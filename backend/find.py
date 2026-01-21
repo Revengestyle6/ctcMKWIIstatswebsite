@@ -16,9 +16,13 @@ def findcol(csvfile: str, query: str):
         value = getattr(row, query)
         if isinstance(value, str):
             output.add(value.lower())
-        else: raise ValueError(f"{query} not a valid search option")
+        elif pd.isna(value):
+            # Skip NaN/empty values
+            continue
+        else:
+            raise ValueError(f"{query} not a valid search option")
 
-    return output
+    return sorted(output)
 
 def findtracklist(csvfile: str):
     return findcol(csvfile, "track")

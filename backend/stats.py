@@ -11,7 +11,7 @@ csv_directory = BASE_DIR / "CSV"
 json_directory = BASE_DIR / "JSON"
 
 
-def findplayeravg(player: str, track="", division="1_2"):
+def findplayeravg(player: str, track="", division="1_2", team=""):
     data = pd.read_csv(csv_directory / f"ctc_d{division}.csv")
 
     playerset = find.findplayernames(f"ctc_d{division}.csv")
@@ -23,6 +23,8 @@ def findplayeravg(player: str, track="", division="1_2"):
     avg = 0.0
     playername = player
     trackname = track
+    teamname = ""  # Initialize as empty string
+    
     if track != "":
         if track.lower() not in tracklist: raise ValueError(f"Invalid Track Name, Valid Tracks: {tracklist}")
         for row in data.itertuples(index=False):
@@ -32,18 +34,20 @@ def findplayeravg(player: str, track="", division="1_2"):
                 trackname = row.track
         for score in scorelist:
             avg += score/len(scorelist)
-        #print(f"{playername} - {trackname} - {round(avg,1)} pts per race - {len(scorelist)} races")
-        return round(avg,1), player, trackname, round(len(scorelist))
+        return round(avg,1), playername, trackname, round(len(scorelist))
     else:
         for row in data.itertuples(index=False):
-            if row.player.lower() == player.lower() and row.score <=15:
-                scorelist.append(row.score)
-                playername = row.player
-        for score in scorelist:
-            avg += score/len(scorelist)
-        #print(f"{playername} - {round(avg,1)} pts per race - {round(avg*12,1)} pts per war - {len(scorelist)} races")
-
-        return round(avg,1), player, trackname, round(len(scorelist))
+            if row.player.lower() == player.lower():
+                if row.team.lower() == team.lower() or team == "":
+                    scorelist.append(row.score)
+                    playername = row.player
+                    teamname = row.team  # Capture team name from each row
+        
+        if scorelist:  # Only calculate average if we have scores
+            for score in scorelist:
+                avg += score*12/len(scorelist)
+        
+        return round(avg,1), playername, teamname, round(len(scorelist))
 
 def findteamavg(team: str, track :str, division="1_2"):
     data = pd.read_csv(csv_directory / f"ctc_d{division}.csv")
@@ -79,7 +83,7 @@ def findtopteamtracks(team: str, min_races = 2, division="1_2"):
         if races >= min_races:
             output[trackname] = (avg, races)
 
-    sorted_tracks = sorted(output.items(), key=lambda x: x[1], reverse=True)[:10]
+    sorted_tracks = sorted(output.items(), key=lambda x: x[1], reverse=True)
 
     print(sorted_tracks)
     
@@ -96,9 +100,24 @@ def findtopplayertracks(player: str, min_races = 2, division="1_2"):
         if races >= min_races:
             output[trackname] = (avg, races)
 
-    sorted_tracks = sorted(output.items(), key=lambda x: x[1], reverse=True)[:10]
+    sorted_tracks = sorted(output.items(), key=lambda x: x[1], reverse=True)
 
     print(sorted_tracks)
     
     return [f"{track} - {avg} pts ({races} races)" for track, (avg, races) in sorted_tracks]
-    
+
+def findtopteamplayers(team: str, min_races = 12, division="1_2"):
+    teamlist = find.findteamnames(f"ctc_d{division}.csv")
+    playerlist = find.findplayernames(f"ctc_d{division}.csv")
+    output = dict()
+
+    if team.lower() not in teamlist: raise ValueError(f"Invalid Player Name, Valid Teams: {teamlist}")
+    for p in playerlist:
+        avg, playername, _, races = findplayeravg(p, "", division, team)
+        if races >= min_races:
+            output[playername] = (avg, races)
+
+    sorted_players = sorted(output.items(), key=lambda x: x[1], reverse=True)
+    print(sorted_players)
+
+    return [f"{player} - {avg} pts ({races} races)" for player, (avg, races) in sorted_players] 
