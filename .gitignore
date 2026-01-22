@@ -18,6 +18,10 @@ __pycache__/
 build/
 dist/
 
+# Vite
+.vite/
+vite.config.ts.timestamp-*
+
 # Environment files
 .env
 .env.local
