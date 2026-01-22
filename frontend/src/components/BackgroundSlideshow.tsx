@@ -8,7 +8,7 @@ export default function BackgroundSlideshow(): React.JSX.Element {
   useEffect(() => {
     const interval = setInterval(() => {
       // Advance to the next image and wrap around
-      setCurrent((prev) => (prev + 1) % images.length);
+      setCurrent((prev) => (Math.floor(prev + 1000*Math.random())) % images.length);
     }, 7000);
     return () => clearInterval(interval);
   }, [images.length]);

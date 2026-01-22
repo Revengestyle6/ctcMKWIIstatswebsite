@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 type TrackStat = {
@@ -31,7 +31,7 @@ export default function BestMatchups(): React.JSX.Element {
     return { track: match[1].trim(), avg, races, text: entry };
   };
 
-  const normalizeTracks = (raw: unknown): TrackStat[] => {
+  const normalizeTracks = useCallback((raw: unknown): TrackStat[] => {
     if (!Array.isArray(raw)) return [];
     return raw
       .map((item) => {
@@ -59,7 +59,7 @@ export default function BestMatchups(): React.JSX.Element {
         return null;
       })
       .filter((t): t is TrackStat => Boolean(t && t.track));
-  };
+  }, []);
 
   useEffect(() => {
     async function fetchTeams() {
@@ -113,7 +113,7 @@ export default function BestMatchups(): React.JSX.Element {
     }
 
     fetchBothTeams();
-  }, [selectedTeam, selectedTeam2, division]);
+  }, [selectedTeam, selectedTeam2, division, normalizeTracks]);
 
   const comparisonRows = useMemo(() => {
     if (!selectedTeam || !selectedTeam2) return [];

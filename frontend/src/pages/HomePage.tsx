@@ -72,6 +72,7 @@ export default function HomePage(): React.JSX.Element {
               allow="autoplay; fullscreen; encrypted-media"
               allowFullScreen
               className="rounded-xl shadow-lg"
+              title="Custom Track Cup MKWii Twitch Channel"
             />
           </div>
       </div>
