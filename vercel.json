@@ -1,8 +1,6 @@
-{
-  "installCommand": "npm install && npm --prefix ./frontend install",
-  "buildCommand": "npm run build",
+﻿{
+  "installCommand": "npm install && cd frontend && npm install",
+  "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/build",
-  "framework": "vite",
-  "regions": ["iad1"]
+  "framework": "vite"
 }
-
