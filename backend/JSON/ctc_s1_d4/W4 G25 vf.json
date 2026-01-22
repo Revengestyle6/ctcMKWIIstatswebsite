@@ -1,0 +1,642 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r10490241"
+  ],
+  "tracks": [
+    "Siberian Chateau",
+    "Lost Fortress",
+    "Marble Towers",
+    "Undiscovered Offlimit",
+    "Cruel Angel's Thesis",
+    "Big Nature City",
+    "Color Wonderland",
+    "Flying Kingdom",
+    "Starry Cityscape",
+    "3DS Music Park",
+    "Candy Coaster",
+    "Superstar Dystopia"
+  ],
+  "teams": {
+    "G25": {
+      "table_tag_str": "G25 #95eefa",
+      "table_penalty_str": "",
+      "total_score": 410,
+      "penalties": 0,
+      "players": {
+        "1251-5542-1431": {
+          "table_str": "ismail [dz] 45|37|45",
+          "mii_name": "G25 glw",
+          "lounge_name": "ismail",
+          "table_name": "ismail",
+          "tag": "G25",
+          "total_score": 127,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            12,
+            3,
+            15,
+            15,
+            10,
+            8,
+            4,
+            10,
+            15,
+            8,
+            12
+          ],
+          "race_positions": [
+            1,
+            2,
+            7,
+            1,
+            1,
+            3,
+            4,
+            6,
+            3,
+            1,
+            4,
+            2
+          ],
+          "gp_scores": [
+            [
+              15,
+              12,
+              3,
+              15
+            ],
+            [
+              15,
+              10,
+              8,
+              4
+            ],
+            [
+              10,
+              15,
+              8,
+              12
+            ]
+          ],
+          "flag": "dz"
+        },
+        "4859-3376-0667": {
+          "table_str": "cariad [ie] 22|39|36",
+          "mii_name": "G25 cla",
+          "lounge_name": "cariad",
+          "table_name": "cariad",
+          "tag": "G25",
+          "total_score": 97,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            4,
+            4,
+            6,
+            12,
+            15,
+            6,
+            6,
+            15,
+            3,
+            3,
+            15
+          ],
+          "race_positions": [
+            4,
+            6,
+            6,
+            5,
+            2,
+            1,
+            5,
+            5,
+            1,
+            7,
+            7,
+            1
+          ],
+          "gp_scores": [
+            [
+              8,
+              4,
+              4,
+              6
+            ],
+            [
+              12,
+              15,
+              6,
+              6
+            ],
+            [
+              15,
+              3,
+              3,
+              15
+            ]
+          ],
+          "flag": "ie"
+        },
+        "5460-6228-6799": {
+          "table_str": "Sam G [bb] 30|26|39",
+          "mii_name": "G25 iron",
+          "lounge_name": "Sam G",
+          "table_name": "Sam G",
+          "tag": "G25",
+          "total_score": 95,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            6,
+            10,
+            10,
+            6,
+            3,
+            15,
+            2,
+            6,
+            12,
+            15,
+            6
+          ],
+          "race_positions": [
+            6,
+            5,
+            3,
+            3,
+            5,
+            7,
+            1,
+            8,
+            5,
+            2,
+            1,
+            5
+          ],
+          "gp_scores": [
+            [
+              4,
+              6,
+              10,
+              10
+            ],
+            [
+              6,
+              3,
+              15,
+              2
+            ],
+            [
+              6,
+              12,
+              15,
+              6
+            ]
+          ],
+          "flag": "bb"
+        },
+        "4730-4869-4616": {
+          "table_str": "eloslingshotdxcn [nr] 24|32|30",
+          "mii_name": "G25 cla`",
+          "lounge_name": "eloslingshotdxcn",
+          "table_name": "eloslingshotdxcn",
+          "tag": "G25",
+          "total_score": 86,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            8,
+            6,
+            8,
+            8,
+            8,
+            4,
+            12,
+            12,
+            2,
+            6,
+            10
+          ],
+          "race_positions": [
+            8,
+            4,
+            5,
+            4,
+            4,
+            4,
+            6,
+            2,
+            2,
+            8,
+            5,
+            3
+          ],
+          "gp_scores": [
+            [
+              2,
+              8,
+              6,
+              8
+            ],
+            [
+              8,
+              8,
+              4,
+              12
+            ],
+            [
+              12,
+              2,
+              6,
+              10
+            ]
+          ],
+          "flag": "nr"
+        },
+        "3914-4397-6761": {
+          "table_str": "squirrel [us] 0|3|2",
+          "mii_name": "G25 cla`",
+          "lounge_name": "squirrel",
+          "table_name": "squirrel",
+          "tag": "G25",
+          "total_score": 5,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0,
+            1
+          ],
+          "race_positions": [
+            10,
+            10,
+            10,
+            10,
+            10,
+            9,
+            9,
+            9,
+            10,
+            9,
+            10,
+            9
+          ],
+          "gp_scores": [
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              1,
+              1
+            ],
+            [
+              0,
+              1,
+              0,
+              1
+            ]
+          ],
+          "flag": "us"
+        }
+      },
+      "hex_color": "#95eefa"
+    },
+    "vf": {
+      "table_tag_str": "vf #58cede",
+      "table_penalty_str": "",
+      "total_score": 322,
+      "penalties": 0,
+      "players": {
+        "0220-7522-0359": {
+          "table_str": "vf Klγ 52|34|30",
+          "mii_name": "vf Klγ",
+          "lounge_name": "",
+          "table_name": "vf Klγ",
+          "tag": "vf",
+          "total_score": 116,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            15,
+            15,
+            12,
+            10,
+            4,
+            12,
+            8,
+            4,
+            10,
+            12,
+            4
+          ],
+          "race_positions": [
+            3,
+            1,
+            1,
+            2,
+            3,
+            6,
+            2,
+            4,
+            6,
+            3,
+            2,
+            6
+          ],
+          "gp_scores": [
+            [
+              10,
+              15,
+              15,
+              12
+            ],
+            [
+              10,
+              4,
+              12,
+              8
+            ],
+            [
+              4,
+              10,
+              12,
+              4
+            ]
+          ],
+          "flag": ""
+        },
+        "0220-7701-8555": {
+          "table_str": "poison [us] 36|29|30",
+          "mii_name": "vf♪PSYDUCK",
+          "lounge_name": "poison",
+          "table_name": "poison",
+          "tag": "vf",
+          "total_score": 95,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            10,
+            12,
+            2,
+            3,
+            6,
+            10,
+            10,
+            8,
+            4,
+            10,
+            8
+          ],
+          "race_positions": [
+            2,
+            3,
+            2,
+            8,
+            7,
+            5,
+            3,
+            3,
+            4,
+            6,
+            3,
+            4
+          ],
+          "gp_scores": [
+            [
+              12,
+              10,
+              12,
+              2
+            ],
+            [
+              3,
+              6,
+              10,
+              10
+            ],
+            [
+              8,
+              4,
+              10,
+              8
+            ]
+          ],
+          "flag": "us"
+        },
+        "2368-2586-3226": {
+          "table_str": "Double Gold S15 [bs] 20|32|18",
+          "mii_name": "vf☆Jamo",
+          "lounge_name": "Double Gold S15",
+          "table_name": "Double Gold S15",
+          "tag": "vf",
+          "total_score": 70,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            3,
+            8,
+            3,
+            2,
+            12,
+            3,
+            15,
+            3,
+            8,
+            4,
+            3
+          ],
+          "race_positions": [
+            5,
+            7,
+            4,
+            7,
+            8,
+            2,
+            7,
+            1,
+            7,
+            4,
+            6,
+            7
+          ],
+          "gp_scores": [
+            [
+              6,
+              3,
+              8,
+              3
+            ],
+            [
+              2,
+              12,
+              3,
+              15
+            ],
+            [
+              3,
+              8,
+              4,
+              3
+            ]
+          ],
+          "flag": "bs"
+        },
+        "0349-6257-1454": {
+          "table_str": "uhhh bomb up [ee] 11|11|12",
+          "mii_name": "vf homri",
+          "lounge_name": "uhhh bomb up",
+          "table_name": "uhhh bomb up",
+          "tag": "vf",
+          "total_score": 34,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            2,
+            2,
+            4,
+            4,
+            2,
+            2,
+            3,
+            2,
+            6,
+            2,
+            2
+          ],
+          "race_positions": [
+            7,
+            8,
+            8,
+            6,
+            6,
+            8,
+            8,
+            7,
+            8,
+            5,
+            8,
+            8
+          ],
+          "gp_scores": [
+            [
+              3,
+              2,
+              2,
+              4
+            ],
+            [
+              4,
+              2,
+              2,
+              3
+            ],
+            [
+              2,
+              6,
+              2,
+              2
+            ]
+          ],
+          "flag": "ee"
+        },
+        "1809-9044-4020": {
+          "table_str": "om nom [us_az] 4|1|2",
+          "mii_name": "vfdots",
+          "lounge_name": "om nom",
+          "table_name": "om nom",
+          "tag": "vf",
+          "total_score": 7,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0
+          ],
+          "race_positions": [
+            9,
+            9,
+            9,
+            9,
+            9,
+            10,
+            10,
+            10,
+            9,
+            10,
+            9,
+            10
+          ],
+          "gp_scores": [
+            [
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ]
+          ],
+          "flag": "us_az"
+        }
+      },
+      "hex_color": "#58cede"
+    }
+  }
+}

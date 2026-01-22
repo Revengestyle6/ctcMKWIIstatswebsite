@@ -1,0 +1,643 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r10345042",
+    "r10345148"
+  ],
+  "tracks": [
+    "Vile Isle",
+    "Lost Fortress",
+    "Strobenz Desert Illusion",
+    "GBA Rainbow Road",
+    "Shy Guy Lumber Co.",
+    "GCN Dino Dino Jungle",
+    "Glimmer Express Trains",
+    "Starry Cityscape",
+    "The Great Apple War",
+    "Flying Kingdom",
+    "Lava Road",
+    "τ-Cryovolcano"
+  ],
+  "teams": {
+    "ZogZhit": {
+      "table_tag_str": "ZogZhit #ffbe96",
+      "table_penalty_str": "",
+      "total_score": 375,
+      "penalties": 0,
+      "players": {
+        "2282-3554-1649": {
+          "table_str": "Kebjin [ro] 39|34|38",
+          "mii_name": "Zog Zhit K",
+          "lounge_name": "Kebjin",
+          "table_name": "Kebjin",
+          "tag": "ZogZhit",
+          "total_score": 111,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            15,
+            2,
+            10,
+            10,
+            15,
+            6,
+            3,
+            10,
+            3,
+            10,
+            15
+          ],
+          "race_positions": [
+            2,
+            1,
+            8,
+            3,
+            3,
+            1,
+            5,
+            7,
+            3,
+            7,
+            3,
+            1
+          ],
+          "gp_scores": [
+            [
+              12,
+              15,
+              2,
+              10
+            ],
+            [
+              10,
+              15,
+              6,
+              3
+            ],
+            [
+              10,
+              3,
+              10,
+              15
+            ]
+          ],
+          "flag": "ro"
+        },
+        "2625-9382-5901": {
+          "table_str": "Zoot McSchmoove [br] 42|29|36",
+          "mii_name": "Zog Zhit R",
+          "lounge_name": "Zoot McSchmoove",
+          "table_name": "Zoot McSchmoove",
+          "tag": "ZogZhit",
+          "total_score": 107,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            12,
+            12,
+            15,
+            4,
+            2,
+            8,
+            15,
+            12,
+            8,
+            8,
+            8
+          ],
+          "race_positions": [
+            7,
+            2,
+            2,
+            1,
+            6,
+            8,
+            4,
+            1,
+            2,
+            4,
+            4,
+            4
+          ],
+          "gp_scores": [
+            [
+              3,
+              12,
+              12,
+              15
+            ],
+            [
+              4,
+              2,
+              8,
+              15
+            ],
+            [
+              12,
+              8,
+              8,
+              8
+            ]
+          ],
+          "flag": "br"
+        },
+        "3742-6426-5435": {
+          "table_str": "billiam [ro] 39|30|30",
+          "mii_name": "Zog Zhit 2",
+          "lounge_name": "billiam",
+          "table_name": "billiam",
+          "tag": "ZogZhit",
+          "total_score": 99,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            6,
+            15,
+            8,
+            8,
+            6,
+            4,
+            12,
+            8,
+            12,
+            4,
+            6
+          ],
+          "race_positions": [
+            3,
+            5,
+            1,
+            4,
+            4,
+            5,
+            6,
+            2,
+            4,
+            2,
+            6,
+            5
+          ],
+          "gp_scores": [
+            [
+              10,
+              6,
+              15,
+              8
+            ],
+            [
+              8,
+              6,
+              4,
+              12
+            ],
+            [
+              8,
+              12,
+              4,
+              6
+            ]
+          ],
+          "flag": "ro"
+        },
+        "2110-5534-3852": {
+          "table_str": "wafflehouse [us] 18|27|8",
+          "mii_name": "Zog Zhit69",
+          "lounge_name": "wafflehouse",
+          "table_name": "wafflehouse",
+          "tag": "ZogZhit",
+          "total_score": 53,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            8,
+            6,
+            2,
+            2,
+            4,
+            15,
+            6,
+            3,
+            2,
+            2,
+            1
+          ],
+          "race_positions": [
+            8,
+            4,
+            5,
+            8,
+            8,
+            6,
+            1,
+            5,
+            7,
+            8,
+            8,
+            9
+          ],
+          "gp_scores": [
+            [
+              2,
+              8,
+              6,
+              2
+            ],
+            [
+              2,
+              4,
+              15,
+              6
+            ],
+            [
+              3,
+              2,
+              2,
+              1
+            ]
+          ],
+          "flag": "us"
+        },
+        "1122-7096-3438": {
+          "table_str": "guero [hr] 2|2|1",
+          "mii_name": "Zog Zhit L",
+          "lounge_name": "guero",
+          "table_name": "guero",
+          "tag": "ZogZhit",
+          "total_score": 5,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            0,
+            1,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "race_positions": [
+            10,
+            9,
+            9,
+            10,
+            9,
+            10,
+            9,
+            10,
+            10,
+            9,
+            10,
+            10
+          ],
+          "gp_scores": [
+            [
+              0,
+              1,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ]
+          ],
+          "flag": "hr"
+        }
+      },
+      "hex_color": "#ffbe96"
+    },
+    "G25": {
+      "table_tag_str": "G25 #96c9ff",
+      "table_penalty_str": "Penalty -25",
+      "total_score": 332,
+      "penalties": 25,
+      "players": {
+        "1251-5542-1431": {
+          "table_str": "glw [dz] 32|47|52",
+          "mii_name": "G25 glw",
+          "lounge_name": "glw",
+          "table_name": "glw",
+          "tag": "G25",
+          "total_score": 131,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            10,
+            10,
+            6,
+            15,
+            10,
+            12,
+            10,
+            15,
+            10,
+            15,
+            12
+          ],
+          "race_positions": [
+            5,
+            3,
+            3,
+            5,
+            1,
+            3,
+            2,
+            3,
+            1,
+            3,
+            1,
+            2
+          ],
+          "gp_scores": [
+            [
+              6,
+              10,
+              10,
+              6
+            ],
+            [
+              15,
+              10,
+              12,
+              10
+            ],
+            [
+              15,
+              10,
+              15,
+              12
+            ]
+          ],
+          "flag": "dz"
+        },
+        "5460-6228-6799": {
+          "table_str": "Sam G [cg] 39|26|35",
+          "mii_name": "G25 iron",
+          "lounge_name": "Sam G",
+          "table_name": "Sam G",
+          "tag": "G25",
+          "total_score": 100,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            4,
+            8,
+            12,
+            12,
+            8,
+            2,
+            4,
+            4,
+            15,
+            12,
+            4
+          ],
+          "race_positions": [
+            1,
+            6,
+            4,
+            2,
+            2,
+            4,
+            8,
+            6,
+            6,
+            1,
+            2,
+            6
+          ],
+          "gp_scores": [
+            [
+              15,
+              4,
+              8,
+              12
+            ],
+            [
+              12,
+              8,
+              2,
+              4
+            ],
+            [
+              4,
+              15,
+              12,
+              4
+            ]
+          ],
+          "flag": "cg"
+        },
+        "4730-4869-4616": {
+          "table_str": "chatrestriction1 [cn] 19|24|13",
+          "mii_name": "G25 song",
+          "lounge_name": "chatrestriction1",
+          "table_name": "chatrestriction1",
+          "tag": "G25",
+          "total_score": 56,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            3,
+            4,
+            4,
+            3,
+            3,
+            10,
+            8,
+            2,
+            6,
+            3,
+            2
+          ],
+          "race_positions": [
+            4,
+            7,
+            6,
+            6,
+            7,
+            7,
+            3,
+            4,
+            8,
+            5,
+            7,
+            8
+          ],
+          "gp_scores": [
+            [
+              8,
+              3,
+              4,
+              4
+            ],
+            [
+              3,
+              3,
+              10,
+              8
+            ],
+            [
+              2,
+              6,
+              3,
+              2
+            ]
+          ],
+          "flag": "cn"
+        },
+        "0907-9688-4690": {
+          "table_str": "CT Inter [ca_sk] 12|23|19",
+          "mii_name": "G25◇J.3:16",
+          "lounge_name": "CT Inter",
+          "table_name": "CT Inter",
+          "tag": "G25",
+          "total_score": 54,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            2,
+            3,
+            3,
+            6,
+            12,
+            3,
+            2,
+            6,
+            4,
+            6,
+            3
+          ],
+          "race_positions": [
+            6,
+            8,
+            7,
+            7,
+            5,
+            2,
+            7,
+            8,
+            5,
+            6,
+            5,
+            7
+          ],
+          "gp_scores": [
+            [
+              4,
+              2,
+              3,
+              3
+            ],
+            [
+              6,
+              12,
+              3,
+              2
+            ],
+            [
+              6,
+              4,
+              6,
+              3
+            ]
+          ],
+          "flag": "ca_sk"
+        },
+        "3914-4397-6761": {
+          "table_str": "squirrel [ag] 2|2|12",
+          "mii_name": "G25 ISMAIL",
+          "lounge_name": "squirrel",
+          "table_name": "squirrel",
+          "tag": "G25",
+          "total_score": 16,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            10
+          ],
+          "race_positions": [
+            9,
+            10,
+            10,
+            9,
+            10,
+            9,
+            10,
+            9,
+            9,
+            10,
+            9,
+            3
+          ],
+          "gp_scores": [
+            [
+              1,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              0,
+              1
+            ],
+            [
+              1,
+              0,
+              1,
+              10
+            ]
+          ],
+          "flag": "ag"
+        }
+      },
+      "hex_color": "#96c9ff"
+    }
+  }
+}

@@ -1,0 +1,643 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r10446841",
+    "r10446917"
+  ],
+  "tracks": [
+    "Alpine Peak",
+    "Infernal Pipeyard",
+    "GBA Sunset Wilds",
+    "GBA Rainbow Road",
+    "GCN Mushroom Bridge",
+    "Undiscovered Offlimit",
+    "Lunar Lights",
+    "Volcanic Valley",
+    "Marble Towers",
+    "τ-Cryovolcano",
+    "Cruel Angel's Thesis",
+    "SNES Choco Island 2"
+  ],
+  "teams": {
+    "vf": {
+      "table_tag_str": "vf #193FFF",
+      "table_penalty_str": "",
+      "total_score": 395,
+      "penalties": 0,
+      "players": {
+        "0220-7522-0359": {
+          "table_str": "vf Klγ 45|41|42",
+          "mii_name": "vf Klγ",
+          "lounge_name": "",
+          "table_name": "vf Klγ",
+          "tag": "vf",
+          "total_score": 128,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            15,
+            12,
+            10,
+            12,
+            4,
+            10,
+            15,
+            12,
+            12,
+            15,
+            3
+          ],
+          "race_positions": [
+            4,
+            1,
+            2,
+            3,
+            2,
+            6,
+            3,
+            1,
+            2,
+            2,
+            1,
+            7
+          ],
+          "gp_scores": [
+            [
+              8,
+              15,
+              12,
+              10
+            ],
+            [
+              12,
+              4,
+              10,
+              15
+            ],
+            [
+              12,
+              12,
+              15,
+              3
+            ]
+          ],
+          "flag": ""
+        },
+        "2368-2586-3226": {
+          "table_str": "Double Gold S15 [bs] 26|35|42",
+          "mii_name": "vf☆Jamo",
+          "lounge_name": "Double Gold S15",
+          "table_name": "Double Gold S15",
+          "tag": "vf",
+          "total_score": 103,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            4,
+            2,
+            8,
+            4,
+            10,
+            15,
+            6,
+            15,
+            4,
+            8,
+            15
+          ],
+          "race_positions": [
+            2,
+            6,
+            8,
+            4,
+            6,
+            3,
+            1,
+            5,
+            1,
+            6,
+            4,
+            1
+          ],
+          "gp_scores": [
+            [
+              12,
+              4,
+              2,
+              8
+            ],
+            [
+              4,
+              10,
+              15,
+              6
+            ],
+            [
+              15,
+              4,
+              8,
+              15
+            ]
+          ],
+          "flag": "bs"
+        },
+        "0220-7701-8555": {
+          "table_str": "poison [us] 26|41|34",
+          "mii_name": "@vf",
+          "lounge_name": "poison",
+          "table_name": "poison",
+          "tag": "vf",
+          "total_score": 101,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            6,
+            3,
+            2,
+            15,
+            12,
+            6,
+            8,
+            8,
+            6,
+            10,
+            10
+          ],
+          "race_positions": [
+            1,
+            5,
+            7,
+            8,
+            1,
+            2,
+            5,
+            4,
+            4,
+            5,
+            3,
+            3
+          ],
+          "gp_scores": [
+            [
+              15,
+              6,
+              3,
+              2
+            ],
+            [
+              15,
+              12,
+              6,
+              8
+            ],
+            [
+              8,
+              6,
+              10,
+              10
+            ]
+          ],
+          "flag": "us"
+        },
+        "1294-5051-0751": {
+          "table_str": "warz [bs] 17|26|14",
+          "mii_name": "vf warz",
+          "lounge_name": "warz",
+          "table_name": "warz",
+          "tag": "vf",
+          "total_score": 57,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            2,
+            6,
+            3,
+            6,
+            2,
+            8,
+            10,
+            4,
+            2,
+            4,
+            4
+          ],
+          "race_positions": [
+            5,
+            8,
+            5,
+            7,
+            5,
+            8,
+            4,
+            3,
+            6,
+            8,
+            6,
+            6
+          ],
+          "gp_scores": [
+            [
+              6,
+              2,
+              6,
+              3
+            ],
+            [
+              6,
+              2,
+              8,
+              10
+            ],
+            [
+              4,
+              2,
+              4,
+              4
+            ]
+          ],
+          "flag": "bs"
+        },
+        "1809-9044-4020": {
+          "table_str": "om nom [us_az] 3|2|1",
+          "mii_name": "vfdots",
+          "lounge_name": "om nom",
+          "table_name": "om nom",
+          "tag": "vf",
+          "total_score": 6,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            0,
+            0
+          ],
+          "race_positions": [
+            9,
+            9,
+            10,
+            9,
+            10,
+            10,
+            9,
+            9,
+            10,
+            9,
+            10,
+            10
+          ],
+          "gp_scores": [
+            [
+              1,
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              1,
+              1
+            ],
+            [
+              0,
+              1,
+              0,
+              0
+            ]
+          ],
+          "flag": "us_az"
+        }
+      },
+      "hex_color": "#193FFF"
+    },
+    "Zog Zhit": {
+      "table_tag_str": "Zog Zhit #FF0404",
+      "table_penalty_str": "",
+      "total_score": 340,
+      "penalties": 0,
+      "players": {
+        "3742-6426-5435": {
+          "table_str": "billiam [ro] 40|28|43",
+          "mii_name": "Zog Zhit 2",
+          "lounge_name": "billiam",
+          "table_name": "billiam",
+          "tag": "Zog Zhit",
+          "total_score": 111,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            8,
+            10,
+            12,
+            8,
+            15,
+            3,
+            2,
+            10,
+            15,
+            6,
+            12
+          ],
+          "race_positions": [
+            3,
+            4,
+            3,
+            2,
+            4,
+            1,
+            7,
+            8,
+            3,
+            1,
+            5,
+            2
+          ],
+          "gp_scores": [
+            [
+              10,
+              8,
+              10,
+              12
+            ],
+            [
+              8,
+              15,
+              3,
+              2
+            ],
+            [
+              10,
+              15,
+              6,
+              12
+            ]
+          ],
+          "flag": "ro"
+        },
+        "1724-0001-7772": {
+          "table_str": "Dodging Coelho [pt] 37|26|34",
+          "mii_name": "Zog Zhit C",
+          "lounge_name": "Dodging Coelho",
+          "table_name": "Dodging Coelho",
+          "tag": "Zog Zhit",
+          "total_score": 97,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            12,
+            15,
+            6,
+            2,
+            8,
+            12,
+            4,
+            6,
+            8,
+            12,
+            8
+          ],
+          "race_positions": [
+            6,
+            2,
+            1,
+            5,
+            8,
+            4,
+            2,
+            6,
+            5,
+            4,
+            2,
+            4
+          ],
+          "gp_scores": [
+            [
+              4,
+              12,
+              15,
+              6
+            ],
+            [
+              2,
+              8,
+              12,
+              4
+            ],
+            [
+              6,
+              8,
+              12,
+              8
+            ]
+          ],
+          "flag": "pt"
+        },
+        "2625-9382-5901": {
+          "table_str": "Zoot McSchmoove [br] 36|25|21",
+          "mii_name": "Zog Zhit R",
+          "lounge_name": "Zoot McSchmoove",
+          "table_name": "Zoot McSchmoove",
+          "tag": "Zog Zhit",
+          "total_score": 82,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            10,
+            8,
+            15,
+            3,
+            6,
+            4,
+            12,
+            2,
+            10,
+            3,
+            6
+          ],
+          "race_positions": [
+            null,
+            3,
+            4,
+            1,
+            7,
+            5,
+            6,
+            2,
+            8,
+            3,
+            7,
+            5
+          ],
+          "gp_scores": [
+            [
+              3,
+              10,
+              8,
+              15
+            ],
+            [
+              3,
+              6,
+              4,
+              12
+            ],
+            [
+              2,
+              10,
+              3,
+              6
+            ]
+          ],
+          "flag": "br"
+        },
+        "2495-2667-1761": {
+          "table_str": "zoomer [no] 14|18|10",
+          "mii_name": "Zog Zhit Z",
+          "lounge_name": "zoomer",
+          "table_name": "zoomer",
+          "tag": "Zog Zhit",
+          "total_score": 42,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            3,
+            4,
+            4,
+            10,
+            3,
+            2,
+            3,
+            3,
+            3,
+            2,
+            2
+          ],
+          "race_positions": [
+            7,
+            7,
+            6,
+            6,
+            3,
+            7,
+            8,
+            7,
+            7,
+            7,
+            8,
+            8
+          ],
+          "gp_scores": [
+            [
+              3,
+              3,
+              4,
+              4
+            ],
+            [
+              10,
+              3,
+              2,
+              3
+            ],
+            [
+              3,
+              3,
+              2,
+              2
+            ]
+          ],
+          "flag": "no"
+        },
+        "2110-5534-3852": {
+          "table_str": "wafflehouse [us] 3|2|3",
+          "mii_name": "Zog Zhit69",
+          "lounge_name": "wafflehouse",
+          "table_name": "wafflehouse",
+          "tag": "Zog Zhit",
+          "total_score": 8,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1
+          ],
+          "race_positions": [
+            8,
+            10,
+            9,
+            10,
+            9,
+            9,
+            10,
+            10,
+            9,
+            10,
+            9,
+            9
+          ],
+          "gp_scores": [
+            [
+              2,
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              1,
+              1
+            ]
+          ],
+          "flag": "us"
+        }
+      },
+      "hex_color": "#FF0404"
+    }
+  }
+}
