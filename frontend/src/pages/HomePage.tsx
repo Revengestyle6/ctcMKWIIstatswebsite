@@ -65,15 +65,15 @@ export default function HomePage(): React.JSX.Element {
               Twitch Channel
             </h2>
 
-            <iframe
-              src="https://player.twitch.tv/?channel=customtrackcupmkwii&parent=localhost"
-              height="500"
-              width="100%"
-              allow="autoplay; fullscreen; encrypted-media"
-              allowFullScreen
-              className="rounded-xl shadow-lg"
-              title="Custom Track Cup MKWii Twitch Channel"
-            />
+        <iframe
+          src={`https://player.twitch.tv/?channel=customtrackcupmkwii&parent=${window.location.hostname}`}
+          height="500"
+          width="100%"
+          allow="autoplay; fullscreen; encrypted-media"
+          allowFullScreen
+          className="rounded-xl shadow-lg"
+          title="Custom Track Cup MKWii Twitch Channel"
+        />
           </div>
       </div>
                 </header>
