@@ -5,19 +5,35 @@ export default function BackgroundSlideshow(): React.JSX.Element {
 
   const [current, setCurrent] = useState(0);
 
+  // Preload images for smooth transitions
+  useEffect(() => {
+    const preload = (src: string) => {
+      const img = new Image();
+      img.src = src;
+    };
+    
+    // Preload current, next, and previous images
+    preload(images[current]);
+    preload(images[(current + 1) % images.length]);
+    preload(images[(current - 1 + images.length) % images.length]);
+  }, [current, images]);
+
   useEffect(() => {
     const interval = setInterval(() => {
-      // Advance to the next image and wrap around
-      setCurrent((prev) => (Math.floor(prev + 1000*Math.random())) % images.length);
+      setCurrent((prev) => (prev + 1) % images.length);
     }, 7000);
     return () => clearInterval(interval);
   }, [images.length]);
 
   return (
     <div className="fixed inset-0 z-0 overflow-hidden bg-black">
-      {/* Only render current and next image for better performance */}
+      {/* Render current, next, and previous images for smooth fade transitions */}
       {images.map((img, idx) => {
-        const isVisible = idx === current || idx === ((current + 1) % images.length);
+        const isVisible = 
+          idx === current || 
+          idx === ((current + 1) % images.length) ||
+          idx === ((current - 1 + images.length) % images.length);
+        
         if (!isVisible) return null;
         
         return (
@@ -25,7 +41,6 @@ export default function BackgroundSlideshow(): React.JSX.Element {
             key={img}
             src={img}
             alt={`Background ${idx + 1}`}
-            loading="eager"
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
               idx === current ? "opacity-100" : "opacity-0"
             }`}
