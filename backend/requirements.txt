@@ -1,5 +1,6 @@
 Flask==3.0.0
 Flask-CORS==4.0.0
 pandas==2.2.3
-numpy==1.24.3
+numpy==1.26.4
 gunicorn==21.2.0
+setuptools>=65.0.0
