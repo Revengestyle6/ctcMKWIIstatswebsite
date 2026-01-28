@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios, { AxiosError } from "axios";
 
@@ -24,6 +24,7 @@ export default function PlayerStats() {
   const [division, setDivision] = useState<string>("1_2");
   const [loading, setLoading] = useState(false);
   const [avgLoading, setAvgLoading] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch players whenever division changes
   useEffect(() => {
@@ -47,39 +48,53 @@ export default function PlayerStats() {
   // Fetch player stats and average whenever selected player changes
   useEffect(() => {
     if (!selectedPlayer) return;
-
-    async function fetchPlayerStats() {
-      setLoading(true);
-      setAvgLoading(true);
-      setError("");
-      try {
-        // Fetch best tracks
-        const tracksResponse = await axios.get<PlayerResponse>(
-          `${API_URL}/api/player`,
-          { params: { name: selectedPlayer, division } }
-        );
-        setResults(tracksResponse.data.results);
-
-        // Fetch player average
-        const avgResponse = await axios.get<PlayerAvgResponse>(
-          `${API_URL}/api/player-avg`,
-          { params: { name: selectedPlayer, division } }
-        );
-        setPlayerAvg(avgResponse.data);
-      } catch (err: unknown) {
-        if (err instanceof AxiosError) {
-          setError(err.response?.data?.error ?? "Server error");
-        } else {
-          setError("Unexpected error occurred");
-        }
-        setResults([]);
-        setPlayerAvg(null);
-      } finally {
-        setLoading(false);
-        setAvgLoading(false);
-      }
+// Clear previous timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
 
+    // Debounce API call by 300ms
+    debounceTimerRef.current = setTimeout(() => {
+      async function fetchPlayerStats() {
+        setLoading(true);
+        setAvgLoading(true);
+        setError("");
+        try {
+          // Fetch best tracks
+          const tracksResponse = await axios.get<PlayerResponse>(
+            `${API_URL}/api/player`,
+            { params: { name: selectedPlayer, division } }
+          );
+          setResults(tracksResponse.data.results);
+
+          // Fetch player average
+          const avgResponse = await axios.get<PlayerAvgResponse>(
+            `${API_URL}/api/player-avg`,
+            { params: { name: selectedPlayer, division } }
+          );
+          setPlayerAvg(avgResponse.data);
+        } catch (err: unknown) {
+          if (err instanceof AxiosError) {
+            setError(err.response?.data?.error ?? "Server error");
+          } else {
+            setError("Unexpected error occurred");
+          }
+          setResults([]);
+          setPlayerAvg(null);
+        } finally {
+          setLoading(false);
+          setAvgLoading(false);
+        }
+      }
+
+      fetchPlayerStats();
+    }, 300);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    }
     fetchPlayerStats();
   }, [selectedPlayer, division]);
 
@@ -90,6 +105,7 @@ export default function PlayerStats() {
           src="/images/CTC_LOGO/ctclogo.png" 
           alt="Logo" 
           className="w-64 h-64 rounded-lg"
+          loading="lazy"
         />
       </div>
 

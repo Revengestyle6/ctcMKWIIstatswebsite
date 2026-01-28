@@ -11,6 +11,7 @@ export default function HomePage(): React.JSX.Element {
           src="/images/CTC_LOGO/ctclogo.png" 
           alt="Logo" 
           className="w-24 h-24 mx-auto mb-4 rounded-lg"
+          loading="lazy"
         />
 
           <h1 className="text-4xl font-bold sm:text-5xl">
@@ -73,6 +74,7 @@ export default function HomePage(): React.JSX.Element {
           allowFullScreen
           className="rounded-xl shadow-lg"
           title="Custom Track Cup MKWii Twitch Channel"
+          loading="lazy"
         />
           </div>
       </div>

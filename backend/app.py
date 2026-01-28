@@ -1,11 +1,16 @@
 from flask import Flask, request, jsonify
+from flask_caching import Cache
+from flask_compress import Compress
 import stats
 import find
 import pandas as pd
 from pathlib import Path
 from flask_cors import CORS
+
 app = Flask(__name__)
 CORS(app)
+Compress(app)
+cache = Cache(app, config={'CACHE_TYPE': 'simple', 'CACHE_DEFAULT_TIMEOUT': 3600})
 
 BASE_DIR = Path(__file__).resolve().parent
 csv_directory = BASE_DIR / "CSV"
@@ -41,6 +46,7 @@ def player_avg():
         return jsonify({"error": str(e)}), 400
     
 @app.route("/api/players", methods=["GET"])
+@cache.cached(timeout=3600, query_string=True)
 def api_players():
     division = request.args.get("division", "1_2")
     try:
@@ -77,6 +83,7 @@ def api_top_team_players():
         return jsonify({"error": str(e)}), 400
 
 @app.route("/api/teams", methods=["GET"])
+@cache.cached(timeout=3600, query_string=True)
 def api_teams():
     division = request.args.get("division", "1_2")
     try:
@@ -93,6 +100,7 @@ def api_teams():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 400
     
+@cache.cached(timeout=3600, query_string=True)
 @app.route("/api/top-team-tracks", methods=["GET"])
 def api_top_team_tracks():
     team = request.args.get("team")
