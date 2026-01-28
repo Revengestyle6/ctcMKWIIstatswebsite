@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 type TrackStat = {
   track: string;
   avg: number;
@@ -64,7 +66,7 @@ export default function BestMatchups(): React.JSX.Element {
   useEffect(() => {
     async function fetchTeams() {
       try {
-        const res = await fetch(`/api/teams?division=${division}`);
+        const res = await fetch(`${API_URL}/api/teams?division=${division}`);
         if (!res.ok) throw new Error("Failed to fetch teams");
         const data: string[] = await res.json();
         setTeams(data);
@@ -82,7 +84,7 @@ export default function BestMatchups(): React.JSX.Element {
   useEffect(() => {
     async function fetchTeamTracks(team: string): Promise<TrackStat[]> {
       const tracksRes = await fetch(
-        `/api/top-team-tracks?team=${encodeURIComponent(team)}&division=${division}`
+        `${API_URL}/api/top-team-tracks?team=${encodeURIComponent(team)}&division=${division}`
       );
       if (!tracksRes.ok) throw new Error("Failed to fetch top tracks");
       const raw = await tracksRes.json();

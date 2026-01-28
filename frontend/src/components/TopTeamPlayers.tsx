@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import React from "react";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const divisions = ["1_2", "3", "4"];
 
 export default function TopTeamPlayers(): React.JSX.Element {
@@ -17,7 +18,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
   useEffect(() => {
     async function fetchTeams() {
       try {
-        const res = await fetch(`/api/teams?division=${division}`);
+        const res = await fetch(`${API_URL}/api/teams?division=${division}`);
         if (!res.ok) throw new Error("Failed to fetch teams");
         const data: string[] = await res.json();
         setTeams(data);
@@ -41,7 +42,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
       try {
         // Fetch top players
         const playersRes = await fetch(
-          `/api/top-team-players?team=${encodeURIComponent(
+          `${API_URL}/api/top-team-players?team=${encodeURIComponent(
             selectedTeam
           )}&min_races=${minRaces}&division=${division}`
         );
@@ -51,7 +52,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
 
         // Fetch top tracks
         const tracksRes = await fetch(
-          `/api/top-team-tracks?team=${encodeURIComponent(
+          `${API_URL}/api/top-team-tracks?team=${encodeURIComponent(
             selectedTeam
           )}&division=${division}`
         );

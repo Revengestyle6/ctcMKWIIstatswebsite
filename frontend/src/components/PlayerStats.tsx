@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios, { AxiosError } from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 interface PlayerResponse {
   results: string[];
 }
@@ -27,7 +29,7 @@ export default function PlayerStats() {
   useEffect(() => {
     async function fetchPlayers() {
       try {
-        const res = await fetch(`/api/players?division=${division}`);
+        const res = await fetch(`${API_URL}/api/players?division=${division}`);
         if (!res.ok) throw new Error("Failed to fetch players");
         const data: string[] = await res.json();
         setPlayers(data);
@@ -53,14 +55,14 @@ export default function PlayerStats() {
       try {
         // Fetch best tracks
         const tracksResponse = await axios.get<PlayerResponse>(
-          "/api/player",
+          `${API_URL}/api/player`,
           { params: { name: selectedPlayer, division } }
         );
         setResults(tracksResponse.data.results);
 
         // Fetch player average
         const avgResponse = await axios.get<PlayerAvgResponse>(
-          "/api/player-avg",
+          `${API_URL}/api/player-avg`,
           { params: { name: selectedPlayer, division } }
         );
         setPlayerAvg(avgResponse.data);
