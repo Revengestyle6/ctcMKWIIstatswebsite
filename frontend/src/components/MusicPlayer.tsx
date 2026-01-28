@@ -140,15 +140,15 @@ export default function MusicPlayer() {
       )}
 
       {/* Floating music control button */}
-      <div 
-        className="fixed bottom-6 right-6 z-50"
-        onMouseEnter={() => setShowControls(true)}
-        onMouseLeave={() => setShowControls(false)}
-      >
-        <div className="relative">
+      <div className="fixed bottom-6 right-6 z-50">
+        <div 
+          className="relative"
+          onMouseEnter={() => setShowControls(true)}
+          onMouseLeave={() => setShowControls(false)}
+        >
           {/* Controls panel */}
           {showControls && (
-            <div className="absolute bottom-full mb-2 right-0 bg-black/90 backdrop-blur-sm rounded-lg p-4 shadow-xl border border-purple-500/50 w-48">
+            <div className="absolute bottom-full right-0 bg-black/90 backdrop-blur-sm rounded-lg p-4 shadow-xl border border-purple-500/50 w-48 mb-1">
               <div className="space-y-3">
                 <div>
                   <label className="block text-white text-sm mb-2">
