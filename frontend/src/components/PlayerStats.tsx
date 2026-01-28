@@ -24,7 +24,7 @@ export default function PlayerStats() {
   const [division, setDivision] = useState<string>("1_2");
   const [loading, setLoading] = useState(false);
   const [avgLoading, setAvgLoading] = useState(false);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch players whenever division changes
   useEffect(() => {
@@ -48,7 +48,8 @@ export default function PlayerStats() {
   // Fetch player stats and average whenever selected player changes
   useEffect(() => {
     if (!selectedPlayer) return;
-// Clear previous timer
+
+    // Clear previous timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
@@ -94,8 +95,7 @@ export default function PlayerStats() {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
-    }
-    fetchPlayerStats();
+    };
   }, [selectedPlayer, division]);
 
   return (
