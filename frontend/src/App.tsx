@@ -4,12 +4,14 @@ import PlayerStats from "./components/PlayerStats";
 import TopTeamPlayers from "./components/TopTeamPlayers";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import BestMatchups from "./components/BestMatchups";
+import MusicPlayer from "./components/MusicPlayer";
 import React from "react";
 
 export default function App(): React.JSX.Element {
   return (
     <BrowserRouter>
       <BackgroundSlideshow />
+      <MusicPlayer />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/stats" element={<PlayerStats />} />
