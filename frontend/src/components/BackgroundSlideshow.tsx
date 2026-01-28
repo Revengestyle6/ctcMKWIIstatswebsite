@@ -15,16 +15,23 @@ export default function BackgroundSlideshow(): React.JSX.Element {
 
   return (
     <div className="fixed inset-0 z-0 overflow-hidden bg-black">
-      {images.map((img, idx) => (
-        <img
-          key={img}
-          src={img}
-          alt={`Background ${idx + 1}`}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-            idx === current ? "opacity-100" : "opacity-0"
-          }`}
-        />
-      ))}
+      {/* Only render current and next image for better performance */}
+      {images.map((img, idx) => {
+        const isVisible = idx === current || idx === ((current + 1) % images.length);
+        if (!isVisible) return null;
+        
+        return (
+          <img
+            key={img}
+            src={img}
+            alt={`Background ${idx + 1}`}
+            loading="eager"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+              idx === current ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        );
+      })}
 
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/40 z-10" />

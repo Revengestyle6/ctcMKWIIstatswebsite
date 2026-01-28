@@ -84,6 +84,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
             src="/images/CTC_LOGO/ctclogo.png" 
             alt="Logo" 
             className="w-12 h-12 rounded-lg"
+            loading="lazy"
           />
         </div>
       </div>

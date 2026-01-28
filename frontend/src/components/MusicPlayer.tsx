@@ -99,6 +99,7 @@ export default function MusicPlayer() {
           ref={audioRef}
           src={currentTrack}
           onEnded={handleTrackEnd}
+          preload="auto"
         />
       )}
 
