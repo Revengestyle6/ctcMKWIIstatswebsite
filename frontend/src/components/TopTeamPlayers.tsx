@@ -78,8 +78,10 @@ export default function TopTeamPlayers(): React.JSX.Element {
       <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
         <div className="flex justify-between items-center max-w-7xl mx-auto px-2">
           <Link to="/" className="text-blue-400 hover:text-blue-300 font-semibold">
-            ← Back to Home
+            ← Back
           </Link>
+          <h1 className="text-3xl font-bold text-center flex-1">Best Team Averages</h1>
+          <div className="w-32"></div>
           <img 
             src="/images/CTC_LOGO/ctclogo.png" 
             alt="Logo" 
@@ -89,9 +91,9 @@ export default function TopTeamPlayers(): React.JSX.Element {
         </div>
       </div>
 
-      {/* Add padding to account for fixed top bar */}
-      <div className="pt-16">
-        <h1 className="text-3xl font-bold mb-6 text-center">Best Team Averages</h1>
+      {/* Main content with top padding */}
+      <div className="pt-24 max-w-4xl mx-auto">
+
 
         {error && <p className="text-red-400 mb-4 text-center">{error}</p>}
 

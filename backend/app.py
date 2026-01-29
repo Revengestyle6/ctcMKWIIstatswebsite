@@ -113,6 +113,41 @@ def api_top_team_tracks():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 400
+    
+@app.route("/api/tracks", methods=["GET"])
+@cache.cached(timeout=3600, query_string=True)
+def api_tracks():
+    division = request.args.get("division", "1_2")
+    try:
+        csv_file = csv_directory / f"ctc_d{division}.csv"
+        data = pd.read_csv(csv_file)
+        tracks = set()
+        for value in data['track']:
+            if isinstance(value, str):
+                tracks.add(value)
+        return jsonify(sorted(list(tracks)))
+    except Exception as e:
+        print(f"Error in api_tracks: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/api/top-tracks", methods=["GET"])
+@cache.cached(timeout=3600, query_string=True)
+def api_top_tracks():
+    track = request.args.get("track")
+    min_races = int(request.args.get("min_races", 2))
+    division = request.args.get("division", "1_2")
+    if not track:
+        return jsonify({"error": "Track name is required"}), 400
+    try:
+        results = stats.findtoptracks(track, min_races=min_races, division=division)
+        return jsonify(results)
+    except Exception as e:
+        print(f"Error in api_top_tracks: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 400
 
 if __name__ == "__main__":
     app.run(debug=True)

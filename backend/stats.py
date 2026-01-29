@@ -121,3 +121,20 @@ def findtopteamplayers(team: str, min_races = 12, division="1_2"):
     print(sorted_players)
 
     return [f"{player} - {avg} pts ({races} races)" for player, (avg, races) in sorted_players] 
+
+def findtoptracks(track: str, min_races = 2, division="1_2"):
+    playerlist = find.findplayernames(f"ctc_d{division}.csv")
+    tracklist = find.findtracklist(f"ctc_d{division}.csv")
+    output = dict()
+
+    if track.lower() not in tracklist: raise ValueError(f"Invalid Track Name, Valid Tracks: {tracklist}")
+    for p in playerlist:
+        avg, playername, _, races = findplayeravg(p, track, division)
+        if races >= min_races:
+            output[playername] = (avg, races)
+
+    sorted_players = sorted(output.items(), key=lambda x: x[1], reverse=True)
+
+    print(sorted_players)
+    
+    return [f"{player} - {avg} pts ({races} races)" for player, (avg, races) in sorted_players]

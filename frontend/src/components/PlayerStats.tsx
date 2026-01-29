@@ -100,23 +100,25 @@ export default function PlayerStats() {
 
   return (
     <div className="relative min-h-screen text-white font-sans p-6">
-      <div className="absolute top-6 right-6">
-        <img 
-          src="/images/CTC_LOGO/ctclogo.png" 
-          alt="Logo" 
-          className="w-64 h-64 rounded-lg"
-          loading="lazy"
-        />
+      {/* Top bar with semi-transparent background */}
+      <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
+        <div className="flex justify-between items-center max-w-7xl mx-auto px-2">
+          <Link to="/" className="text-blue-400 hover:text-blue-300 font-semibold">
+            ← Back
+          </Link>
+          <h1 className="text-3xl font-bold text-center flex-1">Player Statistics</h1>
+          <div className="w-32"></div>
+          <img 
+            src="/images/CTC_LOGO/ctclogo.png" 
+            alt="Logo" 
+            className="w-12 h-12 rounded-lg"
+            loading="lazy"
+          />
+        </div>
       </div>
 
-      <Link to="/" className="text-blue-400 hover:text-blue-300 mb-4 inline-block">
-        ← Back to Home
-      </Link>
-
-      <div className="mx-auto max-w-3xl">
-        <h1 className="text-3xl font-bold mb-6">
-          Player Statistics
-        </h1>
+      {/* Main content with top padding */}
+      <div className="pt-24 max-w-4xl mx-auto">
 
         <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6 flex-wrap">
           {/* Division dropdown */}

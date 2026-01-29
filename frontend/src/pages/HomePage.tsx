@@ -37,6 +37,13 @@ export default function HomePage(): React.JSX.Element {
             </Link>
 
             <Link
+              to="/top-tracks"
+              className="px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-red-700 transition"
+            >
+              Best Player Averages
+            </Link>
+
+            <Link
               to="/best-matchups"
               className="px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-red-700 transition"
             >
