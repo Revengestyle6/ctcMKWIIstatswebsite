@@ -123,13 +123,13 @@ export default function PlayerStats() {
           <div>
             <label className="block font-semibold mb-1">Division</label>
             <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={division}
               onChange={(e) => setDivision(e.target.value)}
             >
-              <option value="1_2" className="text-black">Division 1–2</option>
-              <option value="3" className="text-black">Division 3</option>
-              <option value="4" className="text-black">Division 4</option>
+              <option value="1_2">Division 1–2</option>
+              <option value="3">Division 3</option>
+              <option value="4">Division 4</option>
             </select>
           </div>
 
@@ -137,13 +137,13 @@ export default function PlayerStats() {
           <div>
             <label className="block font-semibold mb-1">Player</label>
             <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={selectedPlayer}
               onChange={(e) => setSelectedPlayer(e.target.value)}
             >
               <option value="">Select a player</option>
               {players.map((p) => (
-                <option key={p} value={p} className="text-black">
+                <option key={p} value={p}>
                   {p}
                 </option>
               ))}

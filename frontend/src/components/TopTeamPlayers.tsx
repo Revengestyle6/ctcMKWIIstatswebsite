@@ -100,12 +100,12 @@ export default function TopTeamPlayers(): React.JSX.Element {
           <div>
             <label className="block font-semibold mb-1">Division</label>
             <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-black/70 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={division}
               onChange={(e) => setDivision(e.target.value)}
             >
               {divisions.map((div) => (
-                <option key={div} value={div} className="text-black">
+                <option key={div} value={div}>
                   Division {div.replace("_", "–")}
                 </option>
               ))}
@@ -116,13 +116,13 @@ export default function TopTeamPlayers(): React.JSX.Element {
           <div>
             <label className="block font-semibold mb-1">Team</label>
             <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-black/70 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={selectedTeam}
               onChange={(e) => setSelectedTeam(e.target.value)}
             >
               <option value="">Select a team</option>
               {teams.map((team) => (
-                <option key={team} value={team} className="text-black">
+                <option key={team} value={team}>
                   {team}
                 </option>
               ))}
