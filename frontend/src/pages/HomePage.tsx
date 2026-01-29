@@ -64,6 +64,7 @@ export default function HomePage(): React.JSX.Element {
               match thread. Missing, incomplete, or incorrect data
               may lead to inaccuracies in the statistics shown.
               Report any duplicate names or obvious errors if seen.
+              RESULTS MAY TAKE 30-60 SECONDS TO LOAD.
             </h1>
           </div>
           </div>
