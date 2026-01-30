@@ -163,7 +163,7 @@ export default function TopTracks(): React.JSX.Element {
             {topPlayers.length > 0 && (
               <div className="space-y-3">
                 <h2 className="text-2xl font-bold mb-4">Top Players</h2>
-                <div className="bg-black/90 rounded-lg border border-white/20 overflow-y-auto max-h-96">
+                <div className="bg-black/90 rounded-lg border border-white/20">
                   {topPlayers
                     .filter((player) => {
                       const scoreMatch = player.match(/(\d+(?:\.\d+)?)\s*pts/);
@@ -193,7 +193,7 @@ export default function TopTracks(): React.JSX.Element {
             {topTeams.length > 0 && (
               <div className="space-y-3">
                 <h2 className="text-2xl font-bold mb-4">Top Teams</h2>
-                <div className="bg-black/90 rounded-lg border border-white/20 overflow-y-auto max-h-96">
+                <div className="bg-black/90 rounded-lg border border-white/20">
                   {topTeams
                     .filter((team) => {
                       const scoreMatch = team.match(/(\d+(?:\.\d+)?)\s*pts/);
