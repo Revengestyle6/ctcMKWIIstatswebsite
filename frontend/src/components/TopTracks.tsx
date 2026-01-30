@@ -161,60 +161,72 @@ export default function TopTracks(): React.JSX.Element {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Players Column */}
             {topPlayers.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="text-2xl font-bold mb-4">Top Players</h2>
-                <div className="bg-black/90 rounded-lg border border-white/20">
-                  {topPlayers
-                    .filter((player) => {
-                      const scoreMatch = player.match(/(\d+(?:\.\d+)?)\s*pts/);
-                      const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
-                      return score >= 2;
-                    })
-                    .map((player, index) => (
-                      <div
-                        key={index}
-                        className="px-6 py-4 border-b border-white/10 last:border-b-0 hover:bg-white/5 transition"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <span className="text-xl font-semibold text-blue-300">
-                              #{index + 1}
-                            </span>
-                            <p className="text-white mt-1">{player}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+              <div>
+                <h2 className="text-2xl font-bold mb-4 text-center">Top Players</h2>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-black/70 backdrop-blur-sm shadow-md rounded-xl overflow-hidden">
+                    <thead className="bg-black/90">
+                      <tr>
+                        <th className="text-left px-4 py-2 font-semibold text-white">#</th>
+                        <th className="text-left px-4 py-2 font-semibold text-white">Player Stats</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topPlayers
+                        .filter((player) => {
+                          const scoreMatch = player.match(/(\d+(?:\.\d+)?)\s*pts/);
+                          const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
+                          return score >= 2;
+                        })
+                        .map((player, idx) => (
+                          <tr
+                            key={idx}
+                            className={idx % 2 === 0 ? "bg-black/50" : "bg-black/70"}
+                          >
+                            <td className="px-4 py-2 font-semibold text-blue-400">
+                              {idx + 1}
+                            </td>
+                            <td className="px-4 py-2 text-white">{player}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
 
             {/* Teams Column */}
             {topTeams.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="text-2xl font-bold mb-4">Top Teams</h2>
-                <div className="bg-black/90 rounded-lg border border-white/20">
-                  {topTeams
-                    .filter((team) => {
-                      const scoreMatch = team.match(/(\d+(?:\.\d+)?)\s*pts/);
-                      const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
-                      return score >= 2;
-                    })
-                    .map((team, index) => (
-                      <div
-                        key={index}
-                        className="px-6 py-4 border-b border-white/10 last:border-b-0 hover:bg-white/5 transition"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <span className="text-xl font-semibold text-blue-300">
-                              #{index + 1}
-                            </span>
-                            <p className="text-white mt-1">{team}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+              <div>
+                <h2 className="text-2xl font-bold mb-4 text-center">Top Teams</h2>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-black/70 backdrop-blur-sm shadow-md rounded-xl overflow-hidden">
+                    <thead className="bg-black/90">
+                      <tr>
+                        <th className="text-left px-4 py-2 font-semibold text-white">#</th>
+                        <th className="text-left px-4 py-2 font-semibold text-white">Team Stats</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topTeams
+                        .filter((team) => {
+                          const scoreMatch = team.match(/(\d+(?:\.\d+)?)\s*pts/);
+                          const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
+                          return score >= 2;
+                        })
+                        .map((team, idx) => (
+                          <tr
+                            key={idx}
+                            className={idx % 2 === 0 ? "bg-black/50" : "bg-black/70"}
+                          >
+                            <td className="px-4 py-2 font-semibold text-blue-400">
+                              {idx + 1}
+                            </td>
+                            <td className="px-4 py-2 text-white">{team}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
