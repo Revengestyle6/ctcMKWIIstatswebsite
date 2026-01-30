@@ -33,8 +33,10 @@ export default function PlayerStats() {
         const res = await fetch(`${API_URL}/api/players?division=${division}`);
         if (!res.ok) throw new Error("Failed to fetch players");
         const data: string[] = await res.json();
-        setPlayers(data);
-        if (data.length > 0) setSelectedPlayer(data[0]);
+        // Sort players alphabetically (case-insensitive)
+        const sortedData = data.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        setPlayers(sortedData);
+        if (sortedData.length > 0) setSelectedPlayer(sortedData[0]);
         setError("");
       } catch (err) {
         console.error("Error fetching players:", err);

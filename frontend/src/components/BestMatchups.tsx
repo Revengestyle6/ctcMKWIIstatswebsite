@@ -69,8 +69,10 @@ export default function BestMatchups(): React.JSX.Element {
         const res = await fetch(`${API_URL}/api/teams?division=${division}`);
         if (!res.ok) throw new Error("Failed to fetch teams");
         const data: string[] = await res.json();
-        setTeams(data);
-        if (data.length > 0) setSelectedTeam(data[0]);
+        // Sort teams alphabetically (case-insensitive)
+        const sortedData = data.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        setTeams(sortedData);
+        if (sortedData.length > 0) setSelectedTeam(sortedData[0]);
         setError("");
       } catch (err) {
         console.error("Error fetching teams:", err);
