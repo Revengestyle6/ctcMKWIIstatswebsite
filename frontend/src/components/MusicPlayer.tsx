@@ -93,13 +93,13 @@ export default function MusicPlayer() {
 
   return (
     <>
-      {/* Hidden audio element */}
+      {/* Hidden audio element - lazy load only when needed */}
       {currentTrack && (
         <audio
           ref={audioRef}
           src={currentTrack}
           onEnded={handleTrackEnd}
-          preload="auto"
+          preload="metadata"
         />
       )}
 

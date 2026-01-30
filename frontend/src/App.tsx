@@ -6,26 +6,11 @@ import TopTracks from "./components/TopTracks";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import BestMatchups from "./components/BestMatchups";
 import MusicPlayer from "./components/MusicPlayer";
-import React, { useEffect } from "react";
+import React from "react";
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://ctc-mkwii-api-production.up.railway.app';
 
 export default function App(): React.JSX.Element {
-  useEffect(() => {
-    // Make an API call on page load
-    const fetchInitialData = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/teams`);
-        const data = await response.json();
-        console.log("Initial API call successful:", data);
-      } catch (error) {
-        console.error("Error fetching initial data:", error);
-      }
-    };
-
-    fetchInitialData();
-  }, []);
-
   return (
     <BrowserRouter>
       <BackgroundSlideshow />
