@@ -8,7 +8,7 @@ export default function HomePage(): React.JSX.Element {
         <div className="mx-auto max-w-7xl px-6 py-12 text-center">
           {/* Logo */}
         <img 
-          src="/images/CTC_LOGO/ctclogo.png" 
+          src="/images/CTC_LOGO/ctclogo.webp" 
           alt="Logo" 
           className="w-24 h-24 mx-auto mb-4 rounded-lg"
           loading="lazy"

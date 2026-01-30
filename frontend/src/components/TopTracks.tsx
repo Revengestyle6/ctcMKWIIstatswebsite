@@ -83,7 +83,7 @@ export default function TopTracks(): React.JSX.Element {
           <h1 className="text-3xl font-bold text-center flex-1">Best Track Averages</h1>
           <div className="w-32"></div>
             <img 
-            src="/images/CTC_LOGO/ctclogo.png" 
+            src="/images/CTC_LOGO/ctclogo.webp" 
             alt="Logo" 
             className="w-12 h-12 rounded-lg"
             loading="lazy"
