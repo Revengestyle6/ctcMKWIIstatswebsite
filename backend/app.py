@@ -149,5 +149,22 @@ def api_top_tracks():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 400
 
+@app.route("/api/top-teams-on-track", methods=["GET"])
+@cache.cached(timeout=3600, query_string=True)
+def api_top_teams_on_track():
+    track = request.args.get("track")
+    min_races = int(request.args.get("min_races", 2))
+    division = request.args.get("division", "1_2")
+    if not track:
+        return jsonify({"error": "Track name is required"}), 400
+    try:
+        results = stats.findtopteamsontrack(track, min_races=min_races, division=division)
+        return jsonify(results)
+    except Exception as e:
+        print(f"Error in api_top_teams_on_track: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 400
+
 if __name__ == "__main__":
     app.run(debug=True)

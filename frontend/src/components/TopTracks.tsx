@@ -9,6 +9,7 @@ export default function TopTracks(): React.JSX.Element {
   const [tracks, setTracks] = useState<string[]>([]);
   const [selectedTrack, setSelectedTrack] = useState<string>("");
   const [topPlayers, setTopPlayers] = useState<string[]>([]);
+  const [topTeams, setTopTeams] = useState<string[]>([]);
   const [division, setDivision] = useState<string>("1_2");
   const [minRaces, setMinRaces] = useState<number>(2);
   const [loading, setLoading] = useState(false);
@@ -41,18 +42,28 @@ export default function TopTracks(): React.JSX.Element {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(
+        const playersRes = await fetch(
           `${API_URL}/api/top-tracks?track=${encodeURIComponent(
             selectedTrack
           )}&min_races=${minRaces}&division=${division}`
         );
-        if (!res.ok) throw new Error("Failed to fetch top players");
-        const data: string[] = await res.json();
-        setTopPlayers(data);
+        if (!playersRes.ok) throw new Error("Failed to fetch top players");
+        const playersData: string[] = await playersRes.json();
+        setTopPlayers(playersData);
+
+        const teamsRes = await fetch(
+          `${API_URL}/api/top-teams-on-track?track=${encodeURIComponent(
+            selectedTrack
+          )}&min_races=${minRaces}&division=${division}`
+        );
+        if (!teamsRes.ok) throw new Error("Failed to fetch top teams");
+        const teamsData: string[] = await teamsRes.json();
+        setTopTeams(teamsData);
       } catch (err) {
         console.error("Error fetching track data:", err);
-        setError("Failed to fetch top players for this track");
+        setError("Failed to fetch data for this track");
         setTopPlayers([]);
+        setTopTeams([]);
       } finally {
         setLoading(false);
       }
@@ -141,47 +152,72 @@ export default function TopTracks(): React.JSX.Element {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-8 text-gray-300">
-            Loading top players...
+            Loading data...
           </div>
         )}
 
-        {/* Results */}
-        {!loading && topPlayers.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-2xl font-bold mb-4">
-              Top Players on {selectedTrack}
-            </h2>
-            <div className="bg-black/90 rounded-lg border border-white/20 overflow-hidden">
-              {topPlayers
-                .filter((player) => {
-                  // Extract score from format: "player - avg pts (races races)"
-                  const scoreMatch = player.match(/(\d+(?:\.\d+)?)\s*pts/);
-                  const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
-                  return score >= 2;
-                })
-                .map((player, index) => (
-                  <div
-                    key={index}
-                    className="px-6 py-4 border-b border-white/10 last:border-b-0 hover:bg-white/5 transition"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <span className="text-xl font-semibold text-blue-300">
-                          #{index + 1}
-                        </span>
-                        <p className="text-white mt-1">{player}</p>
+        {/* Side-by-side results */}
+        {!loading && (topPlayers.length > 0 || topTeams.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Players Column */}
+            {topPlayers.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-2xl font-bold mb-4">Top Players</h2>
+                <div className="bg-black/90 rounded-lg border border-white/20 overflow-y-auto max-h-96">
+                  {topPlayers
+                    .filter((player) => {
+                      const scoreMatch = player.match(/(\d+(?:\.\d+)?)\s*pts/);
+                      const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
+                      return score >= 2;
+                    })
+                    .map((player, index) => (
+                      <div
+                        key={index}
+                        className="px-6 py-4 border-b border-white/10 last:border-b-0 hover:bg-white/5 transition"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <span className="text-xl font-semibold text-blue-300">
+                              #{index + 1}
+                            </span>
+                            <p className="text-white mt-1">{player}</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
+                    ))}
+                </div>
+              </div>
+            )}
 
-        {/* No Results */}
-        {!loading && topPlayers.length === 0 && !error && (
-          <div className="text-center py-8 text-gray-400">
-            No players found for the selected track.
+            {/* Teams Column */}
+            {topTeams.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-2xl font-bold mb-4">Top Teams</h2>
+                <div className="bg-black/90 rounded-lg border border-white/20 overflow-y-auto max-h-96">
+                  {topTeams
+                    .filter((team) => {
+                      const scoreMatch = team.match(/(\d+(?:\.\d+)?)\s*pts/);
+                      const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
+                      return score >= 2;
+                    })
+                    .map((team, index) => (
+                      <div
+                        key={index}
+                        className="px-6 py-4 border-b border-white/10 last:border-b-0 hover:bg-white/5 transition"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <span className="text-xl font-semibold text-blue-300">
+                              #{index + 1}
+                            </span>
+                            <p className="text-white mt-1">{team}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
