@@ -1,16 +1,16 @@
 team,player,track,score
-[80],Honami Ichinose,Alpine Peak,15
-[80],Honami Ichinose,Desert Fort,15
-[80],Honami Ichinose,Sandstone Cliffs,8
-[80],Honami Ichinose,Strobenz Desert Illusion,6
-[80],Honami Ichinose,Lava Road,12
-[80],Honami Ichinose,Starry Cityscape,6
-[80],Honami Ichinose,Siberian Chateau,10
-[80],Honami Ichinose,Thump Bump Forest,12
-[80],Honami Ichinose,Glimmer Express Trains,12
-[80],Honami Ichinose,Lost Fortress,10
-[80],Honami Ichinose,Christmas Court,12
-[80],Honami Ichinose,Windy Whirl,8
+[80],Wolfpack,Alpine Peak,15
+[80],Wolfpack,Desert Fort,15
+[80],Wolfpack,Sandstone Cliffs,8
+[80],Wolfpack,Strobenz Desert Illusion,6
+[80],Wolfpack,Lava Road,12
+[80],Wolfpack,Starry Cityscape,6
+[80],Wolfpack,Siberian Chateau,10
+[80],Wolfpack,Thump Bump Forest,12
+[80],Wolfpack,Glimmer Express Trains,12
+[80],Wolfpack,Lost Fortress,10
+[80],Wolfpack,Christmas Court,12
+[80],Wolfpack,Windy Whirl,8
 [80],GAMT Eric,Alpine Peak,12
 [80],GAMT Eric,Desert Fort,2
 [80],GAMT Eric,Sandstone Cliffs,2
@@ -351,18 +351,18 @@ SLAY,Dots,Marble Towers,15
 SLAY,Dots,Starry Cityscape,8
 SLAY,Dots,Cruel Angel's Thesis,15
 SLAY,Dots,GBA Bowser Castle 4,6
-SLAY,Yu Narukami,Dark Matter Shrine,6
-SLAY,Yu Narukami,SNES Bowser Castle 3,8
-SLAY,Yu Narukami,Spooky Swamp,2
-SLAY,Yu Narukami,SRB2K Green Hill Zone,3
-SLAY,Yu Narukami,Skyline Avenue,3
-SLAY,Yu Narukami,Cosmic Grove,10
-SLAY,Yu Narukami,Wario's Climate Cataclysm,8
-SLAY,Yu Narukami,GBA Bowser Castle 2,15
-SLAY,Yu Narukami,Marble Towers,10
-SLAY,Yu Narukami,Starry Cityscape,10
-SLAY,Yu Narukami,Cruel Angel's Thesis,3
-SLAY,Yu Narukami,GBA Bowser Castle 4,10
+SLAY,Grantworth,Dark Matter Shrine,6
+SLAY,Grantworth,SNES Bowser Castle 3,8
+SLAY,Grantworth,Spooky Swamp,2
+SLAY,Grantworth,SRB2K Green Hill Zone,3
+SLAY,Grantworth,Skyline Avenue,3
+SLAY,Grantworth,Cosmic Grove,10
+SLAY,Grantworth,Wario's Climate Cataclysm,8
+SLAY,Grantworth,GBA Bowser Castle 2,15
+SLAY,Grantworth,Marble Towers,10
+SLAY,Grantworth,Starry Cityscape,10
+SLAY,Grantworth,Cruel Angel's Thesis,3
+SLAY,Grantworth,GBA Bowser Castle 4,10
 SLAY,lsuth,Dark Matter Shrine,12
 SLAY,lsuth,SNES Bowser Castle 3,6
 SLAY,lsuth,Spooky Swamp,15
@@ -507,18 +507,18 @@ SN,Bowser498,DS Tick-Tock Clock,8
 SN,Bowser498,GBA Snow Land,6
 SN,Bowser498,Dark Matter Shrine,4
 SN,Bowser498,Desert Fort,15
-SN,aeterna (bag),Superstar Dystopia,1
-SN,aeterna (bag),Windy Whirl,1
-SN,aeterna (bag),Underground Sky,0
-SN,aeterna (bag),Marble Towers,1
-SN,aeterna (bag),3DS Neo Bowser City,0
-SN,aeterna (bag),Starry Cityscape,0
-SN,aeterna (bag),GBA Bowser Castle 2,1
-SN,aeterna (bag),Big Nature City,0
-SN,aeterna (bag),DS Tick-Tock Clock,1
-SN,aeterna (bag),GBA Snow Land,0
-SN,aeterna (bag),Dark Matter Shrine,1
-SN,aeterna (bag),Desert Fort,0
+SN,Silver (bag),Superstar Dystopia,1
+SN,Silver (bag),Windy Whirl,1
+SN,Silver (bag),Underground Sky,0
+SN,Silver (bag),Marble Towers,1
+SN,Silver (bag),3DS Neo Bowser City,0
+SN,Silver (bag),Starry Cityscape,0
+SN,Silver (bag),GBA Bowser Castle 2,1
+SN,Silver (bag),Big Nature City,0
+SN,Silver (bag),DS Tick-Tock Clock,1
+SN,Silver (bag),GBA Snow Land,0
+SN,Silver (bag),Dark Matter Shrine,1
+SN,Silver (bag),Desert Fort,0
 FIB,Cow Jah (bag),Superstar Dystopia,0
 FIB,Cow Jah (bag),Windy Whirl,0
 FIB,Cow Jah (bag),Underground Sky,1
@@ -567,18 +567,18 @@ FIB,Woomy (bag),DS Tick-Tock Clock,0
 FIB,Woomy (bag),GBA Snow Land,0
 FIB,Woomy (bag),Dark Matter Shrine,0
 FIB,Woomy (bag),Desert Fort,0
-FIB,Carl but,Superstar Dystopia,3
-FIB,Carl but,Windy Whirl,2
-FIB,Carl but,Underground Sky,3
-FIB,Carl but,Marble Towers,2
-FIB,Carl but,3DS Neo Bowser City,4
-FIB,Carl but,Starry Cityscape,3
-FIB,Carl but,GBA Bowser Castle 2,4
-FIB,Carl but,Big Nature City,4
-FIB,Carl but,DS Tick-Tock Clock,2
-FIB,Carl but,GBA Snow Land,4
-FIB,Carl but (bag),Dark Matter Shrine,0
-FIB,Carl but,Desert Fort,3
+FIB,Pat1,Superstar Dystopia,3
+FIB,Pat1,Windy Whirl,2
+FIB,Pat1,Underground Sky,3
+FIB,Pat1,Marble Towers,2
+FIB,Pat1,3DS Neo Bowser City,4
+FIB,Pat1,Starry Cityscape,3
+FIB,Pat1,GBA Bowser Castle 2,4
+FIB,Pat1,Big Nature City,4
+FIB,Pat1,DS Tick-Tock Clock,2
+FIB,Pat1,GBA Snow Land,4
+FIB,Pat1 (bag),Dark Matter Shrine,0
+FIB,Pat1,Desert Fort,3
 FIB,Jasonwhy,Superstar Dystopia,4
 FIB,Jasonwhy,Windy Whirl,8
 FIB,Jasonwhy,Underground Sky,4
@@ -789,17 +789,17 @@ Eι,Sparkster (bag),DS Rainbow Road,1
 [80],Masako,Fort Francis,3
 [80],Masako,Thump Bump Forest,6
 [80],Masako,DS Rainbow Road,10
-[80],Dazai,Lost Fortress,10
-[80],Dazai,GBA Snow Land,8
-[80],Dazai,Starry Cityscape,3
-[80],Dazai,Ruinated Peach's Castle,2
-[80],Dazai,Rush City Run,12
-[80],Dazai,Dark Matter Shrine,15
-[80],Dazai,Anthill & Apian Apts.,2
-[80],Dazai,Sandy Clocktower,6
-[80],Dazai,Fort Francis,12
-[80],Dazai,Thump Bump Forest,15
-[80],Dazai,DS Rainbow Road,3
+[80],Wolfpack,Lost Fortress,10
+[80],Wolfpack,GBA Snow Land,8
+[80],Wolfpack,Starry Cityscape,3
+[80],Wolfpack,Ruinated Peach's Castle,2
+[80],Wolfpack,Rush City Run,12
+[80],Wolfpack,Dark Matter Shrine,15
+[80],Wolfpack,Anthill & Apian Apts.,2
+[80],Wolfpack,Sandy Clocktower,6
+[80],Wolfpack,Fort Francis,12
+[80],Wolfpack,Thump Bump Forest,15
+[80],Wolfpack,DS Rainbow Road,3
 [80],GAMT Eric,Lost Fortress,3
 [80],GAMT Eric,GBA Snow Land,4
 [80],GAMT Eric,Starry Cityscape,2
@@ -1591,18 +1591,18 @@ SN,FolF,Big Nature City,10
 SN,FolF,Sandy Clocktower,10
 SN,FolF,Underground Sky,10
 SN,FolF,Cruel Angel's Thesis,3
-SN,aeterna (bag),Castle of Time,1
-SN,aeterna (bag),GBA Snow Land,1
-SN,aeterna (bag),Wario's Climate Cataclysm,1
-SN,aeterna (bag),DS Bowser Castle,0
-SN,aeterna (bag),Strobenz Desert Illusion,1
-SN,aeterna (bag),Desert Fort,0
-SN,aeterna (bag),Siberian Chateau,1
-SN,aeterna (bag),Lost Fortress,1
-SN,aeterna (bag),Big Nature City,1
-SN,aeterna (bag),Sandy Clocktower,1
-SN,aeterna (bag),Underground Sky,1
-SN,aeterna (bag),Cruel Angel's Thesis,0
+SN,Silver (bag),Castle of Time,1
+SN,Silver (bag),GBA Snow Land,1
+SN,Silver (bag),Wario's Climate Cataclysm,1
+SN,Silver (bag),DS Bowser Castle,0
+SN,Silver (bag),Strobenz Desert Illusion,1
+SN,Silver (bag),Desert Fort,0
+SN,Silver (bag),Siberian Chateau,1
+SN,Silver (bag),Lost Fortress,1
+SN,Silver (bag),Big Nature City,1
+SN,Silver (bag),Sandy Clocktower,1
+SN,Silver (bag),Underground Sky,1
+SN,Silver (bag),Cruel Angel's Thesis,0
 [80],TigerClamory,Castle of Time,8
 [80],TigerClamory,GBA Snow Land,15
 [80],TigerClamory,Wario's Climate Cataclysm,3
@@ -2131,18 +2131,18 @@ SN,FolF,N64 Wario Stadium,8
 SN,FolF,Super Sky Courtyard,2
 SN,FolF,Castle of Time,3
 SN,FolF,Skyline Avenue,4
-SN,aeterna (bag),Hell Pyramid,1
-SN,aeterna (bag),GBA Bowser Castle 4,0
-SN,aeterna (bag),Toadette's Castle,0
-SN,aeterna (bag),Wario's Climate Cataclysm,0
-SN,aeterna (bag),Dark Matter Shrine,1
-SN,aeterna (bag),Desert Fort,1
-SN,aeterna (bag),Thump Bump Forest,1
-SN,aeterna (bag),Marble Towers,1
-SN,aeterna (bag),N64 Wario Stadium,1
-SN,aeterna (bag),Super Sky Courtyard,0
-SN,aeterna (bag),Castle of Time,1
-SN,aeterna,Skyline Avenue,6
+SN,Silver (bag),Hell Pyramid,1
+SN,Silver (bag),GBA Bowser Castle 4,0
+SN,Silver (bag),Toadette's Castle,0
+SN,Silver (bag),Wario's Climate Cataclysm,0
+SN,Silver (bag),Dark Matter Shrine,1
+SN,Silver (bag),Desert Fort,1
+SN,Silver (bag),Thump Bump Forest,1
+SN,Silver (bag),Marble Towers,1
+SN,Silver (bag),N64 Wario Stadium,1
+SN,Silver (bag),Super Sky Courtyard,0
+SN,Silver (bag),Castle of Time,1
+SN,Silver,Skyline Avenue,6
 fr,squirrel,Rush City Run,4
 fr,squirrel,Castle of Darkness,2
 fr,squirrel,Sandstone Cliffs,10
@@ -2433,18 +2433,18 @@ FIB,callum (bag),Pianta Shore,0
 μ's,Loocas (bag),Starry Cityscape,0
 μ's,Loocas (bag),Castle of Time,0
 μ's,Loocas (bag),Wiimmfi Wonder World,0
-[80],Honami Ichinose,Crystal Dungeon,2
-[80],Honami Ichinose,Rush City Run,12
-[80],Honami Ichinose,GBA Snow Land,2
-[80],Honami Ichinose,Windy Whirl,4
-[80],Honami Ichinose,Mushroom Island,15
-[80],Honami Ichinose,3DS DK Jungle,6
-[80],Honami Ichinose,N64 Banshee Boardwalk,3
-[80],Honami Ichinose,Infernal Pipeyard,8
-[80],Honami Ichinose,Yoshi Lagoon,10
-[80],Honami Ichinose,Starry Cityscape,12
-[80],Honami Ichinose,Castle of Time,12
-[80],Honami Ichinose,Wiimmfi Wonder World,8
+[80],Wolfpack,Crystal Dungeon,2
+[80],Wolfpack,Rush City Run,12
+[80],Wolfpack,GBA Snow Land,2
+[80],Wolfpack,Windy Whirl,4
+[80],Wolfpack,Mushroom Island,15
+[80],Wolfpack,3DS DK Jungle,6
+[80],Wolfpack,N64 Banshee Boardwalk,3
+[80],Wolfpack,Infernal Pipeyard,8
+[80],Wolfpack,Yoshi Lagoon,10
+[80],Wolfpack,Starry Cityscape,12
+[80],Wolfpack,Castle of Time,12
+[80],Wolfpack,Wiimmfi Wonder World,8
 [80],TigerClamory,Crystal Dungeon,15
 [80],TigerClamory,Rush City Run,4
 [80],TigerClamory,GBA Snow Land,12
@@ -2793,18 +2793,18 @@ SN,JC,GBA Bowser Castle 4,2
 SN,JC,Obstagoon's Palace,12
 SN,JC,Glimmer Express Trains,2
 SN,JC,Underground Sky,6
-SN,aeterna (bag),Marble Towers,1
-SN,aeterna (bag),GBA Bowser Castle 2,1
-SN,aeterna (bag),Desert Fort,1
-SN,aeterna (bag),Skyline Avenue,1
-SN,aeterna (bag),Super Sky Courtyard,1
-SN,aeterna (bag),Wario's Climate Cataclysm,0
-SN,aeterna (bag),Starry Cityscape,0
-SN,aeterna (bag),Siberian Chateau,1
-SN,aeterna (bag),GBA Bowser Castle 4,1
-SN,aeterna (bag),Obstagoon's Palace,0
-SN,aeterna (bag),Glimmer Express Trains,1
-SN,aeterna (bag),Underground Sky,0
+SN,Silver (bag),Marble Towers,1
+SN,Silver (bag),GBA Bowser Castle 2,1
+SN,Silver (bag),Desert Fort,1
+SN,Silver (bag),Skyline Avenue,1
+SN,Silver (bag),Super Sky Courtyard,1
+SN,Silver (bag),Wario's Climate Cataclysm,0
+SN,Silver (bag),Starry Cityscape,0
+SN,Silver (bag),Siberian Chateau,1
+SN,Silver (bag),GBA Bowser Castle 4,1
+SN,Silver (bag),Obstagoon's Palace,0
+SN,Silver (bag),Glimmer Express Trains,1
+SN,Silver (bag),Underground Sky,0
 CPFG,Lochie,Marble Towers,12
 CPFG,Lochie,GBA Bowser Castle 2,15
 CPFG,Lochie,Desert Fort,12
@@ -2900,13 +2900,13 @@ CPFG,mysterious (bag),Underground Sky,1
 μ's,Loocas (bag),Mushroom Island,0
 μ's,Loocas (bag),Obstagoon's Palace,0
 μ's,Loocas (bag),Toad's Temple,1
-[80],Honami Ichinose,Phendrana Frostbite,3
-[80],Honami Ichinose,Rush City Run,4
-[80],Honami Ichinose,Yoshi Lagoon,12
-[80],Honami Ichinose,Toadette's Castle,15
-[80],Honami Ichinose,Mushroom Island,8
-[80],Honami Ichinose,Obstagoon's Palace,15
-[80],Honami Ichinose,Toad's Temple,10
+[80],Wolfpack,Phendrana Frostbite,3
+[80],Wolfpack,Rush City Run,4
+[80],Wolfpack,Yoshi Lagoon,12
+[80],Wolfpack,Toadette's Castle,15
+[80],Wolfpack,Mushroom Island,8
+[80],Wolfpack,Obstagoon's Palace,15
+[80],Wolfpack,Toad's Temple,10
 [80],GAMT Eric,Phendrana Frostbite,4
 [80],GAMT Eric,Rush City Run,12
 [80],GAMT Eric,Yoshi Lagoon,10
@@ -3122,18 +3122,18 @@ SLAY,Keagan,Siberian Chateau,15
 SLAY,Keagan,Aquadrom Stage,8
 SLAY,Keagan,Dark Matter Shrine,4
 SLAY,Keagan,Superstar Dystopia,3
-SLAY,dystopian (bag),Fort Francis,0
-SLAY,dystopian (bag),Frantic Funyard,0
-SLAY,dystopian (bag),Midnight Museum,1
-SLAY,dystopian (bag),Pipe Underworld,0
-SLAY,dystopian (bag),The Great Apple War,0
-SLAY,dystopian (bag),Festival Town,0
-SLAY,dystopian (bag),Crystal Plains,0
-SLAY,dystopian (bag),Mushroom Peaks,1
-SLAY,dystopian (bag),Siberian Chateau,1
-SLAY,dystopian (bag),Aquadrom Stage,1
-SLAY,dystopian (bag),Dark Matter Shrine,0
-SLAY,dystopian (bag),Superstar Dystopia,0
+SLAY,JT (bag),Fort Francis,0
+SLAY,JT (bag),Frantic Funyard,0
+SLAY,JT (bag),Midnight Museum,1
+SLAY,JT (bag),Pipe Underworld,0
+SLAY,JT (bag),The Great Apple War,0
+SLAY,JT (bag),Festival Town,0
+SLAY,JT (bag),Crystal Plains,0
+SLAY,JT (bag),Mushroom Peaks,1
+SLAY,JT (bag),Siberian Chateau,1
+SLAY,JT (bag),Aquadrom Stage,1
+SLAY,JT (bag),Dark Matter Shrine,0
+SLAY,JT (bag),Superstar Dystopia,0
 Eι,Striker,Fort Francis,15
 Eι,Striker,Frantic Funyard,6
 Eι,Striker,Midnight Museum,8
@@ -3314,18 +3314,18 @@ SN,Bowser498,Toadette's Castle,4
 SN,Bowser498,Underground Sky,2
 SN,Bowser498,Mushroom Island,4
 SN,Bowser498,Yoshi Lagoon,6
-SN,aeterna (bag),Crystal Dungeon,1
-SN,aeterna (bag),Super Sky Courtyard,0
-SN,aeterna (bag),Wario's Climate Cataclysm,0
-SN,aeterna (bag),GBA Lakeside Park,0
-SN,aeterna (bag),Marble Towers,0
-SN,aeterna (bag),Rush City Run,1
-SN,aeterna (bag),Sandy Clocktower,1
-SN,aeterna (bag),Lava Road,0
-SN,aeterna (bag),Toadette's Castle,1
-SN,aeterna (bag),Underground Sky,1
-SN,aeterna (bag),Mushroom Island,0
-SN,aeterna (bag),Yoshi Lagoon,0
+SN,Silver (bag),Crystal Dungeon,1
+SN,Silver (bag),Super Sky Courtyard,0
+SN,Silver (bag),Wario's Climate Cataclysm,0
+SN,Silver (bag),GBA Lakeside Park,0
+SN,Silver (bag),Marble Towers,0
+SN,Silver (bag),Rush City Run,1
+SN,Silver (bag),Sandy Clocktower,1
+SN,Silver (bag),Lava Road,0
+SN,Silver (bag),Toadette's Castle,1
+SN,Silver (bag),Underground Sky,1
+SN,Silver (bag),Mushroom Island,0
+SN,Silver (bag),Yoshi Lagoon,0
 Eι,CC,Hell Pyramid,6
 Eι,CC,Midnight Museum,10
 Eι,CC,Ruinated Peach's Castle,12
@@ -3434,18 +3434,18 @@ SN,JC,Final Grounds,2
 SN,JC,N64 Wario Stadium,4
 SN,JC,Glacier Mine,2
 SN,JC,Rush City Run,4
-SN,aeterna (bag),Hell Pyramid,0
-SN,aeterna (bag),Midnight Museum,0
-SN,aeterna (bag),Ruinated Peach's Castle,1
-SN,aeterna (bag),Glimmer Express Trains,0
-SN,aeterna (bag),Rainbow Road: Solar Edition,0
-SN,aeterna (bag),Skyline Avenue,0
-SN,aeterna (bag),Mushroom Peaks,0
-SN,aeterna (bag),Lost Fortress,1
-SN,aeterna (bag),Final Grounds,1
-SN,aeterna (bag),N64 Wario Stadium,1
-SN,aeterna,Glacier Mine,8
-SN,aeterna,Rush City Run,3
+SN,Silver (bag),Hell Pyramid,0
+SN,Silver (bag),Midnight Museum,0
+SN,Silver (bag),Ruinated Peach's Castle,1
+SN,Silver (bag),Glimmer Express Trains,0
+SN,Silver (bag),Rainbow Road: Solar Edition,0
+SN,Silver (bag),Skyline Avenue,0
+SN,Silver (bag),Mushroom Peaks,0
+SN,Silver (bag),Lost Fortress,1
+SN,Silver (bag),Final Grounds,1
+SN,Silver (bag),N64 Wario Stadium,1
+SN,Silver,Glacier Mine,8
+SN,Silver,Rush City Run,3
 fr,squirrel,The Great Apple War,8
 fr,squirrel,Sahara Hideout,10
 fr,squirrel,Skyline Avenue,15
@@ -3542,18 +3542,18 @@ SLAY,Mystique,SRB2K Green Hill Zone,10
 SLAY,Mystique,Sandstone Cliffs,8
 SLAY,Mystique,GBA Cheep-Cheep Island,2
 SLAY,Mystique,Glimmer Express Trains,4
-SLAY,Yu Narukami,The Great Apple War,2
-SLAY,Yu Narukami,Sahara Hideout,2
-SLAY,Yu Narukami,Skyline Avenue,2
-SLAY,Yu Narukami,Cosmic Grove,4
-SLAY,Yu Narukami,Castle of Time,4
-SLAY,Yu Narukami,Darkness Temple,3
-SLAY,Yu Narukami,Dark Matter Shrine,2
-SLAY,Yu Narukami,GBA Bowser Castle 2,4
-SLAY,Yu Narukami,SRB2K Green Hill Zone,3
-SLAY,Yu Narukami,Sandstone Cliffs,10
-SLAY,Yu Narukami,GBA Cheep-Cheep Island,8
-SLAY,Yu Narukami,Glimmer Express Trains,15
+SLAY,Grantworth,The Great Apple War,2
+SLAY,Grantworth,Sahara Hideout,2
+SLAY,Grantworth,Skyline Avenue,2
+SLAY,Grantworth,Cosmic Grove,4
+SLAY,Grantworth,Castle of Time,4
+SLAY,Grantworth,Darkness Temple,3
+SLAY,Grantworth,Dark Matter Shrine,2
+SLAY,Grantworth,GBA Bowser Castle 2,4
+SLAY,Grantworth,SRB2K Green Hill Zone,3
+SLAY,Grantworth,Sandstone Cliffs,10
+SLAY,Grantworth,GBA Cheep-Cheep Island,8
+SLAY,Grantworth,Glimmer Express Trains,15
 SLAY,Bally (bag),The Great Apple War,1
 SLAY,Bally (bag),Sahara Hideout,1
 SLAY,Bally (bag),Skyline Avenue,1
@@ -3626,18 +3626,18 @@ CPFG,Star (bag),Ruinated Peach's Castle,1
 CPFG,Star (bag),Dark Matter Shrine,1
 CPFG,Star (bag),Strobenz Desert Illusion,0
 CPFG,Star,Lost Fortress,15
-[80],Honami Ichinose,Garden of Dreams,4
-[80],Honami Ichinose,Skyline Avenue,12
-[80],Honami Ichinose,Spooky Swamp,10
-[80],Honami Ichinose,Wolf Castlegrounds,3
-[80],Honami Ichinose,GBA Snow Land,10
-[80],Honami Ichinose,Toadette's Castle,8
-[80],Honami Ichinose,Final Grounds,6
-[80],Honami Ichinose,Starry Cityscape,10
-[80],Honami Ichinose,Ruinated Peach's Castle,12
-[80],Honami Ichinose,Dark Matter Shrine,2
-[80],Honami Ichinose,Strobenz Desert Illusion,8
-[80],Honami Ichinose (bag),Lost Fortress,0
+[80],Wolfpack,Garden of Dreams,4
+[80],Wolfpack,Skyline Avenue,12
+[80],Wolfpack,Spooky Swamp,10
+[80],Wolfpack,Wolf Castlegrounds,3
+[80],Wolfpack,GBA Snow Land,10
+[80],Wolfpack,Toadette's Castle,8
+[80],Wolfpack,Final Grounds,6
+[80],Wolfpack,Starry Cityscape,10
+[80],Wolfpack,Ruinated Peach's Castle,12
+[80],Wolfpack,Dark Matter Shrine,2
+[80],Wolfpack,Strobenz Desert Illusion,8
+[80],Wolfpack (bag),Lost Fortress,0
 [80],Froy,Garden of Dreams,6
 [80],Froy,Skyline Avenue,2
 [80],Froy,Spooky Swamp,6
@@ -3774,17 +3774,17 @@ Eι,Sparkster (bag),Skyline Avenue,1
 [80],cheesebait,Starry Cityscape,4
 [80],cheesebait,Glacier Mine,4
 [80],cheesebait,Skyline Avenue,3
-[80],Honami Ichinose,Marble Towers,6
-[80],Honami Ichinose,Midnight Museum,6
-[80],Honami Ichinose,Glimmer Express Trains,3
-[80],Honami Ichinose,Sandy Clocktower,2
-[80],Honami Ichinose,GBA Snow Land,4
-[80],Honami Ichinose,Christmas Court,2
-[80],Honami Ichinose,Big Nature City,8
-[80],Honami Ichinose,Desert Fort,8
-[80],Honami Ichinose,Starry Cityscape,6
-[80],Honami Ichinose,Glacier Mine,6
-[80],Honami Ichinose,Skyline Avenue,4
+[80],Wolfpack,Marble Towers,6
+[80],Wolfpack,Midnight Museum,6
+[80],Wolfpack,Glimmer Express Trains,3
+[80],Wolfpack,Sandy Clocktower,2
+[80],Wolfpack,GBA Snow Land,4
+[80],Wolfpack,Christmas Court,2
+[80],Wolfpack,Big Nature City,8
+[80],Wolfpack,Desert Fort,8
+[80],Wolfpack,Starry Cityscape,6
+[80],Wolfpack,Glacier Mine,6
+[80],Wolfpack,Skyline Avenue,4
 [80],Lawrence (bag),Marble Towers,0
 [80],Lawrence (bag),Midnight Museum,1
 [80],Lawrence (bag),Glimmer Express Trains,1
@@ -3904,18 +3904,18 @@ SLAY,Mystique,Frantic Funyard,2
 SLAY,Mystique,Siberian Chateau,2
 SLAY,Mystique,Cosmic Grove,8
 SLAY,Mystique,Starry Cityscape,8
-SLAY,dystopian (bag),Garden of Dreams,1
-SLAY,dystopian (bag),GBA Bowser Castle 2,1
-SLAY,dystopian (bag),Castle of Darkness,1
-SLAY,dystopian (bag),The Great Apple War,0
-SLAY,dystopian (bag),Dark Matter Shrine,1
-SLAY,dystopian (bag),Skyline Avenue,0
-SLAY,dystopian (bag),Spooky Swamp,0
-SLAY,dystopian (bag),Pipe Underworld,0
-SLAY,dystopian (bag),Frantic Funyard,1
-SLAY,dystopian (bag),Siberian Chateau,1
-SLAY,dystopian (bag),Cosmic Grove,1
-SLAY,dystopian (bag),Starry Cityscape,1
+SLAY,JT (bag),Garden of Dreams,1
+SLAY,JT (bag),GBA Bowser Castle 2,1
+SLAY,JT (bag),Castle of Darkness,1
+SLAY,JT (bag),The Great Apple War,0
+SLAY,JT (bag),Dark Matter Shrine,1
+SLAY,JT (bag),Skyline Avenue,0
+SLAY,JT (bag),Spooky Swamp,0
+SLAY,JT (bag),Pipe Underworld,0
+SLAY,JT (bag),Frantic Funyard,1
+SLAY,JT (bag),Siberian Chateau,1
+SLAY,JT (bag),Cosmic Grove,1
+SLAY,JT (bag),Starry Cityscape,1
 SN,JakeUS,Ice Cream Fortress,15
 SN,JakeUS,Sandy Clocktower,15
 SN,JakeUS,Aquadrom Stage,15
@@ -3964,18 +3964,18 @@ SN,Vrock02,DS Tick-Tock Clock,12
 SN,Vrock02,GCN Yoshi Circuit,4
 SN,Vrock02,Superstar Dystopia,12
 SN,Vrock02,Pianta Shore,8
-SN,aeterna (bag),Ice Cream Fortress,1
-SN,aeterna (bag),Sandy Clocktower,0
-SN,aeterna (bag),Aquadrom Stage,0
-SN,aeterna (bag),GBA Lakeside Park,1
-SN,aeterna (bag),Underground Sky,0
-SN,aeterna (bag),Starry Cityscape,0
-SN,aeterna (bag),GBA Snow Land,1
-SN,aeterna (bag),GBA Bowser Castle 4,0
-SN,aeterna (bag),DS Tick-Tock Clock,1
-SN,aeterna (bag),GCN Yoshi Circuit,0
-SN,aeterna (bag),Superstar Dystopia,1
-SN,aeterna (bag),Pianta Shore,1
+SN,Silver (bag),Ice Cream Fortress,1
+SN,Silver (bag),Sandy Clocktower,0
+SN,Silver (bag),Aquadrom Stage,0
+SN,Silver (bag),GBA Lakeside Park,1
+SN,Silver (bag),Underground Sky,0
+SN,Silver (bag),Starry Cityscape,0
+SN,Silver (bag),GBA Snow Land,1
+SN,Silver (bag),GBA Bowser Castle 4,0
+SN,Silver (bag),DS Tick-Tock Clock,1
+SN,Silver (bag),GCN Yoshi Circuit,0
+SN,Silver (bag),Superstar Dystopia,1
+SN,Silver (bag),Pianta Shore,1
 FIB,Cow Jah (bag),Ice Cream Fortress,0
 FIB,Cow Jah (bag),Sandy Clocktower,1
 FIB,Cow Jah (bag),Aquadrom Stage,1

@@ -11,30 +11,30 @@ team,player,track,score
 μ,starter,Fort Francis,12
 μ,starter,Luncheon Tour,15
 μ,starter,GBA Bowser Castle 4,10
-μ,zm,Shy Guy Lumber Co.,10
-μ,zm,GBA Sky Garden,8
-μ,zm,Lava Lake,15
-μ,zm,Starry Cityscape,8
-μ,zm,Undiscovered Offlimit,12
-μ,zm,Toad's Temple,6
-μ,zm,Lunar Lights,15
-μ,zm,Northern Heights,15
-μ,zm,Pipe Underworld,12
-μ,zm,Fort Francis,4
-μ,zm,Luncheon Tour,10
-μ,zm,GBA Bowser Castle 4,2
-μ,Aurorae,Shy Guy Lumber Co.,6
-μ,Aurorae,GBA Sky Garden,3
-μ,Aurorae,Lava Lake,6
-μ,Aurorae,Starry Cityscape,15
-μ,Aurorae,Undiscovered Offlimit,10
-μ,Aurorae,Toad's Temple,8
-μ,Aurorae,Lunar Lights,4
-μ,Aurorae,Northern Heights,12
-μ,Aurorae,Pipe Underworld,8
-μ,Aurorae,Fort Francis,6
-μ,Aurorae,Luncheon Tour,8
-μ,Aurorae,GBA Bowser Castle 4,15
+μ,Izumi,Shy Guy Lumber Co.,10
+μ,Izumi,GBA Sky Garden,8
+μ,Izumi,Lava Lake,15
+μ,Izumi,Starry Cityscape,8
+μ,Izumi,Undiscovered Offlimit,12
+μ,Izumi,Toad's Temple,6
+μ,Izumi,Lunar Lights,15
+μ,Izumi,Northern Heights,15
+μ,Izumi,Pipe Underworld,12
+μ,Izumi,Fort Francis,4
+μ,Izumi,Luncheon Tour,10
+μ,Izumi,GBA Bowser Castle 4,2
+μ,Empex,Shy Guy Lumber Co.,6
+μ,Empex,GBA Sky Garden,3
+μ,Empex,Lava Lake,6
+μ,Empex,Starry Cityscape,15
+μ,Empex,Undiscovered Offlimit,10
+μ,Empex,Toad's Temple,8
+μ,Empex,Lunar Lights,4
+μ,Empex,Northern Heights,12
+μ,Empex,Pipe Underworld,8
+μ,Empex,Fort Francis,6
+μ,Empex,Luncheon Tour,8
+μ,Empex,GBA Bowser Castle 4,15
 μ,coop,Shy Guy Lumber Co.,15
 μ,coop,GBA Sky Garden,4
 μ,coop,Lava Lake,4
@@ -167,18 +167,18 @@ vf,Jamo,Volcanic Valley,4
 vf,Jamo,Jiyuu Village,2
 vf,Jamo,Obstagoon's Palace,10
 vf,Jamo,Lava Lake,4
-vf,partyblob (bag),Autumn Leavesway,0
-vf,partyblob (bag),GBA Rainbow Road,0
-vf,partyblob (bag),Luncheon Tour,0
-vf,partyblob (bag),Color Wonderland,0
-vf,partyblob (bag),Cruel Angel's Thesis,0
-vf,partyblob (bag),Big Nature City,0
-vf,partyblob (bag),Undiscovered Offlimit,1
-vf,partyblob (bag),DS Tick-Tock Clock,1
-vf,partyblob (bag),Volcanic Valley,1
-vf,partyblob (bag),Jiyuu Village,1
-vf,partyblob (bag),Obstagoon's Palace,1
-vf,partyblob (bag),Lava Lake,0
+vf,Dots (bag),Autumn Leavesway,0
+vf,Dots (bag),GBA Rainbow Road,0
+vf,Dots (bag),Luncheon Tour,0
+vf,Dots (bag),Color Wonderland,0
+vf,Dots (bag),Cruel Angel's Thesis,0
+vf,Dots (bag),Big Nature City,0
+vf,Dots (bag),Undiscovered Offlimit,1
+vf,Dots (bag),DS Tick-Tock Clock,1
+vf,Dots (bag),Volcanic Valley,1
+vf,Dots (bag),Jiyuu Village,1
+vf,Dots (bag),Obstagoon's Palace,1
+vf,Dots (bag),Lava Lake,0
 Nω,kristhekit,Autumn Leavesway,3
 Nω,kristhekit,GBA Rainbow Road,12
 Nω,kristhekit,Luncheon Tour,10
@@ -191,18 +191,18 @@ Nω,kristhekit,Volcanic Valley,10
 Nω,kristhekit,Jiyuu Village,4
 Nω,kristhekit,Obstagoon's Palace,8
 Nω,kristhekit,Lava Lake,8
-Nω,Kasane Teto,Autumn Leavesway,8
-Nω,Kasane Teto,GBA Rainbow Road,8
-Nω,Kasane Teto,Luncheon Tour,4
-Nω,Kasane Teto,Color Wonderland,15
-Nω,Kasane Teto,Cruel Angel's Thesis,4
-Nω,Kasane Teto,Big Nature City,4
-Nω,Kasane Teto,Undiscovered Offlimit,2
-Nω,Kasane Teto,DS Tick-Tock Clock,10
-Nω,Kasane Teto,Volcanic Valley,15
-Nω,Kasane Teto,Jiyuu Village,3
-Nω,Kasane Teto,Obstagoon's Palace,15
-Nω,Kasane Teto,Lava Lake,3
+Nω,Saga,Autumn Leavesway,8
+Nω,Saga,GBA Rainbow Road,8
+Nω,Saga,Luncheon Tour,4
+Nω,Saga,Color Wonderland,15
+Nω,Saga,Cruel Angel's Thesis,4
+Nω,Saga,Big Nature City,4
+Nω,Saga,Undiscovered Offlimit,2
+Nω,Saga,DS Tick-Tock Clock,10
+Nω,Saga,Volcanic Valley,15
+Nω,Saga,Jiyuu Village,3
+Nω,Saga,Obstagoon's Palace,15
+Nω,Saga,Lava Lake,3
 Nω,ardux,Autumn Leavesway,15
 Nω,ardux,GBA Rainbow Road,3
 Nω,ardux,Luncheon Tour,3
@@ -323,18 +323,18 @@ G25,Sam G,The Great Apple War,4
 G25,Sam G,Flying Kingdom,15
 G25,Sam G,Lava Road,12
 G25,Sam G,τ-Cryovolcano,4
-G25,chatrestriction1,Vile Isle,8
-G25,chatrestriction1,Lost Fortress,3
-G25,chatrestriction1,Strobenz Desert Illusion,4
-G25,chatrestriction1,GBA Rainbow Road,4
-G25,chatrestriction1,Shy Guy Lumber Co.,3
-G25,chatrestriction1,GCN Dino Dino Jungle,3
-G25,chatrestriction1,Glimmer Express Trains,10
-G25,chatrestriction1,Starry Cityscape,8
-G25,chatrestriction1,The Great Apple War,2
-G25,chatrestriction1,Flying Kingdom,6
-G25,chatrestriction1,Lava Road,3
-G25,chatrestriction1,τ-Cryovolcano,2
+G25,Song,Vile Isle,8
+G25,Song,Lost Fortress,3
+G25,Song,Strobenz Desert Illusion,4
+G25,Song,GBA Rainbow Road,4
+G25,Song,Shy Guy Lumber Co.,3
+G25,Song,GCN Dino Dino Jungle,3
+G25,Song,Glimmer Express Trains,10
+G25,Song,Starry Cityscape,8
+G25,Song,The Great Apple War,2
+G25,Song,Flying Kingdom,6
+G25,Song,Lava Road,3
+G25,Song,τ-Cryovolcano,2
 G25,CT Inter,Vile Isle,4
 G25,CT Inter,Lost Fortress,2
 G25,CT Inter,Strobenz Desert Illusion,3
@@ -407,42 +407,42 @@ vf,warz,Dragon Burying Grounds,2
 vf,warz,Glimmer Express Trains,2
 vf,warz,Alpine Peak,2
 vf,warz,DS Shroom Ridge,3
-vf,om nom (bag),Infernal Pipeyard,0
-vf,om nom (bag),Lunar Lights,1
-vf,om nom (bag),Color Wonderland,1
-vf,om nom (bag),Toad's Temple,1
-vf,om nom (bag),GBA Snow Land,1
-vf,om nom (bag),Marble Towers,1
-vf,om nom (bag),Volcanic Valley,1
-vf,om nom (bag),Luigi's Island,1
-vf,om nom (bag),Dragon Burying Grounds,1
-vf,om nom (bag),Glimmer Express Trains,1
-vf,om nom (bag),Alpine Peak,0
-vf,om nom (bag),DS Shroom Ridge,1
-μ,Aurorae,Infernal Pipeyard,8
-μ,Aurorae,Lunar Lights,4
-μ,Aurorae,Color Wonderland,6
-μ,Aurorae,Toad's Temple,3
-μ,Aurorae,GBA Snow Land,8
-μ,Aurorae,Marble Towers,3
-μ,Aurorae,Volcanic Valley,10
-μ,Aurorae,Luigi's Island,12
-μ,Aurorae,Dragon Burying Grounds,12
-μ,Aurorae,Glimmer Express Trains,6
-μ,Aurorae,Alpine Peak,3
-μ,Aurorae,DS Shroom Ridge,8
-μ,sog,Infernal Pipeyard,10
-μ,sog,Lunar Lights,12
-μ,sog,Color Wonderland,15
-μ,sog,Toad's Temple,2
-μ,sog,GBA Snow Land,6
-μ,sog,Marble Towers,8
-μ,sog,Volcanic Valley,4
-μ,sog,Luigi's Island,4
-μ,sog,Dragon Burying Grounds,6
-μ,sog,Glimmer Express Trains,8
-μ,sog,Alpine Peak,4
-μ,sog (bag),DS Shroom Ridge,0
+vf,Dots (bag),Infernal Pipeyard,0
+vf,Dots (bag),Lunar Lights,1
+vf,Dots (bag),Color Wonderland,1
+vf,Dots (bag),Toad's Temple,1
+vf,Dots (bag),GBA Snow Land,1
+vf,Dots (bag),Marble Towers,1
+vf,Dots (bag),Volcanic Valley,1
+vf,Dots (bag),Luigi's Island,1
+vf,Dots (bag),Dragon Burying Grounds,1
+vf,Dots (bag),Glimmer Express Trains,1
+vf,Dots (bag),Alpine Peak,0
+vf,Dots (bag),DS Shroom Ridge,1
+μ,Empex,Infernal Pipeyard,8
+μ,Empex,Lunar Lights,4
+μ,Empex,Color Wonderland,6
+μ,Empex,Toad's Temple,3
+μ,Empex,GBA Snow Land,8
+μ,Empex,Marble Towers,3
+μ,Empex,Volcanic Valley,10
+μ,Empex,Luigi's Island,12
+μ,Empex,Dragon Burying Grounds,12
+μ,Empex,Glimmer Express Trains,6
+μ,Empex,Alpine Peak,3
+μ,Empex,DS Shroom Ridge,8
+μ,Izumi,Infernal Pipeyard,10
+μ,Izumi,Lunar Lights,12
+μ,Izumi,Color Wonderland,15
+μ,Izumi,Toad's Temple,2
+μ,Izumi,GBA Snow Land,6
+μ,Izumi,Marble Towers,8
+μ,Izumi,Volcanic Valley,4
+μ,Izumi,Luigi's Island,4
+μ,Izumi,Dragon Burying Grounds,6
+μ,Izumi,Glimmer Express Trains,8
+μ,Izumi,Alpine Peak,4
+μ,Izumi (bag),DS Shroom Ridge,0
 μ,starter,Infernal Pipeyard,12
 μ,starter,Lunar Lights,8
 μ,starter,Color Wonderland,3
@@ -491,18 +491,18 @@ G25,glw,Alpine Peak,6
 G25,glw,GCN Mushroom Bridge,10
 G25,glw,Color Wonderland,15
 G25,glw,DS Tick-Tock Clock,15
-G25,chatrestriction1,Siberian Chateau,15
-G25,chatrestriction1,Superstar Dystopia,6
-G25,chatrestriction1,τ-Cryovolcano,8
-G25,chatrestriction1,Shy Guy Lumber Co.,12
-G25,chatrestriction1,Flying Kingdom,15
-G25,chatrestriction1,N64 Yoshi Valley,12
-G25,chatrestriction1,Starry Cityscape,12
-G25,chatrestriction1,SNES Choco Island 2,2
-G25,chatrestriction1,Alpine Peak,8
-G25,chatrestriction1,GCN Mushroom Bridge,4
-G25,chatrestriction1,Color Wonderland,3
-G25,chatrestriction1,DS Tick-Tock Clock,6
+G25,Song,Siberian Chateau,15
+G25,Song,Superstar Dystopia,6
+G25,Song,τ-Cryovolcano,8
+G25,Song,Shy Guy Lumber Co.,12
+G25,Song,Flying Kingdom,15
+G25,Song,N64 Yoshi Valley,12
+G25,Song,Starry Cityscape,12
+G25,Song,SNES Choco Island 2,2
+G25,Song,Alpine Peak,8
+G25,Song,GCN Mushroom Bridge,4
+G25,Song,Color Wonderland,3
+G25,Song,DS Tick-Tock Clock,6
 G25,Sam G,Siberian Chateau,8
 G25,Sam G,Superstar Dystopia,12
 G25,Sam G,τ-Cryovolcano,3
@@ -599,30 +599,30 @@ ZogZhit,guero (bag),Alpine Peak,0
 ZogZhit,guero (bag),GCN Mushroom Bridge,0
 ZogZhit,guero (bag),Color Wonderland,0
 ZogZhit,guero (bag),DS Tick-Tock Clock,1
-μ,Aurorae,Flying Kingdom,4
-μ,Aurorae,GBA Snow Land,3
-μ,Aurorae,DS Tick-Tock Clock,10
-μ,Aurorae,GCN Dino Dino Jungle,6
-μ,Aurorae,Northern Heights,10
-μ,Aurorae,Undiscovered Offlimit,15
-μ,Aurorae,Fort Francis,15
-μ,Aurorae,SNES Donut Plains 3,10
-μ,Aurorae,Christmas Court,6
-μ,Aurorae,Desert Fort,10
-μ,Aurorae,Vile Isle,15
-μ,Aurorae,Cruel Angel's Thesis,10
-μ,sog,Flying Kingdom,3
-μ,sog,GBA Snow Land,6
-μ,sog,DS Tick-Tock Clock,15
-μ,sog,GCN Dino Dino Jungle,15
-μ,sog,Northern Heights,15
-μ,sog,Undiscovered Offlimit,4
-μ,sog,Fort Francis,8
-μ,sog,SNES Donut Plains 3,15
-μ,sog,Christmas Court,8
-μ,sog,Desert Fort,6
-μ,sog,Vile Isle,6
-μ,sog,Cruel Angel's Thesis,6
+μ,Empex,Flying Kingdom,4
+μ,Empex,GBA Snow Land,3
+μ,Empex,DS Tick-Tock Clock,10
+μ,Empex,GCN Dino Dino Jungle,6
+μ,Empex,Northern Heights,10
+μ,Empex,Undiscovered Offlimit,15
+μ,Empex,Fort Francis,15
+μ,Empex,SNES Donut Plains 3,10
+μ,Empex,Christmas Court,6
+μ,Empex,Desert Fort,10
+μ,Empex,Vile Isle,15
+μ,Empex,Cruel Angel's Thesis,10
+μ,Izumi,Flying Kingdom,3
+μ,Izumi,GBA Snow Land,6
+μ,Izumi,DS Tick-Tock Clock,15
+μ,Izumi,GCN Dino Dino Jungle,15
+μ,Izumi,Northern Heights,15
+μ,Izumi,Undiscovered Offlimit,4
+μ,Izumi,Fort Francis,8
+μ,Izumi,SNES Donut Plains 3,15
+μ,Izumi,Christmas Court,8
+μ,Izumi,Desert Fort,6
+μ,Izumi,Vile Isle,6
+μ,Izumi,Cruel Angel's Thesis,6
 μ,Q Sahab,Flying Kingdom,8
 μ,Q Sahab,GBA Snow Land,4
 μ,Q Sahab,DS Tick-Tock Clock,6
@@ -767,18 +767,18 @@ vf,homri,SNES Donut Plains 3,3
 vf,homri,Undiscovered Offlimit,3
 vf,homri,GBA Rainbow Road,4
 vf,homri,Glimmer Express Trains,2
-vf,om nom (bag),Candy Coaster,0
-vf,om nom (bag),Lava Lake,0
-vf,om nom (bag),Marble Towers,1
-vf,om nom (bag),GBA Snow Land,1
-vf,om nom (bag),Luigi's Island,0
-vf,om nom (bag),Autumn Leavesway,1
-vf,om nom (bag),Alpine Peak,1
-vf,om nom (bag),Infernal Pipeyard,0
-vf,om nom (bag),SNES Donut Plains 3,1
-vf,om nom (bag),Undiscovered Offlimit,0
-vf,om nom (bag),GBA Rainbow Road,1
-vf,om nom (bag),Glimmer Express Trains,0
+vf,Dots (bag),Candy Coaster,0
+vf,Dots (bag),Lava Lake,0
+vf,Dots (bag),Marble Towers,1
+vf,Dots (bag),GBA Snow Land,1
+vf,Dots (bag),Luigi's Island,0
+vf,Dots (bag),Autumn Leavesway,1
+vf,Dots (bag),Alpine Peak,1
+vf,Dots (bag),Infernal Pipeyard,0
+vf,Dots (bag),SNES Donut Plains 3,1
+vf,Dots (bag),Undiscovered Offlimit,0
+vf,Dots (bag),GBA Rainbow Road,1
+vf,Dots (bag),Glimmer Express Trains,0
 Nω,Tiger,Candy Coaster,12
 Nω,Tiger,Lava Lake,10
 Nω,Tiger,Marble Towers,12
@@ -791,18 +791,18 @@ Nω,Tiger,SNES Donut Plains 3,2
 Nω,Tiger,Undiscovered Offlimit,12
 Nω,Tiger,GBA Rainbow Road,10
 Nω,Tiger,Glimmer Express Trains,6
-Nω,Kasane Teto,Candy Coaster,2
-Nω,Kasane Teto,Lava Lake,3
-Nω,Kasane Teto,Marble Towers,6
-Nω,Kasane Teto,GBA Snow Land,4
-Nω,Kasane Teto,Luigi's Island,10
-Nω,Kasane Teto,Autumn Leavesway,15
-Nω,Kasane Teto,Alpine Peak,10
-Nω,Kasane Teto,Infernal Pipeyard,15
-Nω,Kasane Teto,SNES Donut Plains 3,4
-Nω,Kasane Teto,Undiscovered Offlimit,4
-Nω,Kasane Teto,GBA Rainbow Road,2
-Nω,Kasane Teto,Glimmer Express Trains,15
+Nω,Saga,Candy Coaster,2
+Nω,Saga,Lava Lake,3
+Nω,Saga,Marble Towers,6
+Nω,Saga,GBA Snow Land,4
+Nω,Saga,Luigi's Island,10
+Nω,Saga,Autumn Leavesway,15
+Nω,Saga,Alpine Peak,10
+Nω,Saga,Infernal Pipeyard,15
+Nω,Saga,SNES Donut Plains 3,4
+Nω,Saga,Undiscovered Offlimit,4
+Nω,Saga,GBA Rainbow Road,2
+Nω,Saga,Glimmer Express Trains,15
 Nω,Lorone,Candy Coaster,3
 Nω,Lorone,Lava Lake,6
 Nω,Lorone,Marble Towers,2
@@ -839,18 +839,18 @@ Nω,fan (bag),SNES Donut Plains 3,0
 Nω,fan (bag),Undiscovered Offlimit,1
 Nω,fan (bag),GBA Rainbow Road,0
 Nω,fan (bag),Glimmer Express Trains,1
-μ,Aurorae,Infernal Pipeyard,15
-μ,Aurorae,Undiscovered Offlimit,15
-μ,Aurorae,Windy Whirl,12
-μ,Aurorae,Lava Lake,10
-μ,Aurorae,Luncheon Tour,8
-μ,Aurorae,Color Wonderland,4
-μ,Aurorae,Starry Cityscape,2
-μ,Aurorae,Fort Francis,2
-μ,Aurorae,DS Rainbow Road,4
-μ,Aurorae,Christmas Court,15
-μ,Aurorae,Luigi's Island,15
-μ,Aurorae,Pipe Underworld,10
+μ,Empex,Infernal Pipeyard,15
+μ,Empex,Undiscovered Offlimit,15
+μ,Empex,Windy Whirl,12
+μ,Empex,Lava Lake,10
+μ,Empex,Luncheon Tour,8
+μ,Empex,Color Wonderland,4
+μ,Empex,Starry Cityscape,2
+μ,Empex,Fort Francis,2
+μ,Empex,DS Rainbow Road,4
+μ,Empex,Christmas Court,15
+μ,Empex,Luigi's Island,15
+μ,Empex,Pipe Underworld,10
 μ,coop,Infernal Pipeyard,10
 μ,coop,Undiscovered Offlimit,4
 μ,coop,Windy Whirl,4
@@ -875,18 +875,18 @@ Nω,fan (bag),Glimmer Express Trains,1
 μ,starter,Christmas Court,10
 μ,starter,Luigi's Island,4
 μ,starter,Pipe Underworld,6
-μ,zm,Infernal Pipeyard,3
-μ,zm,Undiscovered Offlimit,2
-μ,zm,Windy Whirl,15
-μ,zm,Lava Lake,8
-μ,zm,Luncheon Tour,2
-μ,zm,Color Wonderland,10
-μ,zm,Starry Cityscape,10
-μ,zm,Fort Francis,12
-μ,zm,DS Rainbow Road,10
-μ,zm,Christmas Court,4
-μ,zm,Luigi's Island,3
-μ,zm,Pipe Underworld,15
+μ,Izumi,Infernal Pipeyard,3
+μ,Izumi,Undiscovered Offlimit,2
+μ,Izumi,Windy Whirl,15
+μ,Izumi,Lava Lake,8
+μ,Izumi,Luncheon Tour,2
+μ,Izumi,Color Wonderland,10
+μ,Izumi,Starry Cityscape,10
+μ,Izumi,Fort Francis,12
+μ,Izumi,DS Rainbow Road,10
+μ,Izumi,Christmas Court,4
+μ,Izumi,Luigi's Island,3
+μ,Izumi,Pipe Underworld,15
 μ,Bowser498 (bag),Infernal Pipeyard,1
 μ,Bowser498 (bag),Undiscovered Offlimit,1
 μ,Bowser498 (bag),Windy Whirl,0
@@ -923,18 +923,18 @@ Nω,Evasive,DS Rainbow Road,12
 Nω,Evasive,Christmas Court,2
 Nω,Evasive,Luigi's Island,6
 Nω,Evasive,Pipe Underworld,8
-Nω,Kasane Teto,Infernal Pipeyard,8
-Nω,Kasane Teto,Undiscovered Offlimit,8
-Nω,Kasane Teto,Windy Whirl,10
-Nω,Kasane Teto,Lava Lake,6
-Nω,Kasane Teto,Luncheon Tour,4
-Nω,Kasane Teto,Color Wonderland,3
-Nω,Kasane Teto,Starry Cityscape,6
-Nω,Kasane Teto,Fort Francis,8
-Nω,Kasane Teto,DS Rainbow Road,8
-Nω,Kasane Teto,Christmas Court,3
-Nω,Kasane Teto,Luigi's Island,2
-Nω,Kasane Teto,Pipe Underworld,2
+Nω,Saga,Infernal Pipeyard,8
+Nω,Saga,Undiscovered Offlimit,8
+Nω,Saga,Windy Whirl,10
+Nω,Saga,Lava Lake,6
+Nω,Saga,Luncheon Tour,4
+Nω,Saga,Color Wonderland,3
+Nω,Saga,Starry Cityscape,6
+Nω,Saga,Fort Francis,8
+Nω,Saga,DS Rainbow Road,8
+Nω,Saga,Christmas Court,3
+Nω,Saga,Luigi's Island,2
+Nω,Saga,Pipe Underworld,2
 Nω,ardux,Infernal Pipeyard,6
 Nω,ardux,Undiscovered Offlimit,10
 Nω,ardux,Windy Whirl,2
@@ -983,18 +983,18 @@ G25,Sam G,DS Tick-Tock Clock,10
 G25,Sam G,Siberian Chateau,10
 G25,Sam G,Superstar Dystopia,10
 G25,Sam G (bag),Desert Fort,0
-G25,chatrestriction1,Infernal Pipeyard,3
-G25,chatrestriction1,Volcanic Valley,6
-G25,chatrestriction1,Alpine Peak,4
-G25,chatrestriction1,Color Wonderland,8
-G25,chatrestriction1,Glimmer Express Trains,8
-G25,chatrestriction1,Vile Isle,15
-G25,chatrestriction1,Lunar Lights,3
-G25,chatrestriction1,Cruel Angel's Thesis,15
-G25,chatrestriction1,DS Tick-Tock Clock,4
-G25,chatrestriction1,Siberian Chateau,15
-G25,chatrestriction1,Superstar Dystopia,12
-G25,chatrestriction1,Desert Fort,4
+G25,Song,Infernal Pipeyard,3
+G25,Song,Volcanic Valley,6
+G25,Song,Alpine Peak,4
+G25,Song,Color Wonderland,8
+G25,Song,Glimmer Express Trains,8
+G25,Song,Vile Isle,15
+G25,Song,Lunar Lights,3
+G25,Song,Cruel Angel's Thesis,15
+G25,Song,DS Tick-Tock Clock,4
+G25,Song,Siberian Chateau,15
+G25,Song,Superstar Dystopia,12
+G25,Song,Desert Fort,4
 G25,cillian,Infernal Pipeyard,6
 G25,cillian,Volcanic Valley,12
 G25,cillian,Alpine Peak,2
@@ -1055,42 +1055,42 @@ vf,warz,DS Tick-Tock Clock,8
 vf,warz,Siberian Chateau,2
 vf,warz,Superstar Dystopia,6
 vf,warz,Desert Fort,3
-vf,hit 145 bomb car,Infernal Pipeyard,15
-vf,hit 145 bomb car,Volcanic Valley,2
-vf,hit 145 bomb car,Alpine Peak,10
-vf,hit 145 bomb car,Color Wonderland,3
-vf,hit 145 bomb car,Glimmer Express Trains,2
-vf,hit 145 bomb car,Vile Isle,6
-vf,hit 145 bomb car,Lunar Lights,2
-vf,hit 145 bomb car,Cruel Angel's Thesis,2
-vf,hit 145 bomb car,DS Tick-Tock Clock,2
-vf,hit 145 bomb car,Siberian Chateau,3
-vf,hit 145 bomb car,Superstar Dystopia,2
-vf,hit 145 bomb car,Desert Fort,6
-vf,uhhh bomb up,Infernal Pipeyard,15
-vf,uhhh bomb up,Volcanic Valley,2
-vf,uhhh bomb up,Alpine Peak,3
-vf,uhhh bomb up,Color Wonderland,3
-vf,uhhh bomb up (bag),Glimmer Express Trains,0
-vf,uhhh bomb up (bag),Vile Isle,0
-vf,uhhh bomb up (bag),Lunar Lights,0
-vf,uhhh bomb up (bag),Cruel Angel's Thesis,0
-vf,uhhh bomb up (bag),DS Tick-Tock Clock,0
-vf,uhhh bomb up (bag),Siberian Chateau,0
-vf,uhhh bomb up (bag),Superstar Dystopia,0
-vf,uhhh bomb up (bag),Desert Fort,0
-vf,partyblob (bag),Infernal Pipeyard,1
-vf,partyblob (bag),Volcanic Valley,0
-vf,partyblob (bag),Alpine Peak,0
-vf,partyblob (bag),Color Wonderland,0
-vf,partyblob (bag),Glimmer Express Trains,1
-vf,partyblob (bag),Vile Isle,0
-vf,partyblob (bag),Lunar Lights,1
-vf,partyblob (bag),Cruel Angel's Thesis,0
-vf,partyblob (bag),DS Tick-Tock Clock,0
-vf,partyblob (bag),Siberian Chateau,0
-vf,partyblob (bag),Superstar Dystopia,0
-vf,partyblob,Desert Fort,11
+vf,CrystallizedMage,Infernal Pipeyard,15
+vf,CrystallizedMage,Volcanic Valley,2
+vf,CrystallizedMage,Alpine Peak,10
+vf,CrystallizedMage,Color Wonderland,3
+vf,CrystallizedMage,Glimmer Express Trains,2
+vf,CrystallizedMage,Vile Isle,6
+vf,CrystallizedMage,Lunar Lights,2
+vf,CrystallizedMage,Cruel Angel's Thesis,2
+vf,CrystallizedMage,DS Tick-Tock Clock,2
+vf,CrystallizedMage,Siberian Chateau,3
+vf,CrystallizedMage,Superstar Dystopia,2
+vf,CrystallizedMage,Desert Fort,6
+vf,Klyde,Infernal Pipeyard,15
+vf,Klyde,Volcanic Valley,2
+vf,Klyde,Alpine Peak,3
+vf,Klyde,Color Wonderland,3
+vf,Klyde (bag),Glimmer Express Trains,0
+vf,Klyde (bag),Vile Isle,0
+vf,Klyde (bag),Lunar Lights,0
+vf,Klyde (bag),Cruel Angel's Thesis,0
+vf,Klyde (bag),DS Tick-Tock Clock,0
+vf,Klyde (bag),Siberian Chateau,0
+vf,Klyde (bag),Superstar Dystopia,0
+vf,Klyde (bag),Desert Fort,0
+vf,Dots (bag),Infernal Pipeyard,1
+vf,Dots (bag),Volcanic Valley,0
+vf,Dots (bag),Alpine Peak,0
+vf,Dots (bag),Color Wonderland,0
+vf,Dots (bag),Glimmer Express Trains,1
+vf,Dots (bag),Vile Isle,0
+vf,Dots (bag),Lunar Lights,1
+vf,Dots (bag),Cruel Angel's Thesis,0
+vf,Dots (bag),DS Tick-Tock Clock,0
+vf,Dots (bag),Siberian Chateau,0
+vf,Dots (bag),Superstar Dystopia,0
+vf,Dots,Desert Fort,11
 G25,ismail,Siberian Chateau,15
 G25,ismail,Lost Fortress,12
 G25,ismail,Marble Towers,3
@@ -1127,18 +1127,18 @@ G25,Sam G,Starry Cityscape,6
 G25,Sam G,3DS Music Park,12
 G25,Sam G,Candy Coaster,15
 G25,Sam G,Superstar Dystopia,6
-G25,eloslingshotdxcn,Siberian Chateau,2
-G25,eloslingshotdxcn,Lost Fortress,8
-G25,eloslingshotdxcn,Marble Towers,6
-G25,eloslingshotdxcn,Undiscovered Offlimit,8
-G25,eloslingshotdxcn,Cruel Angel's Thesis,8
-G25,eloslingshotdxcn,Big Nature City,8
-G25,eloslingshotdxcn,Color Wonderland,4
-G25,eloslingshotdxcn,Flying Kingdom,12
-G25,eloslingshotdxcn,Starry Cityscape,12
-G25,eloslingshotdxcn,3DS Music Park,2
-G25,eloslingshotdxcn,Candy Coaster,6
-G25,eloslingshotdxcn,Superstar Dystopia,10
+G25,Song,Siberian Chateau,2
+G25,Song,Lost Fortress,8
+G25,Song,Marble Towers,6
+G25,Song,Undiscovered Offlimit,8
+G25,Song,Cruel Angel's Thesis,8
+G25,Song,Big Nature City,8
+G25,Song,Color Wonderland,4
+G25,Song,Flying Kingdom,12
+G25,Song,Starry Cityscape,12
+G25,Song,3DS Music Park,2
+G25,Song,Candy Coaster,6
+G25,Song,Superstar Dystopia,10
 G25,squirrel (bag),Siberian Chateau,0
 G25,squirrel (bag),Lost Fortress,0
 G25,squirrel (bag),Marble Towers,0
@@ -1187,42 +1187,42 @@ vf,Jamo,Starry Cityscape,3
 vf,Jamo,3DS Music Park,8
 vf,Jamo,Candy Coaster,4
 vf,Jamo,Superstar Dystopia,3
-vf,uhhh bomb up,Siberian Chateau,3
-vf,uhhh bomb up,Lost Fortress,2
-vf,uhhh bomb up,Marble Towers,2
-vf,uhhh bomb up,Undiscovered Offlimit,4
-vf,uhhh bomb up,Cruel Angel's Thesis,4
-vf,uhhh bomb up,Big Nature City,2
-vf,uhhh bomb up,Color Wonderland,2
-vf,uhhh bomb up,Flying Kingdom,3
-vf,uhhh bomb up,Starry Cityscape,2
-vf,uhhh bomb up,3DS Music Park,6
-vf,uhhh bomb up,Candy Coaster,2
-vf,uhhh bomb up,Superstar Dystopia,2
-vf,om nom (bag),Siberian Chateau,1
-vf,om nom (bag),Lost Fortress,1
-vf,om nom (bag),Marble Towers,1
-vf,om nom (bag),Undiscovered Offlimit,1
-vf,om nom (bag),Cruel Angel's Thesis,1
-vf,om nom (bag),Big Nature City,0
-vf,om nom (bag),Color Wonderland,0
-vf,om nom (bag),Flying Kingdom,0
-vf,om nom (bag),Starry Cityscape,1
-vf,om nom (bag),3DS Music Park,0
-vf,om nom (bag),Candy Coaster,1
-vf,om nom (bag),Superstar Dystopia,0
-μ,Aurorae,Autumn Leavesway,15
-μ,Aurorae,Desert Fort,12
-μ,Aurorae,Christmas Court,6
-μ,Aurorae,Luigi's Island,15
-μ,Aurorae,Glimmer Express Trains,10
-μ,Aurorae,Lava Lake,15
-μ,Aurorae,SNES Donut Plains 3,4
-μ,Aurorae,GBA Snow Land,12
-μ,Aurorae,Undiscovered Offlimit,12
-μ,Aurorae,GBA Rainbow Road,10
-μ,Aurorae,Garden of Dreams,4
-μ,Aurorae,Big Nature City,15
+vf,Klyde,Siberian Chateau,3
+vf,Klyde,Lost Fortress,2
+vf,Klyde,Marble Towers,2
+vf,Klyde,Undiscovered Offlimit,4
+vf,Klyde,Cruel Angel's Thesis,4
+vf,Klyde,Big Nature City,2
+vf,Klyde,Color Wonderland,2
+vf,Klyde,Flying Kingdom,3
+vf,Klyde,Starry Cityscape,2
+vf,Klyde,3DS Music Park,6
+vf,Klyde,Candy Coaster,2
+vf,Klyde,Superstar Dystopia,2
+vf,Dots (bag),Siberian Chateau,1
+vf,Dots (bag),Lost Fortress,1
+vf,Dots (bag),Marble Towers,1
+vf,Dots (bag),Undiscovered Offlimit,1
+vf,Dots (bag),Cruel Angel's Thesis,1
+vf,Dots (bag),Big Nature City,0
+vf,Dots (bag),Color Wonderland,0
+vf,Dots (bag),Flying Kingdom,0
+vf,Dots (bag),Starry Cityscape,1
+vf,Dots (bag),3DS Music Park,0
+vf,Dots (bag),Candy Coaster,1
+vf,Dots (bag),Superstar Dystopia,0
+μ,Empex,Autumn Leavesway,15
+μ,Empex,Desert Fort,12
+μ,Empex,Christmas Court,6
+μ,Empex,Luigi's Island,15
+μ,Empex,Glimmer Express Trains,10
+μ,Empex,Lava Lake,15
+μ,Empex,SNES Donut Plains 3,4
+μ,Empex,GBA Snow Land,12
+μ,Empex,Undiscovered Offlimit,12
+μ,Empex,GBA Rainbow Road,10
+μ,Empex,Garden of Dreams,4
+μ,Empex,Big Nature City,15
 μ,starter,Autumn Leavesway,2
 μ,starter,Desert Fort,6
 μ,starter,Christmas Court,15
@@ -1235,18 +1235,18 @@ vf,om nom (bag),Superstar Dystopia,0
 μ,starter,GBA Rainbow Road,15
 μ,starter,Garden of Dreams,8
 μ,starter,Big Nature City,11
-μ,zm,Autumn Leavesway,12
-μ,zm,Desert Fort,2
-μ,zm,Christmas Court,12
-μ,zm,Luigi's Island,4
-μ,zm,Glimmer Express Trains,15
-μ,zm,Lava Lake,4
-μ,zm,SNES Donut Plains 3,12
-μ,zm,GBA Snow Land,10
-μ,zm,Undiscovered Offlimit,10
-μ,zm,GBA Rainbow Road,8
-μ,zm,Garden of Dreams,6
-μ,zm,Big Nature City,4
+μ,Izumi,Autumn Leavesway,12
+μ,Izumi,Desert Fort,2
+μ,Izumi,Christmas Court,12
+μ,Izumi,Luigi's Island,4
+μ,Izumi,Glimmer Express Trains,15
+μ,Izumi,Lava Lake,4
+μ,Izumi,SNES Donut Plains 3,12
+μ,Izumi,GBA Snow Land,10
+μ,Izumi,Undiscovered Offlimit,10
+μ,Izumi,GBA Rainbow Road,8
+μ,Izumi,Garden of Dreams,6
+μ,Izumi,Big Nature City,4
 μ,HypeSpeed,Autumn Leavesway,4
 μ,HypeSpeed,Desert Fort,8
 μ,HypeSpeed,Christmas Court,10
@@ -1475,30 +1475,30 @@ Nω,fan (bag),DS Rainbow Road,0
 μ,starter,Lost Fortress,15
 μ,starter,Glimmer Express Trains,15
 μ,starter,Fort Francis,15
-μ,Aurorae,Lava Lake,6
-μ,Aurorae,Flying Kingdom,3
-μ,Aurorae,Vile Isle,15
-μ,Aurorae,Undiscovered Offlimit,4
-μ,Aurorae,GBA Snow Land,4
-μ,Aurorae,Siberian Chateau,2
-μ,Aurorae,Starry Cityscape,6
-μ,Aurorae,Kamek's Library,15
-μ,Aurorae,Pipe Underworld,15
-μ,Aurorae,Lost Fortress,8
-μ,Aurorae,Glimmer Express Trains,12
-μ,Aurorae,Fort Francis,3
-μ,zm,Lava Lake,8
-μ,zm,Flying Kingdom,12
-μ,zm,Vile Isle,2
-μ,zm,Undiscovered Offlimit,10
-μ,zm,GBA Snow Land,3
-μ,zm,Siberian Chateau,3
-μ,zm,Starry Cityscape,4
-μ,zm,Kamek's Library,4
-μ,zm,Pipe Underworld,4
-μ,zm,Lost Fortress,6
-μ,zm,Glimmer Express Trains,8
-μ,zm,Fort Francis,10
+μ,Empex,Lava Lake,6
+μ,Empex,Flying Kingdom,3
+μ,Empex,Vile Isle,15
+μ,Empex,Undiscovered Offlimit,4
+μ,Empex,GBA Snow Land,4
+μ,Empex,Siberian Chateau,2
+μ,Empex,Starry Cityscape,6
+μ,Empex,Kamek's Library,15
+μ,Empex,Pipe Underworld,15
+μ,Empex,Lost Fortress,8
+μ,Empex,Glimmer Express Trains,12
+μ,Empex,Fort Francis,3
+μ,Izumi,Lava Lake,8
+μ,Izumi,Flying Kingdom,12
+μ,Izumi,Vile Isle,2
+μ,Izumi,Undiscovered Offlimit,10
+μ,Izumi,GBA Snow Land,3
+μ,Izumi,Siberian Chateau,3
+μ,Izumi,Starry Cityscape,4
+μ,Izumi,Kamek's Library,4
+μ,Izumi,Pipe Underworld,4
+μ,Izumi,Lost Fortress,6
+μ,Izumi,Glimmer Express Trains,8
+μ,Izumi,Fort Francis,10
 μ,Bowser498 (bag),Lava Lake,1
 μ,Bowser498 (bag),Flying Kingdom,1
 μ,Bowser498 (bag),Vile Isle,1
@@ -1547,18 +1547,18 @@ G25,CT Inter,Pipe Underworld,3
 G25,CT Inter,Lost Fortress,12
 G25,CT Inter,Glimmer Express Trains,6
 G25,CT Inter,Fort Francis,8
-G25,chatrestriction1,Lava Lake,2
-G25,chatrestriction1,Flying Kingdom,2
-G25,chatrestriction1,Vile Isle,8
-G25,chatrestriction1,Undiscovered Offlimit,12
-G25,chatrestriction1,GBA Snow Land,6
-G25,chatrestriction1,Siberian Chateau,10
-G25,chatrestriction1,Starry Cityscape,2
-G25,chatrestriction1,Kamek's Library,12
-G25,chatrestriction1,Pipe Underworld,2
-G25,chatrestriction1,Lost Fortress,10
-G25,chatrestriction1,Glimmer Express Trains,3
-G25,chatrestriction1,Fort Francis,2
+G25,Song,Lava Lake,2
+G25,Song,Flying Kingdom,2
+G25,Song,Vile Isle,8
+G25,Song,Undiscovered Offlimit,12
+G25,Song,GBA Snow Land,6
+G25,Song,Siberian Chateau,10
+G25,Song,Starry Cityscape,2
+G25,Song,Kamek's Library,12
+G25,Song,Pipe Underworld,2
+G25,Song,Lost Fortress,10
+G25,Song,Glimmer Express Trains,3
+G25,Song,Fort Francis,2
 G25,squirrel (bag),Lava Lake,0
 G25,squirrel (bag),Flying Kingdom,0
 G25,squirrel (bag),Vile Isle,0
@@ -1619,18 +1619,18 @@ vf,poison,GCN Dino Dino Jungle,8
 vf,poison,Alpine Peak,3
 vf,poison,Windy Whirl,2
 vf,poison,GBA Sunset Wilds,10
-vf,partyblob (bag),Volcanic Valley,0
-vf,partyblob (bag),DS Rainbow Road,1
-vf,partyblob (bag),τ-Cryovolcano,1
-vf,partyblob (bag),GCN Mushroom Bridge,1
-vf,partyblob (bag),Cruel Angel's Thesis,0
-vf,partyblob (bag),Bluster Blob Bluff,0
-vf,partyblob (bag),N64 Yoshi Valley,1
-vf,partyblob (bag),Lava Road,1
-vf,partyblob (bag),GCN Dino Dino Jungle,1
-vf,partyblob (bag),Alpine Peak,1
-vf,partyblob (bag),Windy Whirl,0
-vf,partyblob (bag),GBA Sunset Wilds,0
+vf,Dots (bag),Volcanic Valley,0
+vf,Dots (bag),DS Rainbow Road,1
+vf,Dots (bag),τ-Cryovolcano,1
+vf,Dots (bag),GCN Mushroom Bridge,1
+vf,Dots (bag),Cruel Angel's Thesis,0
+vf,Dots (bag),Bluster Blob Bluff,0
+vf,Dots (bag),N64 Yoshi Valley,1
+vf,Dots (bag),Lava Road,1
+vf,Dots (bag),GCN Dino Dino Jungle,1
+vf,Dots (bag),Alpine Peak,1
+vf,Dots (bag),Windy Whirl,0
+vf,Dots (bag),GBA Sunset Wilds,0
 ZogZhit,billiam,Volcanic Valley,8
 ZogZhit,billiam,DS Rainbow Road,6
 ZogZhit,billiam,τ-Cryovolcano,15
@@ -1751,18 +1751,18 @@ F's,Honami Ichinose (bag),Superstar Dystopia,1
 F's,Honami Ichinose (bag),GBA Snow Land,0
 F's,Honami Ichinose (bag),SNES Donut Plains 3,1
 F's,Honami Ichinose (bag),Vile Isle,1
-Nω,Kasane Teto,Wetland Woods,10
-Nω,Kasane Teto,GBA Bowser Castle 4,2
-Nω,Kasane Teto,Aqua Dungeon,8
-Nω,Kasane Teto,GBA Bowser Castle 2,15
-Nω,Kasane Teto,Desert Fort,15
-Nω,Kasane Teto,GCN Dino Dino Jungle,8
-Nω,Kasane Teto,Lava Lake,8
-Nω,Kasane Teto,Undiscovered Offlimit,10
-Nω,Kasane Teto,Superstar Dystopia,8
-Nω,Kasane Teto,GBA Snow Land,2
-Nω,Kasane Teto,SNES Donut Plains 3,4
-Nω,Kasane Teto,Vile Isle,10
+Nω,Saga,Wetland Woods,10
+Nω,Saga,GBA Bowser Castle 4,2
+Nω,Saga,Aqua Dungeon,8
+Nω,Saga,GBA Bowser Castle 2,15
+Nω,Saga,Desert Fort,15
+Nω,Saga,GCN Dino Dino Jungle,8
+Nω,Saga,Lava Lake,8
+Nω,Saga,Undiscovered Offlimit,10
+Nω,Saga,Superstar Dystopia,8
+Nω,Saga,GBA Snow Land,2
+Nω,Saga,SNES Donut Plains 3,4
+Nω,Saga,Vile Isle,10
 Nω,Tiger,Wetland Woods,4
 Nω,Tiger,GBA Bowser Castle 4,8
 Nω,Tiger,Aqua Dungeon,6
@@ -1847,18 +1847,18 @@ G25,CT Inter,Color Wonderland,10
 G25,CT Inter,Desert Fort,4
 G25,CT Inter,Lost Fortress,6
 G25,CT Inter,Fort Francis,3
-G25,chatrestriction1,Vile Isle,3
-G25,chatrestriction1,Undiscovered Offlimit,6
-G25,chatrestriction1,Lava Lake,2
-G25,chatrestriction1,GBA Snow Land,2
-G25,chatrestriction1,Garden of Dreams,8
-G25,chatrestriction1,Starry Cityscape,10
-G25,chatrestriction1,Luigi's Island,3
-G25,chatrestriction1,Shy Guy Lumber Co.,4
-G25,chatrestriction1,Color Wonderland,2
-G25,chatrestriction1,Desert Fort,2
-G25,chatrestriction1,Lost Fortress,3
-G25,chatrestriction1,Fort Francis,15
+G25,Song,Vile Isle,3
+G25,Song,Undiscovered Offlimit,6
+G25,Song,Lava Lake,2
+G25,Song,GBA Snow Land,2
+G25,Song,Garden of Dreams,8
+G25,Song,Starry Cityscape,10
+G25,Song,Luigi's Island,3
+G25,Song,Shy Guy Lumber Co.,4
+G25,Song,Color Wonderland,2
+G25,Song,Desert Fort,2
+G25,Song,Lost Fortress,3
+G25,Song,Fort Francis,15
 G25,squirrel (bag),Vile Isle,1
 G25,squirrel (bag),Undiscovered Offlimit,0
 G25,squirrel (bag),Lava Lake,0
@@ -1871,30 +1871,30 @@ G25,squirrel (bag),Color Wonderland,0
 G25,squirrel (bag),Desert Fort,1
 G25,squirrel (bag),Lost Fortress,1
 G25,squirrel (bag),Fort Francis,0
-μ,Aurorae,Vile Isle,10
-μ,Aurorae,Undiscovered Offlimit,8
-μ,Aurorae,Lava Lake,3
-μ,Aurorae,GBA Snow Land,12
-μ,Aurorae,Garden of Dreams,15
-μ,Aurorae,Starry Cityscape,12
-μ,Aurorae,Luigi's Island,15
-μ,Aurorae,Shy Guy Lumber Co.,8
-μ,Aurorae,Color Wonderland,6
-μ,Aurorae,Desert Fort,15
-μ,Aurorae,Lost Fortress,10
-μ,Aurorae,Fort Francis,4
-μ,sog,Vile Isle,15
-μ,sog,Undiscovered Offlimit,15
-μ,sog,Lava Lake,10
-μ,sog,GBA Snow Land,10
-μ,sog,Garden of Dreams,6
-μ,sog,Starry Cityscape,2
-μ,sog,Luigi's Island,4
-μ,sog,Shy Guy Lumber Co.,3
-μ,sog,Color Wonderland,3
-μ,sog,Desert Fort,12
-μ,sog,Lost Fortress,4
-μ,sog,Fort Francis,10
+μ,Empex,Vile Isle,10
+μ,Empex,Undiscovered Offlimit,8
+μ,Empex,Lava Lake,3
+μ,Empex,GBA Snow Land,12
+μ,Empex,Garden of Dreams,15
+μ,Empex,Starry Cityscape,12
+μ,Empex,Luigi's Island,15
+μ,Empex,Shy Guy Lumber Co.,8
+μ,Empex,Color Wonderland,6
+μ,Empex,Desert Fort,15
+μ,Empex,Lost Fortress,10
+μ,Empex,Fort Francis,4
+μ,Izumi,Vile Isle,15
+μ,Izumi,Undiscovered Offlimit,15
+μ,Izumi,Lava Lake,10
+μ,Izumi,GBA Snow Land,10
+μ,Izumi,Garden of Dreams,6
+μ,Izumi,Starry Cityscape,2
+μ,Izumi,Luigi's Island,4
+μ,Izumi,Shy Guy Lumber Co.,3
+μ,Izumi,Color Wonderland,3
+μ,Izumi,Desert Fort,12
+μ,Izumi,Lost Fortress,4
+μ,Izumi,Fort Francis,10
 μ,coop,Vile Isle,2
 μ,coop,Undiscovered Offlimit,12
 μ,coop,Lava Lake,6
@@ -1991,18 +1991,18 @@ vf,warz,Marble Towers,4
 vf,warz,τ-Cryovolcano,2
 vf,warz,Cruel Angel's Thesis,4
 vf,warz,SNES Choco Island 2,4
-vf,om nom (bag),Alpine Peak,1
-vf,om nom (bag),Infernal Pipeyard,1
-vf,om nom (bag),GBA Sunset Wilds,0
-vf,om nom (bag),GBA Rainbow Road,1
-vf,om nom (bag),GCN Mushroom Bridge,0
-vf,om nom (bag),Undiscovered Offlimit,0
-vf,om nom (bag),Lunar Lights,1
-vf,om nom (bag),Volcanic Valley,1
-vf,om nom (bag),Marble Towers,0
-vf,om nom (bag),τ-Cryovolcano,1
-vf,om nom (bag),Cruel Angel's Thesis,0
-vf,om nom (bag),SNES Choco Island 2,0
+vf,Dots (bag),Alpine Peak,1
+vf,Dots (bag),Infernal Pipeyard,1
+vf,Dots (bag),GBA Sunset Wilds,0
+vf,Dots (bag),GBA Rainbow Road,1
+vf,Dots (bag),GCN Mushroom Bridge,0
+vf,Dots (bag),Undiscovered Offlimit,0
+vf,Dots (bag),Lunar Lights,1
+vf,Dots (bag),Volcanic Valley,1
+vf,Dots (bag),Marble Towers,0
+vf,Dots (bag),τ-Cryovolcano,1
+vf,Dots (bag),Cruel Angel's Thesis,0
+vf,Dots (bag),SNES Choco Island 2,0
 ZogZhit,billiam,Alpine Peak,10
 ZogZhit,billiam,Infernal Pipeyard,8
 ZogZhit,billiam,GBA Sunset Wilds,10
@@ -2087,18 +2087,18 @@ G25,Sam G,DS Tick-Tock Clock,15
 G25,Sam G,Lava Lake,10
 G25,Sam G,Autumn Leavesway,6
 G25,Sam G,Color Wonderland,12
-G25,chatrestriction1,Siberian Chateau,15
-G25,chatrestriction1,GBA Snow Land,6
-G25,chatrestriction1,Glimmer Express Trains,15
-G25,chatrestriction1,Superstar Dystopia,3
-G25,chatrestriction1,Lost Fortress,6
-G25,chatrestriction1,Desert Fort,6
-G25,chatrestriction1,Bluster Blob Bluff,2
-G25,chatrestriction1,Starry Cityscape,12
-G25,chatrestriction1,DS Tick-Tock Clock,12
-G25,chatrestriction1,Lava Lake,15
-G25,chatrestriction1,Autumn Leavesway,4
-G25,chatrestriction1,Color Wonderland,4
+G25,Song,Siberian Chateau,15
+G25,Song,GBA Snow Land,6
+G25,Song,Glimmer Express Trains,15
+G25,Song,Superstar Dystopia,3
+G25,Song,Lost Fortress,6
+G25,Song,Desert Fort,6
+G25,Song,Bluster Blob Bluff,2
+G25,Song,Starry Cityscape,12
+G25,Song,DS Tick-Tock Clock,12
+G25,Song,Lava Lake,15
+G25,Song,Autumn Leavesway,4
+G25,Song,Color Wonderland,4
 G25,CT Inter,Siberian Chateau,12
 G25,CT Inter,GBA Snow Land,4
 G25,CT Inter,Glimmer Express Trains,4
@@ -2183,30 +2183,30 @@ Nω,fan (bag),DS Tick-Tock Clock,1
 Nω,fan (bag),Lava Lake,1
 Nω,fan (bag),Autumn Leavesway,0
 Nω,fan (bag),Color Wonderland,0
-μ,zm,Undiscovered Offlimit,12
-μ,zm,τ-Cryovolcano,10
-μ,zm,GCN Mushroom Bridge,4
-μ,zm,N64 Yoshi Valley,10
-μ,zm,Christmas Court,3
-μ,zm,Starry Cityscape,15
-μ,zm,Pipe Underworld,15
-μ,zm,DS Rainbow Road,3
-μ,zm,DS Bowser Castle,8
-μ,zm,Alpine Peak,15
-μ,zm,Fort Francis,2
-μ,zm,SNES Choco Island 2,3
-μ,Aurorae,Undiscovered Offlimit,15
-μ,Aurorae,τ-Cryovolcano,4
-μ,Aurorae,GCN Mushroom Bridge,12
-μ,Aurorae,N64 Yoshi Valley,4
-μ,Aurorae,Christmas Court,2
-μ,Aurorae,Starry Cityscape,8
-μ,Aurorae,Pipe Underworld,12
-μ,Aurorae,DS Rainbow Road,8
-μ,Aurorae,DS Bowser Castle,15
-μ,Aurorae,Alpine Peak,2
-μ,Aurorae,Fort Francis,12
-μ,Aurorae,SNES Choco Island 2,4
+μ,Izumi,Undiscovered Offlimit,12
+μ,Izumi,τ-Cryovolcano,10
+μ,Izumi,GCN Mushroom Bridge,4
+μ,Izumi,N64 Yoshi Valley,10
+μ,Izumi,Christmas Court,3
+μ,Izumi,Starry Cityscape,15
+μ,Izumi,Pipe Underworld,15
+μ,Izumi,DS Rainbow Road,3
+μ,Izumi,DS Bowser Castle,8
+μ,Izumi,Alpine Peak,15
+μ,Izumi,Fort Francis,2
+μ,Izumi,SNES Choco Island 2,3
+μ,Empex,Undiscovered Offlimit,15
+μ,Empex,τ-Cryovolcano,4
+μ,Empex,GCN Mushroom Bridge,12
+μ,Empex,N64 Yoshi Valley,4
+μ,Empex,Christmas Court,2
+μ,Empex,Starry Cityscape,8
+μ,Empex,Pipe Underworld,12
+μ,Empex,DS Rainbow Road,8
+μ,Empex,DS Bowser Castle,15
+μ,Empex,Alpine Peak,2
+μ,Empex,Fort Francis,12
+μ,Empex,SNES Choco Island 2,4
 μ,starter,Undiscovered Offlimit,8
 μ,starter,τ-Cryovolcano,6
 μ,starter,GCN Mushroom Bridge,15
@@ -2387,18 +2387,18 @@ G25,Sam G,Flying Kingdom,15
 G25,Sam G,Autumn Leavesway,12
 G25,Sam G,Shy Guy Lumber Co.,3
 G25,Sam G,Siberian Chateau,6
-G25,eloslingshotdxcn,Lava Road,2
-G25,eloslingshotdxcn,GBA Rainbow Road,6
-G25,eloslingshotdxcn,Infernal Pipeyard,11
-G25,eloslingshotdxcn,GBA Snow Land,11
-G25,eloslingshotdxcn,Starry Cityscape,11
-G25,eloslingshotdxcn,Lava Lake,4
-G25,eloslingshotdxcn,Alpine Peak,3
-G25,eloslingshotdxcn,Color Wonderland,15
-G25,eloslingshotdxcn,Flying Kingdom,8
-G25,eloslingshotdxcn,Autumn Leavesway,2
-G25,eloslingshotdxcn,Shy Guy Lumber Co.,4
-G25,eloslingshotdxcn (bag),Siberian Chateau,1
+G25,Song,Lava Road,2
+G25,Song,GBA Rainbow Road,6
+G25,Song,Infernal Pipeyard,11
+G25,Song,GBA Snow Land,11
+G25,Song,Starry Cityscape,11
+G25,Song,Lava Lake,4
+G25,Song,Alpine Peak,3
+G25,Song,Color Wonderland,15
+G25,Song,Flying Kingdom,8
+G25,Song,Autumn Leavesway,2
+G25,Song,Shy Guy Lumber Co.,4
+G25,Song (bag),Siberian Chateau,1
 G25,Aylx,Lava Road,4
 G25,Aylx,GBA Rainbow Road,4
 G25,Aylx,Infernal Pipeyard,4
@@ -2447,18 +2447,18 @@ vf,poison,Flying Kingdom,15
 vf,poison,Wetland Woods,10
 vf,poison,Undiscovered Offlimit,15
 vf,poison,Lunar Lights,8
-vf,uhhh bomb up,Dragon Burying Grounds,8
-vf,uhhh bomb up,GBA Bowser Castle 4,4
-vf,uhhh bomb up,GCN Dino Dino Jungle,2
-vf,uhhh bomb up,Candy Coaster,15
-vf,uhhh bomb up,SNES Donut Plains 3,4
-vf,uhhh bomb up,Cruel Angel's Thesis,15
-vf,uhhh bomb up,Marble Towers,15
-vf,uhhh bomb up,GBA Snow Land,8
-vf,uhhh bomb up,Flying Kingdom,6
-vf,uhhh bomb up,Wetland Woods,8
-vf,uhhh bomb up,Undiscovered Offlimit,2
-vf,uhhh bomb up,Lunar Lights,6
+vf,Klyde,Dragon Burying Grounds,8
+vf,Klyde,GBA Bowser Castle 4,4
+vf,Klyde,GCN Dino Dino Jungle,2
+vf,Klyde,Candy Coaster,15
+vf,Klyde,SNES Donut Plains 3,4
+vf,Klyde,Cruel Angel's Thesis,15
+vf,Klyde,Marble Towers,15
+vf,Klyde,GBA Snow Land,8
+vf,Klyde,Flying Kingdom,6
+vf,Klyde,Wetland Woods,8
+vf,Klyde,Undiscovered Offlimit,2
+vf,Klyde,Lunar Lights,6
 vf,Jamo,Dragon Burying Grounds,6
 vf,Jamo,GBA Bowser Castle 4,12
 vf,Jamo,GCN Dino Dino Jungle,10
@@ -2555,18 +2555,18 @@ F's,Honami Ichinose (bag),Lunar Lights,1
 μ,starter,GBA Sunset Wilds,15
 μ,starter,DS DK Pass,4
 μ,starter,GBA Rainbow Road,6
-μ,Aurorae,GCN Mushroom Bridge,2
-μ,Aurorae,GCN Dino Dino Jungle,10
-μ,Aurorae,N64 Yoshi Valley,4
-μ,Aurorae,SNES Bowser Castle 3,12
-μ,Aurorae,τ-Cryovolcano,12
-μ,Aurorae,SNES Choco Island 2,2
-μ,Aurorae,Starry Cityscape,15
-μ,Aurorae,Undiscovered Offlimit,15
-μ,Aurorae,Pipe Underworld,10
-μ,Aurorae,GBA Sunset Wilds,2
-μ,Aurorae,DS DK Pass,6
-μ,Aurorae,GBA Rainbow Road,15
+μ,Empex,GCN Mushroom Bridge,2
+μ,Empex,GCN Dino Dino Jungle,10
+μ,Empex,N64 Yoshi Valley,4
+μ,Empex,SNES Bowser Castle 3,12
+μ,Empex,τ-Cryovolcano,12
+μ,Empex,SNES Choco Island 2,2
+μ,Empex,Starry Cityscape,15
+μ,Empex,Undiscovered Offlimit,15
+μ,Empex,Pipe Underworld,10
+μ,Empex,GBA Sunset Wilds,2
+μ,Empex,DS DK Pass,6
+μ,Empex,GBA Rainbow Road,15
 μ,coop,GCN Mushroom Bridge,12
 μ,coop,GCN Dino Dino Jungle,6
 μ,coop,N64 Yoshi Valley,3
@@ -2699,18 +2699,18 @@ G25,glw,Lost Fortress,15
 G25,glw,3DS Music Park,15
 G25,glw,GBA Snow Land,6
 G25,glw,Fort Francis,12
-G25,chatrestriction1,Wetland Woods,2
-G25,chatrestriction1,Kamek's Library,4
-G25,chatrestriction1,Vile Isle,6
-G25,chatrestriction1,DS Tick-Tock Clock,8
-G25,chatrestriction1,Siberian Chateau,6
-G25,chatrestriction1,SNES Donut Plains 3,2
-G25,chatrestriction1,Starry Cityscape,6
-G25,chatrestriction1,Luncheon Tour,2
-G25,chatrestriction1,Lost Fortress,8
-G25,chatrestriction1,3DS Music Park,4
-G25,chatrestriction1,GBA Snow Land,10
-G25,chatrestriction1,Fort Francis,10
+G25,Song,Wetland Woods,2
+G25,Song,Kamek's Library,4
+G25,Song,Vile Isle,6
+G25,Song,DS Tick-Tock Clock,8
+G25,Song,Siberian Chateau,6
+G25,Song,SNES Donut Plains 3,2
+G25,Song,Starry Cityscape,6
+G25,Song,Luncheon Tour,2
+G25,Song,Lost Fortress,8
+G25,Song,3DS Music Park,4
+G25,Song,GBA Snow Land,10
+G25,Song,Fort Francis,10
 G25,squirrel (bag),Wetland Woods,1
 G25,squirrel (bag),Kamek's Library,0
 G25,squirrel (bag),Vile Isle,0
@@ -2842,42 +2842,42 @@ vf,Panko (bag),Undiscovered Offlimit,0
 vf,Panko (bag),Luigi's Island,0
 vf,Panko (bag),Darkness Temple,0
 vf,Panko (bag),Lava Lake,0
-vf,partyblob (bag),Candy Coaster,1
-vf,partyblob (bag),Starry Cityscape,1
-vf,partyblob (bag),Color Wonderland,1
-vf,partyblob (bag),Cruel Angel's Thesis,1
-vf,partyblob (bag),GBA Snow Land,1
-vf,partyblob (bag),Big Nature City,0
-vf,partyblob (bag),Infernal Pipeyard,1
-vf,partyblob (bag),DS Tick-Tock Clock,0
-vf,partyblob (bag),Undiscovered Offlimit,0
-vf,partyblob (bag),Luigi's Island,1
-vf,partyblob (bag),Darkness Temple,0
-vf,partyblob (bag),Lava Lake,1
-μ,Aurorae,Candy Coaster,12
-μ,Aurorae,Starry Cityscape,6
-μ,Aurorae,Color Wonderland,15
-μ,Aurorae,Cruel Angel's Thesis,10
-μ,Aurorae,GBA Snow Land,15
-μ,Aurorae,Big Nature City,6
-μ,Aurorae,Infernal Pipeyard,8
-μ,Aurorae,DS Tick-Tock Clock,15
-μ,Aurorae,Undiscovered Offlimit,4
-μ,Aurorae,Luigi's Island,10
-μ,Aurorae,Darkness Temple,15
-μ,Aurorae,Lava Lake,12
-μ,zm,Candy Coaster,6
-μ,zm,Starry Cityscape,3
-μ,zm,Color Wonderland,4
-μ,zm,Cruel Angel's Thesis,8
-μ,zm,GBA Snow Land,12
-μ,zm,Big Nature City,4
-μ,zm,Infernal Pipeyard,6
-μ,zm,DS Tick-Tock Clock,11
-μ,zm,Undiscovered Offlimit,8
-μ,zm,Luigi's Island,12
-μ,zm,Darkness Temple,8
-μ,zm,Lava Lake,6
+vf,Dots (bag),Candy Coaster,1
+vf,Dots (bag),Starry Cityscape,1
+vf,Dots (bag),Color Wonderland,1
+vf,Dots (bag),Cruel Angel's Thesis,1
+vf,Dots (bag),GBA Snow Land,1
+vf,Dots (bag),Big Nature City,0
+vf,Dots (bag),Infernal Pipeyard,1
+vf,Dots (bag),DS Tick-Tock Clock,0
+vf,Dots (bag),Undiscovered Offlimit,0
+vf,Dots (bag),Luigi's Island,1
+vf,Dots (bag),Darkness Temple,0
+vf,Dots (bag),Lava Lake,1
+μ,Empex,Candy Coaster,12
+μ,Empex,Starry Cityscape,6
+μ,Empex,Color Wonderland,15
+μ,Empex,Cruel Angel's Thesis,10
+μ,Empex,GBA Snow Land,15
+μ,Empex,Big Nature City,6
+μ,Empex,Infernal Pipeyard,8
+μ,Empex,DS Tick-Tock Clock,15
+μ,Empex,Undiscovered Offlimit,4
+μ,Empex,Luigi's Island,10
+μ,Empex,Darkness Temple,15
+μ,Empex,Lava Lake,12
+μ,Izumi,Candy Coaster,6
+μ,Izumi,Starry Cityscape,3
+μ,Izumi,Color Wonderland,4
+μ,Izumi,Cruel Angel's Thesis,8
+μ,Izumi,GBA Snow Land,12
+μ,Izumi,Big Nature City,4
+μ,Izumi,Infernal Pipeyard,6
+μ,Izumi,DS Tick-Tock Clock,11
+μ,Izumi,Undiscovered Offlimit,8
+μ,Izumi,Luigi's Island,12
+μ,Izumi,Darkness Temple,8
+μ,Izumi,Lava Lake,6
 μ,starter,Candy Coaster,4
 μ,starter,Starry Cityscape,15
 μ,starter,Color Wonderland,12
