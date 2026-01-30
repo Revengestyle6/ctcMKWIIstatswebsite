@@ -21,5 +21,6 @@ RUN pip install --no-cache-dir -r ./backend/requirements.txt
 COPY --from=frontend-build /app/frontend/build ./frontend/build
 COPY --from=frontend-build /app/frontend/package*.json ./frontend/
 
+WORKDIR /app/backend
 EXPOSE 5000
-CMD ["sh", "-c", "cd backend && gunicorn app:app --bind 0.0.0.0:5000"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:5000"]
