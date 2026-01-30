@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import React from "react";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://ctc-mkwii-api-production.up.railway.app';
 const divisions = ["1_2", "3", "4"];
 
 export default function TopTeamPlayers(): React.JSX.Element {

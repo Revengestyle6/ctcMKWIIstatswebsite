@@ -8,7 +8,7 @@ import BestMatchups from "./components/BestMatchups";
 import MusicPlayer from "./components/MusicPlayer";
 import React, { useEffect } from "react";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://ctc-mkwii-api-production.up.railway.app';
 
 export default function App(): React.JSX.Element {
   useEffect(() => {
