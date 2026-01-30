@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 export default function BackgroundSlideshow(): React.JSX.Element {
-  const images = Array.from({ length: 343 }, (_, i) => `/images/CT_BGS/bg_(${i + 1}).png`);
+  const images = Array.from({ length: 343 }, (_, i) => `/images/CT_BGS_WEBP/bg_(${i + 1}).webp`);
 
   const [current, setCurrent] = useState(0);
 
