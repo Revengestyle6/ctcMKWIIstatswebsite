@@ -13,15 +13,13 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install
 
 WORKDIR /app
 
+# Copy backend first to install dependencies
+COPY backend ./backend
+RUN pip install --no-cache-dir -r ./backend/requirements.txt
+
 # Copy frontend build
 COPY --from=frontend-build /app/frontend/build ./frontend/build
 COPY --from=frontend-build /app/frontend/package*.json ./frontend/
 
-# Copy backend
-COPY backend ./backend
-WORKDIR /app/backend
-RUN pip install --no-cache-dir -r requirements.txt
-
-WORKDIR /app
 EXPOSE 5000
-CMD ["gunicorn", "backend.app:app", "--bind", "0.0.0.0:5000"]
+CMD ["sh", "-c", "cd backend && gunicorn app:app --bind 0.0.0.0:5000"]
