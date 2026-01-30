@@ -34,14 +34,6 @@ export default function BackgroundSlideshow(): React.JSX.Element {
           className="absolute inset-0 w-full h-full object-cover"
         />
       )}
-      {/* Preload next image in background for smoother transition */}
-      {images[(current + 1) % images.length] && (
-        <link
-          rel="preload"
-          as="image"
-          href={images[(current + 1) % images.length]}
-        />
-      )}
 
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/40 z-10" />
