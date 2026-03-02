@@ -8,7 +8,7 @@ import BestMatchups from "./components/BestMatchups";
 import MusicPlayer from "./components/MusicPlayer";
 import React from "react";
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://ctc-mkwii-api-production.up.railway.app';
+const API_URL = import.meta.env.VITE_API_URL || 'https://ctcmkwiistatswebsite.onrender.com';
 
 export default function App(): React.JSX.Element {
   return (
