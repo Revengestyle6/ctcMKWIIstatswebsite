@@ -1,0 +1,582 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r10896170"
+  ],
+  "tracks": [
+    "Wooded Way",
+    "Yoshi Lagoon",
+    "Bluster Blob Bluff",
+    "Big Express City",
+    "Vile Isle",
+    "Gothic Castle",
+    "Crystal Dungeon",
+    "Cubing Conundrum",
+    "Wetland Woods",
+    "Wario's Climate Cataclysm",
+    "Castle of Time",
+    "Rush City Run"
+  ],
+  "teams": {
+    "I": {
+      "table_tag_str": "I #E40CA6",
+      "table_penalty_str": "",
+      "total_score": 307,
+      "penalties": 0,
+      "players": {
+        "4988-1709-3963": {
+          "table_str": "Isa [fr_mq] 27|40|26",
+          "mii_name": "IceSpice",
+          "lounge_name": "Isa",
+          "table_name": "Isa",
+          "tag": "I",
+          "total_score": 93,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            4,
+            11,
+            11,
+            11,
+            11,
+            3,
+            15,
+            4,
+            4,
+            3,
+            15
+          ],
+          "race_positions": [
+            8,
+            5,
+            2,
+            2,
+            2,
+            2,
+            6,
+            1,
+            5,
+            5,
+            6,
+            1
+          ],
+          "gp_scores": [
+            [
+              1,
+              4,
+              11,
+              11
+            ],
+            [
+              11,
+              11,
+              3,
+              15
+            ],
+            [
+              4,
+              4,
+              3,
+              15
+            ]
+          ],
+          "flag": "fr_mq"
+        },
+        "0950-9146-6092": {
+          "table_str": "Jray 46|21|24",
+          "mii_name": "IceSpice◎J",
+          "lounge_name": "Jray",
+          "table_name": "Jray",
+          "tag": "I",
+          "total_score": 91,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            15,
+            1,
+            15,
+            2,
+            2,
+            6,
+            11,
+            1,
+            8,
+            11,
+            4
+          ],
+          "race_positions": [
+            1,
+            1,
+            8,
+            1,
+            7,
+            7,
+            4,
+            2,
+            8,
+            3,
+            2,
+            5
+          ],
+          "gp_scores": [
+            [
+              15,
+              15,
+              1,
+              15
+            ],
+            [
+              2,
+              2,
+              6,
+              11
+            ],
+            [
+              1,
+              8,
+              11,
+              4
+            ]
+          ],
+          "flag": ""
+        },
+        "4687-5372-7718": {
+          "table_str": "DarkChaos 16|24|27",
+          "mii_name": "IceSpice D",
+          "lounge_name": "DarkChaos",
+          "table_name": "DarkChaos",
+          "tag": "I",
+          "total_score": 67,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            11,
+            2,
+            1,
+            8,
+            6,
+            4,
+            6,
+            11,
+            11,
+            2,
+            3
+          ],
+          "race_positions": [
+            7,
+            2,
+            7,
+            8,
+            3,
+            4,
+            5,
+            4,
+            2,
+            2,
+            7,
+            6
+          ],
+          "gp_scores": [
+            [
+              2,
+              11,
+              2,
+              1
+            ],
+            [
+              8,
+              6,
+              4,
+              6
+            ],
+            [
+              11,
+              11,
+              2,
+              3
+            ]
+          ],
+          "flag": ""
+        },
+        "0521-4055-0898": {
+          "table_str": "fall guys [ps] 28|18|10",
+          "mii_name": "IceSpice◇V",
+          "lounge_name": "fall guys",
+          "table_name": "fall guys",
+          "tag": "I",
+          "total_score": 56,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            3,
+            15,
+            6,
+            6,
+            8,
+            1,
+            3,
+            6,
+            2,
+            1,
+            1
+          ],
+          "race_positions": [
+            5,
+            6,
+            1,
+            4,
+            4,
+            3,
+            8,
+            6,
+            4,
+            7,
+            8,
+            8
+          ],
+          "gp_scores": [
+            [
+              4,
+              3,
+              15,
+              6
+            ],
+            [
+              6,
+              8,
+              1,
+              3
+            ],
+            [
+              6,
+              2,
+              1,
+              1
+            ]
+          ],
+          "flag": "ps"
+        }
+      },
+      "hex_color": "#E40CA6"
+    },
+    "G": {
+      "table_tag_str": "G #ADCFCD",
+      "table_penalty_str": "",
+      "total_score": 293,
+      "penalties": 0,
+      "players": {
+        "0389-3835-0982": {
+          "table_str": "GAMT Eric [ca] 16|25|53",
+          "mii_name": "G25 Eric",
+          "lounge_name": "GAMT Eric",
+          "table_name": "GAMT Eric",
+          "tag": "G",
+          "total_score": 94,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            2,
+            3,
+            3,
+            15,
+            4,
+            2,
+            4,
+            15,
+            15,
+            15,
+            8
+          ],
+          "race_positions": [
+            3,
+            7,
+            6,
+            6,
+            1,
+            5,
+            7,
+            5,
+            1,
+            1,
+            1,
+            3
+          ],
+          "gp_scores": [
+            [
+              8,
+              2,
+              3,
+              3
+            ],
+            [
+              15,
+              4,
+              2,
+              4
+            ],
+            [
+              15,
+              15,
+              15,
+              8
+            ]
+          ],
+          "flag": "ca"
+        },
+        "4000-3405-9025": {
+          "table_str": "TigerClamory [nl] 23|15|29",
+          "mii_name": "G25 TigerC",
+          "lounge_name": "TigerClamory",
+          "table_name": "TigerClamory",
+          "tag": "G",
+          "total_score": 67,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            11,
+            6,
+            4,
+            2,
+            4,
+            1,
+            8,
+            2,
+            8,
+            6,
+            4,
+            11
+          ],
+          "race_positions": [
+            2,
+            4,
+            5,
+            7,
+            5,
+            8,
+            3,
+            7,
+            3,
+            4,
+            5,
+            2
+          ],
+          "gp_scores": [
+            [
+              11,
+              6,
+              4,
+              2
+            ],
+            [
+              4,
+              1,
+              8,
+              2
+            ],
+            [
+              8,
+              6,
+              4,
+              11
+            ]
+          ],
+          "flag": "nl"
+        },
+        "0907-9688-4690": {
+          "table_str": "CT Inter [ca_sk] 26|34|7",
+          "mii_name": "G25◇J.3:16",
+          "lounge_name": "CT Inter",
+          "table_name": "CT Inter",
+          "tag": "G",
+          "total_score": 67,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            8,
+            8,
+            4,
+            3,
+            15,
+            15,
+            1,
+            2,
+            3,
+            0,
+            2
+          ],
+          "race_positions": [
+            4,
+            3,
+            3,
+            5,
+            6,
+            1,
+            1,
+            8,
+            7,
+            6,
+            9,
+            7
+          ],
+          "gp_scores": [
+            [
+              6,
+              8,
+              8,
+              4
+            ],
+            [
+              3,
+              15,
+              15,
+              1
+            ],
+            [
+              2,
+              3,
+              0,
+              2
+            ]
+          ],
+          "flag": "ca_sk"
+        },
+        "3611-2551-5014": {
+          "table_str": "Gaberboo [us_wa] 18|23|10",
+          "mii_name": "G25 Gabe",
+          "lounge_name": "Gaberboo",
+          "table_name": "Gaberboo",
+          "tag": "G",
+          "total_score": 51,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            1,
+            6,
+            8,
+            1,
+            3,
+            11,
+            8,
+            3,
+            1,
+            6,
+            0
+          ],
+          "race_positions": [
+            6,
+            8,
+            4,
+            3,
+            8,
+            6,
+            2,
+            3,
+            6,
+            8,
+            4,
+            9
+          ],
+          "gp_scores": [
+            [
+              3,
+              1,
+              6,
+              8
+            ],
+            [
+              1,
+              3,
+              11,
+              8
+            ],
+            [
+              3,
+              1,
+              6,
+              0
+            ]
+          ],
+          "flag": "us_wa"
+        },
+        "2368-2586-3226": {
+          "table_str": "Double Gold S15 [bs] 0|0|14",
+          "mii_name": "G25☆Jamo",
+          "lounge_name": "Double Gold S15",
+          "table_name": "Double Gold S15",
+          "tag": "G",
+          "total_score": 14,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            6
+          ],
+          "race_positions": [
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            3,
+            4
+          ],
+          "gp_scores": [
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              8,
+              6
+            ]
+          ],
+          "flag": "bs"
+        }
+      },
+      "hex_color": "#ADCFCD"
+    }
+  }
+}

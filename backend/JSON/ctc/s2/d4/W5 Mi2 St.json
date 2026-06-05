@@ -1,0 +1,642 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r10923224"
+  ],
+  "tracks": [
+    "Mansion of Madness",
+    "Kitayama Keep",
+    "Castle of Time",
+    "GBA Snow Land",
+    "DS Bowser Castle",
+    "Dark Matter Shrine",
+    "Yoshi Lagoon",
+    "Volcanic Valley",
+    "DS Rainbow Road",
+    "Tropical Factory",
+    "GBA Bowser Castle 4",
+    "Halogen Highway"
+  ],
+  "teams": {
+    "Mι": {
+      "table_tag_str": "Mι #54ffc9",
+      "table_penalty_str": "",
+      "total_score": 437,
+      "penalties": 0,
+      "players": {
+        "0263-7149-7426": {
+          "table_str": "Lewis [gb_sc] 45|37|46",
+          "mii_name": "MιAspinall",
+          "lounge_name": "Lewis",
+          "table_name": "Lewis",
+          "tag": "Mι",
+          "total_score": 128,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            8,
+            15,
+            10,
+            3,
+            4,
+            15,
+            15,
+            6,
+            10,
+            15,
+            15
+          ],
+          "race_positions": [
+            2,
+            4,
+            1,
+            3,
+            7,
+            6,
+            1,
+            1,
+            5,
+            3,
+            1,
+            1
+          ],
+          "gp_scores": [
+            [
+              12,
+              8,
+              15,
+              10
+            ],
+            [
+              3,
+              4,
+              15,
+              15
+            ],
+            [
+              6,
+              10,
+              15,
+              15
+            ]
+          ],
+          "flag": "gb_sc"
+        },
+        "4730-4792-5936": {
+          "table_str": "josh 1810 [gb_wa] 43|23|44",
+          "mii_name": "Mι Sadam",
+          "lounge_name": "josh 1810",
+          "table_name": "josh 1810",
+          "tag": "Mι",
+          "total_score": 110,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            10,
+            12,
+            6,
+            6,
+            2,
+            12,
+            3,
+            12,
+            12,
+            8,
+            12
+          ],
+          "race_positions": [
+            1,
+            3,
+            2,
+            5,
+            5,
+            8,
+            2,
+            7,
+            2,
+            2,
+            4,
+            2
+          ],
+          "gp_scores": [
+            [
+              15,
+              10,
+              12,
+              6
+            ],
+            [
+              6,
+              2,
+              12,
+              3
+            ],
+            [
+              12,
+              12,
+              8,
+              12
+            ]
+          ],
+          "flag": "gb_wa"
+        },
+        "1337-4724-9434": {
+          "table_str": "sixfour [us] 23|49|35",
+          "mii_name": "Mι sixfour",
+          "lounge_name": "sixfour",
+          "table_name": "sixfour",
+          "tag": "Mι",
+          "total_score": 107,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            12,
+            6,
+            3,
+            15,
+            12,
+            10,
+            12,
+            15,
+            15,
+            2,
+            3
+          ],
+          "race_positions": [
+            8,
+            2,
+            5,
+            7,
+            1,
+            2,
+            3,
+            2,
+            1,
+            1,
+            8,
+            7
+          ],
+          "gp_scores": [
+            [
+              2,
+              12,
+              6,
+              3
+            ],
+            [
+              15,
+              12,
+              10,
+              12
+            ],
+            [
+              15,
+              15,
+              2,
+              3
+            ]
+          ],
+          "flag": "us"
+        },
+        "5199-9636-1382": {
+          "table_str": "Zouzou [tn] 36|24|23",
+          "mii_name": "Mι Zouz' ♪",
+          "lounge_name": "Zouzou",
+          "table_name": "Zouzou",
+          "tag": "Mι",
+          "total_score": 83,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            6,
+            8,
+            12,
+            4,
+            6,
+            4,
+            10,
+            4,
+            3,
+            12,
+            4
+          ],
+          "race_positions": [
+            3,
+            5,
+            4,
+            2,
+            6,
+            5,
+            6,
+            3,
+            6,
+            7,
+            2,
+            6
+          ],
+          "gp_scores": [
+            [
+              10,
+              6,
+              8,
+              12
+            ],
+            [
+              4,
+              6,
+              4,
+              10
+            ],
+            [
+              4,
+              3,
+              12,
+              4
+            ]
+          ],
+          "flag": "tn"
+        },
+        "2711-8319-7990": {
+          "table_str": "miiwii [ca] 2|4|3",
+          "mii_name": "Mι『m¡¡w¡¡』",
+          "lounge_name": "miiwii",
+          "table_name": "miiwii",
+          "tag": "Mι",
+          "total_score": 9,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            0,
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            1
+          ],
+          "race_positions": [
+            10,
+            9,
+            10,
+            9,
+            9,
+            9,
+            9,
+            9,
+            10,
+            9,
+            9,
+            9
+          ],
+          "gp_scores": [
+            [
+              0,
+              1,
+              0,
+              1
+            ],
+            [
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              0,
+              1,
+              1,
+              1
+            ]
+          ],
+          "flag": "ca"
+        }
+      },
+      "hex_color": "#54ffc9"
+    },
+    "St": {
+      "table_tag_str": "St #54e3ff",
+      "table_penalty_str": "",
+      "total_score": 295,
+      "penalties": 0,
+      "players": {
+        "4172-1265-3554": {
+          "table_str": "Cyrene [world] 23|33|26",
+          "mii_name": "St. Frost",
+          "lounge_name": "Cyrene",
+          "table_name": "Cyrene",
+          "tag": "St",
+          "total_score": 82,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            3,
+            10,
+            2,
+            10,
+            15,
+            6,
+            2,
+            10,
+            8,
+            6,
+            2
+          ],
+          "race_positions": [
+            4,
+            7,
+            3,
+            8,
+            3,
+            1,
+            5,
+            8,
+            3,
+            4,
+            5,
+            8
+          ],
+          "gp_scores": [
+            [
+              8,
+              3,
+              10,
+              2
+            ],
+            [
+              10,
+              15,
+              6,
+              2
+            ],
+            [
+              10,
+              8,
+              6,
+              2
+            ]
+          ],
+          "flag": "world"
+        },
+        "0220-7770-0220": {
+          "table_str": "sog [ca_ns] 27|20|30",
+          "mii_name": "St. Izumi",
+          "lounge_name": "sog",
+          "table_name": "sog",
+          "tag": "St",
+          "total_score": 77,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            4,
+            4,
+            15,
+            2,
+            10,
+            2,
+            6,
+            8,
+            2,
+            10,
+            10
+          ],
+          "race_positions": [
+            6,
+            6,
+            6,
+            1,
+            8,
+            3,
+            8,
+            5,
+            4,
+            8,
+            3,
+            3
+          ],
+          "gp_scores": [
+            [
+              4,
+              4,
+              4,
+              15
+            ],
+            [
+              2,
+              10,
+              2,
+              6
+            ],
+            [
+              8,
+              2,
+              10,
+              10
+            ]
+          ],
+          "flag": "ca_ns"
+        },
+        "3356-0835-9762": {
+          "table_str": "Dazai [us_fl] 28|22|18",
+          "mii_name": "St.Lincoln",
+          "lounge_name": "Dazai",
+          "table_name": "Dazai",
+          "tag": "St",
+          "total_score": 68,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            15,
+            2,
+            8,
+            12,
+            3,
+            3,
+            4,
+            3,
+            4,
+            3,
+            8
+          ],
+          "race_positions": [
+            7,
+            1,
+            8,
+            4,
+            2,
+            7,
+            7,
+            6,
+            7,
+            6,
+            7,
+            4
+          ],
+          "gp_scores": [
+            [
+              3,
+              15,
+              2,
+              8
+            ],
+            [
+              12,
+              3,
+              3,
+              4
+            ],
+            [
+              3,
+              4,
+              3,
+              8
+            ]
+          ],
+          "flag": "us_fl"
+        },
+        "3914-4375-2788": {
+          "table_str": "cheesebait [kr_jj] 15|32|18",
+          "mii_name": "St. Zazza",
+          "lounge_name": "cheesebait",
+          "table_name": "cheesebait",
+          "tag": "St",
+          "total_score": 65,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            2,
+            3,
+            4,
+            8,
+            8,
+            8,
+            8,
+            2,
+            6,
+            4,
+            6
+          ],
+          "race_positions": [
+            5,
+            8,
+            7,
+            6,
+            4,
+            4,
+            4,
+            4,
+            8,
+            5,
+            6,
+            5
+          ],
+          "gp_scores": [
+            [
+              6,
+              2,
+              3,
+              4
+            ],
+            [
+              8,
+              8,
+              8,
+              8
+            ],
+            [
+              2,
+              6,
+              4,
+              6
+            ]
+          ],
+          "flag": "kr_jj"
+        },
+        "0220-7722-0770": {
+          "table_str": "Tectrox [ec] 2|0|1",
+          "mii_name": "St. Tctrx",
+          "lounge_name": "Tectrox",
+          "table_name": "Tectrox",
+          "tag": "St",
+          "total_score": 3,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            9,
+            10,
+            9,
+            10,
+            10,
+            10,
+            10,
+            10,
+            9,
+            10,
+            10,
+            10
+          ],
+          "gp_scores": [
+            [
+              1,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "ec"
+        }
+      },
+      "hex_color": "#54e3ff"
+    }
+  }
+}

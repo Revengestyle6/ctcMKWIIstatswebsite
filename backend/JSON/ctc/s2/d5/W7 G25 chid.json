@@ -1,0 +1,703 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r10923118",
+    "r10923262"
+  ],
+  "tracks": [
+    "Fort Francis",
+    "Cubing Conundrum",
+    "Wario's Climate Cataclysm",
+    "Rush City Run",
+    "The Great Apple War",
+    "Garden of Dreams",
+    "Wooded Way",
+    "Blissful Block",
+    "Glacier Mine",
+    "GBA Bowser Castle 4",
+    "DS Bowser Castle",
+    "Aqua Dungeon"
+  ],
+  "teams": {
+    "G25": {
+      "table_tag_str": "G25 #FF0404",
+      "table_penalty_str": "",
+      "total_score": 376,
+      "penalties": 0,
+      "players": {
+        "3184-2974-9412": {
+          "table_str": "KaneTheSnowman [bb] 39|41|38",
+          "mii_name": "G25☆♪Dog",
+          "lounge_name": "KaneTheSnowman",
+          "table_name": "KaneTheSnowman",
+          "tag": "G25",
+          "total_score": 118,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            12,
+            6,
+            15,
+            12,
+            2,
+            15,
+            12,
+            15,
+            6,
+            2,
+            15
+          ],
+          "race_positions": [
+            5,
+            2,
+            5,
+            1,
+            2,
+            8,
+            1,
+            2,
+            1,
+            5,
+            8,
+            1
+          ],
+          "gp_scores": [
+            [
+              6,
+              12,
+              6,
+              15
+            ],
+            [
+              12,
+              2,
+              15,
+              12
+            ],
+            [
+              15,
+              6,
+              2,
+              15
+            ]
+          ],
+          "flag": "bb"
+        },
+        "0389-3835-0982": {
+          "table_str": "GAMT Eric [ca] 30|34|29",
+          "mii_name": "G25 Eric",
+          "lounge_name": "GAMT Eric",
+          "table_name": "GAMT Eric",
+          "tag": "G25",
+          "total_score": 93,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            3,
+            15,
+            4,
+            15,
+            3,
+            10,
+            6,
+            2,
+            2,
+            15,
+            10
+          ],
+          "race_positions": [
+            4,
+            7,
+            1,
+            6,
+            1,
+            7,
+            3,
+            5,
+            8,
+            8,
+            1,
+            3
+          ],
+          "gp_scores": [
+            [
+              8,
+              3,
+              15,
+              4
+            ],
+            [
+              15,
+              3,
+              10,
+              6
+            ],
+            [
+              2,
+              2,
+              15,
+              10
+            ]
+          ],
+          "flag": "ca"
+        },
+        "3611-2551-5014": {
+          "table_str": "Gaberboo [us_wa] 18|35|30",
+          "mii_name": "G25 Gabe",
+          "lounge_name": "Gaberboo",
+          "table_name": "Gaberboo",
+          "tag": "G25",
+          "total_score": 83,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            2,
+            2,
+            2,
+            10,
+            8,
+            2,
+            15,
+            10,
+            10,
+            6,
+            4
+          ],
+          "race_positions": [
+            2,
+            8,
+            8,
+            8,
+            3,
+            4,
+            8,
+            1,
+            3,
+            3,
+            5,
+            6
+          ],
+          "gp_scores": [
+            [
+              12,
+              2,
+              2,
+              2
+            ],
+            [
+              10,
+              8,
+              2,
+              15
+            ],
+            [
+              10,
+              10,
+              6,
+              4
+            ]
+          ],
+          "flag": "us_wa"
+        },
+        "0907-9688-4690": {
+          "table_str": "CT Inter [ca_sk] 32|22|20",
+          "mii_name": "G25◇J.3:16",
+          "lounge_name": "CT Inter",
+          "table_name": "CT Inter",
+          "tag": "G25",
+          "total_score": 74,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            6,
+            8,
+            8,
+            4,
+            10,
+            4,
+            4,
+            6,
+            8,
+            3,
+            3
+          ],
+          "race_positions": [
+            3,
+            5,
+            4,
+            4,
+            6,
+            3,
+            6,
+            6,
+            5,
+            4,
+            7,
+            7
+          ],
+          "gp_scores": [
+            [
+              10,
+              6,
+              8,
+              8
+            ],
+            [
+              4,
+              10,
+              4,
+              4
+            ],
+            [
+              6,
+              8,
+              3,
+              3
+            ]
+          ],
+          "flag": "ca_sk"
+        },
+        "2368-2586-3226": {
+          "table_str": "Jamo [bs] 4|1|3",
+          "mii_name": "G25☆Jamo",
+          "lounge_name": "Jamo",
+          "table_name": "Jamo",
+          "tag": "G25",
+          "total_score": 8,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            9,
+            9,
+            9,
+            9,
+            10,
+            10,
+            9,
+            10,
+            9,
+            10,
+            10,
+            10
+          ],
+          "gp_scores": [
+            [
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              0,
+              0,
+              1,
+              0
+            ],
+            [
+              3,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "bs"
+        }
+      },
+      "hex_color": "#FF0404"
+    },
+    "chid": {
+      "table_tag_str": "chid #193FFF",
+      "table_penalty_str": "",
+      "total_score": 356,
+      "penalties": 0,
+      "players": {
+        "1466-3154-6231": {
+          "table_str": "neemsy [tv] 43|26|36",
+          "mii_name": "chid 0619",
+          "lounge_name": "neemsy",
+          "table_name": "neemsy",
+          "tag": "chid",
+          "total_score": 105,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            4,
+            12,
+            12,
+            2,
+            15,
+            6,
+            3,
+            4,
+            12,
+            12,
+            8
+          ],
+          "race_positions": [
+            1,
+            6,
+            2,
+            2,
+            8,
+            1,
+            5,
+            7,
+            6,
+            2,
+            2,
+            4
+          ],
+          "gp_scores": [
+            [
+              15,
+              4,
+              12,
+              12
+            ],
+            [
+              2,
+              15,
+              6,
+              3
+            ],
+            [
+              4,
+              12,
+              12,
+              8
+            ]
+          ],
+          "flag": "tv"
+        },
+        "0518-9005-9480": {
+          "table_str": "vTim [us] 33|34|34",
+          "mii_name": "chid☆τιm",
+          "lounge_name": "vTim",
+          "table_name": "vTim",
+          "tag": "chid",
+          "total_score": 101,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            10,
+            10,
+            10,
+            8,
+            12,
+            12,
+            2,
+            3,
+            15,
+            10,
+            6
+          ],
+          "race_positions": [
+            7,
+            3,
+            3,
+            3,
+            4,
+            2,
+            2,
+            8,
+            7,
+            1,
+            3,
+            5
+          ],
+          "gp_scores": [
+            [
+              3,
+              10,
+              10,
+              10
+            ],
+            [
+              8,
+              12,
+              12,
+              2
+            ],
+            [
+              3,
+              15,
+              10,
+              6
+            ]
+          ],
+          "flag": "us"
+        },
+        "5417-6840-3267": {
+          "table_str": "Astro [in] 27|25|32",
+          "mii_name": "chid☆sτrο",
+          "lounge_name": "Astro",
+          "table_name": "Astro",
+          "tag": "chid",
+          "total_score": 84,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            15,
+            4,
+            6,
+            6,
+            6,
+            3,
+            10,
+            8,
+            4,
+            8,
+            12
+          ],
+          "race_positions": [
+            8,
+            1,
+            6,
+            5,
+            5,
+            5,
+            7,
+            3,
+            4,
+            6,
+            4,
+            2
+          ],
+          "gp_scores": [
+            [
+              2,
+              15,
+              4,
+              6
+            ],
+            [
+              6,
+              6,
+              3,
+              10
+            ],
+            [
+              8,
+              4,
+              8,
+              12
+            ]
+          ],
+          "flag": "in"
+        },
+        "1337-4430-3494": {
+          "table_str": "swim [us] 18|23|21",
+          "mii_name": "chid ybo♪",
+          "lounge_name": "swim",
+          "table_name": "swim",
+          "tag": "chid",
+          "total_score": 62,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            8,
+            3,
+            3,
+            3,
+            4,
+            8,
+            8,
+            12,
+            3,
+            4,
+            2
+          ],
+          "race_positions": [
+            6,
+            4,
+            7,
+            7,
+            7,
+            6,
+            4,
+            4,
+            2,
+            7,
+            6,
+            8
+          ],
+          "gp_scores": [
+            [
+              4,
+              8,
+              3,
+              3
+            ],
+            [
+              3,
+              4,
+              8,
+              8
+            ],
+            [
+              12,
+              3,
+              4,
+              2
+            ]
+          ],
+          "flag": "us"
+        },
+        "1165-6699-6666": {
+          "table_str": "#chid danyy [de] 0|3|9",
+          "mii_name": "#chid danyy",
+          "lounge_name": "disappointment",
+          "table_name": "#chid danyy",
+          "tag": "chid",
+          "total_score": 12,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": true,
+          "race_scores": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            0,
+            3,
+            3,
+            3
+          ],
+          "race_positions": [
+            10,
+            10,
+            10,
+            10,
+            9,
+            9,
+            10,
+            9,
+            10,
+            null,
+            null,
+            null
+          ],
+          "gp_scores": [
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              3,
+              3,
+              3
+            ]
+          ],
+          "flag": "de"
+        },
+        "0435-5253-9857": {
+          "table_str": "disappointment(9)/smalltownheavy(3) [br] 0|3|1",
+          "mii_name": "chidybo",
+          "lounge_name": "smalltownheavy",
+          "table_name": "disappointment(9)/smalltownheavy(3)",
+          "tag": "chid",
+          "total_score": 4,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            9,
+            9,
+            9
+          ],
+          "gp_scores": [
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              1,
+              0,
+              1
+            ],
+            [
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "br"
+        }
+      },
+      "hex_color": "#193FFF"
+    }
+  }
+}

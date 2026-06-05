@@ -9,6 +9,7 @@ This directory documents how the current Season 1 stats website is built, how da
 - [Frontend](frontend.md): React/Vite UI routes, components, assets, and API usage.
 - [Data Pipeline](data-pipeline.md): MKW Table Bot JSON input format, extraction process, CSV schema, and current maintenance workflow.
 - [JSON Database Schema](json-database-schema.md): raw JSON structure analysis and a proposed analytics-ready relational schema.
+- [Analytics Database](database.md): SQLAlchemy/SQLite implementation, rebuild command, and current import summary.
 - [Deployment](deployment.md): Render, Railway, Docker, GitHub Pages, and local development notes.
 - [Environment And Secrets](environment-and-secrets.md): every observed environment variable, external service URL, and secret-like dependency.
 - [Vision](vision.md): proposed direction for Season 2 and live Season 3 maintainability.

@@ -1,0 +1,643 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r11073071",
+    "r11073381"
+  ],
+  "tracks": [
+    "Mystic Tangle",
+    "GCN Bowser's Castle",
+    "Toadette's Castle",
+    "White Garden",
+    "GBA Snow Land",
+    "Cosmic Grove",
+    "Desert Fort",
+    "Cubing Conundrum",
+    "The Rabbit Hole",
+    "Dark Matter Shrine",
+    "Wario's Climate Cataclysm",
+    "Starry Cityscape"
+  ],
+  "teams": {
+    "SN": {
+      "table_tag_str": "SN #ff69b4",
+      "table_penalty_str": "",
+      "total_score": 378,
+      "penalties": 0,
+      "players": {
+        "1337-4410-5658": {
+          "table_str": "Bowser498 [us] 27|30|53",
+          "mii_name": "SN★B498",
+          "lounge_name": "Bowser498",
+          "table_name": "Bowser498",
+          "tag": "SN",
+          "total_score": 110,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            8,
+            2,
+            15,
+            6,
+            4,
+            10,
+            10,
+            15,
+            12,
+            11,
+            15
+          ],
+          "race_positions": [
+            8,
+            4,
+            8,
+            1,
+            5,
+            6,
+            3,
+            3,
+            1,
+            2,
+            2,
+            1
+          ],
+          "gp_scores": [
+            [
+              2,
+              8,
+              2,
+              15
+            ],
+            [
+              6,
+              4,
+              10,
+              10
+            ],
+            [
+              15,
+              12,
+              11,
+              15
+            ]
+          ],
+          "flag": "us"
+        },
+        "5417-6896-6515": {
+          "table_str": "JakeUS [jm] 29|50|28",
+          "mii_name": "SN Jake",
+          "lounge_name": "JakeUS",
+          "table_name": "JakeUS",
+          "tag": "SN",
+          "total_score": 107,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            2,
+            6,
+            6,
+            12,
+            8,
+            15,
+            15,
+            8,
+            3,
+            6,
+            11
+          ],
+          "race_positions": [
+            1,
+            8,
+            5,
+            5,
+            2,
+            4,
+            1,
+            1,
+            4,
+            7,
+            4,
+            2
+          ],
+          "gp_scores": [
+            [
+              15,
+              2,
+              6,
+              6
+            ],
+            [
+              12,
+              8,
+              15,
+              15
+            ],
+            [
+              8,
+              3,
+              6,
+              11
+            ]
+          ],
+          "flag": "jm"
+        },
+        "0736-1517-5171": {
+          "table_str": "Clarence Callahan [nr] 38|33|15",
+          "mii_name": "SN★Lavenza",
+          "lounge_name": "Clarence Callahan",
+          "table_name": "Clarence Callahan",
+          "tag": "SN",
+          "total_score": 86,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            10,
+            10,
+            12,
+            15,
+            6,
+            6,
+            6,
+            3,
+            6,
+            4,
+            2
+          ],
+          "race_positions": [
+            5,
+            3,
+            3,
+            2,
+            1,
+            5,
+            5,
+            5,
+            7,
+            5,
+            5,
+            7
+          ],
+          "gp_scores": [
+            [
+              6,
+              10,
+              10,
+              12
+            ],
+            [
+              15,
+              6,
+              6,
+              6
+            ],
+            [
+              3,
+              6,
+              4,
+              2
+            ]
+          ],
+          "flag": "nr"
+        },
+        "1809-9069-0956": {
+          "table_str": "ChrisPKreme43 [us_md] 30|26|14",
+          "mii_name": "SN joshla",
+          "lounge_name": "ChrisPKreme43",
+          "table_name": "ChrisPKreme43",
+          "tag": "SN",
+          "total_score": 70,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            6,
+            12,
+            4,
+            10,
+            10,
+            2,
+            4,
+            2,
+            4,
+            2,
+            6
+          ],
+          "race_positions": [
+            4,
+            5,
+            2,
+            6,
+            3,
+            3,
+            8,
+            6,
+            8,
+            6,
+            7,
+            4
+          ],
+          "gp_scores": [
+            [
+              8,
+              6,
+              12,
+              4
+            ],
+            [
+              10,
+              10,
+              2,
+              4
+            ],
+            [
+              2,
+              4,
+              2,
+              6
+            ]
+          ],
+          "flag": "us_md"
+        },
+        "2454-1453-4550": {
+          "table_str": "sherm [kr] 2|2|1",
+          "mii_name": "SN 々",
+          "lounge_name": "sherm",
+          "table_name": "sherm",
+          "tag": "SN",
+          "total_score": 5,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ],
+          "race_positions": [
+            10,
+            10,
+            10,
+            10,
+            10,
+            10,
+            9,
+            10,
+            10,
+            10,
+            8,
+            9
+          ],
+          "gp_scores": [
+            [
+              2,
+              0,
+              0,
+              0
+            ],
+            [
+              2,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              0
+            ]
+          ],
+          "flag": "kr"
+        }
+      },
+      "hex_color": "#ff69b4"
+    },
+    "SLAY": {
+      "table_tag_str": "SLAY #b4ff69",
+      "table_penalty_str": "Penalty -20",
+      "total_score": 318,
+      "penalties": 20,
+      "players": {
+        "5417-6614-7162": {
+          "table_str": "Mystique [us] 41|29|23",
+          "mii_name": "SLAY Myst",
+          "lounge_name": "Mystique",
+          "table_name": "Mystique",
+          "tag": "SLAY",
+          "total_score": 93,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            4,
+            15,
+            10,
+            2,
+            3,
+            12,
+            12,
+            6,
+            10,
+            3,
+            4
+          ],
+          "race_positions": [
+            2,
+            6,
+            1,
+            3,
+            8,
+            7,
+            2,
+            2,
+            5,
+            3,
+            6,
+            5
+          ],
+          "gp_scores": [
+            [
+              12,
+              4,
+              15,
+              10
+            ],
+            [
+              2,
+              3,
+              12,
+              12
+            ],
+            [
+              6,
+              10,
+              3,
+              4
+            ]
+          ],
+          "flag": "us"
+        },
+        "3313-1417-7212": {
+          "table_str": "half pint [ie] 26|30|31",
+          "mii_name": "SLAY Kgn",
+          "lounge_name": "half pint",
+          "table_name": "half pint",
+          "tag": "SLAY",
+          "total_score": 87,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            12,
+            8,
+            3,
+            8,
+            12,
+            8,
+            2,
+            10,
+            15,
+            3,
+            3
+          ],
+          "race_positions": [
+            7,
+            2,
+            4,
+            7,
+            4,
+            2,
+            4,
+            8,
+            3,
+            1,
+            null,
+            null
+          ],
+          "gp_scores": [
+            [
+              3,
+              12,
+              8,
+              3
+            ],
+            [
+              8,
+              12,
+              8,
+              2
+            ],
+            [
+              10,
+              15,
+              3,
+              3
+            ]
+          ],
+          "flag": "ie"
+        },
+        "4215-0985-1507": {
+          "table_str": "SLAYNicki 18|30|36",
+          "mii_name": "SLAYNicki",
+          "lounge_name": "",
+          "table_name": "SLAYNicki",
+          "tag": "SLAY",
+          "total_score": 84,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            3,
+            3,
+            8,
+            4,
+            15,
+            3,
+            8,
+            12,
+            8,
+            15,
+            1
+          ],
+          "race_positions": [
+            6,
+            7,
+            7,
+            4,
+            6,
+            1,
+            7,
+            4,
+            2,
+            4,
+            1,
+            8
+          ],
+          "gp_scores": [
+            [
+              4,
+              3,
+              3,
+              8
+            ],
+            [
+              4,
+              15,
+              3,
+              8
+            ],
+            [
+              12,
+              8,
+              15,
+              1
+            ]
+          ],
+          "flag": ""
+        },
+        "2883-6434-3405": {
+          "table_str": "JC [us_ny] 31|12|17",
+          "mii_name": "SLAY JC",
+          "lounge_name": "JC",
+          "table_name": "JC",
+          "tag": "SLAY",
+          "total_score": 60,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            15,
+            4,
+            2,
+            3,
+            2,
+            4,
+            3,
+            4,
+            2,
+            8,
+            3
+          ],
+          "race_positions": [
+            3,
+            1,
+            6,
+            8,
+            7,
+            8,
+            6,
+            7,
+            6,
+            8,
+            3,
+            6
+          ],
+          "gp_scores": [
+            [
+              10,
+              15,
+              4,
+              2
+            ],
+            [
+              3,
+              2,
+              4,
+              3
+            ],
+            [
+              4,
+              2,
+              8,
+              3
+            ]
+          ],
+          "flag": "us_ny"
+        },
+        "1809-9044-4020": {
+          "table_str": "om nom [us_az] 2|2|10",
+          "mii_name": "SLAYblud",
+          "lounge_name": "om nom",
+          "table_name": "om nom",
+          "tag": "SLAY",
+          "total_score": 14,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            8
+          ],
+          "race_positions": [
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            10,
+            9,
+            9,
+            9,
+            9,
+            3
+          ],
+          "gp_scores": [
+            [
+              2,
+              0,
+              0,
+              0
+            ],
+            [
+              2,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              1,
+              0,
+              8
+            ]
+          ],
+          "flag": "us_az"
+        }
+      },
+      "hex_color": "#b4ff69"
+    }
+  }
+}

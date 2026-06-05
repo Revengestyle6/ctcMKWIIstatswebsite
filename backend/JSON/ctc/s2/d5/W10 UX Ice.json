@@ -1,0 +1,703 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r11014162",
+    "r11014308"
+  ],
+  "tracks": [
+    "Aquadrom Stage",
+    "Crystal Dungeon",
+    "Final Grounds",
+    "Christmas Court",
+    "Wooded Way",
+    "DS Tick-Tock Clock",
+    "Lava Lake",
+    "Castle of Time",
+    "Fiery Factory, Fading Frost",
+    "Spike Desert",
+    "Boshi Skatepark",
+    "GBA Snow Land"
+  ],
+  "teams": {
+    "UX": {
+      "table_tag_str": "UX #ff8cfd",
+      "table_penalty_str": "",
+      "total_score": 367,
+      "penalties": 0,
+      "players": {
+        "2497-1111-3333": {
+          "table_str": "Kei [us_la] 27|35|42",
+          "mii_name": "UX★Kei",
+          "lounge_name": "Kei",
+          "table_name": "Kei",
+          "tag": "UX",
+          "total_score": 104,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            4,
+            8,
+            3,
+            4,
+            15,
+            12,
+            4,
+            12,
+            10,
+            12,
+            8
+          ],
+          "race_positions": [
+            2,
+            6,
+            4,
+            7,
+            6,
+            1,
+            2,
+            6,
+            2,
+            3,
+            2,
+            4
+          ],
+          "gp_scores": [
+            [
+              12,
+              4,
+              8,
+              3
+            ],
+            [
+              4,
+              15,
+              12,
+              4
+            ],
+            [
+              12,
+              10,
+              12,
+              8
+            ]
+          ],
+          "flag": "us_la"
+        },
+        "4000-3370-8662": {
+          "table_str": "NAUSICAA [jp] 23|25|53",
+          "mii_name": "UX◇50nu",
+          "lounge_name": "NAUSICAA",
+          "table_name": "NAUSICAA",
+          "tag": "UX",
+          "total_score": 101,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            8,
+            10,
+            2,
+            3,
+            10,
+            2,
+            10,
+            8,
+            15,
+            15,
+            15
+          ],
+          "race_positions": [
+            7,
+            4,
+            3,
+            8,
+            7,
+            3,
+            8,
+            3,
+            4,
+            1,
+            1,
+            1
+          ],
+          "gp_scores": [
+            [
+              3,
+              8,
+              10,
+              2
+            ],
+            [
+              3,
+              10,
+              2,
+              10
+            ],
+            [
+              8,
+              15,
+              15,
+              15
+            ]
+          ],
+          "flag": "jp"
+        },
+        "3613-7976-9916": {
+          "table_str": "Phony [jp] 36|23|40",
+          "mii_name": "UX☆#1",
+          "lounge_name": "Phony",
+          "table_name": "Phony",
+          "tag": "UX",
+          "total_score": 99,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            12,
+            3,
+            6,
+            8,
+            4,
+            8,
+            3,
+            10,
+            8,
+            10,
+            12
+          ],
+          "race_positions": [
+            1,
+            2,
+            7,
+            5,
+            4,
+            6,
+            4,
+            7,
+            3,
+            4,
+            3,
+            2
+          ],
+          "gp_scores": [
+            [
+              15,
+              12,
+              3,
+              6
+            ],
+            [
+              8,
+              4,
+              8,
+              3
+            ],
+            [
+              10,
+              8,
+              10,
+              12
+            ]
+          ],
+          "flag": "jp"
+        },
+        "2969-5444-1046": {
+          "table_str": "Dacchan [jp] 20|21|19",
+          "mii_name": "UX★weed7",
+          "lounge_name": "Dacchan",
+          "table_name": "Dacchan",
+          "tag": "UX",
+          "total_score": 60,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            2,
+            6,
+            8,
+            6,
+            3,
+            4,
+            8,
+            6,
+            3,
+            6,
+            4
+          ],
+          "race_positions": [
+            6,
+            8,
+            5,
+            4,
+            5,
+            7,
+            6,
+            4,
+            5,
+            7,
+            5,
+            6
+          ],
+          "gp_scores": [
+            [
+              4,
+              2,
+              6,
+              8
+            ],
+            [
+              6,
+              3,
+              4,
+              8
+            ],
+            [
+              6,
+              3,
+              6,
+              4
+            ]
+          ],
+          "flag": "jp"
+        },
+        "5245-8888-2222": {
+          "table_str": "Mossan [jp] 1|0|2",
+          "mii_name": "UX☆ Satopy",
+          "lounge_name": "Mossan",
+          "table_name": "Mossan",
+          "tag": "UX",
+          "total_score": 3,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            1
+          ],
+          "race_positions": [
+            10,
+            10,
+            9,
+            10,
+            10,
+            10,
+            10,
+            10,
+            9,
+            10,
+            10,
+            9
+          ],
+          "gp_scores": [
+            [
+              0,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              1
+            ]
+          ],
+          "flag": "jp"
+        }
+      },
+      "hex_color": "#ff8cfd"
+    },
+    "IceSpice": {
+      "table_tag_str": "IceSpice #fdff8c",
+      "table_penalty_str": "",
+      "total_score": 365,
+      "penalties": 0,
+      "players": {
+        "0950-9146-6092": {
+          "table_str": "Jray 36|39|41",
+          "mii_name": "IceSpice◎J",
+          "lounge_name": "Jray",
+          "table_name": "Jray",
+          "tag": "IceSpice",
+          "total_score": 116,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            15,
+            15,
+            4,
+            10,
+            2,
+            15,
+            12,
+            15,
+            12,
+            4,
+            10
+          ],
+          "race_positions": [
+            8,
+            1,
+            1,
+            6,
+            3,
+            8,
+            1,
+            2,
+            1,
+            2,
+            6,
+            3
+          ],
+          "gp_scores": [
+            [
+              2,
+              15,
+              15,
+              4
+            ],
+            [
+              10,
+              2,
+              15,
+              12
+            ],
+            [
+              15,
+              12,
+              4,
+              10
+            ]
+          ],
+          "flag": ""
+        },
+        "1380-3970-6818": {
+          "table_str": "Isa(8)/Ragemodepigeon(4) [gb] 33|39|16",
+          "mii_name": "IceSpice R",
+          "lounge_name": "Ragemodepigeon",
+          "table_name": "Isa(8)/Ragemodepigeon(4)",
+          "tag": "IceSpice",
+          "total_score": 88,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            6,
+            4,
+            15,
+            15,
+            8,
+            10,
+            6,
+            2,
+            6,
+            2,
+            6
+          ],
+          "race_positions": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            8,
+            5,
+            8,
+            5
+          ],
+          "gp_scores": [
+            [
+              8,
+              6,
+              4,
+              15
+            ],
+            [
+              15,
+              8,
+              10,
+              6
+            ],
+            [
+              2,
+              6,
+              2,
+              6
+            ]
+          ],
+          "flag": "gb"
+        },
+        "4687-5372-7718": {
+          "table_str": "DarkChaos 38|23|18",
+          "mii_name": "IceSpice D",
+          "lounge_name": "DarkChaos",
+          "table_name": "DarkChaos",
+          "tag": "IceSpice",
+          "total_score": 79,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            10,
+            12,
+            10,
+            12,
+            6,
+            3,
+            2,
+            3,
+            4,
+            8,
+            3
+          ],
+          "race_positions": [
+            5,
+            3,
+            2,
+            3,
+            2,
+            5,
+            7,
+            8,
+            7,
+            6,
+            4,
+            7
+          ],
+          "gp_scores": [
+            [
+              6,
+              10,
+              12,
+              10
+            ],
+            [
+              12,
+              6,
+              3,
+              2
+            ],
+            [
+              3,
+              4,
+              8,
+              3
+            ]
+          ],
+          "flag": ""
+        },
+        "1509-2579-3885": {
+          "table_str": "Latios [in] 27|35|11",
+          "mii_name": "IceSpice¿",
+          "lounge_name": "Latios",
+          "table_name": "Latios",
+          "tag": "IceSpice",
+          "total_score": 73,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            3,
+            2,
+            12,
+            2,
+            12,
+            6,
+            15,
+            4,
+            2,
+            3,
+            2
+          ],
+          "race_positions": [
+            3,
+            7,
+            8,
+            2,
+            8,
+            2,
+            5,
+            1,
+            6,
+            8,
+            7,
+            8
+          ],
+          "gp_scores": [
+            [
+              10,
+              3,
+              2,
+              12
+            ],
+            [
+              2,
+              12,
+              6,
+              15
+            ],
+            [
+              4,
+              2,
+              3,
+              2
+            ]
+          ],
+          "flag": "in"
+        },
+        "4988-1709-3963": {
+          "table_str": "#IceSpice [fr_mq] 33|39|0",
+          "mii_name": "#IceSpice",
+          "lounge_name": "Isa",
+          "table_name": "#IceSpice",
+          "tag": "IceSpice",
+          "total_score": 72,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": true,
+          "race_scores": [
+            8,
+            6,
+            4,
+            15,
+            15,
+            8,
+            10,
+            6,
+            0,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            4,
+            5,
+            6,
+            1,
+            1,
+            4,
+            3,
+            5,
+            null,
+            null,
+            null,
+            null
+          ],
+          "gp_scores": [
+            [
+              8,
+              6,
+              4,
+              15
+            ],
+            [
+              15,
+              8,
+              10,
+              6
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "fr_mq"
+        },
+        "2196-4395-6736": {
+          "table_str": "Calum [ca_on] 3|4|2",
+          "mii_name": "IceSpice C",
+          "lounge_name": "Calum",
+          "table_name": "Calum",
+          "tag": "IceSpice",
+          "total_score": 9,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0
+          ],
+          "race_positions": [
+            9,
+            9,
+            10,
+            9,
+            9,
+            9,
+            9,
+            9,
+            10,
+            9,
+            9,
+            10
+          ],
+          "gp_scores": [
+            [
+              1,
+              1,
+              0,
+              1
+            ],
+            [
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              0,
+              1,
+              1,
+              0
+            ]
+          ],
+          "flag": "ca_on"
+        }
+      },
+      "hex_color": "#fdff8c"
+    }
+  }
+}
