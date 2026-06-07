@@ -8,6 +8,7 @@ The first analytics database implementation uses SQLite with SQLAlchemy ORM mode
 - `backend/models.py`: ORM models for seasons, divisions, source files, teams, players, matches, races, results, tracks, and penalties.
 - `backend/import_json_to_db.py`: import/rebuild command for archived JSON files.
 - `backend/inspect_db.py`: small inspection command for counts and import review rows.
+- `backend/data/team_aliases.csv`: import-time team tag cleaning map.
 - `backend/data/ctc_stats.sqlite`: generated SQLite database.
 
 `backend/data/*.sqlite` is ignored by git because the database is generated output. The archived JSON files are the source of truth.
@@ -97,12 +98,35 @@ The importer:
 - prefers `.json` files over same-stem `.txt` files
 - stores source file hashes for deduplication
 - infers league, season, and division from folder path
+- applies team aliases from `backend/data/team_aliases.csv`
 - parses week number from filenames like `W1 ...`
 - stores full raw match JSON on the `matches` row
 - keeps team/player/track aliases and raw names
 - expands race scores and positions into `race_player_results`
 - infers `bagger` when race score is `1`
 - marks non-two-team matches as `needs_review`
+
+## Team Tag Cleaning
+
+Some raw Table Bot files misparse complicated clan tags into partial tags such as one-letter fragments, `No Tag`, or a trailing fish-symbol character. These are corrected at import time by `backend/data/team_aliases.csv`.
+
+The alias file is match-aware. This matters because a raw tag like `M` can mean different teams in different matches. The importer first checks for an exact row:
+
+```text
+league_code, season_code, division_code, match_label, raw_team_key
+```
+
+Then it falls back to a division-wide row where `match_label` is blank.
+
+The raw JSON and raw table fields are still preserved for auditability. For example, a player row may still show `tag_raw = No Tag`, but its `match_team_id` and `team_season_entry_id` point to the corrected canonical team.
+
+After the first cleaning pass, the rebuilt database has:
+
+```text
+teams: 39
+team_season_entries: 54
+matches needing review: 0
+```
 
 ## Next Steps
 

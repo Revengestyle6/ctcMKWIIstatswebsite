@@ -1,4 +1,5 @@
 import argparse
+import csv
 import hashlib
 import json
 import re
@@ -30,6 +31,7 @@ from models import (
 )
 
 JSON_ROOT = BASE_DIR / "JSON"
+TEAM_ALIAS_PATH = BASE_DIR / "data" / "team_aliases.csv"
 WEEK_RE = re.compile(r"\bW(\d+)\b", re.IGNORECASE)
 
 
@@ -67,6 +69,46 @@ def preferred_json_files(root: Path) -> list[Path]:
             continue
         output.append(path)
     return output
+
+
+def load_team_aliases(path: Path = TEAM_ALIAS_PATH) -> dict[tuple[str, str, str, str, str], dict[str, str]]:
+    if not path.exists():
+        return {}
+
+    aliases = {}
+    with path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            key = (
+                (row.get("league_code") or "").strip(),
+                (row.get("season_code") or "").strip(),
+                (row.get("division_code") or "").strip(),
+                (row.get("match_label") or "").strip(),
+                (row.get("raw_team_key") or "").strip(),
+            )
+            aliases[key] = {
+                "canonical_tag": (row.get("canonical_tag") or "").strip(),
+                "display_name": (row.get("display_name") or row.get("canonical_tag") or "").strip(),
+                "note": (row.get("note") or "").strip(),
+            }
+    return aliases
+
+
+def resolve_team_alias(
+    aliases: dict[tuple[str, str, str, str, str], dict[str, str]],
+    league_code: str,
+    season_code: str,
+    division_code: str,
+    match_label: str,
+    raw_team_key: str,
+) -> dict[str, str]:
+    exact_key = (league_code, season_code, division_code, match_label, raw_team_key)
+    division_key = (league_code, season_code, division_code, "", raw_team_key)
+    return aliases.get(exact_key) or aliases.get(division_key) or {
+        "canonical_tag": raw_team_key,
+        "display_name": raw_team_key,
+        "note": "",
+    }
 
 
 def get_or_create_season(session, league_code: str, season_code: str) -> Season:
@@ -107,12 +149,14 @@ def get_or_create_division(session, season: Season, division_code: str) -> Divis
     return division
 
 
-def get_or_create_team(session, raw_team_key: str) -> Team:
-    team = session.scalar(select(Team).where(Team.canonical_tag == raw_team_key))
+def get_or_create_team(session, canonical_tag: str, display_name: str | None = None) -> Team:
+    team = session.scalar(select(Team).where(Team.canonical_tag == canonical_tag))
     if team:
+        if display_name and team.canonical_name == team.canonical_tag:
+            team.canonical_name = display_name
         return team
 
-    team = Team(canonical_name=raw_team_key, canonical_tag=raw_team_key)
+    team = Team(canonical_name=display_name or canonical_tag, canonical_tag=canonical_tag)
     session.add(team)
     session.flush()
     return team
@@ -123,14 +167,15 @@ def get_or_create_team_entry(
     team: Team,
     season: Season,
     division: Division,
-    raw_team_key: str,
+    canonical_tag: str,
+    display_name: str,
     hex_color: str | None,
 ) -> TeamSeasonEntry:
     entry = session.scalar(
         select(TeamSeasonEntry).where(
             TeamSeasonEntry.season_id == season.season_id,
             TeamSeasonEntry.division_id == division.division_id,
-            TeamSeasonEntry.clan_tag == raw_team_key,
+            TeamSeasonEntry.clan_tag == canonical_tag,
         )
     )
     if entry:
@@ -142,8 +187,8 @@ def get_or_create_team_entry(
         team_id=team.team_id,
         season_id=season.season_id,
         division_id=division.division_id,
-        display_name=raw_team_key,
-        clan_tag=raw_team_key,
+        display_name=display_name,
+        clan_tag=canonical_tag,
         hex_color=hex_color,
     )
     session.add(entry)
@@ -269,15 +314,37 @@ def normalize_match_objects(data: Any) -> tuple[str, list[dict[str, Any]]]:
     return "unknown", []
 
 
-def import_match(session, source_file: SourceFile, season: Season, division: Division, match_data: dict[str, Any], path: Path, match_index: int):
+def import_match(
+    session,
+    source_file: SourceFile,
+    season: Season,
+    division: Division,
+    match_data: dict[str, Any],
+    path: Path,
+    match_index: int,
+    aliases: dict[tuple[str, str, str, str, str], dict[str, str]],
+    league_code: str,
+    season_code: str,
+    division_code: str,
+):
     teams = match_data.get("teams") or {}
     tracks = match_data.get("tracks") or []
+    match_label = path.stem if match_index == 0 else f"{path.stem} #{match_index + 1}"
     review_notes = []
-    if len(teams) != 2:
-        review_notes.append(f"Expected 2 teams, found {len(teams)} raw team objects.")
     if match_data.get("races_played") != len(tracks):
         review_notes.append(
             f"races_played={match_data.get('races_played')} but tracks length={len(tracks)}."
+        )
+
+    resolved_team_keys = []
+    for raw_team_key in teams:
+        alias = resolve_team_alias(aliases, league_code, season_code, division_code, match_label, raw_team_key)
+        resolved_team_keys.append(alias["canonical_tag"])
+        if alias.get("note"):
+            review_notes.append(f"Team alias applied: {raw_team_key} -> {alias['canonical_tag']}.")
+    if len(set(resolved_team_keys)) != 2:
+        review_notes.append(
+            f"Expected 2 resolved teams, found {len(set(resolved_team_keys))} from {len(teams)} raw team objects."
         )
 
     match = Match(
@@ -286,12 +353,12 @@ def import_match(session, source_file: SourceFile, season: Season, division: Div
         source_file_id=source_file.source_file_id,
         match_index_in_source=match_index,
         week_number=week_number_from_filename(path),
-        match_label=path.stem if match_index == 0 else f"{path.stem} #{match_index + 1}",
+        match_label=match_label,
         title_str=match_data.get("title_str"),
         format=match_data.get("format"),
         races_played=match_data.get("races_played") or len(tracks),
         raw_json=json.dumps(match_data, ensure_ascii=False, separators=(",", ":")),
-        import_status="needs_review" if review_notes else "imported",
+        import_status="needs_review" if len(set(resolved_team_keys)) != 2 or match_data.get("races_played") != len(tracks) else "imported",
         review_notes=" ".join(review_notes) if review_notes else None,
     )
     session.add(match)
@@ -308,24 +375,37 @@ def import_match(session, source_file: SourceFile, season: Season, division: Div
         session.flush()
         race_by_number[race_number] = race
 
+    match_team_by_canonical_tag = {}
     for raw_team_key, team_data in teams.items():
-        team = get_or_create_team(session, raw_team_key)
+        alias = resolve_team_alias(aliases, league_code, season_code, division_code, match_label, raw_team_key)
+        canonical_tag = alias["canonical_tag"]
+        display_name = alias["display_name"] or canonical_tag
+        team = get_or_create_team(session, canonical_tag, display_name)
         team_entry = get_or_create_team_entry(
-            session, team, season, division, raw_team_key, team_data.get("hex_color")
+            session, team, season, division, canonical_tag, display_name, team_data.get("hex_color")
         )
-        match_team = MatchTeam(
-            match_id=match.match_id,
-            team_season_entry_id=team_entry.team_season_entry_id,
-            raw_team_key=raw_team_key,
-            table_tag_str=team_data.get("table_tag_str"),
-            hex_color=team_data.get("hex_color"),
-            raw_total_score=team_data.get("total_score") or 0,
-            team_penalty_points=team_data.get("penalties") or 0,
-            table_penalty_str=team_data.get("table_penalty_str"),
-            final_score=team_data.get("total_score"),
-        )
-        session.add(match_team)
-        session.flush()
+        match_team = match_team_by_canonical_tag.get(canonical_tag)
+        if match_team:
+            if raw_team_key != canonical_tag:
+                match_team.raw_team_key = f"{match_team.raw_team_key}|{raw_team_key}"
+            match_team.raw_total_score += team_data.get("total_score") or 0
+            match_team.team_penalty_points += team_data.get("penalties") or 0
+            match_team.final_score = (match_team.final_score or 0) + (team_data.get("total_score") or 0)
+        else:
+            match_team = MatchTeam(
+                match_id=match.match_id,
+                team_season_entry_id=team_entry.team_season_entry_id,
+                raw_team_key=raw_team_key,
+                table_tag_str=team_data.get("table_tag_str"),
+                hex_color=team_data.get("hex_color"),
+                raw_total_score=team_data.get("total_score") or 0,
+                team_penalty_points=team_data.get("penalties") or 0,
+                table_penalty_str=team_data.get("table_penalty_str"),
+                final_score=team_data.get("total_score"),
+            )
+            session.add(match_team)
+            session.flush()
+            match_team_by_canonical_tag[canonical_tag] = match_team
 
         if team_data.get("penalties") or team_data.get("table_penalty_str"):
             session.add(
@@ -409,7 +489,7 @@ def import_match(session, source_file: SourceFile, season: Season, division: Div
                 )
 
 
-def import_file(session, path: Path) -> tuple[int, int]:
+def import_file(session, path: Path, aliases: dict[tuple[str, str, str, str, str], dict[str, str]]) -> tuple[int, int]:
     relative_parts = path.relative_to(JSON_ROOT).parts
     if len(relative_parts) < 4:
         return 0, 0
@@ -442,7 +522,19 @@ def import_file(session, path: Path) -> tuple[int, int]:
     session.flush()
 
     for match_index, match_data in enumerate(matches):
-        import_match(session, source_file, season, division, match_data, path, match_index)
+        import_match(
+            session,
+            source_file,
+            season,
+            division,
+            match_data,
+            path,
+            match_index,
+            aliases,
+            league_code,
+            season_code,
+            division_code,
+        )
     return len(matches), 0
 
 
@@ -486,10 +578,11 @@ def import_json_tree(db_path: Path, json_root: Path):
     SessionLocal = get_session_factory(db_path)
     imported_matches = 0
     skipped_files = 0
+    aliases = load_team_aliases()
     with SessionLocal() as session:
         for path in preferred_json_files(json_root):
             with session.begin_nested():
-                imported, skipped = import_file(session, path)
+                imported, skipped = import_file(session, path, aliases)
                 imported_matches += imported
                 skipped_files += skipped
         session.commit()
@@ -513,4 +606,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
