@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import axios, { AxiosError } from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://ctcmkwiistatswebsite.onrender.com';
+import { API_URL, fetchJson } from "../api";
+import SeasonDivisionSelector from "./SeasonDivisionSelector";
+import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
 interface PlayerResponse {
   results: string[];
@@ -16,64 +17,78 @@ interface PlayerAvgResponse {
 }
 
 export default function PlayerStats() {
+  const {
+    seasons,
+    divisions,
+    season,
+    division,
+    loadingScope,
+    scopeError,
+    setSeason,
+    setDivision,
+  } = useSeasonDivision();
   const [players, setPlayers] = useState<string[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [results, setResults] = useState<string[]>([]);
   const [playerAvg, setPlayerAvg] = useState<PlayerAvgResponse | null>(null);
   const [error, setError] = useState<string>("");
-  const [division, setDivision] = useState<string>("1_2");
   const [loading, setLoading] = useState(false);
   const [avgLoading, setAvgLoading] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch players whenever division changes
   useEffect(() => {
-    async function fetchPlayers() {
+    let cancelled = false;
+
+    async function loadPlayers() {
+      if (!season || !division) return;
+      setPlayers([]);
+      setSelectedPlayer("");
+      setResults([]);
+      setPlayerAvg(null);
+      setError("");
       try {
-        const res = await fetch(`${API_URL}/api/players?division=${division}`);
-        if (!res.ok) throw new Error("Failed to fetch players");
-        const data: string[] = await res.json();
-        // Sort players alphabetically (case-insensitive)
-        const sortedData = data.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        const data = await fetchJson<string[]>("/api/players", { season, division });
+        if (cancelled) return;
+        const sortedData = [...data].sort((a, b) =>
+          a.toLowerCase().localeCompare(b.toLowerCase())
+        );
         setPlayers(sortedData);
-        if (sortedData.length > 0) setSelectedPlayer(sortedData[0]);
-        setError("");
+        setSelectedPlayer(sortedData[0] ?? "");
       } catch (err) {
+        if (cancelled) return;
         console.error("Error fetching players:", err);
         setError("Failed to load players.");
-        setPlayers([]);
       }
     }
-    fetchPlayers();
-  }, [division]);
 
-  // Fetch player stats and average whenever selected player changes
+    loadPlayers();
+    return () => {
+      cancelled = true;
+    };
+  }, [season, division]);
+
   useEffect(() => {
-    if (!selectedPlayer) return;
+    if (!selectedPlayer || !season || !division) return;
 
-    // Clear previous timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Debounce API call by 300ms
     debounceTimerRef.current = setTimeout(() => {
       async function fetchPlayerStats() {
         setLoading(true);
         setAvgLoading(true);
         setError("");
         try {
-          // Fetch best tracks
           const tracksResponse = await axios.get<PlayerResponse>(
             `${API_URL}/api/player`,
-            { params: { name: selectedPlayer, division } }
+            { params: { name: selectedPlayer, season, division } }
           );
           setResults(tracksResponse.data.results);
 
-          // Fetch player average
           const avgResponse = await axios.get<PlayerAvgResponse>(
             `${API_URL}/api/player-avg`,
-            { params: { name: selectedPlayer, division } }
+            { params: { name: selectedPlayer, season, division } }
           );
           setPlayerAvg(avgResponse.data);
         } catch (err: unknown) {
@@ -98,75 +113,71 @@ export default function PlayerStats() {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [selectedPlayer, division]);
+  }, [selectedPlayer, season, division]);
+
+  const combinedError = scopeError || error;
 
   return (
     <div className="relative min-h-screen text-white font-sans p-6">
-      {/* Top bar with semi-transparent background */}
       <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
         <div className="flex justify-between items-center max-w-7xl mx-auto px-2">
           <Link to="/" className="text-blue-400 hover:text-blue-300 font-semibold">
-            ← Back
+            &lt; Back
           </Link>
           <h1 className="text-3xl font-bold text-center flex-1">Player Statistics</h1>
           <div className="w-32"></div>
-          <img 
-            src="/images/CTC_LOGO/ctclogo.webp" 
-            alt="Logo" 
+          <img
+            src="/images/CTC_LOGO/ctclogo.webp"
+            alt="Logo"
             className="w-12 h-12 rounded-lg"
             loading="lazy"
           />
         </div>
       </div>
 
-      {/* Main content with top padding */}
       <div className="pt-24 max-w-4xl mx-auto">
-
         <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6 flex-wrap">
-          {/* Division dropdown */}
-          <div>
-            <label className="block font-semibold mb-1">Division</label>
-            <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={division}
-              onChange={(e) => setDivision(e.target.value)}
-            >
-              <option value="1_2">Division 1–2</option>
-              <option value="3">Division 3</option>
-              <option value="4">Division 4</option>
-            </select>
-          </div>
+          <SeasonDivisionSelector
+            season={season}
+            division={division}
+            seasons={seasons}
+            divisions={divisions}
+            disabled={loadingScope}
+            onSeasonChange={setSeason}
+            onDivisionChange={setDivision}
+          />
 
-          {/* Player dropdown */}
           <div>
             <label className="block font-semibold mb-1">Player</label>
             <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48"
               value={selectedPlayer}
-              onChange={(e) => setSelectedPlayer(e.target.value)}
+              onChange={(event) => setSelectedPlayer(event.target.value)}
+              disabled={!division || players.length === 0}
             >
               <option value="">Select a player</option>
-              {players.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+              {players.map((player) => (
+                <option key={player} value={player}>
+                  {player}
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Player Average Box */}
         {!avgLoading && playerAvg && (
           <div className="mt-6 bg-black/70 backdrop-blur-sm p-6 rounded-xl shadow-md border border-blue-400/50">
             <h2 className="text-2xl font-bold text-blue-400 mb-2">
-              {playerAvg.player_name} <span className="text-gray-400 text-lg">({playerAvg.team_name})</span>
+              {playerAvg.player_name}{" "}
+              <span className="text-gray-400 text-lg">({playerAvg.team_name})</span>
             </h2>
             <p className="text-lg text-gray-200">
-              Average: <span className="text-yellow-400 font-semibold">{playerAvg.avg.toFixed(1)} pts</span>
+              Average:{" "}
+              <span className="text-yellow-400 font-semibold">
+                {playerAvg.avg.toFixed(1)} pts
+              </span>
             </p>
-            <p className="text-sm text-gray-400">
-              Total races: {playerAvg.races}
-            </p>
+            <p className="text-sm text-gray-400">Total races: {playerAvg.races}</p>
           </div>
         )}
 
@@ -179,7 +190,7 @@ export default function PlayerStats() {
           </div>
         )}
 
-        {error && <p className="mt-4 text-red-400 text-center">{error}</p>}
+        {combinedError && <p className="mt-4 text-red-400 text-center">{combinedError}</p>}
 
         {!loading && results.length > 0 && (
           <div className="mt-6 overflow-x-auto">
@@ -191,15 +202,13 @@ export default function PlayerStats() {
                 </tr>
               </thead>
               <tbody>
-                {results.map((r, idx) => (
+                {results.map((result, index) => (
                   <tr
-                    key={idx}
-                    className={idx % 2 === 0 ? "bg-black/50" : "bg-black/70"}
+                    key={index}
+                    className={index % 2 === 0 ? "bg-black/50" : "bg-black/70"}
                   >
-                    <td className="px-4 py-2 font-semibold text-blue-400">
-                      {idx + 1}
-                    </td>
-                    <td className="px-4 py-2 text-white">{r}</td>
+                    <td className="px-4 py-2 font-semibold text-blue-400">{index + 1}</td>
+                    <td className="px-4 py-2 text-white">{result}</td>
                   </tr>
                 ))}
               </tbody>

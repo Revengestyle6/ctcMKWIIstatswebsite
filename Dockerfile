@@ -16,6 +16,7 @@ WORKDIR /app
 # Copy backend first to install dependencies
 COPY backend ./backend
 RUN pip install --no-cache-dir -r ./backend/requirements.txt
+RUN cd ./backend && python import_json_to_db.py --rebuild
 
 # Copy frontend build
 COPY --from=frontend-build /app/frontend/build ./frontend/build

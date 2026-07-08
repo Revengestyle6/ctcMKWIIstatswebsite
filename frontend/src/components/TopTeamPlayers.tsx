@@ -1,128 +1,140 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import React from "react";
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://ctcmkwiistatswebsite.onrender.com';
-const divisions = ["1_2", "3", "4"];
+import { fetchJson } from "../api";
+import SeasonDivisionSelector from "./SeasonDivisionSelector";
+import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
 export default function TopTeamPlayers(): React.JSX.Element {
+  const {
+    seasons,
+    divisions,
+    season,
+    division,
+    loadingScope,
+    scopeError,
+    setSeason,
+    setDivision,
+  } = useSeasonDivision();
   const [teams, setTeams] = useState<string[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [topPlayers, setTopPlayers] = useState<string[]>([]);
   const [topTracks, setTopTracks] = useState<string[]>([]);
-  const [division, setDivision] = useState<string>("1_2");
   const [minRaces, setMinRaces] = useState<number>(12);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    async function fetchTeams() {
+    let cancelled = false;
+
+    async function loadTeams() {
+      if (!season || !division) return;
+      setTeams([]);
+      setSelectedTeam("");
+      setTopPlayers([]);
+      setTopTracks([]);
+      setError("");
       try {
-        const res = await fetch(`${API_URL}/api/teams?division=${division}`);
-        if (!res.ok) throw new Error("Failed to fetch teams");
-        const data: string[] = await res.json();
-        // Sort teams alphabetically (case-insensitive)
-        const sortedData = data.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        const data = await fetchJson<string[]>("/api/teams", { season, division });
+        if (cancelled) return;
+        const sortedData = [...data].sort((a, b) =>
+          a.toLowerCase().localeCompare(b.toLowerCase())
+        );
         setTeams(sortedData);
-        if (sortedData.length > 0) setSelectedTeam(sortedData[0]);
-        setError("");
+        setSelectedTeam(sortedData[0] ?? "");
       } catch (err) {
+        if (cancelled) return;
         console.error("Error fetching teams:", err);
         setError("Failed to load teams.");
-        setTeams([]);
       }
     }
-    fetchTeams();
-  }, [division]);
+
+    loadTeams();
+    return () => {
+      cancelled = true;
+    };
+  }, [season, division]);
 
   useEffect(() => {
-    if (!selectedTeam) return;
+    let cancelled = false;
 
     async function fetchTeamData() {
+      if (!selectedTeam || !season || !division) return;
       setLoading(true);
       setError("");
       try {
-        // Fetch top players
-        const playersRes = await fetch(
-          `${API_URL}/api/top-team-players?team=${encodeURIComponent(
-            selectedTeam
-          )}&min_races=${minRaces}&division=${division}`
-        );
-        if (!playersRes.ok) throw new Error("Failed to fetch top players");
-        const playersData: string[] = await playersRes.json();
+        const playersData = await fetchJson<string[]>("/api/top-team-players", {
+          team: selectedTeam,
+          min_races: minRaces,
+          season,
+          division,
+        });
+        const tracksData = await fetchJson<string[]>("/api/top-team-tracks", {
+          team: selectedTeam,
+          season,
+          division,
+        });
+        if (cancelled) return;
         setTopPlayers(playersData);
-
-        // Fetch top tracks
-        const tracksRes = await fetch(
-          `${API_URL}/api/top-team-tracks?team=${encodeURIComponent(
-            selectedTeam
-          )}&division=${division}`
-        );
-        if (!tracksRes.ok) throw new Error("Failed to fetch top tracks");
-        const tracksData: string[] = await tracksRes.json();
         setTopTracks(tracksData);
       } catch (err) {
+        if (cancelled) return;
         console.error("Error fetching team data:", err);
-        setError("Failed to fetch team data");
+        setError("Failed to fetch team data.");
         setTopPlayers([]);
         setTopTracks([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchTeamData();
-  }, [selectedTeam, division, minRaces]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTeam, season, division, minRaces]);
+
+  const combinedError = scopeError || error;
 
   return (
     <div className="relative min-h-screen text-white font-sans p-6">
-      {/* Top bar with semi-transparent background */}
       <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
         <div className="flex justify-between items-center max-w-7xl mx-auto px-2">
           <Link to="/" className="text-blue-400 hover:text-blue-300 font-semibold">
-            ← Back
+            &lt; Back
           </Link>
           <h1 className="text-3xl font-bold text-center flex-1">Best Team Averages</h1>
           <div className="w-32"></div>
-          <img 
-            src="/images/CTC_LOGO/ctclogo.webp" 
-            alt="Logo" 
+          <img
+            src="/images/CTC_LOGO/ctclogo.webp"
+            alt="Logo"
             className="w-12 h-12 rounded-lg"
             loading="lazy"
           />
         </div>
       </div>
 
-      {/* Main content with top padding */}
       <div className="pt-24 max-w-4xl mx-auto">
-
-
-        {error && <p className="text-red-400 mb-4 text-center">{error}</p>}
+        {combinedError && <p className="text-red-400 mb-4 text-center">{combinedError}</p>}
 
         <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6 flex-wrap justify-center">
-          {/* Division dropdown */}
-          <div>
-            <label className="block font-semibold mb-1">Division</label>
-            <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={division}
-              onChange={(e) => setDivision(e.target.value)}
-            >
-              {divisions.map((div) => (
-                <option key={div} value={div}>
-                  Division {div.replace("_", "–")}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SeasonDivisionSelector
+            season={season}
+            division={division}
+            seasons={seasons}
+            divisions={divisions}
+            disabled={loadingScope}
+            onSeasonChange={setSeason}
+            onDivisionChange={setDivision}
+          />
 
-          {/* Team dropdown */}
           <div>
             <label className="block font-semibold mb-1">Team</label>
             <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-40"
               value={selectedTeam}
-              onChange={(e) => setSelectedTeam(e.target.value)}
+              onChange={(event) => setSelectedTeam(event.target.value)}
+              disabled={!division || teams.length === 0}
             >
               <option value="">Select a team</option>
               {teams.map((team) => (
@@ -133,23 +145,19 @@ export default function TopTeamPlayers(): React.JSX.Element {
             </select>
           </div>
 
-          {/* Min races slider */}
           <div>
-            <label className="block font-semibold mb-1">
-              Min Races: {minRaces}
-            </label>
+            <label className="block font-semibold mb-1">Min Races: {minRaces}</label>
             <input
               type="range"
               min={1}
               max={30}
               value={minRaces}
-              onChange={(e) => setMinRaces(parseInt(e.target.value))}
+              onChange={(event) => setMinRaces(parseInt(event.target.value))}
               className="w-48"
             />
           </div>
         </div>
 
-        {/* Loading state */}
         {loading && (
           <div className="text-center">
             <div className="inline-block">
@@ -159,7 +167,6 @@ export default function TopTeamPlayers(): React.JSX.Element {
           </div>
         )}
 
-        {/* Top players table */}
         {!loading && topPlayers.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-4 text-center">Top Players</h2>
@@ -172,14 +179,12 @@ export default function TopTeamPlayers(): React.JSX.Element {
                   </tr>
                 </thead>
                 <tbody>
-                  {topPlayers.map((player, idx) => (
+                  {topPlayers.map((player, index) => (
                     <tr
-                      key={idx}
-                      className={idx % 2 === 0 ? "bg-black/50" : "bg-black/70"}
+                      key={index}
+                      className={index % 2 === 0 ? "bg-black/50" : "bg-black/70"}
                     >
-                      <td className="px-4 py-2 font-semibold text-blue-400">
-                        {idx + 1}
-                      </td>
+                      <td className="px-4 py-2 font-semibold text-blue-400">{index + 1}</td>
                       <td className="px-4 py-2 text-white">{player}</td>
                     </tr>
                   ))}
@@ -189,7 +194,6 @@ export default function TopTeamPlayers(): React.JSX.Element {
           </div>
         )}
 
-        {/* Top tracks table */}
         {!loading && topTracks.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-4 text-center">Top Tracks</h2>
@@ -202,14 +206,12 @@ export default function TopTeamPlayers(): React.JSX.Element {
                   </tr>
                 </thead>
                 <tbody>
-                  {topTracks.map((track, idx) => (
+                  {topTracks.map((track, index) => (
                     <tr
-                      key={idx}
-                      className={idx % 2 === 0 ? "bg-black/50" : "bg-black/70"}
+                      key={index}
+                      className={index % 2 === 0 ? "bg-black/50" : "bg-black/70"}
                     >
-                      <td className="px-4 py-2 font-semibold text-blue-400">
-                        {idx + 1}
-                      </td>
+                      <td className="px-4 py-2 font-semibold text-blue-400">{index + 1}</td>
                       <td className="px-4 py-2 text-white">{track}</td>
                     </tr>
                   ))}
