@@ -49,6 +49,13 @@ export default function HomePage(): React.JSX.Element {
             >
               Team Matchups
             </Link>
+
+            <Link
+              to="/matches"
+              className="px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-red-700 transition"
+            >
+              Match History
+            </Link>
           </div>
         </div>
       </header>

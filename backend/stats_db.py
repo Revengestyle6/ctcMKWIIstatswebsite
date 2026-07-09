@@ -6,6 +6,9 @@ from database import get_session_factory
 from models import (
     Division,
     Match,
+    MatchPlayer,
+    MatchTeam,
+    Penalty,
     Player,
     PlayerAlias,
     PlayerSeasonEntry,
@@ -396,6 +399,261 @@ def list_tracks(season=None, division=None):
             .order_by(Track.canonical_name)
         ).scalars()
         return list(rows)
+
+
+def list_matches(season=None, division=None, team=None):
+    with SessionLocal() as session:
+        scope = _get_scope(session, season=season, division=division)
+        match_rows = session.execute(
+            select(
+                Match.match_id,
+                Match.week_number,
+                Match.match_label,
+                Match.races_played,
+                Match.import_status,
+                Match.review_notes,
+            )
+            .where(
+                Match.season_id == scope.season_id,
+                Match.division_id == scope.division_id,
+            )
+            .order_by(Match.week_number, Match.match_label, Match.match_id)
+        ).all()
+        match_ids = [row.match_id for row in match_rows]
+
+        team_rows = []
+        if match_ids:
+            team_rows = session.execute(
+                select(
+                    MatchTeam.match_id,
+                    MatchTeam.final_score,
+                    TeamSeasonEntry.clan_tag,
+                )
+                .join(
+                    TeamSeasonEntry,
+                    TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id,
+                )
+                .where(MatchTeam.match_id.in_(match_ids))
+                .order_by(MatchTeam.match_id, MatchTeam.match_team_id)
+            ).all()
+
+        teams_by_match = {match_id: [] for match_id in match_ids}
+        scores_by_match = {match_id: [] for match_id in match_ids}
+        for row in team_rows:
+            teams_by_match.setdefault(row.match_id, []).append(row.clan_tag)
+            scores_by_match.setdefault(row.match_id, []).append(str(row.final_score))
+
+        team_query = team.strip().lower() if team else ""
+        matches = [
+            {
+                "match_id": row.match_id,
+                "week": row.week_number,
+                "label": row.match_label,
+                "races": row.races_played,
+                "teams": " vs ".join(teams_by_match.get(row.match_id, [])),
+                "scores": " - ".join(scores_by_match.get(row.match_id, [])),
+                "import_status": row.import_status,
+                "review_notes": row.review_notes,
+            }
+            for row in match_rows
+            if not team_query
+            or team_query in [tag.lower() for tag in teams_by_match.get(row.match_id, [])]
+        ]
+        return matches
+
+
+def _team_penalties(session, match_id):
+    rows = session.execute(
+        select(
+            Penalty.match_team_id,
+            func.sum(Penalty.penalty_points).label("penalties"),
+            func.group_concat(Penalty.raw_penalty_text, "; ").label("notes"),
+        )
+        .where(Penalty.match_id == match_id, Penalty.penalty_scope == "team")
+        .group_by(Penalty.match_team_id)
+    ).all()
+    return {
+        row.match_team_id: {
+            "points": int(row.penalties or 0),
+            "notes": row.notes or "",
+        }
+        for row in rows
+    }
+
+
+def get_match_detail(match_id):
+    with SessionLocal() as session:
+        match = session.get(Match, match_id)
+        if not match:
+            raise AnalyticsError("Invalid match")
+
+        season = session.get(Season, match.season_id)
+        division = session.get(Division, match.division_id)
+        race_rows = session.execute(
+            select(Race.race_id, Race.race_number, Race.track_name_raw, Track.canonical_name)
+            .join(Track, Track.track_id == Race.track_id)
+            .where(Race.match_id == match.match_id)
+            .order_by(Race.race_number)
+        ).all()
+        race_ids = [row.race_id for row in race_rows]
+        race_index_by_id = {race_id: index for index, race_id in enumerate(race_ids)}
+
+        match_teams = session.execute(
+            select(
+                MatchTeam.match_team_id,
+                MatchTeam.team_season_entry_id,
+                MatchTeam.raw_team_key,
+                MatchTeam.raw_total_score,
+                MatchTeam.team_penalty_points,
+                MatchTeam.final_score,
+                MatchTeam.hex_color,
+                TeamSeasonEntry.clan_tag,
+                TeamSeasonEntry.display_name,
+            )
+            .join(
+                TeamSeasonEntry,
+                TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id,
+            )
+            .where(MatchTeam.match_id == match.match_id)
+            .order_by(MatchTeam.match_team_id)
+        ).all()
+        team_penalties = _team_penalties(session, match.match_id)
+
+        player_rows = session.execute(
+            select(
+                MatchPlayer.match_player_id,
+                MatchPlayer.match_team_id,
+                MatchPlayer.player_id,
+                MatchPlayer.friend_code_raw,
+                MatchPlayer.lounge_name_raw,
+                MatchPlayer.mii_name_raw,
+                MatchPlayer.table_name_raw,
+                MatchPlayer.raw_total_score,
+                MatchPlayer.player_penalty_points,
+                MatchPlayer.subbed_out,
+                Player.canonical_lounge_name,
+            )
+            .join(Player, Player.player_id == MatchPlayer.player_id)
+            .join(MatchTeam, MatchTeam.match_team_id == MatchPlayer.match_team_id)
+            .where(MatchTeam.match_id == match.match_id)
+            .order_by(MatchPlayer.match_team_id, desc(MatchPlayer.raw_total_score), MatchPlayer.match_player_id)
+        ).all()
+        display_names = _display_names_for_players(
+            session,
+            [row.player_id for row in player_rows],
+            {row.player_id: row.canonical_lounge_name for row in player_rows},
+        )
+
+        scores_by_match_player = {
+            row.match_player_id: [None for _ in race_rows]
+            for row in player_rows
+        }
+        positions_by_match_player = {
+            row.match_player_id: [None for _ in race_rows]
+            for row in player_rows
+        }
+        result_rows = session.execute(
+            select(
+                RacePlayerResult.match_player_id,
+                RacePlayerResult.race_id,
+                RacePlayerResult.score,
+                RacePlayerResult.position,
+                RacePlayerResult.role,
+            )
+            .where(RacePlayerResult.race_id.in_(race_ids))
+        ).all()
+        roles_by_match_player = {
+            row.match_player_id: ["unknown" for _ in race_rows]
+            for row in player_rows
+        }
+        for row in result_rows:
+            index = race_index_by_id.get(row.race_id)
+            if index is None or row.match_player_id not in scores_by_match_player:
+                continue
+            scores_by_match_player[row.match_player_id][index] = row.score
+            positions_by_match_player[row.match_player_id][index] = row.position
+            roles_by_match_player[row.match_player_id][index] = row.role
+
+        players_by_team = {row.match_team_id: [] for row in match_teams}
+        for row in player_rows:
+            players_by_team.setdefault(row.match_team_id, []).append(
+                {
+                    "match_player_id": row.match_player_id,
+                    "player_id": row.player_id,
+                    "name": display_names.get(row.player_id)
+                    or row.lounge_name_raw
+                    or row.table_name_raw
+                    or row.mii_name_raw
+                    or "",
+                    "friend_code": row.friend_code_raw,
+                    "total": row.raw_total_score,
+                    "penalties": row.player_penalty_points,
+                    "subbed_out": row.subbed_out,
+                    "scores": scores_by_match_player.get(row.match_player_id, []),
+                    "positions": positions_by_match_player.get(row.match_player_id, []),
+                    "roles": roles_by_match_player.get(row.match_player_id, []),
+                }
+            )
+
+        teams = []
+        for row in match_teams:
+            team_players = sorted(
+                players_by_team.get(row.match_team_id, []),
+                key=lambda player: (-int(player["total"] or 0), player["name"].lower()),
+            )
+            teams.append(
+                {
+                    "match_team_id": row.match_team_id,
+                    "team_season_entry_id": row.team_season_entry_id,
+                    "tag": row.clan_tag,
+                    "name": row.display_name,
+                    "raw_team_key": row.raw_team_key,
+                    "hex_color": row.hex_color or "#3b82f6",
+                    "raw_total_score": row.raw_total_score,
+                    "team_penalties": row.team_penalty_points,
+                    "final_score": row.final_score,
+                    "penalty": team_penalties.get(row.match_team_id, {"points": 0, "notes": ""}),
+                    "players": team_players,
+                }
+            )
+
+        cumulative = []
+        if len(teams) >= 2:
+            running = 0
+            for race_index in range(len(race_rows)):
+                team_totals = []
+                for team in teams[:2]:
+                    team_totals.append(
+                        sum(
+                            player["scores"][race_index] or 0
+                            for player in team["players"]
+                            if race_index < len(player["scores"])
+                        )
+                    )
+                running += team_totals[0] - team_totals[1]
+                cumulative.append(running)
+
+        return {
+            "match_id": match.match_id,
+            "season": season.season_code if season else "",
+            "division": division.division_code if division else "",
+            "week": match.week_number,
+            "label": match.match_label,
+            "format": match.format,
+            "races_played": match.races_played,
+            "import_status": match.import_status,
+            "review_notes": match.review_notes,
+            "tracks": [
+                {
+                    "race_number": row.race_number,
+                    "name": row.canonical_name or row.track_name_raw,
+                    "raw_name": row.track_name_raw,
+                }
+                for row in race_rows
+            ],
+            "teams": teams,
+            "differential": cumulative,
+        }
 
 
 def findplayeravg(player, track="", division=None, team="", season=None):

@@ -1,0 +1,133 @@
+# Feature Wishlist
+
+This document captures larger product ideas that would build on the current stats database and frontend.
+
+## 1. Match History Catalog
+
+Goal: create a browsable match archive.
+
+Basic flow:
+
+1. Select season.
+2. Select division.
+3. Filter matches by team and other useful criteria.
+4. Open a match detail page.
+
+Possible filters:
+
+- team
+- week
+- match date, if/when available
+- track
+- player
+- source file/import status
+- matches needing review
+- close matches or blowouts
+- penalty/no-penalty matches
+
+Each match page should include:
+
+- full war table
+- season, division, week, and match label
+- teams, final scores, penalties, and score difference
+- track list in race order
+- player scores, GP scores, race scores, and total scores
+- player friend codes used in that match
+- player run/bag status for each race, once that data is available
+- source metadata, such as JSON file/source table refs/import notes
+- links to team pages and player pages
+
+This feature should make it easy to answer: “What happened in this war?” and “Where did this stat come from?”
+
+## 2. Full Season/Team Catalog
+
+Goal: create a season-specific team hub.
+
+Basic flow:
+
+1. Select season.
+2. Select division.
+3. Select team.
+4. View the team page.
+
+Team page content:
+
+- team logo
+- team name and clan tag
+- season/division context
+- team color
+- full roster
+- player names
+- player friend codes
+- player season averages
+- races played
+- team-wide average and record-style summary, if available
+- top tracks and worst tracks
+- most-used lineup or roster participation notes
+- links to every match the team played that season
+
+The match links should point into the Match History Catalog.
+
+This page should make it easy to answer: “Who played for this team this season?” and “How did this team perform?”
+
+## 3. Match JSON Editor
+
+Goal: build an editor for creating, validating, and eventually submitting match JSON.
+
+Initial version:
+
+- upload an existing JSON file as a starting point
+- allow starting from an empty form
+- prefill the UI from uploaded JSON when provided
+- edit all required match fields
+- download the finished JSON
+
+Editable match fields:
+
+- league
+- season
+- division
+- week or match label
+- number of races
+- teams involved
+- team tags, names, colors, scores, and penalties
+- players involved
+- player friend codes
+- player lounge names, table names, Mii names, and flags
+- player scores per race
+- player positions per race
+- GP scores
+- player penalties
+- team penalties
+- tracks played per race
+- player run/bag status per race
+- table references/source refs
+- review notes or import notes
+
+Validation should catch:
+
+- missing required fields
+- malformed friend codes
+- duplicate friend codes in the same match
+- race count mismatches
+- score/position length mismatches
+- team total mismatches
+- player total mismatches
+- penalties not reflected in final scores
+- unknown or duplicate tracks
+- unresolved team aliases
+- unresolved player identity issues
+
+Future version:
+
+- upload/import the finalized JSON directly from the app
+- write the JSON into the repo or configured storage
+- ingest it into the database
+- refresh analytics immediately
+- show import success/failure details
+- flag matches needing review instead of silently accepting questionable data
+
+Longer-term goal:
+
+Use this as the live workflow for next season. A user enters or uploads a completed match JSON, fills in any metadata that is not present in the JSON, submits it, and the site updates analytics live.
+

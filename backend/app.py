@@ -120,6 +120,29 @@ def api_teams():
     except Exception as e:
         print(f"Error in api_teams: {e}")
         return _error_response(e)
+
+
+@app.route("/api/matches", methods=["GET"])
+@cache.cached(timeout=3600, query_string=True)
+def api_matches():
+    division = _division_arg()
+    season = _season_arg()
+    team = request.args.get("team")
+    try:
+        return jsonify(stats.list_matches(season=season, division=division, team=team))
+    except Exception as e:
+        print(f"Error in api_matches: {e}")
+        return _error_response(e)
+
+
+@app.route("/api/matches/<int:match_id>", methods=["GET"])
+@cache.cached(timeout=3600, query_string=True)
+def api_match_detail(match_id):
+    try:
+        return jsonify(stats.get_match_detail(match_id))
+    except Exception as e:
+        print(f"Error in api_match_detail: {e}")
+        return _error_response(e)
     
 @app.route("/api/top-team-tracks", methods=["GET"])
 @cache.cached(timeout=3600, query_string=True)
