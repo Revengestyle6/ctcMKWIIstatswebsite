@@ -4,6 +4,8 @@ node_modules/
 # Python virtual environment
 .venv/
 
+.venv-wsl
+
 # Python cache files
 __pycache__/
 *.pyc

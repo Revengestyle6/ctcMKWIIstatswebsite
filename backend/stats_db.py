@@ -42,6 +42,17 @@ class Scope:
     division_code: str
 
 
+@dataclass(frozen=True)
+class PlayerLookupRow:
+    player_id: int
+    canonical_lounge_name: str | None
+    primary_friend_code: str | None
+    primary_lounge_name: str | None
+    primary_mii_name: str | None
+    clan_tag: str
+    display_name: str
+
+
 def normalize_season_code(value):
     if value is None or str(value).strip() == "":
         return None
@@ -57,7 +68,69 @@ def normalize_division_code(value):
 
 
 def _display_player(row):
-    return row.primary_lounge_name or row.canonical_lounge_name or row.primary_mii_name or ""
+    return (
+        getattr(row, "display_name", None)
+        or row.primary_lounge_name
+        or row.canonical_lounge_name
+        or row.primary_mii_name
+        or ""
+    )
+
+
+def _ranked_alias_values(session, player_ids, alias_type, rank_by):
+    if not player_ids:
+        return {}
+
+    rows = session.execute(
+        select(
+            PlayerAlias.player_id,
+            PlayerAlias.alias_value,
+            func.count(PlayerAlias.player_alias_id).label("uses"),
+            func.max(PlayerAlias.last_seen_match_id).label("last_seen"),
+            func.max(PlayerAlias.player_alias_id).label("alias_id"),
+        )
+        .where(
+            PlayerAlias.player_id.in_(player_ids),
+            PlayerAlias.alias_type == alias_type,
+            PlayerAlias.alias_value.is_not(None),
+            func.trim(PlayerAlias.alias_value) != "",
+        )
+        .group_by(PlayerAlias.player_id, PlayerAlias.alias_value)
+    ).all()
+
+    ranked = {}
+    for row in rows:
+        last_seen = row.last_seen or 0
+        uses = row.uses or 0
+        alias_id = row.alias_id or 0
+        if rank_by == "recent":
+            key = (last_seen, uses, alias_id)
+        else:
+            key = (uses, last_seen, alias_id)
+        current = ranked.get(row.player_id)
+        if current is None or key > current[0]:
+            ranked[row.player_id] = (key, row.alias_value)
+
+    return {player_id: value for player_id, (_, value) in ranked.items()}
+
+
+def _display_names_for_players(session, player_ids, canonical_names=None):
+    player_ids = list(dict.fromkeys(player_ids))
+    canonical_names = canonical_names or {}
+    recent_lounge_names = _ranked_alias_values(session, player_ids, "lounge_name", "recent")
+    common_table_names = _ranked_alias_values(session, player_ids, "table_name", "common")
+    common_mii_names = _ranked_alias_values(session, player_ids, "mii_name", "common")
+
+    return {
+        player_id: (
+            recent_lounge_names.get(player_id)
+            or canonical_names.get(player_id)
+            or common_table_names.get(player_id)
+            or common_mii_names.get(player_id)
+            or ""
+        )
+        for player_id in player_ids
+    }
 
 
 def _score_filter():
@@ -126,7 +199,20 @@ def _valid_players(session, scope):
             PlayerSeasonEntry.division_id == scope.division_id,
         )
     ).all()
-    return rows
+    canonical_names = {row.player_id: row.canonical_lounge_name for row in rows}
+    display_names = _display_names_for_players(session, canonical_names.keys(), canonical_names)
+    return [
+        PlayerLookupRow(
+            player_id=row.player_id,
+            canonical_lounge_name=row.canonical_lounge_name,
+            primary_friend_code=row.primary_friend_code,
+            primary_lounge_name=row.primary_lounge_name,
+            primary_mii_name=row.primary_mii_name,
+            clan_tag=row.clan_tag,
+            display_name=display_names.get(row.player_id, ""),
+        )
+        for row in rows
+    ]
 
 
 def _player_candidate_dict(row):
@@ -139,14 +225,16 @@ def _player_candidate_dict(row):
 
 
 def _resolve_player(session, player, scope):
-    query = player.strip().lower()
-    if not query:
+    query_text = player.strip()
+    query = query_text.lower()
+    if not query_text:
         raise AnalyticsError("Player name is required")
 
     direct_rows = _valid_players(session, scope)
     direct_matches = []
     for row in direct_rows:
         names = [
+            row.display_name,
             row.primary_lounge_name,
             row.primary_mii_name,
             row.canonical_lounge_name,
@@ -234,12 +322,12 @@ def _format_track_rows(rows):
 def list_players(season=None, division=None):
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
-        players = {
-            _display_player(row)
-            for row in _valid_players(session, scope)
-            if _display_player(row)
-        }
-        return sorted(players)
+        players = {}
+        for row in _valid_players(session, scope):
+            display_name = _display_player(row)
+            if display_name:
+                players[display_name.lower()] = display_name
+        return sorted(players.values(), key=lambda name: name.lower())
 
 
 def list_seasons(league_code="ctc"):
@@ -456,14 +544,11 @@ def top_team_players(team, min_races=12, division=None, season=None):
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
         team_row = _resolve_team(session, team, scope)
-        player_name = func.coalesce(
-            PlayerSeasonEntry.primary_lounge_name,
-            Player.canonical_lounge_name,
-            PlayerSeasonEntry.primary_mii_name,
-        ).label("name")
         rows = session.execute(
             select(
-                player_name,
+                Player.player_id,
+                Player.canonical_lounge_name,
+                Player.primary_friend_code,
                 (func.avg(RacePlayerResult.score) * 12).label("average"),
                 func.count(RacePlayerResult.race_player_result_id).label("races"),
             )
@@ -485,12 +570,21 @@ def top_team_players(team, min_races=12, division=None, season=None):
                 RacePlayerResult.team_season_entry_id == team_row.team_season_entry_id,
                 _score_filter(),
             )
-            .group_by(player_name)
+            .group_by(Player.player_id, Player.canonical_lounge_name, Player.primary_friend_code)
             .having(func.count(RacePlayerResult.race_player_result_id) >= min_races)
-            .order_by(desc("average"), desc("races"), "name")
+            .order_by(desc("average"), desc("races"), Player.player_id)
         ).all()
+        display_names = _display_names_for_players(
+            session,
+            [row.player_id for row in rows],
+            {row.player_id: row.canonical_lounge_name for row in rows},
+        )
         return [
-            {"name": row.name, "average": round(float(row.average or 0), 1), "races": int(row.races)}
+            {
+                "name": display_names.get(row.player_id, ""),
+                "average": round(float(row.average or 0), 1),
+                "races": int(row.races),
+            }
             for row in rows
         ]
 
@@ -499,14 +593,11 @@ def top_track_players(track, min_races=2, division=None, season=None):
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
         track_row = _resolve_track(session, track, scope)
-        player_name = func.coalesce(
-            PlayerSeasonEntry.primary_lounge_name,
-            Player.canonical_lounge_name,
-            PlayerSeasonEntry.primary_mii_name,
-        ).label("name")
         rows = session.execute(
             select(
-                player_name,
+                Player.player_id,
+                Player.canonical_lounge_name,
+                Player.primary_friend_code,
                 (func.avg(RacePlayerResult.score) * 12).label("average"),
                 func.count(RacePlayerResult.race_player_result_id).label("races"),
             )
@@ -517,6 +608,7 @@ def top_track_players(track, min_races=2, division=None, season=None):
                     PlayerSeasonEntry.player_id == RacePlayerResult.player_id,
                     PlayerSeasonEntry.season_id == scope.season_id,
                     PlayerSeasonEntry.division_id == scope.division_id,
+                    PlayerSeasonEntry.team_season_entry_id == RacePlayerResult.team_season_entry_id,
                 ),
             )
             .join(Race, Race.race_id == RacePlayerResult.race_id)
@@ -527,12 +619,21 @@ def top_track_players(track, min_races=2, division=None, season=None):
                 Race.track_id == track_row.track_id,
                 _score_filter(),
             )
-            .group_by(player_name)
+            .group_by(Player.player_id, Player.canonical_lounge_name, Player.primary_friend_code)
             .having(func.count(RacePlayerResult.race_player_result_id) >= min_races)
-            .order_by(desc("average"), desc("races"), "name")
+            .order_by(desc("average"), desc("races"), Player.player_id)
         ).all()
+        display_names = _display_names_for_players(
+            session,
+            [row.player_id for row in rows],
+            {row.player_id: row.canonical_lounge_name for row in rows},
+        )
         return [
-            {"name": row.name, "average": round(float(row.average or 0), 1), "races": int(row.races)}
+            {
+                "name": display_names.get(row.player_id, ""),
+                "average": round(float(row.average or 0), 1),
+                "races": int(row.races),
+            }
             for row in rows
         ]
 

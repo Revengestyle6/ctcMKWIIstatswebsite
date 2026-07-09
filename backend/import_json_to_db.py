@@ -3,6 +3,7 @@ import csv
 import hashlib
 import json
 import re
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +33,15 @@ from models import (
 
 JSON_ROOT = BASE_DIR / "JSON"
 TEAM_ALIAS_PATH = BASE_DIR / "data" / "team_aliases.csv"
+PLAYER_IDENTITY_PATH = BASE_DIR / "data" / "player_identities.csv"
 WEEK_RE = re.compile(r"\bW(\d+)\b", re.IGNORECASE)
+
+
+@dataclass
+class PlayerIdentities:
+    friend_code_to_canonical: dict[str, str] = field(default_factory=dict)
+    canonical_to_friend_codes: dict[str, set[str]] = field(default_factory=dict)
+    canonical_names: dict[str, str] = field(default_factory=dict)
 
 
 def sha256_file(path: Path) -> str:
@@ -92,6 +101,29 @@ def load_team_aliases(path: Path = TEAM_ALIAS_PATH) -> dict[tuple[str, str, str,
                 "note": (row.get("note") or "").strip(),
             }
     return aliases
+
+
+def load_player_identities(path: Path = PLAYER_IDENTITY_PATH) -> PlayerIdentities:
+    identities = PlayerIdentities()
+    if not path.exists():
+        return identities
+
+    with path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            canonical_friend_code = (row.get("canonical_friend_code") or "").strip()
+            friend_code = (row.get("friend_code") or "").strip()
+            canonical_lounge_name = (row.get("canonical_lounge_name") or "").strip()
+            if not canonical_friend_code or not friend_code:
+                continue
+
+            identities.friend_code_to_canonical[friend_code] = canonical_friend_code
+            identities.canonical_to_friend_codes.setdefault(canonical_friend_code, set()).update(
+                {canonical_friend_code, friend_code}
+            )
+            if canonical_lounge_name:
+                identities.canonical_names[canonical_friend_code] = canonical_lounge_name
+    return identities
 
 
 def resolve_team_alias(
@@ -205,12 +237,43 @@ def display_player_name(player_data: dict[str, Any]) -> str | None:
     )
 
 
-def get_or_create_player(session, friend_code: str, player_data: dict[str, Any]) -> Player:
+def get_or_create_player(
+    session,
+    friend_code: str,
+    player_data: dict[str, Any],
+    identities: PlayerIdentities,
+) -> Player:
+    canonical_friend_code = identities.friend_code_to_canonical.get(friend_code, friend_code)
+    identity_friend_codes = identities.canonical_to_friend_codes.get(
+        canonical_friend_code,
+        {canonical_friend_code, friend_code},
+    )
     friend_code_row = session.scalar(select(PlayerFriendCode).where(PlayerFriendCode.friend_code == friend_code))
     if friend_code_row:
-        return session.get(Player, friend_code_row.player_id)
+        player = session.get(Player, friend_code_row.player_id)
+        if player and not player.primary_friend_code:
+            player.primary_friend_code = canonical_friend_code
+        return player
 
-    player = Player(canonical_lounge_name=display_player_name(player_data), primary_friend_code=friend_code)
+    identity_friend_code_row = session.scalar(
+        select(PlayerFriendCode).where(PlayerFriendCode.friend_code.in_(identity_friend_codes))
+    )
+    if identity_friend_code_row:
+        player = session.get(Player, identity_friend_code_row.player_id)
+        if player:
+            session.add(PlayerFriendCode(player_id=player.player_id, friend_code=friend_code))
+            if canonical_friend_code != player.primary_friend_code:
+                player.primary_friend_code = canonical_friend_code
+            canonical_name = identities.canonical_names.get(canonical_friend_code)
+            if canonical_name:
+                player.canonical_lounge_name = canonical_name
+            session.flush()
+        return player
+
+    player = Player(
+        canonical_lounge_name=identities.canonical_names.get(canonical_friend_code) or display_player_name(player_data),
+        primary_friend_code=canonical_friend_code,
+    )
     session.add(player)
     session.flush()
 
@@ -323,6 +386,7 @@ def import_match(
     path: Path,
     match_index: int,
     aliases: dict[tuple[str, str, str, str, str], dict[str, str]],
+    identities: PlayerIdentities,
     league_code: str,
     season_code: str,
     division_code: str,
@@ -420,7 +484,7 @@ def import_match(
             )
 
         for friend_code, player_data in (team_data.get("players") or {}).items():
-            player = get_or_create_player(session, friend_code, player_data)
+            player = get_or_create_player(session, friend_code, player_data, identities)
             add_player_aliases(session, player, player_data, match.match_id)
             player_entry = get_or_create_player_entry(
                 session, player, team_entry, season, division, player_data, match.match_id
@@ -489,7 +553,12 @@ def import_match(
                 )
 
 
-def import_file(session, path: Path, aliases: dict[tuple[str, str, str, str, str], dict[str, str]]) -> tuple[int, int]:
+def import_file(
+    session,
+    path: Path,
+    aliases: dict[tuple[str, str, str, str, str], dict[str, str]],
+    identities: PlayerIdentities,
+) -> tuple[int, int]:
     relative_parts = path.relative_to(JSON_ROOT).parts
     if len(relative_parts) < 4:
         return 0, 0
@@ -531,6 +600,7 @@ def import_file(session, path: Path, aliases: dict[tuple[str, str, str, str, str
             path,
             match_index,
             aliases,
+            identities,
             league_code,
             season_code,
             division_code,
@@ -579,10 +649,11 @@ def import_json_tree(db_path: Path, json_root: Path):
     imported_matches = 0
     skipped_files = 0
     aliases = load_team_aliases()
+    identities = load_player_identities()
     with SessionLocal() as session:
         for path in preferred_json_files(json_root):
             with session.begin_nested():
-                imported, skipped = import_file(session, path, aliases)
+                imported, skipped = import_file(session, path, aliases, identities)
                 imported_matches += imported
                 skipped_files += skipped
         session.commit()
