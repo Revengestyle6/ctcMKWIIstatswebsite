@@ -392,8 +392,11 @@ function TraditionalTable({
               const color = teamColor(team, teamColors, teamIndex === 0 ? "#1d4ed8" : "#be185d");
               return (
               <React.Fragment key={team.match_team_id}>
-                <tr style={{ backgroundColor: `${color}99` }}>
-                  <td className="sticky left-0 z-10 px-3 py-3 text-[1.6rem] font-bold leading-none text-white" style={{ backgroundColor: color }}>
+                <tr style={{ backgroundColor: `${color}80` }}>
+                  <td
+                    className="sticky left-0 z-10 px-3 py-3 text-[1.6rem] font-bold leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
+                    style={{ background: `linear-gradient(rgba(0,0,0,.28), rgba(0,0,0,.28)), ${color}` }}
+                  >
                     {team.tag}
                   </td>
                   <td colSpan={columns.length} className="px-3 py-3 text-white">
@@ -620,7 +623,7 @@ function VerticalScorecard({
         <tbody>
           {match.tracks.map((track, raceIndex) => (
             <tr key={track.race_number}>
-              <th className="max-w-56 px-3 py-2 text-left text-xs font-semibold text-gray-100">
+              <th className="max-w-56 px-3 py-2 text-left text-[15px] font-semibold text-gray-100">
                 <span className="mr-2 text-blue-300">R{track.race_number}</span>
                 {track.name}
               </th>
