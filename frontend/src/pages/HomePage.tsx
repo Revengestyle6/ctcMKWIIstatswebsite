@@ -56,6 +56,13 @@ export default function HomePage(): React.JSX.Element {
             >
               Match History
             </Link>
+
+            <Link
+              to="/json-editor"
+              className="px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-red-700 transition"
+            >
+              JSON Editor
+            </Link>
           </div>
         </div>
       </header>

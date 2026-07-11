@@ -6,6 +6,7 @@ import TopTracks from "./components/TopTracks";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import BestMatchups from "./components/BestMatchups";
 import MatchHistory from "./components/MatchHistory";
+import MatchJsonEditor from "./components/MatchJsonEditor";
 import MusicPlayer from "./components/MusicPlayer";
 import React from "react";
 
@@ -21,6 +22,7 @@ export default function App(): React.JSX.Element {
         <Route path="/top-tracks" element={<TopTracks />} />
         <Route path="/best-matchups" element={<BestMatchups />} />
         <Route path="/matches" element={<MatchHistory />} />
+        <Route path="/json-editor" element={<MatchJsonEditor />} />
       </Routes>
     </BrowserRouter>
   );
