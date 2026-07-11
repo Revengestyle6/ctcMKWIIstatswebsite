@@ -1,862 +1,429 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { fetchMatchScopes, fetchPlayerIdentity, fetchTeamScopes, MatchScope, PlayerIdentity, searchTracks, TeamScope } from "../api";
+import {
+  allPlayers, blankMatch, compileMatch, defaultRoleForPosition, expectedRoomSize, MatchJson, MatchPlayerJson,
+  playerLabel, RaceDraft, racesFromMatch, SCORE_TABLES, scoreForPosition, teamColor,
+  teamTag, TeamJson,
+} from "./matchJsonEditorModel";
 
-type MatchPlayerJson = {
-  table_str?: string;
-  mii_name?: string;
-  lounge_name?: string;
-  table_name?: string;
-  tag?: string;
-  total_score?: number;
-  had_penalties?: boolean;
-  penalties?: number;
-  subbed_out?: boolean;
-  race_scores?: Array<number | null>;
-  race_positions?: Array<number | null>;
-  gp_scores?: Array<Array<number | null>>;
-  race_roles?: string[];
-  flag?: string;
-  [key: string]: unknown;
-};
+type IdentityState = { status: "idle" | "checking" | "confirmed" | "new" | "conflict"; identity?: PlayerIdentity; message?: string };
+type Issue = { level: "error" | "warning"; message: string };
 
-type TeamJson = {
-  table_tag_str?: string;
-  table_penalty_str?: string;
-  total_score?: number;
-  penalties?: number;
-  players?: Record<string, MatchPlayerJson>;
-  [key: string]: unknown;
-};
+const inputClass = "mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300";
+const smallLabel = "text-xs font-semibold uppercase text-gray-400";
 
-type MatchJson = {
-  title_str?: string;
-  format?: string;
-  races_played?: number;
-  league?: string;
-  season?: string;
-  division?: string;
-  week?: number;
-  match_label?: string;
-  rxx?: string[];
-  tracks?: string[];
-  teams?: Record<string, TeamJson>;
-  review_notes?: string;
-  [key: string]: unknown;
-};
+function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
+function validFriendCode(value: string): boolean { return /^\d{4}-\d{4}-\d{4}$/.test(value); }
+function numberValue(value: number | undefined): string { return value === undefined ? "" : String(value); }
+function isFfa(format = ""): boolean { return format.trim().toLowerCase() === "ffa"; }
 
-type ValidationIssue = {
-  level: "error" | "warning";
-  message: string;
-};
+function normalized(value: string | undefined): string { return (value ?? "").trim().toLowerCase(); }
 
-const blankMatch: MatchJson = {
-  title_str: "#title 12 races\n",
-  format: "5v5",
-  races_played: 12,
-  league: "ctc",
-  season: "",
-  division: "",
-  week: undefined,
-  match_label: "",
-  rxx: ["", "", ""],
-  tracks: Array.from({ length: 12 }, () => ""),
-  teams: {
-    TeamA: {
-      table_tag_str: "TeamA #4F8CFF",
-      table_penalty_str: "",
-      total_score: 0,
-      penalties: 0,
-      players: {},
-    },
-    TeamB: {
-      table_tag_str: "TeamB #F45D8C",
-      table_penalty_str: "",
-      total_score: 0,
-      penalties: 0,
-      players: {},
-    },
-  },
-  review_notes: "",
-};
-
-function cloneMatch(match: MatchJson): MatchJson {
-  return JSON.parse(JSON.stringify(match)) as MatchJson;
-}
-
-function asNumber(value: string): number | undefined {
-  if (value.trim() === "") return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function asNullableNumber(value: string): number | null {
-  if (value.trim() === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function numberInputValue(value: number | null | undefined): string {
-  return value === null || value === undefined ? "" : String(value);
-}
-
-function friendCodeIsValid(friendCode: string): boolean {
-  return /^\d{4}-\d{4}-\d{4}$/.test(friendCode);
-}
-
-function teamHexColor(team: TeamJson): string {
-  const match = (team.table_tag_str ?? "").match(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/);
-  return match ? match[0].toUpperCase() : "";
-}
-
-function teamDisplayTag(teamKey: string, team: TeamJson): string {
-  const tableTag = (team.table_tag_str ?? "").replace(/#[0-9a-fA-F]{3,6}/, "").trim();
-  return tableTag || teamKey;
-}
-
-function setTeamTagString(team: TeamJson, tag: string, color: string): TeamJson {
-  return {
-    ...team,
-    table_tag_str: color ? `${tag} ${color.toUpperCase()}` : tag,
-  };
-}
-
-function ensureArrayLength<T>(values: T[] | undefined, length: number, fallback: T): T[] {
-  const next = Array.isArray(values) ? [...values] : [];
-  while (next.length < length) next.push(fallback);
-  if (next.length > length) next.length = length;
-  return next;
-}
-
-function rebuildGpScores(scores: Array<number | null>): Array<Array<number | null>> {
-  const gps: Array<Array<number | null>> = [];
-  for (let index = 0; index < scores.length; index += 4) {
-    gps.push(scores.slice(index, index + 4));
+function validation(match: MatchJson, races: RaceDraft[], identities: Record<string, IdentityState>, scopes: MatchScope[], scopesLoaded: boolean, teamScopes: TeamScope[], teamsLoaded: boolean, trackOptions: Array<{ track_id: number; name: string }>, tracksLoaded: boolean): Issue[] {
+  const issues: Issue[] = [];
+  const players = allPlayers(match);
+  const friendCodes = new Set<string>();
+  const playerIds = new Map<number, string>();
+  if (!match.league) issues.push({ level: "error", message: "League is missing." });
+  if (!match.season) issues.push({ level: "error", message: "Season is missing." });
+  if (!match.division) issues.push({ level: "error", message: "Division is missing." });
+  if (scopesLoaded && match.league && !scopes.some((scope) => normalized(scope.league) === normalized(match.league))) {
+    issues.push({ level: "error", message: `League ${match.league} does not exist in the database.` });
   }
-  return gps;
-}
-
-function playerTotal(player: MatchPlayerJson): number {
-  const scoreTotal = (player.race_scores ?? []).reduce<number>((sum, score) => sum + (score ?? 0), 0);
-  return scoreTotal - (player.penalties ?? 0);
-}
-
-function validateMatch(match: MatchJson): ValidationIssue[] {
-  const issues: ValidationIssue[] = [];
-  const races = match.races_played ?? 0;
-  const tracks = match.tracks ?? [];
-  const teams = match.teams ?? {};
-  const friendCodeOwners = new Map<string, string[]>();
-
-  if (!match.format?.trim()) issues.push({ level: "error", message: "Format is missing." });
-  if (!races || races < 1) issues.push({ level: "error", message: "Race count must be at least 1." });
-  if (tracks.length !== races) {
-    issues.push({ level: "error", message: `Track count is ${tracks.length}, but races_played is ${races}.` });
+  const seasonScopes = scopes.filter((scope) => normalized(scope.league) === normalized(match.league) && normalized(scope.season) === normalized(match.season));
+  if (scopesLoaded && match.league && match.season && seasonScopes.length === 0) {
+    issues.push({ level: "error", message: `Season ${match.season} does not exist for league ${match.league}.` });
   }
-  tracks.forEach((track, index) => {
-    if (!track.trim()) issues.push({ level: "warning", message: `Race ${index + 1} is missing a track name.` });
-  });
-
-  const teamEntries = Object.entries(teams);
-  if (teamEntries.length !== 2) {
-    issues.push({ level: "warning", message: `This editor currently expects 2 teams; found ${teamEntries.length}.` });
+  if (scopesLoaded && seasonScopes.length > 0 && match.division && !seasonScopes.some((scope) => normalized(scope.division) === normalized(match.division))) {
+    issues.push({ level: "error", message: `Division ${match.division} does not exist in ${match.league} ${match.season}.` });
   }
-
-  teamEntries.forEach(([teamKey, team]) => {
-    const tag = teamDisplayTag(teamKey, team);
-    const players = Object.entries(team.players ?? {});
-    if (!tag.trim()) issues.push({ level: "error", message: `Team ${teamKey} is missing a tag.` });
-    if (players.length === 0) issues.push({ level: "warning", message: `${tag} has no players.` });
-
-    const sumPlayers = players.reduce((sum, [, player]) => sum + (player.total_score ?? 0), 0);
-    const teamFinal = sumPlayers - (team.penalties ?? 0);
-    if ((team.total_score ?? 0) !== teamFinal) {
-      issues.push({
-        level: "warning",
-        message: `${tag} total_score is ${team.total_score ?? 0}; player totals minus team penalties equal ${teamFinal}.`,
-      });
-    }
-
-    players.forEach(([friendCode, player]) => {
-      const name = player.lounge_name || player.table_name || friendCode;
-      if (!friendCodeIsValid(friendCode)) {
-        issues.push({ level: "error", message: `${name} has malformed friend code ${friendCode}.` });
-      }
-      friendCodeOwners.set(friendCode, [...(friendCodeOwners.get(friendCode) ?? []), `${tag} / ${name}`]);
-
-      const scores = player.race_scores ?? [];
-      const positions = player.race_positions ?? [];
-      const roles = player.race_roles ?? [];
-      if (scores.length !== races) {
-        issues.push({ level: "error", message: `${name} has ${scores.length} race scores; expected ${races}.` });
-      }
-      if (positions.length !== races) {
-        issues.push({ level: "warning", message: `${name} has ${positions.length} race positions; expected ${races}.` });
-      }
-      if (roles.length > 0 && roles.length !== races) {
-        issues.push({ level: "warning", message: `${name} has ${roles.length} race roles; expected ${races}.` });
-      }
-      const expectedTotal = playerTotal(player);
-      if ((player.total_score ?? 0) !== expectedTotal) {
-        issues.push({
-          level: "warning",
-          message: `${name} total_score is ${player.total_score ?? 0}; race scores minus penalties equal ${expectedTotal}.`,
-        });
+  const selectedTeamScope = teamScopes.filter((scope) =>
+    normalized(scope.league) === normalized(match.league)
+    && normalized(scope.season) === normalized(match.season)
+    && normalized(scope.division) === normalized(match.division)
+  );
+  const resolvedTeamIds = new Map<number, string>();
+  if (teamsLoaded) {
+    Object.entries(match.teams ?? {}).forEach(([teamKey, team]) => {
+      const tag = teamTag(teamKey, team);
+      const resolved = selectedTeamScope.find((scope) =>
+        normalized(scope.clan_tag) === normalized(tag) || normalized(scope.canonical_tag) === normalized(tag)
+      );
+      if (!resolved) {
+        issues.push({ level: "error", message: `Team ${tag} does not belong to ${match.league || "the selected league"} ${match.season || "season"} ${match.division || "division"}.` });
+      } else {
+        const prior = resolvedTeamIds.get(resolved.team_id);
+        if (prior) issues.push({ level: "error", message: `Teams ${prior} and ${tag} resolve to the same database team.` });
+        resolvedTeamIds.set(resolved.team_id, tag);
       }
     });
-  });
-
-  friendCodeOwners.forEach((owners, friendCode) => {
-    if (owners.length > 1) {
-      issues.push({
-        level: "error",
-        message: `Duplicate friend code ${friendCode}: ${owners.join(", ")}.`,
-      });
+  }
+  players.forEach(({ playerKey, friendCode, player }) => {
+    const name = player.lounge_name || player.mii_name || friendCode;
+    if (!validFriendCode(friendCode)) issues.push({ level: "error", message: `${name} needs a valid friend code.` });
+    if (friendCodes.has(friendCode)) issues.push({ level: "error", message: `Friend code ${friendCode} is configured more than once.` });
+    friendCodes.add(friendCode);
+    const identity = identities[playerKey];
+    if (validFriendCode(friendCode) && identity?.status !== "confirmed" && identity?.status !== "new") {
+      issues.push({ level: "warning", message: `${name} has not been checked against the database.` });
+    }
+    if (identity?.identity) {
+      const prior = playerIds.get(identity.identity.player_id);
+      if (prior && prior !== playerKey) issues.push({ level: "error", message: `${name} resolves to a player already configured in this match.` });
+      playerIds.set(identity.identity.player_id, playerKey);
+    }
+    if (!isFfa(match.format) && (player.penalties ?? 0) !== 0) {
+      issues.push({ level: "warning", message: `${name} has a legacy player penalty in a team match.` });
     }
   });
-
+  races.forEach((race, index) => {
+    if (!SCORE_TABLES[race.roomSize]) issues.push({ level: "error", message: `Race ${index + 1} has unsupported room size ${race.roomSize}.` });
+    if (!race.trackName.trim()) issues.push({ level: "error", message: `Race ${index + 1} needs a track.` });
+    else if (tracksLoaded && !trackOptions.some((track) => normalized(track.name) === normalized(race.trackName))) {
+      issues.push({ level: "error", message: `Race ${index + 1} track ${race.trackName} does not exist in the database.` });
+    }
+    const assigned = race.placements.filter(Boolean);
+    if (assigned.length !== race.roomSize) issues.push({ level: "error", message: `Race ${index + 1} has ${assigned.length} of ${race.roomSize} positions filled.` });
+    const keys = assigned.map((placement) => placement!.playerKey);
+    if (new Set(keys).size !== keys.length) issues.push({ level: "error", message: `Race ${index + 1} contains a player more than once.` });
+    if (assigned.some((placement) => !placement!.role)) issues.push({ level: "warning", message: `Race ${index + 1} has unconfirmed roles.` });
+  });
   return issues;
 }
 
-function downloadJson(match: MatchJson): void {
-  const filenameParts = [match.match_label || match.title_str?.replace("#title", "").trim() || "match"]
-    .join(" ")
-    .replace(/[^\w()[\] -]+/g, "")
-    .trim();
-  const blob = new Blob([`${JSON.stringify(match, null, 2)}\n`], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `${filenameParts || "match"}.json`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+function download(match: MatchJson): void {
+  const name = (match.match_label || "match").replace(/[^\w()[\] -]+/g, "").trim() || "match";
+  const url = URL.createObjectURL(new Blob([`${JSON.stringify(match, null, 2)}\n`], { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url; link.download = `${name}.json`; link.click(); URL.revokeObjectURL(url);
 }
 
 export default function MatchJsonEditor(): React.JSX.Element {
-  const [match, setMatch] = useState<MatchJson>(() => cloneMatch(blankMatch));
-  const [fileName, setFileName] = useState<string>("New match JSON");
+  const initial = clone(blankMatch);
+  const [match, setMatch] = useState<MatchJson>(initial);
+  const [races, setRaces] = useState<RaceDraft[]>(() => racesFromMatch(initial));
+  const [fileName, setFileName] = useState("New match JSON");
+  const [identityStates, setIdentityStates] = useState<Record<string, IdentityState>>({});
+  const [trackOptions, setTrackOptions] = useState<Array<{ track_id: number; name: string }>>([]);
+  const [tracksLoaded, setTracksLoaded] = useState(false);
+  const [matchScopes, setMatchScopes] = useState<MatchScope[]>([]);
+  const [scopesLoaded, setScopesLoaded] = useState(false);
+  const [teamScopes, setTeamScopes] = useState<TeamScope[]>([]);
+  const [teamsLoaded, setTeamsLoaded] = useState(false);
+  const [raceView, setRaceView] = useState<"one" | "all">("one");
+  const [activeRace, setActiveRace] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [activeTeam, setActiveTeam] = useState<string>(() => Object.keys(blankMatch.teams ?? {})[0]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const queriedTrackNames = useRef(new Set<string>());
 
-  const races = match.races_played ?? 0;
-  const tracks = ensureArrayLength(match.tracks, races, "");
-  const teams = match.teams ?? {};
-  const teamEntries = Object.entries(teams);
-  const selectedTeamKey = teams[activeTeam] ? activeTeam : teamEntries[0]?.[0] ?? "";
-  const selectedTeam = selectedTeamKey ? teams[selectedTeamKey] : undefined;
-  const issues = useMemo(() => validateMatch(match), [match]);
-  const errorCount = issues.filter((issue) => issue.level === "error").length;
-  const warningCount = issues.length - errorCount;
+  const players = useMemo(() => allPlayers(match), [match]);
+  const playerMap = useMemo(() => new Map(players.map((entry) => [entry.playerKey, entry])), [players]);
+  const duplicateMiiNames = useMemo(() => {
+    const counts = new Map<string, number>();
+    players.forEach(({ player }) => { const key = (player.mii_name || "").trim().toLowerCase(); if (key) counts.set(key, (counts.get(key) ?? 0) + 1); });
+    return counts;
+  }, [players]);
+  const issues = useMemo(() => validation(match, races, identityStates, matchScopes, scopesLoaded, teamScopes, teamsLoaded, trackOptions, tracksLoaded), [match, races, identityStates, matchScopes, scopesLoaded, teamScopes, teamsLoaded, trackOptions, tracksLoaded]);
+  const compiled = useMemo(() => compileMatch(match, races), [match, races]);
 
-  function updateMatch(patch: Partial<MatchJson>): void {
-    setMatch((current) => ({ ...current, ...patch }));
-  }
+  useEffect(() => {
+    searchTracks()
+      .then((tracks) => { setTrackOptions(tracks); setTracksLoaded(true); })
+      .catch(() => { setTrackOptions([]); setTracksLoaded(false); });
+  }, []);
+  useEffect(() => {
+    const knownNames = new Set(trackOptions.map((track) => normalized(track.name)));
+    races.forEach((race) => {
+      const key = normalized(race.trackName);
+      if (!key || knownNames.has(key) || queriedTrackNames.current.has(key)) return;
+      queriedTrackNames.current.add(key);
+      searchTracks(race.trackName).then((matches) => {
+        setTrackOptions((current) => {
+          const ids = new Set(current.map((track) => track.track_id));
+          return [...current, ...matches.filter((track) => !ids.has(track.track_id))];
+        });
+      }).catch(() => undefined);
+    });
+  }, [races, trackOptions]);
+  useEffect(() => {
+    fetchMatchScopes()
+      .then((scopes) => { setMatchScopes(scopes); setScopesLoaded(true); })
+      .catch(() => { setMatchScopes([]); setScopesLoaded(false); });
+  }, []);
+  useEffect(() => {
+    fetchTeamScopes()
+      .then((scopes) => { setTeamScopes(scopes); setTeamsLoaded(true); })
+      .catch(() => { setTeamScopes([]); setTeamsLoaded(false); });
+  }, []);
 
-  function updateTracks(nextRaces: number): void {
-    setMatch((current) => ({
+  useEffect(() => {
+    const pending = players.filter(({ playerKey, friendCode }) =>
+      validFriendCode(friendCode) && !identityStates[playerKey]
+    );
+    if (pending.length === 0) return;
+
+    setIdentityStates((current) => ({
       ...current,
-      races_played: nextRaces,
-      tracks: ensureArrayLength(current.tracks, nextRaces, ""),
-      rxx: ensureArrayLength(current.rxx, Math.max(1, Math.ceil(nextRaces / 4)), ""),
-      teams: Object.fromEntries(
-        Object.entries(current.teams ?? {}).map(([teamKey, team]) => [
-          teamKey,
-          {
-            ...team,
-            players: Object.fromEntries(
-              Object.entries(team.players ?? {}).map(([friendCode, player]) => {
-                const scores = ensureArrayLength(player.race_scores, nextRaces, null);
-                return [
-                  friendCode,
-                  {
-                    ...player,
-                    race_scores: scores,
-                    race_positions: ensureArrayLength(player.race_positions, nextRaces, null),
-                    race_roles: ensureArrayLength(player.race_roles, nextRaces, ""),
-                    gp_scores: rebuildGpScores(scores),
-                  },
-                ];
-              })
-            ),
-          },
-        ])
-      ),
+      ...Object.fromEntries(pending.map(({ playerKey }) => [playerKey, { status: "checking" as const }])),
     }));
-  }
 
-  function updateTrack(index: number, value: string): void {
-    setMatch((current) => {
-      const nextTracks = ensureArrayLength(current.tracks, current.races_played ?? 0, "");
-      nextTracks[index] = value;
-      return { ...current, tracks: nextTracks };
+    pending.forEach(({ playerKey, friendCode }) => {
+      fetchPlayerIdentity(friendCode)
+        .then((result) => {
+          const nextState: IdentityState = result.results.length === 1
+            ? { status: "confirmed", identity: result.results[0] }
+            : result.results.length === 0
+              ? { status: "new", message: "Not found in database" }
+              : { status: "conflict", message: "Multiple matches" };
+          setIdentityStates((current) => ({ ...current, [playerKey]: nextState }));
+        })
+        .catch((error) => {
+          setIdentityStates((current) => ({
+            ...current,
+            [playerKey]: {
+              status: "conflict",
+              message: error instanceof Error ? error.message : "Lookup failed",
+            },
+          }));
+        });
     });
-  }
+  }, [players, identityStates]);
 
-  function updateRxx(index: number, value: string): void {
-    setMatch((current) => {
-      const nextRxx = ensureArrayLength(current.rxx, Math.max(1, Math.ceil((current.races_played ?? 0) / 4)), "");
-      nextRxx[index] = value;
-      return { ...current, rxx: nextRxx };
-    });
-  }
-
+  function updateMatch(patch: Partial<MatchJson>): void { setMatch((current) => ({ ...current, ...patch })); }
   function updateTeam(teamKey: string, updater: (team: TeamJson) => TeamJson): void {
-    setMatch((current) => ({
-      ...current,
-      teams: {
-        ...(current.teams ?? {}),
-        [teamKey]: updater((current.teams ?? {})[teamKey] ?? { players: {} }),
-      },
+    setMatch((current) => ({ ...current, teams: { ...current.teams, [teamKey]: updater(current.teams?.[teamKey] ?? { players: {} }) } }));
+  }
+  function updatePlayer(teamKey: string, code: string, updater: (player: MatchPlayerJson) => MatchPlayerJson): void {
+    updateTeam(teamKey, (team) => ({ ...team, players: { ...team.players, [code]: updater(team.players?.[code] ?? {}) } }));
+  }
+  function setRace(index: number, updater: (race: RaceDraft) => RaceDraft): void {
+    setRaces((current) => current.map((race, raceIndex) => raceIndex === index ? updater(race) : race));
+  }
+  function resizeRaces(count: number): void {
+    const safeCount = Math.max(1, Math.min(99, count));
+    setRaces((current) => Array.from({ length: safeCount }, (_, index) => current[index] ?? {
+      trackName: "", roomSize: expectedRoomSize(match.format), placements: Array(expectedRoomSize(match.format)).fill(null),
     }));
+    updateMatch({ races_played: safeCount, rxx: Array.from({ length: Math.ceil(safeCount / 4) }, (_, index) => match.rxx?.[index] ?? "") });
+    setActiveRace((current) => Math.min(current, safeCount - 1));
   }
-
-  function renameTeam(oldKey: string, nextKey: string): void {
-    if (!nextKey.trim()) return;
-    setMatch((current) => {
-      const currentTeams = current.teams ?? {};
-      const team = currentTeams[oldKey];
-      if (!team || oldKey === nextKey) return current;
-      const nextTeams: Record<string, TeamJson> = {};
-      Object.entries(currentTeams).forEach(([key, value]) => {
-        if (key === oldKey) {
-          nextTeams[nextKey] = {
-            ...value,
-            players: Object.fromEntries(
-              Object.entries(value.players ?? {}).map(([friendCode, player]) => [
-                friendCode,
-                { ...player, tag: nextKey },
-              ])
-            ),
-          };
-        } else {
-          nextTeams[key] = value;
-        }
-      });
-      setActiveTeam(nextKey);
-      return { ...current, teams: nextTeams };
-    });
-  }
-
   function addPlayer(teamKey: string): void {
-    const placeholderCode = `0000-0000-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
+    let index = 1; let code = `NEW-${index}`;
+    const existing = new Set(players.map((player) => player.friendCode));
+    while (existing.has(code)) code = `NEW-${++index}`;
+    updateTeam(teamKey, (team) => ({ ...team, players: { ...team.players, [code]: { lounge_name: "", table_name: "", mii_name: "", flag: "", penalties: 0, tag: teamKey } } }));
+  }
+  function renamePlayer(teamKey: string, oldCode: string, newCode: string): void {
+    if (!newCode || oldCode === newCode || match.teams?.[teamKey]?.players?.[newCode]) return;
+    const oldKey = `${teamKey}::${oldCode}`; const newKey = `${teamKey}::${newCode}`;
     updateTeam(teamKey, (team) => {
-      const scores = Array.from({ length: races }, () => null);
-      return {
-        ...team,
-        players: {
-          ...(team.players ?? {}),
-          [placeholderCode]: {
-            table_str: "New Player",
-            mii_name: "",
-            lounge_name: "New Player",
-            table_name: "New Player",
-            tag: teamKey,
-            total_score: 0,
-            had_penalties: false,
-            penalties: 0,
-            subbed_out: false,
-            race_scores: scores,
-            race_positions: Array.from({ length: races }, () => null),
-            gp_scores: rebuildGpScores(scores),
-            race_roles: Array.from({ length: races }, () => ""),
-            flag: "",
-          },
-        },
+      const next = { ...team.players }; const player = next[oldCode]; delete next[oldCode]; next[newCode] = player; return { ...team, players: next };
+    });
+    setRaces((current) => current.map((race) => ({ ...race, placements: race.placements.map((placement) => placement?.playerKey === oldKey ? { ...placement, playerKey: newKey } : placement) })));
+    setIdentityStates((current) => { const next = { ...current }; delete next[oldKey]; return next; });
+  }
+  function removePlayer(teamKey: string, code: string): void {
+    const key = `${teamKey}::${code}`;
+    updateTeam(teamKey, (team) => { const next = { ...team.players }; delete next[code]; return { ...team, players: next }; });
+    setRaces((current) => current.map((race) => ({ ...race, placements: race.placements.map((placement) => placement?.playerKey === key ? null : placement) })));
+  }
+  async function checkIdentity(playerKey: string, friendCode: string): Promise<void> {
+    if (!validFriendCode(friendCode)) { setIdentityStates((s) => ({ ...s, [playerKey]: { status: "conflict", message: "Invalid friend code" } })); return; }
+    setIdentityStates((s) => ({ ...s, [playerKey]: { status: "checking" } }));
+    try {
+      const result = await fetchPlayerIdentity(friendCode);
+      setIdentityStates((s) => ({ ...s, [playerKey]: result.results.length === 1
+        ? { status: "confirmed", identity: result.results[0] }
+        : result.results.length === 0 ? { status: "new", message: "Not found in database" } : { status: "conflict", message: "Multiple matches" } }));
+    } catch (error) { setIdentityStates((s) => ({ ...s, [playerKey]: { status: "conflict", message: error instanceof Error ? error.message : "Lookup failed" } })); }
+  }
+  function assignPlayer(raceIndex: number, positionIndex: number, playerKey: string): void {
+    if (!playerKey) return;
+    setRace(raceIndex, (race) => {
+      const next = [...race.placements];
+      const prior = next.findIndex((placement) => placement?.playerKey === playerKey);
+      const displaced = next[positionIndex];
+      if (prior >= 0) next[prior] = displaced;
+      next[positionIndex] = {
+        playerKey,
+        role: prior >= 0
+          ? race.placements[prior]?.role ?? defaultRoleForPosition(match.format, positionIndex + 1)
+          : defaultRoleForPosition(match.format, positionIndex + 1),
       };
+      return { ...race, placements: next };
     });
   }
-
-  function updatePlayer(teamKey: string, friendCode: string, updater: (player: MatchPlayerJson) => MatchPlayerJson): void {
-    updateTeam(teamKey, (team) => ({
-      ...team,
-      players: {
-        ...(team.players ?? {}),
-        [friendCode]: updater((team.players ?? {})[friendCode] ?? {}),
-      },
+  function removePlayerFromRace(raceIndex: number, playerKey: string): void {
+    setRace(raceIndex, (race) => ({
+      ...race,
+      placements: race.placements.map((placement) => placement?.playerKey === playerKey ? null : placement),
     }));
   }
-
-  function renamePlayer(teamKey: string, oldFriendCode: string, nextFriendCode: string): void {
-    if (!nextFriendCode.trim()) return;
-    updateTeam(teamKey, (team) => {
-      const players = team.players ?? {};
-      const player = players[oldFriendCode];
-      if (!player || oldFriendCode === nextFriendCode) return team;
-      const nextPlayers: Record<string, MatchPlayerJson> = {};
-      Object.entries(players).forEach(([friendCode, value]) => {
-        if (friendCode === oldFriendCode) nextPlayers[nextFriendCode] = value;
-        else nextPlayers[friendCode] = value;
-      });
-      return { ...team, players: nextPlayers };
-    });
+  function setRoomSize(raceIndex: number, size: number): void {
+    if (!SCORE_TABLES[size]) return;
+    setRace(raceIndex, (race) => ({ ...race, roomSize: size, placements: Array.from({ length: size }, (_, index) => race.placements[index] ?? null) }));
   }
-
-  function updateRaceValue(
-    teamKey: string,
-    friendCode: string,
-    field: "race_scores" | "race_positions",
-    raceIndex: number,
-    value: string
-  ): void {
-    updatePlayer(teamKey, friendCode, (player) => {
-      const nextValues = ensureArrayLength(player[field], races, null);
-      nextValues[raceIndex] = asNullableNumber(value);
-      const nextPlayer = { ...player, [field]: nextValues };
-      if (field === "race_scores") {
-        const scores = nextValues as Array<number | null>;
-        nextPlayer.gp_scores = rebuildGpScores(scores);
-        nextPlayer.total_score = scores.reduce<number>((sum, score) => sum + (score ?? 0), 0) - (player.penalties ?? 0);
-      }
-      return nextPlayer;
-    });
+  function displayName(key: string): string {
+    const entry = playerMap.get(key); if (!entry) return key;
+    const mii = entry.player.mii_name || entry.player.lounge_name || entry.friendCode;
+    return duplicateMiiNames.get((entry.player.mii_name || "").trim().toLowerCase())! > 1 && entry.player.lounge_name ? `${mii} (${entry.player.lounge_name})` : mii;
   }
-
-  function updateRaceRole(teamKey: string, friendCode: string, raceIndex: number, value: string): void {
-    updatePlayer(teamKey, friendCode, (player) => {
-      const roles = ensureArrayLength(player.race_roles, races, "");
-      roles[raceIndex] = value;
-      return { ...player, race_roles: roles };
-    });
-  }
-
   function loadFile(file: File): void {
     const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result)) as MatchJson;
-        const normalized: MatchJson = {
-          ...parsed,
-          races_played: parsed.races_played ?? parsed.tracks?.length ?? 12,
-          tracks: ensureArrayLength(parsed.tracks, parsed.races_played ?? parsed.tracks?.length ?? 12, ""),
-          teams: parsed.teams ?? {},
-        };
-        setMatch(normalized);
-        setFileName(file.name);
-        setLoadError(null);
-        setActiveTeam(Object.keys(normalized.teams ?? {})[0] ?? "");
-      } catch (error) {
-        setLoadError(error instanceof Error ? error.message : "Could not parse JSON.");
-      }
-    };
+    reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)) as MatchJson; setMatch(parsed); setRaces(racesFromMatch(parsed)); setFileName(file.name); setIdentityStates({}); setActiveRace(0); setLoadError(null); } catch (error) { setLoadError(error instanceof Error ? error.message : "Could not parse JSON"); } };
     reader.readAsText(file);
   }
 
-  return (
-    <main className="relative min-h-screen px-4 py-8 text-white sm:px-6">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Link to="/" className="text-sm font-semibold text-blue-200 hover:text-white">
-              Back home
-            </Link>
-            <h1 className="mt-2 text-3xl font-bold">Match JSON Editor</h1>
-            <p className="mt-1 text-sm text-gray-300">{fileName}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) loadFile(file);
-                event.currentTarget.value = "";
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="rounded-md border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
-            >
-              Upload JSON
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMatch(cloneMatch(blankMatch));
-                setFileName("New match JSON");
-                setActiveTeam("TeamA");
-                setLoadError(null);
-              }}
-              className="rounded-md border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
-            >
-              New Blank
-            </button>
-            <button
-              type="button"
-              onClick={() => downloadJson(match)}
-              className="rounded-md bg-blue-500 px-4 py-2 text-sm font-bold text-white hover:bg-blue-400"
-            >
-              Download JSON
-            </button>
-          </div>
+  const raceIndexes = raceView === "all" ? races.map((_, index) => index) : [activeRace];
+  const errorCount = issues.filter((issue) => issue.level === "error").length;
+  const leagueValid = scopesLoaded && matchScopes.some((scope) => normalized(scope.league) === normalized(match.league));
+  const seasonValid = scopesLoaded && matchScopes.some((scope) => normalized(scope.league) === normalized(match.league) && normalized(scope.season) === normalized(match.season));
+  const divisionValid = scopesLoaded && matchScopes.some((scope) => normalized(scope.league) === normalized(match.league) && normalized(scope.season) === normalized(match.season) && normalized(scope.division) === normalized(match.division));
+  const availableTeams = teamScopes.filter((scope) => normalized(scope.league) === normalized(match.league) && normalized(scope.season) === normalized(match.season) && normalized(scope.division) === normalized(match.division));
+
+  return <main className="relative min-h-screen px-4 py-8 text-white sm:px-6">
+    <div className="mx-auto max-w-[92rem]">
+      <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div><Link to="/" className="text-blue-400 hover:text-blue-300 font-semibold">&lt; Back</Link><h1 className="mt-2 text-3xl font-bold">Match JSON Editor</h1><p className="text-sm text-gray-300">{fileName}</p></div>
+        <div className="flex flex-wrap gap-2">
+          <input ref={fileInput} type="file" accept=".json,application/json" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) loadFile(file); event.currentTarget.value = ""; }} />
+          <button type="button" onClick={() => fileInput.current?.click()} className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold">Upload JSON</button>
+          <button type="button" onClick={() => { const next = clone(blankMatch); setMatch(next); setRaces(racesFromMatch(next)); setFileName("New match JSON"); setIdentityStates({}); }} className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold">New Blank</button>
+          <button type="button" onClick={() => download(compiled)} className="rounded-md bg-blue-500 px-4 py-2 font-bold hover:bg-blue-400">Download JSON</button>
         </div>
+      </header>
+      {loadError && <p className="mb-4 rounded-md border border-red-400/40 bg-red-950/70 p-3 text-red-100">{loadError}</p>}
 
-        {loadError && (
-          <div className="mb-4 rounded-md border border-red-400/40 bg-red-950/70 px-4 py-3 text-sm text-red-100">
-            {loadError}
+      <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
+        <h2 className="mb-3 text-xl font-bold">Additional Metadata</h2>
+        <div className="grid gap-3 md:grid-cols-4">
+          {(["league", "season", "division", "match_label"] as const).map((field) => {
+            const valid = field === "league" ? leagueValid : field === "season" ? seasonValid : field === "division" ? divisionValid : null;
+            const listId = field === "match_label" ? undefined : `${field}-options`;
+            return <label key={field} className="text-sm font-semibold capitalize text-gray-200">{field.replace("_", " ")}
+              <input list={listId} value={String(match[field] ?? "")} onChange={(e) => updateMatch({ [field]: e.target.value })} className={`${inputClass} ${valid === true ? "border-emerald-400/70" : valid === false && scopesLoaded ? "border-red-400/70" : ""}`} />
+              {valid !== null && <span className={`mt-1 block text-xs ${valid ? "text-emerald-300" : scopesLoaded ? "text-red-300" : "text-gray-400"}`}>{valid ? "Confirmed in database" : scopesLoaded ? "No matching database record" : "Checking database..."}</span>}
+            </label>;
+          })}
+          <datalist id="league-options">{Array.from(new Set(matchScopes.map((scope) => scope.league))).map((value) => <option key={value} value={value} />)}</datalist>
+          <datalist id="season-options">{Array.from(new Set(matchScopes.filter((scope) => normalized(scope.league) === normalized(match.league)).map((scope) => scope.season))).map((value) => <option key={value} value={value} />)}</datalist>
+          <datalist id="division-options">{Array.from(new Set(matchScopes.filter((scope) => normalized(scope.league) === normalized(match.league) && normalized(scope.season) === normalized(match.season)).map((scope) => scope.division))).map((value) => <option key={value} value={value} />)}</datalist>
+          <label className="text-sm font-semibold text-gray-200">Week<input type="number" value={numberValue(match.week)} onChange={(e) => updateMatch({ week: e.target.value ? Number(e.target.value) : undefined })} className={inputClass} /></label>
+          <label className="text-sm font-semibold text-gray-200">Format<select value={match.format ?? "5v5"} onChange={(e) => updateMatch({ format: e.target.value })} className={inputClass}><option>5v5</option><option>4v4</option><option>FFA</option></select></label>
+          <label className="text-sm font-semibold text-gray-200">Races<input type="number" min={1} value={races.length} onChange={(e) => resizeRaces(Number(e.target.value))} className={inputClass} /></label>
+          <label className="text-sm font-semibold text-gray-200">Review Notes<input value={match.review_notes ?? ""} onChange={(e) => updateMatch({ review_notes: e.target.value })} className={inputClass} /></label>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">{Array.from({ length: Math.ceil(races.length / 4) }, (_, index) => <label key={index} className={smallLabel}>GP {index + 1} room code<input value={match.rxx?.[index] ?? ""} onChange={(e) => updateMatch({ rxx: Array.from({ length: Math.ceil(races.length / 4) }, (_, i) => i === index ? e.target.value : match.rxx?.[i] ?? "") })} className={inputClass} /></label>)}</div>
+      </section>
+
+      <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
+        <h2 className="mb-4 text-xl font-bold">Teams And Players</h2>
+        <div className="grid gap-5 xl:grid-cols-2">{Object.entries(match.teams ?? {}).map(([teamKey, team]) => {
+          const currentTag = teamTag(teamKey, team);
+          const resolvedTeam = availableTeams.find((scope) => normalized(scope.clan_tag) === normalized(currentTag) || normalized(scope.canonical_tag) === normalized(currentTag));
+          return <article key={teamKey} className="border border-white/10 bg-black/25 p-4">
+          <div className="grid gap-3 sm:grid-cols-[1fr_8rem_8rem]">
+            <label className={smallLabel}>Team tag<input list="team-scope-options" value={currentTag} onChange={(e) => updateTeam(teamKey, (current) => ({ ...current, table_tag_str: `${e.target.value} ${teamColor(current)}` }))} className={`${inputClass} ${resolvedTeam ? "border-emerald-400/70" : teamsLoaded ? "border-red-400/70" : ""}`} />
+              <span className={`mt-1 block text-xs ${resolvedTeam ? "text-emerald-300" : teamsLoaded ? "text-red-300" : "text-gray-400"}`}>{resolvedTeam ? `Confirmed: ${resolvedTeam.display_name || resolvedTeam.canonical_name}` : teamsLoaded ? "Not found in selected league/season/division" : "Checking database..."}</span>
+            </label>
+            <label className={smallLabel}>Color<input value={teamColor(team)} onChange={(e) => updateTeam(teamKey, (current) => ({ ...current, hex_color: e.target.value.toUpperCase(), table_tag_str: `${teamTag(teamKey, current)} ${e.target.value.toUpperCase()}` }))} className={`${inputClass} text-center uppercase`} /></label>
+            <label className={smallLabel}>Penalty<input type="number" value={team.penalties ?? 0} onChange={(e) => updateTeam(teamKey, (current) => ({ ...current, penalties: Number(e.target.value) || 0 }))} className={inputClass} /></label>
           </div>
-        )}
+          <div className="mt-4 space-y-3">{Object.entries(team.players ?? {}).map(([code, player]) => {
+            const key = `${teamKey}::${code}`; const state = identityStates[key];
+            return <div key={key} className="border-t border-white/10 pt-3">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[11rem_repeat(4,minmax(0,1fr))_auto]">
+                <label className={smallLabel}>Friend code<input defaultValue={code.startsWith("NEW-") ? "" : code} onBlur={(e) => renamePlayer(teamKey, code, e.target.value.trim())} className={inputClass} placeholder="0000-0000-0000" /></label>
+                {(["lounge_name", "table_name", "mii_name", "flag"] as const).map((field) => <label key={field} className={smallLabel}>{field.replace("_", " ")}<input value={String(player[field] ?? "")} onChange={(e) => updatePlayer(teamKey, code, (current) => ({ ...current, [field]: e.target.value }))} className={inputClass} /></label>)}
+                <button type="button" title="Remove player" onClick={() => removePlayer(teamKey, code)} className="mt-5 h-10 px-3 text-red-300 hover:bg-red-950/40">Remove</button>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                <button type="button" disabled={!validFriendCode(code) || state?.status === "checking"} onClick={() => checkIdentity(key, code)} className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 disabled:opacity-40">{state?.status === "checking" ? "Checking..." : "Check database"}</button>
+                {state?.status === "confirmed" && <span className="text-emerald-300">Confirmed: {state.identity?.canonical_lounge_name || `Player ${state.identity?.player_id}`}</span>}
+                {state?.status === "new" && <span className="text-amber-300">New friend code: no database match</span>}
+                {state?.status === "conflict" && <span className="text-red-300">{state.message}</span>}
+                {isFfa(match.format) && <label className="flex items-center gap-2">Player penalty<input type="number" value={player.penalties ?? 0} onChange={(e) => updatePlayer(teamKey, code, (current) => ({ ...current, penalties: Number(e.target.value) || 0 }))} className="w-20 rounded border border-white/15 bg-black/40 p-1" /></label>}
+                {!isFfa(match.format) && (player.penalties ?? 0) !== 0 && <span className="text-amber-300">Legacy player penalty: {player.penalties}</span>}
+              </div>
+            </div>;
+          })}</div>
+          <button type="button" onClick={() => addPlayer(teamKey)} className="mt-4 rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold">Add Player</button>
+        </article>})}</div>
+        <datalist id="team-scope-options">{availableTeams.map((team) => <option key={`${team.team_id}-${team.clan_tag}`} value={team.clan_tag}>{team.display_name || team.canonical_name}</option>)}</datalist>
+      </section>
 
-        <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/80 p-4 shadow-2xl">
-          <div className="grid gap-3 md:grid-cols-4">
-            <label className="text-sm font-semibold text-gray-200">
-              League
-              <input
-                value={match.league ?? ""}
-                onChange={(event) => updateMatch({ league: event.target.value })}
-                className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-              />
-            </label>
-            <label className="text-sm font-semibold text-gray-200">
-              Season
-              <input
-                value={match.season ?? ""}
-                onChange={(event) => updateMatch({ season: event.target.value })}
-                className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-              />
-            </label>
-            <label className="text-sm font-semibold text-gray-200">
-              Division
-              <input
-                value={match.division ?? ""}
-                onChange={(event) => updateMatch({ division: event.target.value })}
-                className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-              />
-            </label>
-            <label className="text-sm font-semibold text-gray-200">
-              Week
-              <input
-                type="number"
-                value={numberInputValue(match.week)}
-                onChange={(event) => updateMatch({ week: asNumber(event.target.value) })}
-                className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-              />
-            </label>
-            <label className="text-sm font-semibold text-gray-200 md:col-span-2">
-              Match Label
-              <input
-                value={match.match_label ?? ""}
-                onChange={(event) => updateMatch({ match_label: event.target.value })}
-                className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-              />
-            </label>
-            <label className="text-sm font-semibold text-gray-200">
-              Format
-              <input
-                value={match.format ?? ""}
-                onChange={(event) => updateMatch({ format: event.target.value })}
-                className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-              />
-            </label>
-            <label className="text-sm font-semibold text-gray-200">
-              Races
-              <input
-                type="number"
-                min={1}
-                value={numberInputValue(match.races_played)}
-                onChange={(event) => updateTracks(asNumber(event.target.value) ?? 0)}
-                className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-              />
-            </label>
-          </div>
-        </section>
-
-        <section className="mb-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_23rem]">
-          <div className="rounded-lg border border-white/10 bg-zinc-950/80 p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-bold">Tracks and Room Codes</h2>
-              <span className="text-sm text-gray-300">{tracks.length} races</span>
+      <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-bold">Race Entry</h2>
+          <div className="flex items-center gap-2"><button type="button" onClick={() => setRaceView("one")} className={`rounded px-3 py-2 ${raceView === "one" ? "bg-blue-500" : "bg-white/10"}`}>One Race</button><button type="button" onClick={() => setRaceView("all")} className={`rounded px-3 py-2 ${raceView === "all" ? "bg-blue-500" : "bg-white/10"}`}>All Races</button></div>
+        </div>
+        {raceView === "one" && <div className="mb-4 flex items-center justify-between"><button type="button" disabled={activeRace === 0} onClick={() => setActiveRace((r) => r - 1)} className="rounded bg-white/10 px-3 py-2 disabled:opacity-30">Previous</button><select value={activeRace} onChange={(e) => setActiveRace(Number(e.target.value))} className="rounded border border-white/15 bg-zinc-900 px-4 py-2">{races.map((_, index) => <option key={index} value={index}>Race {index + 1}</option>)}</select><button type="button" disabled={activeRace === races.length - 1} onClick={() => setActiveRace((r) => r + 1)} className="rounded bg-white/10 px-3 py-2 disabled:opacity-30">Next</button></div>}
+        <datalist id="track-options">{trackOptions.map((track) => <option key={track.track_id} value={track.name} />)}</datalist>
+        <div className="space-y-5">{raceIndexes.map((raceIndex) => {
+          const race = races[raceIndex]; const assigned = new Set(race.placements.flatMap((placement) => placement ? [placement.playerKey] : []));
+          const resolvedTrack = trackOptions.find((track) => normalized(track.name) === normalized(race.trackName));
+          return <article key={raceIndex} className="border border-white/10 bg-black/25 p-4">
+            <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(15rem,1fr)_10rem_auto_auto]">
+              <label className={smallLabel}>Race {raceIndex + 1} track<input list="track-options" value={race.trackName} onChange={(e) => setRace(raceIndex, (current) => ({ ...current, trackName: e.target.value }))} className={`${inputClass} ${resolvedTrack ? "border-emerald-400/70" : tracksLoaded ? "border-red-400/70" : ""}`} />
+                <span className={`mt-1 block text-xs normal-case ${resolvedTrack ? "text-emerald-300" : tracksLoaded ? "text-red-300" : "text-gray-400"}`}>{resolvedTrack ? "Confirmed in database" : tracksLoaded ? "No matching database track" : "Checking database..."}</span>
+              </label>
+              <label className={smallLabel}>Room size<select value={race.roomSize} onChange={(e) => setRoomSize(raceIndex, Number(e.target.value))} className={inputClass}>{Object.keys(SCORE_TABLES).map((size) => <option key={size}>{size}</option>)}</select></label>
+              <span className="self-end pb-2 text-sm text-gray-300">{race.placements.filter(Boolean).length}/{race.roomSize} placed</span>
+              <button
+                type="button"
+                disabled={!race.placements.some(Boolean)}
+                onClick={() => setRace(raceIndex, (current) => ({ ...current, placements: Array(current.roomSize).fill(null) }))}
+                className="self-end rounded-md border border-red-400/30 bg-red-950/30 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Clear all positions
+              </button>
             </div>
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {tracks.map((track, index) => (
-                <label key={`track-${index}`} className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Race {index + 1}
-                  <input
-                    value={track}
-                    onChange={(event) => updateTrack(index, event.target.value)}
-                    className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-blue-300"
-                  />
-                </label>
-              ))}
-            </div>
-            <div className="mt-4 grid gap-2 md:grid-cols-3">
-              {ensureArrayLength(match.rxx, Math.max(1, Math.ceil(races / 4)), "").map((code, index) => (
-                <label key={`rxx-${index}`} className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  GP {index + 1} room code
-                  <input
-                    value={code}
-                    onChange={(event) => updateRxx(index, event.target.value)}
-                    className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-blue-300"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <aside className="rounded-lg border border-white/10 bg-zinc-950/80 p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-xl font-bold">Validation</h2>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold">
-                {errorCount} errors / {warningCount} warnings
-              </span>
-            </div>
-            <div className="max-h-80 space-y-2 overflow-auto pr-1">
-              {issues.length === 0 ? (
-                <p className="rounded-md border border-emerald-400/30 bg-emerald-950/50 px-3 py-2 text-sm text-emerald-100">
-                  No structural issues found.
-                </p>
-              ) : (
-                issues.map((issue, index) => (
-                  <p
-                    key={`${issue.message}-${index}`}
-                    className={`rounded-md border px-3 py-2 text-sm ${
-                      issue.level === "error"
-                        ? "border-red-400/30 bg-red-950/50 text-red-100"
-                        : "border-amber-300/30 bg-amber-950/40 text-amber-100"
-                    }`}
-                  >
-                    <span className="mr-2 font-bold uppercase">{issue.level}</span>
-                    {issue.message}
-                  </p>
-                ))
-              )}
-            </div>
-          </aside>
-        </section>
-
-        <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/80 p-4 shadow-2xl">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-bold">Teams and Players</h2>
-            <div className="flex flex-wrap gap-2">
-              {teamEntries.map(([teamKey, team]) => (
-                <button
-                  key={teamKey}
+            <div
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => { if (draggedPlayer) removePlayerFromRace(raceIndex, draggedPlayer); setDraggedPlayer(null); }}
+              className="mb-4 min-h-[6rem] border border-dashed border-white/20 bg-black/20 p-3"
+            >
+              <p className="mb-2 text-xs font-semibold uppercase text-gray-400">Player Pool</p>
+              <div className="flex flex-wrap gap-2">
+                {players.filter((player) => !assigned.has(player.playerKey)).map(({ playerKey, friendCode, player, teamKey }) => <button
+                  key={playerKey}
                   type="button"
-                  onClick={() => setActiveTeam(teamKey)}
-                  className={`rounded-md px-4 py-2 text-sm font-bold ${
-                    selectedTeamKey === teamKey ? "bg-blue-500 text-white" : "bg-white/10 text-gray-200 hover:bg-white/15"
-                  }`}
-                >
-                  {teamDisplayTag(teamKey, team)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {selectedTeam && (
-            <div>
-              <div className="grid gap-3 md:grid-cols-[11rem_11rem_9rem_9rem_minmax(0,1fr)]">
-                <label className="text-sm font-semibold text-gray-200">
-                  Team Key
-                  <input
-                    key={selectedTeamKey}
-                    onBlur={(event) => renameTeam(selectedTeamKey, event.target.value.trim())}
-                    className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-                    defaultValue={selectedTeamKey}
-                  />
-                </label>
-                <label className="text-sm font-semibold text-gray-200">
-                  Display Tag
-                  <input
-                    value={teamDisplayTag(selectedTeamKey, selectedTeam)}
-                    onChange={(event) => {
-                      updateTeam(selectedTeamKey, (team) => setTeamTagString(team, event.target.value, teamHexColor(team)));
-                    }}
-                    className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-                  />
-                </label>
-                <label className="text-sm font-semibold text-gray-200">
-                  Color
-                  <input
-                    value={teamHexColor(selectedTeam)}
-                    onChange={(event) => {
-                      updateTeam(selectedTeamKey, (team) => setTeamTagString(team, teamDisplayTag(selectedTeamKey, team), event.target.value.toUpperCase()));
-                    }}
-                    className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-center uppercase text-white outline-none focus:border-blue-300"
-                    placeholder="#FFFFFF"
-                  />
-                </label>
-                <label className="text-sm font-semibold text-gray-200">
-                  Team Penalty
-                  <input
-                    type="number"
-                    value={numberInputValue(selectedTeam.penalties)}
-                    onChange={(event) => updateTeam(selectedTeamKey, (team) => ({ ...team, penalties: asNumber(event.target.value) ?? 0 }))}
-                    className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-                  />
-                </label>
-                <label className="text-sm font-semibold text-gray-200">
-                  Penalty Text
-                  <input
-                    value={selectedTeam.table_penalty_str ?? ""}
-                    onChange={(event) => updateTeam(selectedTeamKey, (team) => ({ ...team, table_penalty_str: event.target.value }))}
-                    className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-                  />
-                </label>
-              </div>
-
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => addPlayer(selectedTeamKey)}
-                  className="rounded-md border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
-                >
-                  Add Player
-                </button>
-              </div>
-
-              <div className="mt-4 space-y-5">
-                {Object.entries(selectedTeam.players ?? {}).map(([friendCode, player]) => {
-                  const scores = ensureArrayLength(player.race_scores, races, null);
-                  const positions = ensureArrayLength(player.race_positions, races, null);
-                  const roles = ensureArrayLength(player.race_roles, races, "");
-                  return (
-                    <article key={friendCode} className="rounded-lg border border-white/10 bg-black/30 p-3">
-                      <div className="grid gap-3 md:grid-cols-[12rem_repeat(4,minmax(0,1fr))_7rem_7rem]">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Friend Code
-                          <input
-                            defaultValue={friendCode}
-                            onBlur={(event) => renamePlayer(selectedTeamKey, friendCode, event.target.value.trim())}
-                            className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-blue-300"
-                          />
-                        </label>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Lounge
-                          <input
-                            value={player.lounge_name ?? ""}
-                            onChange={(event) => updatePlayer(selectedTeamKey, friendCode, (current) => ({ ...current, lounge_name: event.target.value }))}
-                            className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-blue-300"
-                          />
-                        </label>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Table
-                          <input
-                            value={player.table_name ?? ""}
-                            onChange={(event) => updatePlayer(selectedTeamKey, friendCode, (current) => ({ ...current, table_name: event.target.value }))}
-                            className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-blue-300"
-                          />
-                        </label>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Mii
-                          <input
-                            value={player.mii_name ?? ""}
-                            onChange={(event) => updatePlayer(selectedTeamKey, friendCode, (current) => ({ ...current, mii_name: event.target.value }))}
-                            className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-blue-300"
-                          />
-                        </label>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Flag
-                          <input
-                            value={player.flag ?? ""}
-                            onChange={(event) => updatePlayer(selectedTeamKey, friendCode, (current) => ({ ...current, flag: event.target.value }))}
-                            className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-blue-300"
-                          />
-                        </label>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Penalty
-                          <input
-                            type="number"
-                            value={numberInputValue(player.penalties)}
-                            onChange={(event) => updatePlayer(selectedTeamKey, friendCode, (current) => {
-                              const penalties = asNumber(event.target.value) ?? 0;
-                              return {
-                                ...current,
-                                penalties,
-                                had_penalties: penalties !== 0,
-                                total_score: (current.race_scores ?? []).reduce<number>((sum, score) => sum + (score ?? 0), 0) - penalties,
-                              };
-                            })}
-                            className="mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-blue-300"
-                          />
-                        </label>
-                        <label className="flex items-end gap-2 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          <input
-                            type="checkbox"
-                            checked={Boolean(player.subbed_out)}
-                            onChange={(event) => updatePlayer(selectedTeamKey, friendCode, (current) => ({ ...current, subbed_out: event.target.checked }))}
-                            className="h-4 w-4 accent-blue-400"
-                          />
-                          Subbed
-                        </label>
-                      </div>
-
-                      <div className="mt-3 overflow-x-auto">
-                        <table className="min-w-full border-collapse text-sm">
-                          <thead>
-                            <tr className="text-xs uppercase tracking-wide text-gray-400">
-                              <th className="sticky left-0 bg-zinc-950 px-2 py-2 text-left">Field</th>
-                              {tracks.map((_, raceIndex) => (
-                                <th key={`race-head-${raceIndex}`} className="min-w-[4.5rem] border-l border-white/10 px-2 py-2 text-center">
-                                  R{raceIndex + 1}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <th className="sticky left-0 bg-zinc-950 px-2 py-2 text-left text-gray-300">Score</th>
-                              {scores.map((score, raceIndex) => (
-                                <td key={`score-${raceIndex}`} className="border-l border-white/10 px-1 py-1">
-                                  <input
-                                    type="number"
-                                    value={numberInputValue(score)}
-                                    onChange={(event) => updateRaceValue(selectedTeamKey, friendCode, "race_scores", raceIndex, event.target.value)}
-                                    className="w-full rounded-md border border-white/10 bg-black/40 px-2 py-1 text-center text-white outline-none focus:border-blue-300"
-                                  />
-                                </td>
-                              ))}
-                            </tr>
-                            <tr>
-                              <th className="sticky left-0 bg-zinc-950 px-2 py-2 text-left text-gray-300">Place</th>
-                              {positions.map((position, raceIndex) => (
-                                <td key={`position-${raceIndex}`} className="border-l border-white/10 px-1 py-1">
-                                  <input
-                                    type="number"
-                                    value={numberInputValue(position)}
-                                    onChange={(event) => updateRaceValue(selectedTeamKey, friendCode, "race_positions", raceIndex, event.target.value)}
-                                    className="w-full rounded-md border border-white/10 bg-black/40 px-2 py-1 text-center text-white outline-none focus:border-blue-300"
-                                  />
-                                </td>
-                              ))}
-                            </tr>
-                            <tr>
-                              <th className="sticky left-0 bg-zinc-950 px-2 py-2 text-left text-gray-300">Role</th>
-                              {roles.map((role, raceIndex) => (
-                                <td key={`role-${raceIndex}`} className="border-l border-white/10 px-1 py-1">
-                                  <input
-                                    value={role}
-                                    onChange={(event) => updateRaceRole(selectedTeamKey, friendCode, raceIndex, event.target.value)}
-                                    className="w-full rounded-md border border-white/10 bg-black/40 px-2 py-1 text-center text-white outline-none focus:border-blue-300"
-                                    placeholder="-"
-                                  />
-                                </td>
-                              ))}
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </article>
-                  );
-                })}
+                  draggable
+                  onDragStart={() => setDraggedPlayer(playerKey)}
+                  onDragEnd={() => setDraggedPlayer(null)}
+                  onClick={() => { const empty = race.placements.findIndex((slot) => !slot); if (empty >= 0) assignPlayer(raceIndex, empty, playerKey); }}
+                  style={{ borderColor: teamColor(match.teams?.[teamKey] ?? {}) }}
+                  className="min-w-[8rem] cursor-grab rounded border-2 bg-zinc-900 px-3 py-2 text-center text-sm active:cursor-grabbing"
+                >{playerLabel(player, friendCode)}</button>)}
               </div>
             </div>
-          )}
-        </section>
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{race.placements.map((placement, positionIndex) => <div
+              key={positionIndex}
+              draggable={Boolean(placement)}
+              onDragStart={() => { if (placement) setDraggedPlayer(placement.playerKey); }}
+              onDragEnd={() => setDraggedPlayer(null)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => { if (draggedPlayer) assignPlayer(raceIndex, positionIndex, draggedPlayer); setDraggedPlayer(null); }}
+              className={`grid min-h-[7.5rem] grid-cols-[3rem_1fr] border border-white/10 bg-zinc-900/70 ${placement ? "cursor-grab active:cursor-grabbing" : ""}`}
+            >
+              <div className="flex flex-col items-center justify-center border-r border-white/10"><strong>{positionIndex + 1}</strong><span className="text-sm text-blue-300">{scoreForPosition(positionIndex + 1, race.roomSize)} pts</span></div>
+              <div className="p-2">
+                <select value={placement?.playerKey ?? ""} onChange={(e) => e.target.value ? assignPlayer(raceIndex, positionIndex, e.target.value) : setRace(raceIndex, (current) => ({ ...current, placements: current.placements.map((slot, index) => index === positionIndex ? null : slot) }))} className="w-full rounded border border-white/15 bg-black/40 p-2 text-sm">
+                  <option value="">Select player</option>{players.filter((player) => !assigned.has(player.playerKey) || player.playerKey === placement?.playerKey).map((player) => <option key={player.playerKey} value={player.playerKey}>{displayName(player.playerKey)}</option>)}
+                </select>
+                {placement && <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-1"><button type="button" onClick={() => setRace(raceIndex, (current) => ({ ...current, placements: current.placements.map((slot, index) => index === positionIndex && slot ? { ...slot, role: "runner" } : slot) }))} className={`rounded px-2 py-1 text-xs ${placement.role === "runner" ? "bg-blue-500" : "bg-white/10"}`}>Runner</button><button type="button" onClick={() => setRace(raceIndex, (current) => ({ ...current, placements: current.placements.map((slot, index) => index === positionIndex && slot ? { ...slot, role: "bagger" } : slot) }))} className={`rounded px-2 py-1 text-xs ${placement.role === "bagger" ? "bg-amber-500 text-black" : "bg-white/10"}`}>Bagger</button><button type="button" title="Clear position" onClick={() => setRace(raceIndex, (current) => ({ ...current, placements: current.placements.map((slot, index) => index === positionIndex ? null : slot) }))} className="px-2 text-red-300">Clear</button></div>}
+              </div>
+            </div>)}</div>
+          </article>;
+        })}</div>
+      </section>
 
-        <section className="rounded-lg border border-white/10 bg-zinc-950/80 p-4 shadow-2xl">
-          <label className="text-sm font-semibold text-gray-200">
-            Review Notes
-            <textarea
-              value={match.review_notes ?? ""}
-              onChange={(event) => updateMatch({ review_notes: event.target.value })}
-              className="mt-1 h-24 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-            />
-          </label>
-        </section>
-      </div>
-    </main>
-  );
+      <section className="grid gap-5 lg:grid-cols-2">
+        <div className="rounded-lg border border-white/10 bg-zinc-950/85 p-4"><h2 className="mb-3 text-xl font-bold">Validation</h2><p className="mb-3 text-sm text-gray-300">{errorCount} errors / {issues.length - errorCount} warnings</p><div className="max-h-96 space-y-2 overflow-auto">{issues.length === 0 ? <p className="text-emerald-300">Ready to export.</p> : issues.map((issue, index) => <p key={index} className={`border p-2 text-sm ${issue.level === "error" ? "border-red-500/30 bg-red-950/30 text-red-200" : "border-amber-500/30 bg-amber-950/30 text-amber-200"}`}><strong className="uppercase">{issue.level}</strong> {issue.message}</p>)}</div></div>
+        <details className="rounded-lg border border-white/10 bg-zinc-950/85 p-4"><summary className="cursor-pointer text-xl font-bold">Generated JSON Preview</summary><pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap text-xs text-gray-300">{JSON.stringify(compiled, null, 2)}</pre></details>
+      </section>
+    </div>
+  </main>;
 }

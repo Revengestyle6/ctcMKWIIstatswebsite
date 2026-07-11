@@ -532,11 +532,16 @@ def import_match(
 
             race_scores = player_data.get("race_scores") or []
             race_positions = player_data.get("race_positions") or []
+            race_roles = player_data.get("race_roles") or []
             for race_number, race in race_by_number.items():
                 idx = race_number - 1
                 score = race_scores[idx] if idx < len(race_scores) else None
                 position = race_positions[idx] if idx < len(race_positions) else None
-                role, role_source = infer_role(score, position)
+                manual_role = race_roles[idx] if idx < len(race_roles) else None
+                if manual_role in {"runner", "bagger"}:
+                    role, role_source = manual_role, "manual"
+                else:
+                    role, role_source = infer_role(score, position)
                 session.add(
                     RacePlayerResult(
                         race_id=race.race_id,

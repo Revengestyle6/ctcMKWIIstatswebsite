@@ -24,7 +24,7 @@ export async function fetchJson<T>(
     }
   });
 
-  const response = await fetch(url.toString());
+  const response = await fetch(url.toString(), { cache: "no-store" });
   if (!response.ok) {
     let message = "Request failed";
     try {
@@ -48,4 +48,51 @@ export function fetchDivisions(season: string): Promise<DivisionOption[]> {
 
 export function formatDivisionName(division: DivisionOption): string {
   return division.name || `Division ${division.division.replace(/^d/, "").replace("_", "-")}`;
+}
+
+export interface PlayerIdentity {
+  player_id: number;
+  canonical_lounge_name: string | null;
+  primary_friend_code: string | null;
+  friend_codes: string[];
+  aliases: Array<{ type: string; value: string }>;
+}
+
+export function fetchPlayerIdentity(friendCode: string): Promise<{ reason: string; results: PlayerIdentity[] }> {
+  return fetchJson("/api/player-identities", { friend_code: friendCode });
+}
+
+export function searchPlayerIdentities(query: string): Promise<{ reason: string; results: PlayerIdentity[] }> {
+  return fetchJson("/api/player-identities", { query });
+}
+
+export function searchTracks(query = ""): Promise<Array<{ track_id: number; name: string }>> {
+  return fetchJson("/api/track-search", { query });
+}
+
+export interface MatchScope {
+  league: string;
+  season: string;
+  season_name: string;
+  division: string;
+  division_name: string;
+}
+
+export function fetchMatchScopes(): Promise<MatchScope[]> {
+  return fetchJson("/api/match-scopes");
+}
+
+export interface TeamScope {
+  league: string;
+  season: string;
+  division: string;
+  team_id: number;
+  canonical_name: string;
+  canonical_tag: string;
+  display_name: string;
+  clan_tag: string;
+}
+
+export function fetchTeamScopes(): Promise<TeamScope[]> {
+  return fetchJson("/api/team-scopes");
 }

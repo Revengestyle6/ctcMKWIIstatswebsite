@@ -126,6 +126,7 @@ Representative structure:
 | `race_scores` | Ordered per-race scores | Index maps to `tracks` index. |
 | `race_positions` | Ordered per-race placements | May contain `null`. |
 | `gp_scores` | Scores grouped by GP | Can be stored as JSON or normalized later. |
+| `race_roles` | Optional ordered manual roles | New editor output; values are `runner`, `bagger`, or `null`. Historical files omit it. |
 | `flag` | Country/region flag code | Optional profile attribute. |
 
 ## Recommended Database Model

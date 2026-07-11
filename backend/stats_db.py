@@ -11,6 +11,7 @@ from models import (
     Penalty,
     Player,
     PlayerAlias,
+    PlayerFriendCode,
     PlayerSeasonEntry,
     Race,
     RacePlayerResult,
@@ -18,6 +19,7 @@ from models import (
     Team,
     TeamSeasonEntry,
     Track,
+    TrackAlias,
 )
 
 
@@ -333,6 +335,86 @@ def list_players(season=None, division=None):
         return sorted(players.values(), key=lambda name: name.lower())
 
 
+def find_player_identities(friend_code=None, query=None, limit=12):
+    friend_code = (friend_code or "").strip()
+    query = (query or "").strip()
+    with SessionLocal() as session:
+        player_ids = []
+        reason = "none"
+        if friend_code:
+            player_ids = list(session.scalars(
+                select(PlayerFriendCode.player_id).where(PlayerFriendCode.friend_code == friend_code)
+            ))
+            reason = "exact_friend_code" if player_ids else "none"
+        elif query:
+            pattern = f"%{query.lower()}%"
+            player_ids = list(session.scalars(
+                select(Player.player_id)
+                .outerjoin(PlayerAlias, PlayerAlias.player_id == Player.player_id)
+                .where(
+                    func.lower(func.coalesce(Player.canonical_lounge_name, "")).like(pattern)
+                    | func.lower(func.coalesce(PlayerAlias.alias_value, "")).like(pattern)
+                )
+                .distinct()
+                .limit(limit)
+            ))
+            reason = "alias_suggestion" if player_ids else "none"
+
+        if not player_ids:
+            return {"reason": reason, "results": []}
+
+        players = session.execute(
+            select(Player.player_id, Player.canonical_lounge_name, Player.primary_friend_code)
+            .where(Player.player_id.in_(player_ids))
+        ).all()
+        codes = session.execute(
+            select(PlayerFriendCode.player_id, PlayerFriendCode.friend_code)
+            .where(PlayerFriendCode.player_id.in_(player_ids))
+            .order_by(PlayerFriendCode.friend_code)
+        ).all()
+        aliases = session.execute(
+            select(PlayerAlias.player_id, PlayerAlias.alias_type, PlayerAlias.alias_value)
+            .where(PlayerAlias.player_id.in_(player_ids))
+            .order_by(PlayerAlias.alias_type, PlayerAlias.alias_value)
+        ).all()
+        codes_by_player = {}
+        aliases_by_player = {}
+        for row in codes:
+            codes_by_player.setdefault(row.player_id, []).append(row.friend_code)
+        for row in aliases:
+            aliases_by_player.setdefault(row.player_id, []).append({
+                "type": row.alias_type,
+                "value": row.alias_value,
+            })
+        return {
+            "reason": reason,
+            "results": [
+                {
+                    "player_id": row.player_id,
+                    "canonical_lounge_name": row.canonical_lounge_name,
+                    "primary_friend_code": row.primary_friend_code,
+                    "friend_codes": codes_by_player.get(row.player_id, []),
+                    "aliases": aliases_by_player.get(row.player_id, []),
+                }
+                for row in players
+            ],
+        }
+
+
+def search_tracks(query=None, limit=500):
+    query = (query or "").strip().lower()
+    with SessionLocal() as session:
+        statement = select(Track.track_id, Track.canonical_name).order_by(Track.canonical_name)
+        if query:
+            pattern = f"%{query}%"
+            matching_ids = select(TrackAlias.track_id).where(func.lower(TrackAlias.alias_value).like(pattern))
+            statement = statement.where(
+                func.lower(Track.canonical_name).like(pattern) | Track.track_id.in_(matching_ids)
+            )
+        rows = session.execute(statement.limit(limit)).all()
+        return [{"track_id": row.track_id, "name": row.canonical_name} for row in rows]
+
+
 def list_seasons(league_code="ctc"):
     with SessionLocal() as session:
         rows = session.execute(
@@ -351,6 +433,64 @@ def list_seasons(league_code="ctc"):
                 "season_number": row.season_number,
                 "name": row.name,
                 "status": row.status,
+            }
+            for row in rows
+        ]
+
+
+def list_match_scopes():
+    with SessionLocal() as session:
+        rows = session.execute(
+            select(
+                Season.league_code,
+                Season.season_code,
+                Season.name,
+                Division.division_code,
+                Division.division_name,
+            )
+            .join(Division, Division.season_id == Season.season_id)
+            .order_by(Season.league_code, Season.season_number, Division.division_code)
+        ).all()
+        return [
+            {
+                "league": row.league_code,
+                "season": row.season_code,
+                "season_name": row.name,
+                "division": row.division_code,
+                "division_name": row.division_name,
+            }
+            for row in rows
+        ]
+
+
+def list_team_scopes():
+    with SessionLocal() as session:
+        rows = session.execute(
+            select(
+                Season.league_code,
+                Season.season_code,
+                Division.division_code,
+                Team.team_id,
+                Team.canonical_name,
+                Team.canonical_tag,
+                TeamSeasonEntry.display_name,
+                TeamSeasonEntry.clan_tag,
+            )
+            .join(Division, Division.season_id == Season.season_id)
+            .join(TeamSeasonEntry, TeamSeasonEntry.division_id == Division.division_id)
+            .join(Team, Team.team_id == TeamSeasonEntry.team_id)
+            .order_by(Season.league_code, Season.season_number, Division.division_code, TeamSeasonEntry.clan_tag)
+        ).all()
+        return [
+            {
+                "league": row.league_code,
+                "season": row.season_code,
+                "division": row.division_code,
+                "team_id": row.team_id,
+                "canonical_name": row.canonical_name,
+                "canonical_tag": row.canonical_tag,
+                "display_name": row.display_name,
+                "clan_tag": row.clan_tag,
             }
             for row in rows
         ]

@@ -77,6 +77,25 @@ def api_players():
         return _error_response(e)
 
 
+@app.route("/api/player-identities", methods=["GET"])
+def api_player_identities():
+    try:
+        return jsonify(stats.find_player_identities(
+            friend_code=request.args.get("friend_code"),
+            query=request.args.get("query"),
+        ))
+    except Exception as e:
+        return _error_response(e)
+
+
+@app.route("/api/track-search", methods=["GET"])
+def api_track_search():
+    try:
+        return jsonify(stats.search_tracks(query=request.args.get("query")))
+    except Exception as e:
+        return _error_response(e)
+
+
 @app.route("/api/seasons", methods=["GET"])
 @cache.cached(timeout=3600, query_string=True)
 def api_seasons():
@@ -84,6 +103,24 @@ def api_seasons():
         return jsonify(stats.list_seasons())
     except Exception as e:
         print(f"Error in api_seasons: {e}")
+        return _error_response(e)
+
+
+@app.route("/api/match-scopes", methods=["GET"])
+@cache.cached(timeout=3600)
+def api_match_scopes():
+    try:
+        return jsonify(stats.list_match_scopes())
+    except Exception as e:
+        return _error_response(e)
+
+
+@app.route("/api/team-scopes", methods=["GET"])
+@cache.cached(timeout=3600)
+def api_team_scopes():
+    try:
+        return jsonify(stats.list_team_scopes())
+    except Exception as e:
         return _error_response(e)
 
 
