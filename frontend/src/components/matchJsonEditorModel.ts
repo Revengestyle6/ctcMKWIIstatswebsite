@@ -22,7 +22,7 @@ export type MatchJson = {
 };
 
 export type PlacementDraft = { playerKey: string; role: RaceRole };
-export type RaceDraft = { trackName: string; roomSize: number; placements: Array<PlacementDraft | null> };
+export type RaceDraft = { raceNumber: number; trackName: string; roomSize: number; placements: Array<PlacementDraft | null> };
 
 export const SCORE_TABLES: Record<number, number[]> = {
   7: [15, 10, 7, 5, 3, 1, 0],
@@ -95,6 +95,7 @@ export function racesFromMatch(match: MatchJson): RaceDraft[] {
     })).sort((left, right) => right.matches - left.matches || Math.abs(left.size - fallbackRoom) - Math.abs(right.size - fallbackRoom));
     const roomSize = scoredCandidates[0]?.matches ? scoredCandidates[0].size : (SCORE_TABLES[fallbackRoom] ? fallbackRoom : 10);
     return {
+      raceNumber: raceIndex + 1,
       trackName: match.tracks?.[raceIndex] ?? "",
       roomSize,
       placements: Array.from({ length: roomSize }, (_, index) => byPosition.get(index + 1) ?? null),
@@ -109,17 +110,18 @@ function gpGroups(scores: Array<number | null>): Array<Array<number | null>> {
 }
 
 export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
+  const orderedRaces = [...races].sort((left, right) => left.raceNumber - right.raceNumber);
   const teams = Object.fromEntries(Object.entries(match.teams ?? {}).map(([teamKey, team]) => {
     const tag = teamTag(teamKey, team);
     const color = teamColor(team);
     const players = Object.fromEntries(Object.entries(team.players ?? {}).map(([friendCode, player]) => {
       const key = `${teamKey}::${friendCode}`;
-      const positions = races.map((race) => {
+      const positions = orderedRaces.map((race) => {
         const index = race.placements.findIndex((placement) => placement?.playerKey === key);
         return index >= 0 ? index + 1 : null;
       });
-      const scores = positions.map((position, index) => position ? scoreForPosition(position, races[index].roomSize) : null);
-      const roles = races.map((race) => race.placements.find((placement) => placement?.playerKey === key)?.role ?? null);
+      const scores = positions.map((position, index) => position ? scoreForPosition(position, orderedRaces[index].roomSize) : null);
+      const roles = orderedRaces.map((race) => race.placements.find((placement) => placement?.playerKey === key)?.role ?? null);
       const total = scores.reduce<number>((sum, score) => sum + (score ?? 0), 0) - (player.penalties ?? 0);
       const played = positions.map((position, index) => position ? index : -1).filter((index) => index >= 0);
       const gpScores = gpGroups(scores);
@@ -131,7 +133,7 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
         tag,
         total_score: total,
         had_penalties: (player.penalties ?? 0) !== 0,
-        subbed_out: played.length > 0 && played[played.length - 1] < races.length - 1,
+        subbed_out: played.length > 0 && played[played.length - 1] < orderedRaces.length - 1,
         race_scores: scores,
         race_positions: positions,
         gp_scores: gpScores,
@@ -151,9 +153,9 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
   }));
   return {
     ...match,
-    title_str: `#title ${races.length} races\n`,
-    races_played: races.length,
-    tracks: races.map((race) => race.trackName),
+    title_str: `#title ${orderedRaces.length} races\n`,
+    races_played: orderedRaces.length,
+    tracks: orderedRaces.map((race) => race.trackName),
     teams,
   };
 }

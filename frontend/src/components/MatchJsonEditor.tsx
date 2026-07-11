@@ -59,6 +59,11 @@ function validation(match: MatchJson, races: RaceDraft[], identities: Record<str
       }
     });
   }
+  const raceNumberCounts = new Map<number, number>();
+  races.forEach((race) => raceNumberCounts.set(race.raceNumber, (raceNumberCounts.get(race.raceNumber) ?? 0) + 1));
+  raceNumberCounts.forEach((count, raceNumber) => {
+    if (count > 1) issues.push({ level: "error", message: `Race number ${raceNumber} is used more than once.` });
+  });
   players.forEach(({ playerKey, friendCode, player }) => {
     const name = player.lounge_name || player.mii_name || friendCode;
     if (!validFriendCode(friendCode)) issues.push({ level: "error", message: `${name} needs a valid friend code.` });
@@ -77,17 +82,19 @@ function validation(match: MatchJson, races: RaceDraft[], identities: Record<str
       issues.push({ level: "warning", message: `${name} has a legacy player penalty in a team match.` });
     }
   });
-  races.forEach((race, index) => {
-    if (!SCORE_TABLES[race.roomSize]) issues.push({ level: "error", message: `Race ${index + 1} has unsupported room size ${race.roomSize}.` });
-    if (!race.trackName.trim()) issues.push({ level: "error", message: `Race ${index + 1} needs a track.` });
+  races.forEach((race) => {
+    const label = Number.isInteger(race.raceNumber) && race.raceNumber > 0 ? `Race ${race.raceNumber}` : "A race with an invalid number";
+    if (!Number.isInteger(race.raceNumber) || race.raceNumber < 1) issues.push({ level: "error", message: "Every race number must be a positive whole number." });
+    if (!SCORE_TABLES[race.roomSize]) issues.push({ level: "error", message: `${label} has unsupported room size ${race.roomSize}.` });
+    if (!race.trackName.trim()) issues.push({ level: "error", message: `${label} needs a track.` });
     else if (tracksLoaded && !trackOptions.some((track) => normalized(track.name) === normalized(race.trackName))) {
-      issues.push({ level: "error", message: `Race ${index + 1} track ${race.trackName} does not exist in the database.` });
+      issues.push({ level: "error", message: `${label} track ${race.trackName} does not exist in the database.` });
     }
     const assigned = race.placements.filter(Boolean);
-    if (assigned.length !== race.roomSize) issues.push({ level: "error", message: `Race ${index + 1} has ${assigned.length} of ${race.roomSize} positions filled.` });
+    if (assigned.length !== race.roomSize) issues.push({ level: "error", message: `${label} has ${assigned.length} of ${race.roomSize} positions filled.` });
     const keys = assigned.map((placement) => placement!.playerKey);
-    if (new Set(keys).size !== keys.length) issues.push({ level: "error", message: `Race ${index + 1} contains a player more than once.` });
-    if (assigned.some((placement) => !placement!.role)) issues.push({ level: "warning", message: `Race ${index + 1} has unconfirmed roles.` });
+    if (new Set(keys).size !== keys.length) issues.push({ level: "error", message: `${label} contains a player more than once.` });
+    if (assigned.some((placement) => !placement!.role)) issues.push({ level: "warning", message: `${label} has unconfirmed roles.` });
   });
   return issues;
 }
@@ -203,11 +210,33 @@ export default function MatchJsonEditor(): React.JSX.Element {
   }
   function resizeRaces(count: number): void {
     const safeCount = Math.max(1, Math.min(99, count));
-    setRaces((current) => Array.from({ length: safeCount }, (_, index) => current[index] ?? {
-      trackName: "", roomSize: expectedRoomSize(match.format), placements: Array(expectedRoomSize(match.format)).fill(null),
-    }));
+    setRaces((current) => {
+      const highestNumber = Math.max(0, ...current.map((race) => race.raceNumber));
+      return Array.from({ length: safeCount }, (_, index) => current[index] ?? {
+        raceNumber: highestNumber + index - current.length + 1,
+        trackName: "", roomSize: expectedRoomSize(match.format), placements: Array(expectedRoomSize(match.format)).fill(null),
+      });
+    });
     updateMatch({ races_played: safeCount, rxx: Array.from({ length: Math.ceil(safeCount / 4) }, (_, index) => match.rxx?.[index] ?? "") });
     setActiveRace((current) => Math.min(current, safeCount - 1));
+  }
+  function insertRace(raceIndex: number, side: "before" | "after"): void {
+    const currentRace = races[raceIndex];
+    if (!currentRace) return;
+    const raceNumber = currentRace.raceNumber + (side === "after" ? 1 : 0);
+    const insertIndex = raceIndex + (side === "after" ? 1 : 0);
+    const roomSize = expectedRoomSize(match.format);
+    setRaces((current) => {
+      const shifted = current.map((race) => race.raceNumber >= raceNumber ? { ...race, raceNumber: race.raceNumber + 1 } : race);
+      shifted.splice(insertIndex, 0, { raceNumber, trackName: "", roomSize, placements: Array(roomSize).fill(null) });
+      return shifted;
+    });
+    setMatch((current) => ({
+      ...current,
+      races_played: races.length + 1,
+      rxx: Array.from({ length: Math.ceil((races.length + 1) / 4) }, (_, index) => current.rxx?.[index] ?? ""),
+    }));
+    setActiveRace(insertIndex);
   }
   function addPlayer(teamKey: string): void {
     let index = 1; let code = `NEW-${index}`;
@@ -359,14 +388,15 @@ export default function MatchJsonEditor(): React.JSX.Element {
           <h2 className="text-xl font-bold">Race Entry</h2>
           <div className="flex items-center gap-2"><button type="button" onClick={() => setRaceView("one")} className={`rounded px-3 py-2 ${raceView === "one" ? "bg-blue-500" : "bg-white/10"}`}>One Race</button><button type="button" onClick={() => setRaceView("all")} className={`rounded px-3 py-2 ${raceView === "all" ? "bg-blue-500" : "bg-white/10"}`}>All Races</button></div>
         </div>
-        {raceView === "one" && <div className="mb-4 flex items-center justify-between"><button type="button" disabled={activeRace === 0} onClick={() => setActiveRace((r) => r - 1)} className="rounded bg-white/10 px-3 py-2 disabled:opacity-30">Previous</button><select value={activeRace} onChange={(e) => setActiveRace(Number(e.target.value))} className="rounded border border-white/15 bg-zinc-900 px-4 py-2">{races.map((_, index) => <option key={index} value={index}>Race {index + 1}</option>)}</select><button type="button" disabled={activeRace === races.length - 1} onClick={() => setActiveRace((r) => r + 1)} className="rounded bg-white/10 px-3 py-2 disabled:opacity-30">Next</button></div>}
+        {raceView === "one" && <div className="mb-4 flex items-center justify-between"><button type="button" disabled={activeRace === 0} onClick={() => setActiveRace((r) => r - 1)} className="rounded bg-white/10 px-3 py-2 disabled:opacity-30">Previous</button><select value={activeRace} onChange={(e) => setActiveRace(Number(e.target.value))} className="rounded border border-white/15 bg-zinc-900 px-4 py-2">{races.map((race, index) => <option key={index} value={index}>Race {race.raceNumber}</option>)}</select><button type="button" disabled={activeRace === races.length - 1} onClick={() => setActiveRace((r) => r + 1)} className="rounded bg-white/10 px-3 py-2 disabled:opacity-30">Next</button></div>}
         <datalist id="track-options">{trackOptions.map((track) => <option key={track.track_id} value={track.name} />)}</datalist>
         <div className="space-y-5">{raceIndexes.map((raceIndex) => {
           const race = races[raceIndex]; const assigned = new Set(race.placements.flatMap((placement) => placement ? [placement.playerKey] : []));
           const resolvedTrack = trackOptions.find((track) => normalized(track.name) === normalized(race.trackName));
           return <article key={raceIndex} className="border border-white/10 bg-black/25 p-4">
-            <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(15rem,1fr)_10rem_auto_auto]">
-              <label className={smallLabel}>Race {raceIndex + 1} track<input list="track-options" value={race.trackName} onChange={(e) => setRace(raceIndex, (current) => ({ ...current, trackName: e.target.value }))} className={`${inputClass} ${resolvedTrack ? "border-emerald-400/70" : tracksLoaded ? "border-red-400/70" : ""}`} />
+            <div className="mb-4 grid gap-3 sm:grid-cols-[7rem_minmax(15rem,1fr)_10rem_auto_auto]">
+              <label className={smallLabel}>Race number<input type="number" min={1} step={1} value={race.raceNumber} onChange={(e) => setRace(raceIndex, (current) => ({ ...current, raceNumber: Number(e.target.value) }))} className={inputClass} /></label>
+              <label className={smallLabel}>Race {race.raceNumber} track<input list="track-options" value={race.trackName} onChange={(e) => setRace(raceIndex, (current) => ({ ...current, trackName: e.target.value }))} className={`${inputClass} ${resolvedTrack ? "border-emerald-400/70" : tracksLoaded ? "border-red-400/70" : ""}`} />
                 <span className={`mt-1 block text-xs normal-case ${resolvedTrack ? "text-emerald-300" : tracksLoaded ? "text-red-300" : "text-gray-400"}`}>{resolvedTrack ? "Confirmed in database" : tracksLoaded ? "No matching database track" : "Checking database..."}</span>
               </label>
               <label className={smallLabel}>Room size<select value={race.roomSize} onChange={(e) => setRoomSize(raceIndex, Number(e.target.value))} className={inputClass}>{Object.keys(SCORE_TABLES).map((size) => <option key={size}>{size}</option>)}</select></label>
@@ -379,6 +409,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
               >
                 Clear all positions
               </button>
+            </div>
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button type="button" onClick={() => insertRace(raceIndex, "before")} className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15">Insert race before</button>
+              <button type="button" onClick={() => insertRace(raceIndex, "after")} className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15">Insert race after</button>
+              <span className="self-center text-xs text-gray-400">Subsequent race numbers will shift automatically.</span>
             </div>
             <div
               onDragOver={(event) => event.preventDefault()}
