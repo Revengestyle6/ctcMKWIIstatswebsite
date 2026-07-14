@@ -11,7 +11,16 @@ export type MatchPlayerJson = {
 export type TeamJson = {
   table_tag_str?: string; table_penalty_str?: string; total_score?: number;
   penalties?: number; hex_color?: string; players?: Record<string, MatchPlayerJson>;
+  missing_player_scores?: Array<number | null>;
+  missing_player_results?: TeamMissingPlayerResultJson[];
   [key: string]: unknown;
+};
+
+export type MissingPlayerReason = "short_roster" | "unreplaced_disconnect" | "unknown";
+export type TeamMissingPlayerResultJson = {
+  race_number: number;
+  score: number;
+  reason: MissingPlayerReason;
 };
 
 export type MatchJson = {
@@ -22,7 +31,16 @@ export type MatchJson = {
 };
 
 export type PlacementDraft = { playerKey: string; role: RaceRole };
-export type RaceDraft = { raceNumber: number; trackName: string; roomSize: number; placements: Array<PlacementDraft | null> };
+export type UnplacedResultDraft = { playerKey: string; score: number; role: RaceRole };
+export type MissingPlayerResultDraft = { teamKey: string; score: number; reason: MissingPlayerReason };
+export type RaceDraft = {
+  raceNumber: number;
+  trackName: string;
+  roomSize: number;
+  placements: Array<PlacementDraft | null>;
+  unplacedResults: UnplacedResultDraft[];
+  missingPlayerResults: MissingPlayerResultDraft[];
+};
 
 export const SCORE_TABLES: Record<number, number[]> = {
   7: [15, 10, 7, 5, 3, 1, 0],
@@ -60,6 +78,11 @@ export function playerLabel(player: MatchPlayerJson, friendCode: string): string
   return player.mii_name || player.lounge_name || player.table_name || friendCode;
 }
 
+function isMissingPlayerPlaceholder(player: MatchPlayerJson): boolean {
+  return [player.table_str, player.mii_name, player.lounge_name, player.table_name]
+    .some((value) => String(value ?? "").toLowerCase().includes("missing player"));
+}
+
 export function allPlayers(match: MatchJson): Array<{ playerKey: string; friendCode: string; teamKey: string; player: MatchPlayerJson }> {
   return Object.entries(match.teams ?? {}).flatMap(([teamKey, team]) =>
     Object.entries(team.players ?? {}).map(([friendCode, player]) => ({
@@ -75,8 +98,20 @@ export function racesFromMatch(match: MatchJson): RaceDraft[] {
   return Array.from({ length: count }, (_, raceIndex) => {
     const byPosition = new Map<number, PlacementDraft>();
     const scorePairs: Array<{ position: number; score: number }> = [];
-    players.forEach(({ playerKey, player }) => {
+    const unplacedResults: UnplacedResultDraft[] = [];
+    const missingPlayerResults = Object.entries(match.teams ?? {}).flatMap(([teamKey, team]) => {
+      const explicitResults = (team.missing_player_results ?? [])
+        .filter((result) => result.race_number === raceIndex + 1)
+        .map((result) => ({ teamKey, score: result.score, reason: result.reason ?? "unknown" as MissingPlayerReason }));
+      if (explicitResults.length > 0) return explicitResults;
+      const legacyScore = team.missing_player_scores?.[raceIndex];
+      return typeof legacyScore === "number"
+        ? [{ teamKey, score: legacyScore, reason: "unknown" as MissingPlayerReason }]
+        : [];
+    });
+    players.forEach(({ playerKey, teamKey, player }) => {
       const position = player.race_positions?.[raceIndex];
+      const score = player.race_scores?.[raceIndex];
       if (typeof position === "number" && position > 0 && !byPosition.has(position)) {
         const rawRole = player.race_roles?.[raceIndex];
         const role: RaceRole = rawRole === "runner" || rawRole === "bagger"
@@ -84,7 +119,20 @@ export function racesFromMatch(match: MatchJson): RaceDraft[] {
           : defaultRoleForPosition(match.format, position);
         byPosition.set(position, { playerKey, role });
       }
-      const score = player.race_scores?.[raceIndex];
+      if ((position === null || position === undefined) && typeof score === "number" && score !== 0) {
+        if (isMissingPlayerPlaceholder(player)) {
+          if (!missingPlayerResults.some((result) => result.teamKey === teamKey)) {
+            missingPlayerResults.push({ teamKey, score, reason: "unknown" });
+          }
+        } else {
+          const rawRole = player.race_roles?.[raceIndex];
+          unplacedResults.push({
+            playerKey,
+            score,
+            role: rawRole === "runner" || rawRole === "bagger" ? rawRole : null,
+          });
+        }
+      }
       if (typeof position === "number" && typeof score === "number") scorePairs.push({ position, score });
     });
     const largestPosition = Math.max(0, ...Array.from(byPosition.keys()));
@@ -99,6 +147,8 @@ export function racesFromMatch(match: MatchJson): RaceDraft[] {
       trackName: match.tracks?.[raceIndex] ?? "",
       roomSize,
       placements: Array.from({ length: roomSize }, (_, index) => byPosition.get(index + 1) ?? null),
+      unplacedResults,
+      missingPlayerResults,
     };
   });
 }
@@ -120,8 +170,15 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
         const index = race.placements.findIndex((placement) => placement?.playerKey === key);
         return index >= 0 ? index + 1 : null;
       });
-      const scores = positions.map((position, index) => position ? scoreForPosition(position, orderedRaces[index].roomSize) : null);
-      const roles = orderedRaces.map((race) => race.placements.find((placement) => placement?.playerKey === key)?.role ?? null);
+      const scores = positions.map((position, index) => {
+        if (position) return scoreForPosition(position, orderedRaces[index].roomSize);
+        return orderedRaces[index].unplacedResults.find((result) => result.playerKey === key)?.score ?? null;
+      });
+      const roles = orderedRaces.map((race) =>
+        race.placements.find((placement) => placement?.playerKey === key)?.role
+        ?? race.unplacedResults.find((result) => result.playerKey === key)?.role
+        ?? null
+      );
       const total = scores.reduce<number>((sum, score) => sum + (score ?? 0), 0) - (player.penalties ?? 0);
       const played = positions.map((position, index) => position ? index : -1).filter((index) => index >= 0);
       const gpScores = gpGroups(scores);
@@ -141,18 +198,33 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
       }];
     }));
     const gross = Object.values(players).reduce<number>((sum, player) => sum + Number((player as MatchPlayerJson).total_score ?? 0), 0);
+    const missingPlayerScores = orderedRaces.map((race) => {
+      const scores = race.missingPlayerResults.filter((result) => result.teamKey === teamKey).map((result) => result.score);
+      return scores.length ? scores.reduce((sum, score) => sum + score, 0) : null;
+    });
+    const missingPlayerTotal = missingPlayerScores.reduce<number>((sum, score) => sum + (score ?? 0), 0);
+    const missingPlayerResults = orderedRaces.flatMap((race) => race.missingPlayerResults
+      .filter((result) => result.teamKey === teamKey)
+      .map((result) => ({
+        race_number: race.raceNumber,
+        score: result.score,
+        reason: result.reason,
+      })));
     const penalties = Number(team.penalties ?? 0);
     return [teamKey, {
       ...team,
       table_tag_str: `${tag} ${color}`,
       table_penalty_str: penalties ? `Penalty -${penalties}` : "",
       hex_color: color,
-      total_score: gross - penalties,
+      total_score: gross + missingPlayerTotal - penalties,
       players,
+      missing_player_scores: missingPlayerScores.some((score) => score !== null) ? missingPlayerScores : undefined,
+      missing_player_results: missingPlayerResults.length ? missingPlayerResults : undefined,
     }];
   }));
   return {
     ...match,
+    rxx: (match.rxx ?? []).map((code) => code.trim()).filter(Boolean),
     title_str: `#title ${orderedRaces.length} races\n`,
     races_played: orderedRaces.length,
     tracks: orderedRaces.map((race) => race.trackName),
@@ -162,7 +234,7 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
 
 export const blankMatch: MatchJson = {
   title_str: "#title 12 races\n", format: "5v5", races_played: 12, league: "ctc",
-  season: "", division: "", match_label: "", rxx: ["", "", ""],
+  season: "", division: "", match_label: "", rxx: [""],
   tracks: Array(12).fill(""), review_notes: "",
   teams: {
     TeamA: { table_tag_str: "TeamA #4F8CFF", hex_color: "#4F8CFF", penalties: 0, players: {} },

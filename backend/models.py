@@ -259,6 +259,25 @@ class Race(Base):
     __table_args__ = (UniqueConstraint("match_id", "race_number", name="uq_race_match_number"),)
 
 
+class RaceTeamResult(Base):
+    __tablename__ = "race_team_results"
+
+    race_team_result_id = Column(Integer, primary_key=True)
+    race_id = Column(Integer, ForeignKey("races.race_id"), nullable=False)
+    match_team_id = Column(Integer, ForeignKey("match_teams.match_team_id"), nullable=False)
+    score = Column(Integer, nullable=False)
+    result_type = Column(Text, nullable=False, default="missing_player")
+    reason = Column(Text, nullable=False, default="unknown")
+
+    __table_args__ = (
+        CheckConstraint("result_type IN ('missing_player')", name="ck_team_result_type"),
+        CheckConstraint(
+            "reason IN ('short_roster', 'unreplaced_disconnect', 'unknown')",
+            name="ck_team_result_reason",
+        ),
+    )
+
+
 class RacePlayerResult(Base):
     __tablename__ = "race_player_results"
 
@@ -297,4 +316,3 @@ class Penalty(Base):
     __table_args__ = (
         CheckConstraint("penalty_scope IN ('team', 'player', 'race', 'unknown')", name="ck_penalty_scope"),
     )
-

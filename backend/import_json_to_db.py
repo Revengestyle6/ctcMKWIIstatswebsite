@@ -23,6 +23,7 @@ from models import (
     PlayerSeasonEntry,
     Race,
     RacePlayerResult,
+    RaceTeamResult,
     Season,
     SourceFile,
     Team,
@@ -78,6 +79,13 @@ def preferred_json_files(root: Path) -> list[Path]:
             continue
         output.append(path)
     return output
+
+
+def is_missing_player_placeholder(player_data: dict[str, Any]) -> bool:
+    return any(
+        "missing player" in str(player_data.get(field) or "").lower()
+        for field in ("table_str", "mii_name", "lounge_name", "table_name")
+    )
 
 
 def load_team_aliases(path: Path = TEAM_ALIAS_PATH) -> dict[tuple[str, str, str, str, str], dict[str, str]]:
@@ -483,7 +491,45 @@ def import_match(
                 )
             )
 
+        explicit_missing_results = team_data.get("missing_player_results") or []
+        if explicit_missing_results:
+            missing_results = explicit_missing_results
+        else:
+            missing_results = [
+                {"race_number": index, "score": score, "reason": "unknown"}
+                for index, score in enumerate(team_data.get("missing_player_scores") or [], start=1)
+                if score is not None
+            ]
+        recorded_missing_races = set()
+        for missing_result in missing_results:
+            race = race_by_number.get(missing_result.get("race_number"))
+            score = missing_result.get("score")
+            if race is None or not isinstance(score, (int, float)):
+                continue
+            reason = missing_result.get("reason")
+            if reason not in {"short_roster", "unreplaced_disconnect", "unknown"}:
+                reason = "unknown"
+            session.add(
+                RaceTeamResult(
+                    race_id=race.race_id,
+                    match_team_id=match_team.match_team_id,
+                    score=int(score),
+                    result_type="missing_player",
+                    reason=reason,
+                )
+            )
+            recorded_missing_races.add(race.race_number)
+
         for friend_code, player_data in (team_data.get("players") or {}).items():
+            placeholder = is_missing_player_placeholder(player_data)
+            placeholder_score_total = sum(
+                score
+                for score, position in zip(
+                    player_data.get("race_scores") or [],
+                    player_data.get("race_positions") or [],
+                )
+                if placeholder and isinstance(score, (int, float)) and position is None
+            )
             player = get_or_create_player(session, friend_code, player_data, identities)
             add_player_aliases(session, player, player_data, match.match_id)
             player_entry = get_or_create_player_entry(
@@ -500,7 +546,7 @@ def import_match(
                 tag_raw=player_data.get("tag"),
                 flag=player_data.get("flag"),
                 table_str=player_data.get("table_str"),
-                raw_total_score=player_data.get("total_score") or 0,
+                raw_total_score=(player_data.get("total_score") or 0) - placeholder_score_total,
                 player_penalty_points=player_data.get("penalties") or 0,
                 had_penalties=bool(player_data.get("had_penalties")),
                 subbed_out=bool(player_data.get("subbed_out")),
@@ -537,6 +583,19 @@ def import_match(
                 idx = race_number - 1
                 score = race_scores[idx] if idx < len(race_scores) else None
                 position = race_positions[idx] if idx < len(race_positions) else None
+                if placeholder and isinstance(score, (int, float)) and position is None:
+                    if race_number not in recorded_missing_races:
+                        session.add(
+                            RaceTeamResult(
+                                race_id=race.race_id,
+                                match_team_id=match_team.match_team_id,
+                                score=int(score),
+                                result_type="missing_player",
+                                reason="unknown",
+                            )
+                        )
+                        recorded_missing_races.add(race_number)
+                    score = None
                 manual_role = race_roles[idx] if idx < len(race_roles) else None
                 if manual_role in {"runner", "bagger"}:
                     role, role_source = manual_role, "manual"
@@ -633,6 +692,7 @@ def print_summary(session, imported_matches: int, skipped_files: int):
         Track,
         Race,
         RacePlayerResult,
+        RaceTeamResult,
         Penalty,
     ):
         print(f"{model.__tablename__}: {table_count(session, model)}")

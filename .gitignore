@@ -37,6 +37,7 @@ yarn-debug.log
 # Generated local analytics database
 backend/data/*.sqlite
 backend/data/*.sqlite-*
+backend/data/*.sqlite.bak-*
 backend/data/*.db
 backend/data/*.db-*
 backend/JSON/1459942488293769382.json

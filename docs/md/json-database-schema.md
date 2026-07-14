@@ -93,7 +93,7 @@ Representative structure:
 | `title_str` | Table title string | Often contains race count text. |
 | `format` | Match format | Currently observed as `5v5`. |
 | `races_played` | Number of races in this table | Should match `tracks.length` in normal cases. |
-| `rxx` | Table Bot race/table references | Array length varies from 1 to 4. Store as child rows. |
+| `rxx` | Ordered Table Bot room references | Add a new value when the room resets or changes host. It is not one code per GP; array length is independent of race and GP count. |
 | `tracks` | Ordered list of tracks | The array index maps to race number. |
 | `teams` | Team result object | Keys are raw team tags/names. |
 
@@ -107,6 +107,8 @@ Representative structure:
 | `total_score` | Team total score shown by table bot | Store raw. Confirm later whether already net of penalties. |
 | `penalties` | Team penalty points | Usually `0`, positive number when penalty exists. |
 | `hex_color` | Team display color | Useful for frontend but not identity. |
+| `missing_player_results` | Optional team-level race results | Editor extension. Each item contains `race_number`, `score`, and a reason: `short_roster`, `unreplaced_disconnect`, or `unknown`. |
+| `missing_player_scores` | Optional ordered team-level scores | Legacy compatibility form. Each index maps to a race; prefer `missing_player_results` for new files. |
 | `players` | Player result object | Keys are friend codes. |
 
 ### Player-Level Fields
@@ -128,6 +130,19 @@ Representative structure:
 | `gp_scores` | Scores grouped by GP | Can be stored as JSON or normalized later. |
 | `race_roles` | Optional ordered manual roles | New editor output; values are `runner`, `bagger`, or `null`. Historical files omit it. |
 | `flag` | Country/region flag code | Optional profile attribute. |
+
+Some manually edited tables preserve a nonzero `race_scores` value while the matching `race_positions` value is `null`. This represents a known player who disconnected, received disconnection points, and did not receive a placement. Importers and editors must preserve the score on that real player; they must not infer a placement, treat the player as absent, or discard the score.
+
+Team-level missing-player results cover different cases: a team started with four players, or a player left and was not replaced so the team continued with four. Store these in `missing_player_results` instead of creating a fake player or friend code. These points contribute to team totals and race differentials, but never to an individual player's analytics.
+
+```json
+"missing_player_results": [
+  { "race_number": 1, "score": 3, "reason": "short_roster" },
+  { "race_number": 7, "score": 3, "reason": "unreplaced_disconnect" }
+]
+```
+
+Room size controls the deterministic score table and the number of placement slots. Team-level missing-player points and known-player disconnection points with no placement are supplemental results; neither occupies a placement slot.
 
 ## Recommended Database Model
 
@@ -414,6 +429,21 @@ Suggested initial inference:
 
 If CTC has a better official rule, encode that rule in the importer and keep `role_source` so future audits are possible.
 
+### `race_team_results`
+
+Stores race points that belong to a team but not to a player identity.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `race_team_result_id` | integer primary key | Internal ID. |
+| `race_id` | foreign key to `races` | Required. |
+| `match_team_id` | foreign key to `match_teams` | Team receiving the points. |
+| `score` | integer | Missing-player points for this race. |
+| `result_type` | text | Currently `missing_player`. |
+| `reason` | text | `short_roster`, `unreplaced_disconnect`, or `unknown`. |
+
+These rows are included in team totals and race differential charts, but excluded from player averages, race counts, rankings, and identity data.
+
 ## Penalty Tables
 
 ### `penalties`
@@ -453,6 +483,7 @@ For each match object:
 13. Insert tracks into `tracks` and `track_aliases`.
 14. Insert one `races` row per track index.
 15. Expand `race_scores` and `race_positions` into `race_player_results`.
+16. Expand team `missing_player_results` into `race_team_results`.
 
 ## Suggested Minimum Viable Schema
 

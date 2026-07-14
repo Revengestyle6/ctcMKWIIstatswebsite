@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { fetchMatchScopes, fetchPlayerIdentity, fetchTeamScopes, MatchScope, PlayerIdentity, searchTracks, TeamScope } from "../api";
 import {
   allPlayers, blankMatch, compileMatch, defaultRoleForPosition, expectedRoomSize, MatchJson, MatchPlayerJson,
-  playerLabel, RaceDraft, racesFromMatch, SCORE_TABLES, scoreForPosition, teamColor,
+  RaceDraft, racesFromMatch, SCORE_TABLES, scoreForPosition, teamColor,
   teamTag, TeamJson,
 } from "./matchJsonEditorModel";
 
@@ -91,10 +91,22 @@ function validation(match: MatchJson, races: RaceDraft[], identities: Record<str
       issues.push({ level: "error", message: `${label} track ${race.trackName} does not exist in the database.` });
     }
     const assigned = race.placements.filter(Boolean);
-    if (assigned.length !== race.roomSize) issues.push({ level: "error", message: `${label} has ${assigned.length} of ${race.roomSize} positions filled.` });
+    if (assigned.length !== race.roomSize) issues.push({ level: "error", message: `${label} has ${assigned.length} placements for a ${race.roomSize}-player room. Disconnection and missing-player awards do not occupy placement slots.` });
     const keys = assigned.map((placement) => placement!.playerKey);
     if (new Set(keys).size !== keys.length) issues.push({ level: "error", message: `${label} contains a player more than once.` });
     if (assigned.some((placement) => !placement!.role)) issues.push({ level: "warning", message: `${label} has unconfirmed roles.` });
+    race.unplacedResults.forEach((result) => {
+      const player = players.find((entry) => entry.playerKey === result.playerKey);
+      const name = player ? player.player.lounge_name || player.player.mii_name || player.friendCode : result.playerKey;
+      if (!Number.isFinite(result.score) || result.score < 0 || result.score > 15) issues.push({ level: "error", message: `${label} has an invalid disconnected-player score for ${name}.` });
+      else issues.push({ level: "warning", message: `${label} gives ${name} ${result.score} disconnection points without a placement.` });
+    });
+    race.missingPlayerResults.forEach((result) => {
+      const tag = match.teams?.[result.teamKey] ? teamTag(result.teamKey, match.teams[result.teamKey]) : result.teamKey;
+      if (!match.teams?.[result.teamKey]) issues.push({ level: "error", message: `${label} assigns missing-player points to an unknown team.` });
+      if (!Number.isFinite(result.score) || result.score < 0) issues.push({ level: "error", message: `${label} has an invalid missing-player score for ${tag}.` });
+      else issues.push({ level: "warning", message: `${label} assigns ${result.score} missing-player points to ${tag} (${result.reason.replaceAll("_", " ")}).` });
+    });
   });
   return issues;
 }
@@ -214,10 +226,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
       const highestNumber = Math.max(0, ...current.map((race) => race.raceNumber));
       return Array.from({ length: safeCount }, (_, index) => current[index] ?? {
         raceNumber: highestNumber + index - current.length + 1,
-        trackName: "", roomSize: expectedRoomSize(match.format), placements: Array(expectedRoomSize(match.format)).fill(null),
+        trackName: "", roomSize: expectedRoomSize(match.format), placements: Array(expectedRoomSize(match.format)).fill(null), unplacedResults: [], missingPlayerResults: [],
       });
     });
-    updateMatch({ races_played: safeCount, rxx: Array.from({ length: Math.ceil(safeCount / 4) }, (_, index) => match.rxx?.[index] ?? "") });
+    updateMatch({ races_played: safeCount });
     setActiveRace((current) => Math.min(current, safeCount - 1));
   }
   function insertRace(raceIndex: number, side: "before" | "after"): void {
@@ -228,15 +240,46 @@ export default function MatchJsonEditor(): React.JSX.Element {
     const roomSize = expectedRoomSize(match.format);
     setRaces((current) => {
       const shifted = current.map((race) => race.raceNumber >= raceNumber ? { ...race, raceNumber: race.raceNumber + 1 } : race);
-      shifted.splice(insertIndex, 0, { raceNumber, trackName: "", roomSize, placements: Array(roomSize).fill(null) });
+      shifted.splice(insertIndex, 0, { raceNumber, trackName: "", roomSize, placements: Array(roomSize).fill(null), unplacedResults: [], missingPlayerResults: [] });
       return shifted;
     });
     setMatch((current) => ({
       ...current,
       races_played: races.length + 1,
-      rxx: Array.from({ length: Math.ceil((races.length + 1) / 4) }, (_, index) => current.rxx?.[index] ?? ""),
     }));
     setActiveRace(insertIndex);
+  }
+  function deleteRace(raceIndex: number): void {
+    const race = races[raceIndex];
+    if (!race || races.length <= 1) return;
+    const hasData = Boolean(
+      race.trackName.trim()
+      || race.placements.some(Boolean)
+      || race.unplacedResults.length
+      || race.missingPlayerResults.length
+    );
+    const message = hasData
+      ? `Delete Race ${race.raceNumber}? Its track and all race results will be removed.`
+      : `Delete Race ${race.raceNumber}?`;
+    if (!window.confirm(message)) return;
+
+    setRaces((current) => current
+      .filter((_, index) => index !== raceIndex)
+      .map((entry) => entry.raceNumber > race.raceNumber ? { ...entry, raceNumber: entry.raceNumber - 1 } : entry));
+    setMatch((current) => ({ ...current, races_played: races.length - 1 }));
+    setActiveRace((current) => current > raceIndex ? current - 1 : Math.min(current, races.length - 2));
+  }
+  function updateRoomCode(index: number, value: string): void {
+    const codes = match.rxx?.length ? [...match.rxx] : [""];
+    codes[index] = value;
+    updateMatch({ rxx: codes });
+  }
+  function addRoomCode(): void {
+    updateMatch({ rxx: [...(match.rxx ?? []), ""] });
+  }
+  function removeRoomCode(index: number): void {
+    const codes = (match.rxx ?? []).filter((_, codeIndex) => codeIndex !== index);
+    updateMatch({ rxx: codes.length ? codes : [""] });
   }
   function addPlayer(teamKey: string): void {
     let index = 1; let code = `NEW-${index}`;
@@ -256,7 +299,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
   function removePlayer(teamKey: string, code: string): void {
     const key = `${teamKey}::${code}`;
     updateTeam(teamKey, (team) => { const next = { ...team.players }; delete next[code]; return { ...team, players: next }; });
-    setRaces((current) => current.map((race) => ({ ...race, placements: race.placements.map((placement) => placement?.playerKey === key ? null : placement) })));
+    setRaces((current) => current.map((race) => ({
+      ...race,
+      placements: race.placements.map((placement) => placement?.playerKey === key ? null : placement),
+      unplacedResults: race.unplacedResults.filter((result) => result.playerKey !== key),
+    })));
   }
   async function checkIdentity(playerKey: string, friendCode: string): Promise<void> {
     if (!validFriendCode(friendCode)) { setIdentityStates((s) => ({ ...s, [playerKey]: { status: "conflict", message: "Invalid friend code" } })); return; }
@@ -290,6 +337,56 @@ export default function MatchJsonEditor(): React.JSX.Element {
       placements: race.placements.map((placement) => placement?.playerKey === playerKey ? null : placement),
     }));
   }
+  function releaseUnplacedResult(raceIndex: number, playerKey: string): void {
+    setRace(raceIndex, (race) => ({
+      ...race,
+      unplacedResults: race.unplacedResults.filter((result) => result.playerKey !== playerKey),
+    }));
+  }
+  function addDisconnectedPlayerResult(raceIndex: number, playerKey: string): void {
+    if (!playerKey) return;
+    setRace(raceIndex, (race) => ({
+      ...race,
+      placements: race.placements.map((placement) => placement?.playerKey === playerKey ? null : placement),
+      unplacedResults: race.unplacedResults.some((result) => result.playerKey === playerKey)
+        ? race.unplacedResults
+        : [...race.unplacedResults, { playerKey, score: 3, role: null }],
+    }));
+  }
+  function updateDisconnectedPlayerResult(raceIndex: number, playerKey: string, score: number): void {
+    setRace(raceIndex, (race) => ({
+      ...race,
+      unplacedResults: race.unplacedResults.map((result) => result.playerKey === playerKey ? { ...result, score } : result),
+    }));
+  }
+  function addMissingPlayerResult(raceIndex: number): void {
+    const teamKey = Object.keys(match.teams ?? {})[0] ?? "";
+    setRace(raceIndex, (race) => ({
+      ...race,
+      missingPlayerResults: [...race.missingPlayerResults, { teamKey, score: 0, reason: "short_roster" }],
+    }));
+  }
+  function updateMissingPlayerResult(raceIndex: number, resultIndex: number, patch: Partial<RaceDraft["missingPlayerResults"][number]>): void {
+    setRace(raceIndex, (race) => ({
+      ...race,
+      missingPlayerResults: race.missingPlayerResults.map((result, index) => index === resultIndex ? { ...result, ...patch } : result),
+    }));
+  }
+  function removeMissingPlayerResult(raceIndex: number, resultIndex: number): void {
+    setRace(raceIndex, (race) => ({
+      ...race,
+      missingPlayerResults: race.missingPlayerResults.filter((_, index) => index !== resultIndex),
+    }));
+  }
+  function applyMissingPlayerResult(raceIndex: number, resultIndex: number, scope: "all" | "remaining"): void {
+    const source = races[raceIndex]?.missingPlayerResults[resultIndex];
+    if (!source) return;
+    setRaces((current) => current.map((race, index) => {
+      if (scope === "remaining" && index < raceIndex) return race;
+      const withoutSameTeam = race.missingPlayerResults.filter((result) => result.teamKey !== source.teamKey);
+      return { ...race, missingPlayerResults: [...withoutSameTeam, { ...source }] };
+    }));
+  }
   function setRoomSize(raceIndex: number, size: number): void {
     if (!SCORE_TABLES[size]) return;
     setRace(raceIndex, (race) => ({ ...race, roomSize: size, placements: Array.from({ length: size }, (_, index) => race.placements[index] ?? null) }));
@@ -317,7 +414,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div><Link to="/" className="text-blue-400 hover:text-blue-300 font-semibold">&lt; Back</Link><h1 className="mt-2 text-3xl font-bold">Match JSON Editor</h1><p className="text-sm text-gray-300">{fileName}</p></div>
         <div className="flex flex-wrap gap-2">
-          <input ref={fileInput} type="file" accept=".json,application/json" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) loadFile(file); event.currentTarget.value = ""; }} />
+          <input ref={fileInput} type="file" accept=".json,.txt,application/json,text/plain" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) loadFile(file); event.currentTarget.value = ""; }} />
           <button type="button" onClick={() => fileInput.current?.click()} className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold">Upload JSON</button>
           <button type="button" onClick={() => { const next = clone(blankMatch); setMatch(next); setRaces(racesFromMatch(next)); setFileName("New match JSON"); setIdentityStates({}); }} className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold">New Blank</button>
           <button type="button" onClick={() => download(compiled)} className="rounded-md bg-blue-500 px-4 py-2 font-bold hover:bg-blue-400">Download JSON</button>
@@ -344,7 +441,17 @@ export default function MatchJsonEditor(): React.JSX.Element {
           <label className="text-sm font-semibold text-gray-200">Races<input type="number" min={1} value={races.length} onChange={(e) => resizeRaces(Number(e.target.value))} className={inputClass} /></label>
           <label className="text-sm font-semibold text-gray-200">Review Notes<input value={match.review_notes ?? ""} onChange={(e) => updateMatch({ review_notes: e.target.value })} className={inputClass} /></label>
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">{Array.from({ length: Math.ceil(races.length / 4) }, (_, index) => <label key={index} className={smallLabel}>GP {index + 1} room code<input value={match.rxx?.[index] ?? ""} onChange={(e) => updateMatch({ rxx: Array.from({ length: Math.ceil(races.length / 4) }, (_, i) => i === index ? e.target.value : match.rxx?.[i] ?? "") })} className={inputClass} /></label>)}</div>
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-bold">Room Codes</h3>
+            <button type="button" onClick={addRoomCode} className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm font-semibold hover:bg-white/15">Add room code</button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">{(match.rxx?.length ? match.rxx : [""]).map((code, index) => <div key={index} className="grid grid-cols-[1fr_auto] items-end gap-2">
+            <label className={smallLabel}>Room code {index + 1}<input value={code} onChange={(e) => updateRoomCode(index, e.target.value)} className={inputClass} /></label>
+            <button type="button" title="Remove room code" onClick={() => removeRoomCode(index)} className="mb-0.5 h-10 px-3 text-red-300 hover:bg-red-950/40">Remove</button>
+          </div>)}</div>
+          <p className="mt-2 text-xs text-gray-400">Add a code only when the room resets or changes host. Codes are kept in chronological order.</p>
+        </div>
       </section>
 
       <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
@@ -391,7 +498,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
         {raceView === "one" && <div className="mb-4 flex items-center justify-between"><button type="button" disabled={activeRace === 0} onClick={() => setActiveRace((r) => r - 1)} className="rounded bg-white/10 px-3 py-2 disabled:opacity-30">Previous</button><select value={activeRace} onChange={(e) => setActiveRace(Number(e.target.value))} className="rounded border border-white/15 bg-zinc-900 px-4 py-2">{races.map((race, index) => <option key={index} value={index}>Race {race.raceNumber}</option>)}</select><button type="button" disabled={activeRace === races.length - 1} onClick={() => setActiveRace((r) => r + 1)} className="rounded bg-white/10 px-3 py-2 disabled:opacity-30">Next</button></div>}
         <datalist id="track-options">{trackOptions.map((track) => <option key={track.track_id} value={track.name} />)}</datalist>
         <div className="space-y-5">{raceIndexes.map((raceIndex) => {
-          const race = races[raceIndex]; const assigned = new Set(race.placements.flatMap((placement) => placement ? [placement.playerKey] : []));
+          const race = races[raceIndex];
+          const assigned = new Set([
+            ...race.placements.flatMap((placement) => placement ? [placement.playerKey] : []),
+            ...race.unplacedResults.map((result) => result.playerKey),
+          ]);
           const resolvedTrack = trackOptions.find((track) => normalized(track.name) === normalized(race.trackName));
           return <article key={raceIndex} className="border border-white/10 bg-black/25 p-4">
             <div className="mb-4 grid gap-3 sm:grid-cols-[7rem_minmax(15rem,1fr)_10rem_auto_auto]">
@@ -400,7 +511,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 <span className={`mt-1 block text-xs normal-case ${resolvedTrack ? "text-emerald-300" : tracksLoaded ? "text-red-300" : "text-gray-400"}`}>{resolvedTrack ? "Confirmed in database" : tracksLoaded ? "No matching database track" : "Checking database..."}</span>
               </label>
               <label className={smallLabel}>Room size<select value={race.roomSize} onChange={(e) => setRoomSize(raceIndex, Number(e.target.value))} className={inputClass}>{Object.keys(SCORE_TABLES).map((size) => <option key={size}>{size}</option>)}</select></label>
-              <span className="self-end pb-2 text-sm text-gray-300">{race.placements.filter(Boolean).length}/{race.roomSize} placed</span>
+              <span className="self-end pb-2 text-sm text-gray-300">{race.placements.filter(Boolean).length} / {race.roomSize} placed{race.unplacedResults.length ? `; ${race.unplacedResults.length} DC award` : ""}{race.missingPlayerResults.length ? `; ${race.missingPlayerResults.length} team missing` : ""}</span>
               <button
                 type="button"
                 disabled={!race.placements.some(Boolean)}
@@ -413,7 +524,44 @@ export default function MatchJsonEditor(): React.JSX.Element {
             <div className="mb-4 flex flex-wrap gap-2">
               <button type="button" onClick={() => insertRace(raceIndex, "before")} className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15">Insert race before</button>
               <button type="button" onClick={() => insertRace(raceIndex, "after")} className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15">Insert race after</button>
+              <button type="button" disabled={races.length <= 1} onClick={() => deleteRace(raceIndex)} className="rounded-md border border-red-400/30 bg-red-950/30 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40">Delete race</button>
               <span className="self-center text-xs text-gray-400">Subsequent race numbers will shift automatically.</span>
+            </div>
+            <div className="mb-4 border border-amber-400/30 bg-amber-950/25 p-3">
+              <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-amber-200">Player Disconnect: Points Without Placement</p>
+                  <p className="mt-1 text-xs text-amber-100/80">Use this when a configured player misses the finish but receives disconnection points.</p>
+                </div>
+                <label className={smallLabel}>Add disconnected player<select value="" onChange={(event) => addDisconnectedPlayerResult(raceIndex, event.target.value)} className={inputClass}>
+                  <option value="">Select player</option>
+                  {players.filter((player) => !assigned.has(player.playerKey)).map((player) => <option key={player.playerKey} value={player.playerKey}>{displayName(player.playerKey)}</option>)}
+                </select></label>
+              </div>
+              {race.unplacedResults.length > 0 && <div className="space-y-2">{race.unplacedResults.map((result) => <div key={result.playerKey} className="grid gap-2 border border-amber-300/20 bg-black/20 px-3 py-2 text-sm sm:grid-cols-[minmax(12rem,1fr)_8rem_auto]">
+                <span className="self-center"><strong>{displayName(result.playerKey)}</strong> has no finishing position.</span>
+                <label className={smallLabel}>DC points<input type="number" min={0} max={15} value={result.score} onChange={(event) => updateDisconnectedPlayerResult(raceIndex, result.playerKey, Number(event.target.value))} className={inputClass} /></label>
+                <button type="button" onClick={() => releaseUnplacedResult(raceIndex, result.playerKey)} className="self-end rounded-md border border-amber-300/30 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-900/30">Release to player pool</button>
+              </div>)}</div>}
+            </div>
+            <div className="mb-4 border border-white/10 bg-black/20 p-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-gray-300">Team Missing Player</p>
+                  <p className="mt-1 text-xs text-gray-400">Use this when a team starts short or continues short after an unreplaced disconnect. This result does not occupy a finishing position.</p>
+                </div>
+                <button type="button" onClick={() => addMissingPlayerResult(raceIndex)} className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15">Add missing player points</button>
+              </div>
+              {race.missingPlayerResults.length > 0 && <div className="space-y-2">{race.missingPlayerResults.map((result, resultIndex) => <div key={resultIndex} className="grid gap-2 border border-white/10 bg-zinc-900/60 p-2 sm:grid-cols-[minmax(10rem,1fr)_minmax(13rem,1fr)_8rem_auto]">
+                <label className={smallLabel}>Team<select value={result.teamKey} onChange={(event) => updateMissingPlayerResult(raceIndex, resultIndex, { teamKey: event.target.value })} className={inputClass}>{Object.entries(match.teams ?? {}).map(([teamKey, team]) => <option key={teamKey} value={teamKey}>{teamTag(teamKey, team)}</option>)}</select></label>
+                <label className={smallLabel}>Reason<select value={result.reason} onChange={(event) => updateMissingPlayerResult(raceIndex, resultIndex, { reason: event.target.value as RaceDraft["missingPlayerResults"][number]["reason"] })} className={inputClass}><option value="short_roster">Started with four players</option><option value="unreplaced_disconnect">Disconnect/sub not replaced</option><option value="unknown">Unknown / legacy source</option></select></label>
+                <label className={smallLabel}>Points<input type="number" min={0} value={result.score} onChange={(event) => updateMissingPlayerResult(raceIndex, resultIndex, { score: Number(event.target.value) })} className={inputClass} /></label>
+                <div className="flex flex-wrap items-end gap-1 sm:col-span-4">
+                  <button type="button" onClick={() => applyMissingPlayerResult(raceIndex, resultIndex, "all")} className="rounded border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10">Apply to all races</button>
+                  <button type="button" onClick={() => applyMissingPlayerResult(raceIndex, resultIndex, "remaining")} className="rounded border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10">Apply from this race onward</button>
+                  <button type="button" onClick={() => removeMissingPlayerResult(raceIndex, resultIndex)} className="ml-auto px-3 py-2 text-sm text-red-300 hover:bg-red-950/40">Remove</button>
+                </div>
+              </div>)}</div>}
             </div>
             <div
               onDragOver={(event) => event.preventDefault()}
@@ -431,7 +579,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   onClick={() => { const empty = race.placements.findIndex((slot) => !slot); if (empty >= 0) assignPlayer(raceIndex, empty, playerKey); }}
                   style={{ borderColor: teamColor(match.teams?.[teamKey] ?? {}) }}
                   className="min-w-[8rem] cursor-grab rounded border-2 bg-zinc-900 px-3 py-2 text-center text-sm active:cursor-grabbing"
-                >{playerLabel(player, friendCode)}</button>)}
+                >{displayName(playerKey)}</button>)}
               </div>
             </div>
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{race.placements.map((placement, positionIndex) => <div

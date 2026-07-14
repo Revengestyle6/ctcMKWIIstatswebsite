@@ -15,6 +15,7 @@ from models import (
     PlayerSeasonEntry,
     Race,
     RacePlayerResult,
+    RaceTeamResult,
     Season,
     Team,
     TeamSeasonEntry,
@@ -714,6 +715,35 @@ def get_match_detail(match_id):
             positions_by_match_player[row.match_player_id][index] = row.position
             roles_by_match_player[row.match_player_id][index] = row.role
 
+        missing_scores_by_team = {
+            row.match_team_id: [None for _ in race_rows]
+            for row in match_teams
+        }
+        missing_reasons_by_team = {
+            row.match_team_id: [[] for _ in race_rows]
+            for row in match_teams
+        }
+        team_result_rows = session.execute(
+            select(
+                RaceTeamResult.match_team_id,
+                RaceTeamResult.race_id,
+                RaceTeamResult.score,
+                RaceTeamResult.reason,
+            )
+            .where(
+                RaceTeamResult.race_id.in_(race_ids),
+                RaceTeamResult.result_type == "missing_player",
+            )
+        ).all()
+        for result in team_result_rows:
+            index = race_index_by_id.get(result.race_id)
+            scores = missing_scores_by_team.get(result.match_team_id)
+            reasons = missing_reasons_by_team.get(result.match_team_id)
+            if index is None or scores is None or reasons is None:
+                continue
+            scores[index] = (scores[index] or 0) + result.score
+            reasons[index].append(result.reason)
+
         players_by_team = {row.match_team_id: [] for row in match_teams}
         for row in player_rows:
             players_by_team.setdefault(row.match_team_id, []).append(
@@ -753,6 +783,11 @@ def get_match_detail(match_id):
                     "team_penalties": row.team_penalty_points,
                     "final_score": row.final_score,
                     "penalty": team_penalties.get(row.match_team_id, {"points": 0, "notes": ""}),
+                    "missing_player": {
+                        "scores": missing_scores_by_team.get(row.match_team_id, []),
+                        "reasons": missing_reasons_by_team.get(row.match_team_id, []),
+                        "total": sum(score or 0 for score in missing_scores_by_team.get(row.match_team_id, [])),
+                    },
                     "players": team_players,
                 }
             )
@@ -763,13 +798,14 @@ def get_match_detail(match_id):
             for race_index in range(len(race_rows)):
                 team_totals = []
                 for team in teams[:2]:
-                    team_totals.append(
-                        sum(
+                    player_total = sum(
                             player["scores"][race_index] or 0
                             for player in team["players"]
                             if race_index < len(player["scores"])
                         )
-                    )
+                    missing_scores = team["missing_player"]["scores"]
+                    missing_total = missing_scores[race_index] or 0 if race_index < len(missing_scores) else 0
+                    team_totals.append(player_total + missing_total)
                 running += team_totals[0] - team_totals[1]
                 cumulative.append(running)
 

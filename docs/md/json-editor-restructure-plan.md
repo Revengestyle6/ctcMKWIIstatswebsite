@@ -45,7 +45,7 @@ Keep metadata in its own top section. Fields should include:
 - Match label
 - Format (`5v5`, `4v4`, FFA, and future supported formats)
 - Planned race count
-- Table Bot references (`rxx`)
+- Ordered Table Bot room references (`rxx`), added only for room resets or host changes
 - Review notes
 
 Season and division should use API-backed selectors when records exist, while still allowing a deliberate new value for a season not yet loaded into the database.
@@ -124,8 +124,9 @@ The roster and the active room lineup are separate concepts. A team may configur
 - The first race defaults to the expected lineup size from the format.
 - A player omitted from a race receives `null` position and score in generated arrays.
 - A player who appears early and is absent later is generated with `subbed_out: true` when another teammate replaces them. The UI should allow an override for unusual cases.
-- The editor should validate team counts for every race, but permit an explicitly confirmed uneven room after a disconnect.
-- A disconnect or missing racer changes that race's room size and therefore its scoring table.
+- The editor should validate actual race participants separately from team-level missing-player awards.
+- A team that starts or continues short uses the smaller actual room size. Team-level missing-player awards and known-player disconnection awards do not occupy placement slots.
+- Team-level missing-player results can be applied to every race for a short-roster war or from the current race onward after an unreplaced disconnect.
 
 ## Scoring Engine
 

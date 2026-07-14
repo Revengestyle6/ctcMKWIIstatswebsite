@@ -47,6 +47,11 @@ type MatchTeam = {
     points: number;
     notes: string;
   };
+  missing_player: {
+    scores: Array<number | null>;
+    reasons: string[][];
+    total: number;
+  };
   players: MatchPlayer[];
 };
 
@@ -120,11 +125,52 @@ function normalizeHexColor(value: string): string | null {
 }
 
 function scoreColumnValue(player: MatchPlayer, column: ScoreColumn): number | null {
+  return scoreArrayColumnValue(player.scores, column);
+}
+
+function scoreArrayColumnValue(values: Array<number | null>, column: ScoreColumn): number | null {
   const scores = column.indexes
-    .map((index) => player.scores[index])
+    .map((index) => values[index])
     .filter((score): score is number => score !== null && score !== undefined);
   if (scores.length === 0) return null;
   return scores.reduce((sum, score) => sum + score, 0);
+}
+
+function columnHasDisconnectedResult(player: MatchPlayer, column: ScoreColumn): boolean {
+  return column.indexes.some((index) =>
+    player.scores[index] !== null
+    && player.scores[index] !== undefined
+    && (player.positions[index] === null || player.positions[index] === undefined)
+  );
+}
+
+function raceResultClass(score: number | null | undefined, position: number | null | undefined): string {
+  if (score !== null && score !== undefined && (position === null || position === undefined)) {
+    return "text-amber-300";
+  }
+  return racePositionClass(position);
+}
+
+function raceResultValue(score: number | null | undefined, position: number | null | undefined): string {
+  if (score !== null && score !== undefined && (position === null || position === undefined)) {
+    return `DC ${score}`;
+  }
+  return scoreValue(score ?? null);
+}
+
+function hasMissingPlayerResults(team: MatchTeam): boolean {
+  return team.missing_player.scores.some((score) => score !== null && score !== undefined);
+}
+
+function missingReasonTitle(team: MatchTeam, indexes: number[]): string {
+  const labels: Record<string, string> = {
+    short_roster: "Started short",
+    unreplaced_disconnect: "Disconnect/substitution not replaced",
+    unknown: "Missing player",
+  };
+  return Array.from(new Set(indexes.flatMap((index) => team.missing_player.reasons[index] ?? [])))
+    .map((reason) => labels[reason] ?? reason)
+    .join(", ");
 }
 
 function groupedScoreClass(match: MatchDetail, column: ScoreColumn, value: number | null): string {
@@ -418,15 +464,17 @@ function TraditionalTable({
                     </th>
                     {columns.map((column) => {
                       const value = scoreColumnValue(player, column);
+                      const hasDisconnectedResult = columnHasDisconnectedResult(player, column);
                       const textClass = groupByGp
                         ? groupedScoreClass(match, column, value)
-                        : racePositionClass(player.positions[column.indexes[0]]);
+                        : raceResultClass(player.scores[column.indexes[0]], player.positions[column.indexes[0]]);
                       return (
                       <td
                         key={`${player.match_player_id}-${column.key}`}
+                        title={groupByGp && hasDisconnectedResult ? "Includes disconnection points without a placement" : undefined}
                         className={`${raceColumnClass} border-l border-white/10 px-2 py-2 text-center text-[1.05rem] font-semibold ${textClass}`}
                       >
-                        {scoreValue(value)}
+                        {groupByGp ? <>{scoreValue(value)}{hasDisconnectedResult && <span className="ml-1 text-[10px] font-bold text-amber-300">DC</span>}</> : raceResultValue(player.scores[column.indexes[0]], player.positions[column.indexes[0]])}
                       </td>
                     )})}
                     <td className="border-l border-white/20 px-3 py-2 text-center text-lg font-bold text-white">{player.total}</td>
@@ -435,6 +483,27 @@ function TraditionalTable({
                     </td>
                   </tr>
                 )})}
+                {hasMissingPlayerResults(team) && (
+                  <tr className="bg-amber-950/20">
+                    <th className="sticky left-0 z-10 bg-zinc-950 px-3 py-2 text-left font-semibold text-amber-200">
+                      Missing player
+                    </th>
+                    {columns.map((column) => {
+                      const value = scoreArrayColumnValue(team.missing_player.scores, column);
+                      return (
+                        <td
+                          key={`missing-${team.match_team_id}-${column.key}`}
+                          title={missingReasonTitle(team, column.indexes)}
+                          className={`${raceColumnClass} border-l border-white/10 px-2 py-2 text-center text-[1.05rem] font-semibold text-amber-300`}
+                        >
+                          {scoreValue(value)}
+                        </td>
+                      );
+                    })}
+                    <td className="border-l border-white/20 px-3 py-2 text-center text-lg font-bold text-amber-200">{team.missing_player.total}</td>
+                    <td className="px-3 py-2 text-center text-gray-500">-</td>
+                  </tr>
+                )}
               </React.Fragment>
             )})}
           </tbody>
@@ -570,6 +639,10 @@ function VerticalScorecard({
 
   const leftPlayers = [...leftTeam.players].sort((a, b) => b.total - a.total);
   const rightPlayers = [...rightTeam.players].sort((a, b) => b.total - a.total);
+  const leftHasMissing = hasMissingPlayerResults(leftTeam);
+  const rightHasMissing = hasMissingPlayerResults(rightTeam);
+  const leftColumnCount = leftPlayers.length + (leftHasMissing ? 1 : 0);
+  const rightColumnCount = rightPlayers.length + (rightHasMissing ? 1 : 0);
   const finalDiff = leftTeam.final_score - rightTeam.final_score;
   const leftColor = teamColor(leftTeam, teamColors, "#1d4ed8");
   const rightColor = teamColor(rightTeam, teamColors, "#be185d");
@@ -593,11 +666,11 @@ function VerticalScorecard({
         <thead>
           <tr className="bg-black/80 text-white">
             <th className="px-3 py-3 text-left">Track</th>
-            <th colSpan={leftPlayers.length} className="px-3 py-3 text-center text-[1.6rem] font-bold leading-none" style={{ backgroundColor: `${leftColor}aa` }}>
+            <th colSpan={leftColumnCount} className="px-3 py-3 text-center text-[1.6rem] font-bold leading-none" style={{ backgroundColor: `${leftColor}aa` }}>
               {leftTeam.tag}
             </th>
             <th className="px-3 py-3 text-center">Diff</th>
-            <th colSpan={rightPlayers.length} className="px-3 py-3 text-center text-[1.6rem] font-bold leading-none" style={{ backgroundColor: `${rightColor}aa` }}>
+            <th colSpan={rightColumnCount} className="px-3 py-3 text-center text-[1.6rem] font-bold leading-none" style={{ backgroundColor: `${rightColor}aa` }}>
               {rightTeam.tag}
             </th>
           </tr>
@@ -610,7 +683,9 @@ function VerticalScorecard({
                 rank={playerIndex + 1}
               />
             ))}
+            {leftHasMissing && <th className="w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-amber-300/20 px-1 py-2 text-center text-[11px] font-semibold leading-tight text-amber-200">Missing</th>}
             <th className="px-2 py-2"></th>
+            {rightHasMissing && <th className="w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-amber-300/20 px-1 py-2 text-center text-[11px] font-semibold leading-tight text-amber-200">Missing</th>}
             {rightPlayers.map((player, playerIndex) => (
               <VerticalPlayerHeader
                 key={player.match_player_id}
@@ -630,22 +705,24 @@ function VerticalScorecard({
               {leftPlayers.map((player, playerIndex) => (
                 <td
                   key={`${player.match_player_id}-${track.race_number}`}
-                  className={`w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-white/10 px-2 py-2 text-center text-[1.05rem] font-semibold ${racePositionClass(player.positions[raceIndex])} ${playerIndex % 2 === 0 ? "bg-white/5" : "bg-white/[.025]"}`}
+                  className={`w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-white/10 px-2 py-2 text-center text-[1.05rem] font-semibold ${raceResultClass(player.scores[raceIndex], player.positions[raceIndex])} ${playerIndex % 2 === 0 ? "bg-white/5" : "bg-white/[.025]"}`}
                 >
-                  {scoreValue(player.scores[raceIndex])}
+                  {raceResultValue(player.scores[raceIndex], player.positions[raceIndex])}
                 </td>
               ))}
+              {leftHasMissing && <td title={missingReasonTitle(leftTeam, [raceIndex])} className="w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-amber-300/20 bg-amber-950/20 px-2 py-2 text-center text-[1.05rem] font-semibold text-amber-300">{scoreValue(leftTeam.missing_player.scores[raceIndex])}</td>}
               {raceIndex === 0 && (
                 <td rowSpan={match.tracks.length} className="w-56 min-w-56 border-x border-white/20 bg-black/25 px-1 py-1 align-top">
                   <VerticalDifferentialChart values={chartValues} leftTeam={leftTeam} rightTeam={rightTeam} chartMode={chartMode} />
                 </td>
               )}
+              {rightHasMissing && <td title={missingReasonTitle(rightTeam, [raceIndex])} className="w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-amber-300/20 bg-amber-950/20 px-2 py-2 text-center text-[1.05rem] font-semibold text-amber-300">{scoreValue(rightTeam.missing_player.scores[raceIndex])}</td>}
               {rightPlayers.map((player, playerIndex) => (
                 <td
                   key={`${player.match_player_id}-${track.race_number}`}
-                  className={`w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-white/10 px-2 py-2 text-center text-[1.05rem] font-semibold ${racePositionClass(player.positions[raceIndex])} ${playerIndex % 2 === 0 ? "bg-white/5" : "bg-white/[.025]"}`}
+                  className={`w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-white/10 px-2 py-2 text-center text-[1.05rem] font-semibold ${raceResultClass(player.scores[raceIndex], player.positions[raceIndex])} ${playerIndex % 2 === 0 ? "bg-white/5" : "bg-white/[.025]"}`}
                 >
-                  {scoreValue(player.scores[raceIndex])}
+                  {raceResultValue(player.scores[raceIndex], player.positions[raceIndex])}
                 </td>
               ))}
             </tr>
@@ -655,7 +732,9 @@ function VerticalScorecard({
             {leftPlayers.map((player) => (
               <td key={player.match_player_id} className="px-2 py-3 text-center font-bold">{player.total}</td>
             ))}
+            {leftHasMissing && <td className="px-2 py-3 text-center font-bold text-amber-200">{leftTeam.missing_player.total}</td>}
             <td className="px-2 py-3 text-center font-bold">{signedValue(finalDiff)}</td>
+            {rightHasMissing && <td className="px-2 py-3 text-center font-bold text-amber-200">{rightTeam.missing_player.total}</td>}
             {rightPlayers.map((player) => (
               <td key={player.match_player_id} className="px-2 py-3 text-center font-bold">{player.total}</td>
             ))}
@@ -670,7 +749,9 @@ function VerticalScorecard({
                 </td>
               );
             })}
+            {leftHasMissing && <td className="px-2 py-2.5 text-center text-gray-500">-</td>}
             <td className="px-2 py-2.5"></td>
+            {rightHasMissing && <td className="px-2 py-2.5 text-center text-gray-500">-</td>}
             {rightPlayers.map((player, playerIndex) => {
               const diff = rightPlayerDiff(playerIndex);
               return (
@@ -682,12 +763,12 @@ function VerticalScorecard({
           </tr>
           <tr className="bg-black/80 text-white">
             <th className="px-3 py-2.5 text-left">Team total</th>
-            <td colSpan={leftPlayers.length} className="px-3 py-2.5 text-center text-2xl font-bold">
+            <td colSpan={leftColumnCount} className="px-3 py-2.5 text-center text-2xl font-bold">
               {leftTeam.final_score}
               <span className={`ml-3 text-sm ${diffTextClass(finalDiff)}`}>{signedValue(finalDiff)}</span>
             </td>
             <td className="px-3 py-2.5"></td>
-            <td colSpan={rightPlayers.length} className="px-3 py-2.5 text-center text-2xl font-bold">
+            <td colSpan={rightColumnCount} className="px-3 py-2.5 text-center text-2xl font-bold">
               {rightTeam.final_score}
               <span className={`ml-3 text-sm ${diffTextClass(-finalDiff)}`}>{signedValue(-finalDiff)}</span>
             </td>
