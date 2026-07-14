@@ -1,0 +1,787 @@
+{
+  "division": "d2",
+  "format": "5v5",
+  "league": "ctc",
+  "match_label": "[M11] sts 366 - 356 CS",
+  "races_played": 12,
+  "rxx": [
+    "r11595640"
+  ],
+  "season": "s3",
+  "teams": {
+    "CS": {
+      "hex_color": "#fdff8c",
+      "penalties": 5,
+      "players": {
+        "2540-0334-4034": {
+          "flag": "",
+          "gp_scores": [
+            [
+              8,
+              6,
+              8,
+              8
+            ],
+            [
+              4,
+              12,
+              12,
+              10
+            ],
+            [
+              10,
+              12,
+              8,
+              12
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Ford",
+          "mii_name": "CS F@sglc",
+          "penalties": 0,
+          "race_positions": [
+            4,
+            5,
+            4,
+            4,
+            6,
+            2,
+            2,
+            3,
+            3,
+            2,
+            4,
+            2
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            8,
+            6,
+            8,
+            8,
+            4,
+            12,
+            12,
+            10,
+            10,
+            12,
+            8,
+            12
+          ],
+          "subbed_out": false,
+          "table_name": "Ford",
+          "table_str": "Ford 30|38|42",
+          "tag": "CS",
+          "total_score": 110
+        },
+        "2969-5491-9022": {
+          "flag": "",
+          "gp_scores": [
+            [
+              1,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              1,
+              1
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "38point4",
+          "mii_name": "CS jεd",
+          "penalties": 0,
+          "race_positions": [
+            9,
+            10,
+            9,
+            10,
+            10,
+            9,
+            10,
+            9,
+            10,
+            9,
+            9,
+            9
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            1,
+            1
+          ],
+          "subbed_out": false,
+          "table_name": "38point4",
+          "table_str": "38point4 2|2|3",
+          "tag": "CS",
+          "total_score": 7
+        },
+        "3098-4042-7390": {
+          "flag": "",
+          "gp_scores": [
+            [
+              10,
+              15,
+              3,
+              15
+            ],
+            [
+              6,
+              4,
+              10,
+              3
+            ],
+            [
+              4,
+              8,
+              3,
+              3
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "towner",
+          "mii_name": "CS towner",
+          "penalties": 0,
+          "race_positions": [
+            3,
+            1,
+            7,
+            1,
+            5,
+            6,
+            3,
+            7,
+            6,
+            4,
+            7,
+            7
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            10,
+            15,
+            3,
+            15,
+            6,
+            4,
+            10,
+            3,
+            4,
+            8,
+            3,
+            3
+          ],
+          "subbed_out": false,
+          "table_name": "towner",
+          "table_str": "towner 43|23|18",
+          "tag": "CS",
+          "total_score": 84
+        },
+        "3184-2806-6264": {
+          "flag": "",
+          "gp_scores": [
+            [
+              2,
+              2,
+              15,
+              6
+            ],
+            [
+              3,
+              10,
+              15,
+              6
+            ],
+            [
+              3,
+              10,
+              6,
+              15
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "bran",
+          "mii_name": "CS bran",
+          "penalties": 0,
+          "race_positions": [
+            8,
+            8,
+            1,
+            5,
+            7,
+            3,
+            1,
+            5,
+            7,
+            3,
+            5,
+            1
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            2,
+            2,
+            15,
+            6,
+            3,
+            10,
+            15,
+            6,
+            3,
+            10,
+            6,
+            15
+          ],
+          "subbed_out": false,
+          "table_name": "bran",
+          "table_str": "bran 25|34|34",
+          "tag": "CS",
+          "total_score": 93
+        },
+        "4000-3210-5203": {
+          "flag": "",
+          "gp_scores": [
+            [
+              12,
+              4,
+              4,
+              3
+            ],
+            [
+              8,
+              2,
+              4,
+              12
+            ],
+            [
+              8,
+              4,
+              2,
+              4
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Solar",
+          "mii_name": "[CS]beulah",
+          "penalties": 0,
+          "race_positions": [
+            2,
+            6,
+            6,
+            7,
+            4,
+            8,
+            6,
+            2,
+            4,
+            6,
+            8,
+            6
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            12,
+            4,
+            4,
+            3,
+            8,
+            2,
+            4,
+            12,
+            8,
+            4,
+            2,
+            4
+          ],
+          "subbed_out": false,
+          "table_name": "Solar",
+          "table_str": "Solar 23|26|18",
+          "tag": "CS",
+          "total_score": 67
+        }
+      },
+      "table_penalty_str": "Penalty -5",
+      "table_tag_str": "CS #fdff8c",
+      "total_score": 356
+    },
+    "sts": {
+      "hex_color": "#ff8cfd",
+      "penalties": 5,
+      "players": {
+        "0177-8182-2179": {
+          "flag": "",
+          "gp_scores": [
+            [
+              4,
+              12,
+              6,
+              2
+            ],
+            [
+              10,
+              6,
+              3,
+              8
+            ],
+            [
+              15,
+              6,
+              10,
+              10
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Snowy",
+          "mii_name": "sts sno.",
+          "penalties": 0,
+          "race_positions": [
+            6,
+            2,
+            5,
+            8,
+            3,
+            5,
+            7,
+            4,
+            1,
+            5,
+            3,
+            3
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            4,
+            12,
+            6,
+            2,
+            10,
+            6,
+            3,
+            8,
+            15,
+            6,
+            10,
+            10
+          ],
+          "subbed_out": false,
+          "table_name": "Snowy",
+          "table_str": "Snowy 24|27|41",
+          "tag": "sts",
+          "total_score": 92
+        },
+        "0779-1058-5685": {
+          "flag": "",
+          "gp_scores": [
+            [
+              3,
+              10,
+              10,
+              12
+            ],
+            [
+              2,
+              3,
+              6,
+              4
+            ],
+            [
+              2,
+              3,
+              4,
+              8
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Bally",
+          "mii_name": "sts·stssts",
+          "penalties": 0,
+          "race_positions": [
+            7,
+            3,
+            3,
+            2,
+            8,
+            7,
+            5,
+            6,
+            8,
+            7,
+            6,
+            4
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            3,
+            10,
+            10,
+            12,
+            2,
+            3,
+            6,
+            4,
+            2,
+            3,
+            4,
+            8
+          ],
+          "subbed_out": false,
+          "table_name": "Bally",
+          "table_str": "Bally 35|15|17",
+          "tag": "sts",
+          "total_score": 67
+        },
+        "1380-3989-1797": {
+          "flag": "",
+          "gp_scores": [
+            [
+              0,
+              1,
+              0,
+              1
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "JC",
+          "mii_name": "sts JC",
+          "penalties": 0,
+          "race_positions": [
+            10,
+            9,
+            10,
+            9,
+            9,
+            10,
+            9,
+            10,
+            9,
+            10,
+            10,
+            10
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "subbed_out": false,
+          "table_name": "JC",
+          "table_str": "JC 2|2|1",
+          "tag": "sts",
+          "total_score": 5
+        },
+        "3012-5129-6240": {
+          "flag": "",
+          "gp_scores": [
+            [
+              15,
+              3,
+              12,
+              10
+            ],
+            [
+              15,
+              8,
+              2,
+              15
+            ],
+            [
+              12,
+              15,
+              12,
+              6
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "season",
+          "mii_name": "sts Lloyd",
+          "penalties": 0,
+          "race_positions": [
+            1,
+            7,
+            2,
+            3,
+            1,
+            4,
+            8,
+            1,
+            2,
+            1,
+            2,
+            5
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            15,
+            3,
+            12,
+            10,
+            15,
+            8,
+            2,
+            15,
+            12,
+            15,
+            12,
+            6
+          ],
+          "subbed_out": false,
+          "table_name": "season",
+          "table_str": "season 40|40|45",
+          "tag": "sts",
+          "total_score": 125
+        },
+        "4258-0446-9506": {
+          "flag": "",
+          "gp_scores": [
+            [
+              6,
+              8,
+              2,
+              4
+            ],
+            [
+              12,
+              15,
+              8,
+              2
+            ],
+            [
+              6,
+              2,
+              15,
+              2
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Kai Havertz",
+          "mii_name": "sts L",
+          "penalties": 0,
+          "race_positions": [
+            5,
+            4,
+            8,
+            6,
+            2,
+            1,
+            4,
+            8,
+            5,
+            8,
+            1,
+            8
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            6,
+            8,
+            2,
+            4,
+            12,
+            15,
+            8,
+            2,
+            6,
+            2,
+            15,
+            2
+          ],
+          "subbed_out": false,
+          "table_name": "Kai Havertz",
+          "table_str": "Kai Havertz 20|37|25",
+          "tag": "sts",
+          "total_score": 82
+        }
+      },
+      "table_penalty_str": "Penalty -5",
+      "table_tag_str": "sts #ff8cfd",
+      "total_score": 366
+    }
+  },
+  "title_str": "#title 12 races\n",
+  "tracks": [
+    "Final Grounds",
+    "Six King Labyrinth",
+    "Glimmer Express Trains",
+    "Strobenz Desert Illusion",
+    "Incendia Castle RC1.1",
+    "Rainbow Road: Solar Edition",
+    "Marble Towers",
+    "N64 Banshee Boardwalk",
+    "DS Mario Circuit",
+    "Emerald Coast",
+    "Cubing Conundrum",
+    "Shy Guy Lumber Co."
+  ],
+  "week": 11
+}

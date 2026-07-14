@@ -42,6 +42,11 @@ Observed match-shaped file facts:
 
 Season and division are not present inside the JSON. They need to come from folder naming, filename metadata, an upload form, or a manual import manifest.
 
+Editor-generated JSON includes `league`, `season`, `division`, `week`, and
+`match_label` metadata. On confirmed upload, the backend archives the exact
+validated JSON under `backend/JSON/{league}/{season}/{division}/` and stores its
+path and SHA-256 in `source_files`.
+
 CTC matches should be modeled as two-team matches. If an imported JSON object has a third team, treat that as a data-quality issue rather than a true three-team match. The likely explanation is that a sub was parsed as a separate team by mistake and should be manually assigned to one of the two actual teams during import review.
 
 ## Raw JSON Shape
@@ -197,6 +202,22 @@ Tracks every imported raw file.
 | `json_shape` | text | Example `single_match` or `match_array`. |
 | `imported_at` | timestamp | When processed. |
 
+### `database_addition_logs`
+
+Stores the durable live feed of catalog records created by confirmed editor
+uploads. Rows are inserted in the same transaction as the match, so previews
+and failed uploads never produce events.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `addition_log_id` | integer primary key | SSE event ID and ordering cursor. |
+| `match_id` | foreign key to `matches`, nullable | Upload responsible for the addition. |
+| `entity_type` | text | Example `team`, `player_friend_code`, or `track`. |
+| `entity_id` | integer | Primary key of the added entity. |
+| `summary` | text | Human-readable log message. |
+| `details_json` | text JSON | Structured identifiers and context. |
+| `created_at` | timestamp | Commit-time event timestamp. |
+
 ## Team Tables
 
 ### `teams`
@@ -299,7 +320,7 @@ One imported match/table.
 | `season_id` | foreign key to `seasons` | Manual/import metadata. |
 | `division_id` | foreign key to `divisions` | Manual/import metadata. |
 | `source_file_id` | foreign key to `source_files` | Audit. |
-| `week_number` | integer nullable | Can be parsed from filenames like `W1`, or entered manually. |
+| `week_number` | integer nullable | Historical imports may omit it; editor uploads require a positive whole number. Multiple matches may share a week. |
 | `match_label` | text | Filename or friendly label. |
 | `title_str` | text nullable | Raw JSON title. |
 | `format` | text | Example `5v5`. |

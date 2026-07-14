@@ -18,7 +18,7 @@ The editor should make placement, track, participation, and manually confirmed r
 - `race_positions[index]`, `race_scores[index]`, and `tracks[index]` describe the same race.
 - Scores are deterministic from finishing position and the number of racers in that race. The room size can change during a match, so scoring must be calculated per race rather than once from the match format.
 - Substitutions are represented by multiple players on one team. The outgoing and incoming players have `null` positions for races they did not play, although some historical files contain zeros or incomplete arrays that need review.
-- A player can have more than one friend code. Friend code must resolve through `player_friend_codes` to one canonical `player_id`; display names alone are not sufficient identity evidence.
+- A player can have more than one friend code. Friend code resolves through `player_friend_codes` to one canonical `player_id`. Staff-enforced, globally unique lounge names are strong identity evidence for proposing a new friend-code link, but the reviewer must still approve that link.
 - The current `/api/players` endpoint returns display-name strings only. The editor needs a richer identity lookup endpoint before it can reliably confirm a player.
 - Existing raw JSON does not contain an explicit race role. The importer currently infers `bagger` when a player scores exactly one point and otherwise infers `runner`. The editor can improve future data by recording a manual role.
 - Existing JSONs contain team penalties and occasional historical player penalties. For team formats, new entries should expose team penalties only. Player penalties should remain readable when an old JSON is uploaded, but should be hidden or moved into a legacy-data warning unless the format is FFA.
@@ -41,7 +41,7 @@ Keep metadata in its own top section. Fields should include:
 - League
 - Season
 - Division
-- Week
+- Week (required positive whole number; multiple matches may share a week)
 - Match label
 - Format (`5v5`, `4v4`, FFA, and future supported formats)
 - Planned race count
@@ -82,7 +82,11 @@ Each player row should show one identity state:
 - `Conflict`: friend code or selected identity disagrees with another configured player.
 - `Incomplete`: friend code is missing or malformed.
 
-The editor must not confirm identity from lounge, table, or Mii name alone. Names may be offered as ranked suggestions, but the user must select the person or mark the player as new.
+The editor does not silently confirm identity from a name. An exact normalized
+lounge-name match may propose a specific existing `player_id`, because lounge
+names are staff-enforced and globally unique. The reviewer must approve the
+proposed friend-code link. Table and Mii names remain display aliases and are
+not sufficient for identity linking.
 
 ### 4. Race Entry
 
@@ -186,7 +190,76 @@ This makes the editor's source of truth unambiguous and prevents scores, positio
 
 ## Backend/API Work
 
-Add a purpose-built player identity endpoint, for example:
+### Transactional Table Preview
+
+`POST /api/matches/preview` accepts the editor's compiled match object. It uses
+the normal importer and match-detail serializer in one SQLAlchemy session, then
+always rolls the transaction back. The response has the same shape as
+`GET /api/matches/{match_id}`, allowing the editor and Match History to use the
+same Traditional and Vertical React table components.
+
+The preview must never depend on deleting committed rows. Rollback also reverses
+temporary updates to shared players, aliases, friend codes, teams, tracks, and
+first/last-seen metadata. On databases such as PostgreSQL, generated sequence
+values may advance during a rolled-back preview; gaps in internal IDs are normal
+and do not represent persisted records.
+
+Production requirements:
+
+- Keep import, serialization, and rollback on one database session/connection.
+- Do not perform external side effects such as repository writes inside preview.
+- Keep preview unauthenticated only in local development; production write-like
+  endpoints need authentication, request-size limits, rate limits, and timeouts.
+- Run final ingestion separately in an atomic transaction and commit only after
+  server-side validation passes.
+
+### New Database Entry Approval
+
+Unknown reference data is reviewable instead of being rejected immediately.
+Before preview or final ingestion, `POST /api/matches/new-entries` compares the
+compiled match with the database and reports every proposed addition:
+
+- a season within its league
+- a division within its season
+- a team entry within its season and division
+- a player whose friend code is not assigned in `player_friend_codes`, either
+  as a proposed link to an exact lounge-name match or as a proposed new player
+- a track whose name matches neither a canonical track nor a track alias
+
+The editor presents each result separately with the message
+that describes the exact database operation. For teams, it distinguishes an
+existing global team receiving a new season/division entry from a completely
+new global team. Existing-team messages include the reused `team_id`; new-team
+messages warn the reviewer to reject an unregistered alias rather than create a
+duplicate team. Division messages also explain when the same division code
+exists in another season. The user must approve every entry. Rejecting or
+leaving any entry undecided blocks the preview/upload; it does not silently
+omit that entry.
+
+For an unknown friend code, detection normalizes the submitted lounge name by
+trimming/collapsing whitespace and applying Unicode-aware case folding. It
+checks canonical lounge names, historical lounge aliases, and season-entry
+lounge names. Exactly one matching `player_id` produces an `Approve link`
+operation that lists the existing player ID and friend codes. No match produces
+an explicit `Create player` operation. Multiple historical owners block upload
+as an identity conflict; the importer never guesses between them. An approved
+link inserts only a `player_friend_codes` row for the existing player, so all
+match and race analytics continue to use the same `player_id`.
+
+Approvals are also enforced by the backend. The client submits the approved
+entry keys with the compiled match, and `POST /api/matches/preview` redetects
+new entries from that match before importing it. A missing approval returns
+HTTP 409 with the complete current entry list. This prevents stale client
+validation or a hand-written request from bypassing review. The final ingestion
+endpoint uses the same detection and approval check inside its atomic
+transaction.
+
+An approval permits creation during this one operation; it is not a permanent
+allow-list. Preview still rolls back all newly created seasons, divisions,
+team entries, players, friend codes, and tracks. A final upload will persist
+them only when its entire transaction succeeds.
+
+The purpose-built player identity endpoint supports:
 
 ```http
 GET /api/player-identities?friend_code=1234-5678-9012
@@ -203,7 +276,12 @@ Responses should include:
 - season/division team entries when available
 - match confidence/reason (`exact_friend_code`, `alias_suggestion`, or `none`)
 
-Exact friend-code lookup may auto-confirm. Alias results are suggestions only. A second endpoint or later ingestion workflow will be needed to attach a new friend code to an existing player or create a new player; the editor should not mutate identity records merely by searching.
+Exact friend-code lookup may auto-confirm. Read-only searches never mutate
+identity records. During preview/upload, however, an approved exact lounge-name
+proposal attaches the new friend code to the server-selected existing player;
+an approved unmatched proposal creates a new player. Preview performs the same
+operations inside its rollback-only transaction, while final upload persists
+them atomically with the match.
 
 Add a track-search endpoint returning canonical names and aliases so race entry avoids spelling variants.
 
@@ -276,9 +354,17 @@ The following additions should materially speed up Season 3 entry:
 
 ### Phase 6: Ingestion Preparation
 
-- Add draft autosave and recovery.
-- Add server-side validation using the same rules.
-- Later, add authenticated repo/database ingestion with duplicate source detection, transaction boundaries, and an audit trail.
+- Add draft autosave and recovery. (Pending.)
+- Add server-side validation using the same rules. (Implemented for commit
+  integrity; additional domain rules can still be expanded.)
+- Add canonical JSON serialization and a preview fingerprint. (Implemented.)
+- Archive confirmed JSON under
+  `backend/JSON/{league}/{season}/{division}/`, creating directories safely.
+- Add protected repo/database ingestion with duplicate source detection,
+  staged filesystem writes, transaction boundaries, reconciliation, and an
+  audit trail. (Implemented for local or bearer-token access; user/session
+  authentication and Git synchronization remain.) See
+  [Match Upload And JSON Archive Implementation Plan](match-upload-implementation-plan.md).
 
 ## Recommended First Implementation Boundary
 

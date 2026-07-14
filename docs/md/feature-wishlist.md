@@ -81,6 +81,7 @@ Initial version:
 - prefill the UI from uploaded JSON when provided
 - edit all required match fields
 - download the finished JSON
+- preview the compiled JSON through the same SQL importer and Match History table renderer without committing database changes
 
 Editable match fields:
 
@@ -107,6 +108,7 @@ Editable match fields:
 Validation should catch:
 
 - missing required fields
+- missing or invalid week number
 - malformed friend codes
 - duplicate friend codes in the same match
 - race count mismatches
@@ -118,16 +120,57 @@ Validation should catch:
 - unresolved team aliases
 - unresolved player identity issues
 
-Future version:
+Unknown seasons, divisions, season/division team entries, player friend codes,
+and tracks enter an explicit approval workflow instead of failing immediately.
+The editor lists each proposed database addition with Approve and Reject
+controls, and every item must be approved before preview or final ingestion.
+Team proposals explicitly distinguish reusing an existing global team for a
+new season/division from creating a completely new team, including a warning
+when an unknown tag could be an unregistered alias.
+The backend repeats this check against the submitted match so client-side state
+cannot bypass it. Preview approvals create records only inside the rollback-only
+preview transaction; final ingestion will reuse the same contract and persist
+them only when the complete import commits successfully.
+
+Implemented ingestion workflow:
 
 - upload/import the finalized JSON directly from the app
-- write the JSON into the repo or configured storage
+- write the exact compiled JSON to
+  `backend/JSON/{league}/{season}/{division}/{filename}.json`, creating missing
+  directories as necessary
+- use configured shared storage in production while preserving the same logical
+  league/season/division archive layout
 - ingest it into the database
 - refresh analytics immediately
 - show import success/failure details
 - flag matches needing review instead of silently accepting questionable data
+- display a live stream of committed database additions
+
+Preview imports run inside a rollback-only database transaction. The backend
+imports and serializes the match normally, returns the Match History detail
+payload, and rolls back every inserted or updated row before responding. Final
+submission reruns the same import in a new transaction and commits only after
+server-side validation succeeds.
+
+The editor now provides Discard Preview and Confirm Upload controls. Confirmed
+uploads archive the canonical JSON, commit normalized records, return the new
+match ID, and publish durable addition events. Exact retries return the existing
+match rather than creating another one.
+
+The upload workflow starts from `Review & Upload` in the Validation section.
+The action is disabled until all red data errors are resolved; reviewable new
+database entries remain amber and are handled by the approval dialog.
+
+Permanent upload must coordinate the JSON archive and database carefully because
+filesystem and SQL writes cannot share one atomic transaction. The proposed
+staging, duplicate protection, recovery checks, confirmation UI, and ordered
+implementation steps are documented in
+[Match Upload And JSON Archive Implementation Plan](match-upload-implementation-plan.md).
 
 Longer-term goal:
 
 Use this as the live workflow for next season. A user enters or uploads a completed match JSON, fills in any metadata that is not present in the JSON, submits it, and the site updates analytics live.
 
+Recommended next work: add session-based administrator authentication and an
+audited correction/replacement workflow, then configure shared persistent JSON
+storage and optional Git synchronization for production.

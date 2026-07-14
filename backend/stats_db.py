@@ -622,8 +622,11 @@ def _team_penalties(session, match_id):
     }
 
 
-def get_match_detail(match_id):
-    with SessionLocal() as session:
+def get_match_detail(match_id, session=None):
+    if session is None:
+        with SessionLocal() as owned_session:
+            return get_match_detail(match_id, session=owned_session)
+    if session is not None:
         match = session.get(Match, match_id)
         if not match:
             raise AnalyticsError("Invalid match")

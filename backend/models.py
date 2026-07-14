@@ -69,6 +69,18 @@ class SourceFile(Base):
     )
 
 
+class DatabaseAdditionLog(Base):
+    __tablename__ = "database_addition_logs"
+
+    addition_log_id = Column(Integer, primary_key=True)
+    match_id = Column(Integer, ForeignKey("matches.match_id"), index=True)
+    entity_type = Column(Text, nullable=False, index=True)
+    entity_id = Column(Integer, nullable=False)
+    summary = Column(Text, nullable=False)
+    details_json = Column(Text, nullable=False, default="{}")
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+
+
 class Team(Base):
     __tablename__ = "teams"
 

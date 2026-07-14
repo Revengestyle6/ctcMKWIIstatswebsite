@@ -55,7 +55,7 @@ type MatchTeam = {
   players: MatchPlayer[];
 };
 
-type MatchDetail = {
+export type MatchDetail = {
   match_id: number;
   season: string;
   division: string;
@@ -71,8 +71,8 @@ type MatchDetail = {
 };
 
 type TableMode = "traditional" | "vertical";
-type ChartMode = "cumulative" | "perRace";
-type TeamColors = Record<number, string>;
+export type ChartMode = "cumulative" | "perRace";
+export type TeamColors = Record<number, string>;
 type ScoreColumn = {
   key: string;
   label: string;
@@ -338,7 +338,7 @@ function DifferentialLineChart({
   );
 }
 
-function TrackList({ tracks }: { tracks: Track[] }): React.JSX.Element {
+export function TrackList({ tracks }: { tracks: Track[] }): React.JSX.Element {
   const gps: Track[][] = [];
   for (let index = 0; index < tracks.length; index += 4) {
     gps.push(tracks.slice(index, index + 4));
@@ -383,7 +383,7 @@ function VerticalPlayerHeader({
   );
 }
 
-function TraditionalTable({
+export function TraditionalTable({
   match,
   groupByGp,
   teamColors,
@@ -624,7 +624,7 @@ function VerticalDifferentialChart({
   );
 }
 
-function VerticalScorecard({
+export function VerticalScorecard({
   match,
   teamColors,
   chartMode,

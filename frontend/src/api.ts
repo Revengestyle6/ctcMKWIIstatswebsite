@@ -38,6 +38,25 @@ export async function fetchJson<T>(
   return response.json() as Promise<T>;
 }
 
+export async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(new URL(path, API_URL).toString(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    let message = "Request failed";
+    try {
+      const responseBody = await response.json();
+      message = responseBody.error ?? message;
+    } catch {
+      message = response.statusText || message;
+    }
+    throw new Error(message);
+  }
+  return response.json() as Promise<T>;
+}
+
 export function fetchSeasons(): Promise<SeasonOption[]> {
   return fetchJson<SeasonOption[]>("/api/seasons");
 }
@@ -95,4 +114,24 @@ export interface TeamScope {
 
 export function fetchTeamScopes(): Promise<TeamScope[]> {
   return fetchJson("/api/team-scopes");
+}
+
+export interface DatabaseAddition {
+  id: number;
+  match_id: number | null;
+  entity_type: string;
+  entity_id: number;
+  summary: string;
+  details: Record<string, unknown>;
+  created_at: string | null;
+}
+
+export function fetchDatabaseAdditions(limit = 100): Promise<DatabaseAddition[]> {
+  return fetchJson("/api/database-additions", { limit });
+}
+
+export function databaseAdditionStreamUrl(afterId = 0): string {
+  const url = new URL("/api/database-additions/stream", API_URL);
+  if (afterId > 0) url.searchParams.set("after_id", String(afterId));
+  return url.toString();
 }
