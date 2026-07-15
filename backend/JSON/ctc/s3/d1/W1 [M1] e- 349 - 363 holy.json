@@ -1,0 +1,787 @@
+{
+  "division": "d1",
+  "format": "5v5",
+  "league": "ctc",
+  "match_label": "[M1] e- 349 - 363 holy",
+  "races_played": 12,
+  "rxx": [
+    "r11422511"
+  ],
+  "season": "s3",
+  "teams": {
+    "e-": {
+      "hex_color": "#fcff3d",
+      "penalties": 0,
+      "players": {
+        "0392-5738-3057": {
+          "flag": "gb",
+          "gp_scores": [
+            [
+              4,
+              3,
+              2,
+              15
+            ],
+            [
+              4,
+              4,
+              12,
+              12
+            ],
+            [
+              3,
+              6,
+              3,
+              10
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "GAMT British",
+          "mii_name": "e- Ye.",
+          "penalties": 0,
+          "race_positions": [
+            6,
+            7,
+            8,
+            1,
+            6,
+            6,
+            2,
+            2,
+            7,
+            5,
+            7,
+            3
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            4,
+            3,
+            2,
+            15,
+            4,
+            4,
+            12,
+            12,
+            3,
+            6,
+            3,
+            10
+          ],
+          "subbed_out": false,
+          "table_name": "GAMT British",
+          "table_str": "GAMT British 24|32|22",
+          "tag": "e-",
+          "total_score": 78
+        },
+        "2067-6106-3242": {
+          "flag": "gb_en",
+          "gp_scores": [
+            [
+              1,
+              0,
+              1,
+              1
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              1
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "NathanUK",
+          "mii_name": "e-Chudmax",
+          "penalties": 0,
+          "race_positions": [
+            9,
+            10,
+            9,
+            9,
+            10,
+            10,
+            10,
+            10,
+            10,
+            9,
+            10,
+            9
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1
+          ],
+          "subbed_out": false,
+          "table_name": "NathanUK",
+          "table_str": "NathanUK 3|0|2",
+          "tag": "e-",
+          "total_score": 5
+        },
+        "2711-8376-7744": {
+          "flag": "us",
+          "gp_scores": [
+            [
+              3,
+              15,
+              15,
+              3
+            ],
+            [
+              3,
+              12,
+              15,
+              8
+            ],
+            [
+              10,
+              4,
+              4,
+              4
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Arezu",
+          "mii_name": "e-lil guy",
+          "penalties": 0,
+          "race_positions": [
+            7,
+            1,
+            1,
+            7,
+            7,
+            2,
+            1,
+            4,
+            3,
+            6,
+            6,
+            6
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            3,
+            15,
+            15,
+            3,
+            3,
+            12,
+            15,
+            8,
+            10,
+            4,
+            4,
+            4
+          ],
+          "subbed_out": false,
+          "table_name": "Arezu",
+          "table_str": "Arezu 36|38|22",
+          "tag": "e-",
+          "total_score": 96
+        },
+        "4644-5717-7879": {
+          "flag": "us_ca",
+          "gp_scores": [
+            [
+              2,
+              10,
+              6,
+              10
+            ],
+            [
+              8,
+              8,
+              4,
+              15
+            ],
+            [
+              15,
+              2,
+              6,
+              6
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "8610",
+          "mii_name": "e-gooby",
+          "penalties": 0,
+          "race_positions": [
+            8,
+            3,
+            5,
+            3,
+            4,
+            4,
+            6,
+            1,
+            1,
+            8,
+            5,
+            5
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            2,
+            10,
+            6,
+            10,
+            8,
+            8,
+            4,
+            15,
+            15,
+            2,
+            6,
+            6
+          ],
+          "subbed_out": false,
+          "table_name": "8610",
+          "table_str": "8610 28|35|29",
+          "tag": "e-",
+          "total_score": 92
+        },
+        "5074-0644-0576": {
+          "flag": "at",
+          "gp_scores": [
+            [
+              6,
+              6,
+              3,
+              12
+            ],
+            [
+              2,
+              6,
+              10,
+              2
+            ],
+            [
+              12,
+              15,
+              2,
+              2
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Pascal",
+          "mii_name": "e- ◆",
+          "penalties": 0,
+          "race_positions": [
+            5,
+            5,
+            7,
+            2,
+            8,
+            5,
+            3,
+            8,
+            2,
+            1,
+            8,
+            8
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            6,
+            6,
+            3,
+            12,
+            2,
+            6,
+            10,
+            2,
+            12,
+            15,
+            2,
+            2
+          ],
+          "subbed_out": false,
+          "table_name": "Pascal",
+          "table_str": "Pascal 27|20|31",
+          "tag": "e-",
+          "total_score": 78
+        }
+      },
+      "table_penalty_str": "",
+      "table_tag_str": "e- #fcff3d",
+      "total_score": 349
+    },
+    "holy": {
+      "hex_color": "#a1ff3d",
+      "penalties": 20,
+      "players": {
+        "0306-6780-8745": {
+          "flag": "",
+          "gp_scores": [
+            [
+              15,
+              2,
+              4,
+              8
+            ],
+            [
+              15,
+              3,
+              3,
+              6
+            ],
+            [
+              4,
+              3,
+              8,
+              15
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "2jassey",
+          "mii_name": "holy",
+          "penalties": 0,
+          "race_positions": [
+            1,
+            8,
+            6,
+            4,
+            1,
+            7,
+            7,
+            5,
+            6,
+            7,
+            4,
+            1
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            15,
+            2,
+            4,
+            8,
+            15,
+            3,
+            3,
+            6,
+            4,
+            3,
+            8,
+            15
+          ],
+          "subbed_out": false,
+          "table_name": "2jassey",
+          "table_str": "2jassey 29|27|30",
+          "tag": "holy",
+          "total_score": 86
+        },
+        "0993-8500-8099": {
+          "flag": "",
+          "gp_scores": [
+            [
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "eten",
+          "mii_name": "holy",
+          "penalties": 0,
+          "race_positions": [
+            10,
+            9,
+            10,
+            10,
+            9,
+            9,
+            9,
+            9,
+            9,
+            10,
+            9,
+            10
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            0,
+            1,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0
+          ],
+          "subbed_out": false,
+          "table_name": "eten",
+          "table_str": "eten 1|4|2",
+          "tag": "holy",
+          "total_score": 7
+        },
+        "2540-0456-0634": {
+          "flag": "ma",
+          "gp_scores": [
+            [
+              10,
+              4,
+              10,
+              4
+            ],
+            [
+              10,
+              2,
+              8,
+              3
+            ],
+            [
+              2,
+              12,
+              15,
+              3
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "m1",
+          "mii_name": "holy",
+          "penalties": 0,
+          "race_positions": [
+            3,
+            6,
+            3,
+            6,
+            3,
+            8,
+            4,
+            7,
+            8,
+            2,
+            1,
+            7
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            10,
+            4,
+            10,
+            4,
+            10,
+            2,
+            8,
+            3,
+            2,
+            12,
+            15,
+            3
+          ],
+          "subbed_out": false,
+          "table_name": "m1",
+          "table_str": "m1 28|23|32",
+          "tag": "holy",
+          "total_score": 83
+        },
+        "2926-6126-9292": {
+          "flag": "",
+          "gp_scores": [
+            [
+              12,
+              12,
+              8,
+              6
+            ],
+            [
+              12,
+              15,
+              2,
+              10
+            ],
+            [
+              6,
+              10,
+              10,
+              12
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "SIX FIVE HTN",
+          "mii_name": "holy",
+          "penalties": 0,
+          "race_positions": [
+            2,
+            2,
+            4,
+            5,
+            2,
+            1,
+            8,
+            3,
+            5,
+            3,
+            3,
+            2
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            12,
+            12,
+            8,
+            6,
+            12,
+            15,
+            2,
+            10,
+            6,
+            10,
+            10,
+            12
+          ],
+          "subbed_out": false,
+          "table_name": "holy",
+          "table_str": "holy 38|39|38",
+          "tag": "holy",
+          "total_score": 115
+        },
+        "4129-1819-6718": {
+          "flag": "us",
+          "gp_scores": [
+            [
+              8,
+              8,
+              12,
+              2
+            ],
+            [
+              6,
+              10,
+              6,
+              4
+            ],
+            [
+              8,
+              8,
+              12,
+              8
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Virox",
+          "mii_name": "holy",
+          "penalties": 0,
+          "race_positions": [
+            4,
+            4,
+            2,
+            8,
+            5,
+            3,
+            5,
+            6,
+            4,
+            4,
+            2,
+            4
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            8,
+            8,
+            12,
+            2,
+            6,
+            10,
+            6,
+            4,
+            8,
+            8,
+            12,
+            8
+          ],
+          "subbed_out": false,
+          "table_name": "Virox",
+          "table_str": "Virox 30|26|36",
+          "tag": "holy",
+          "total_score": 92
+        }
+      },
+      "table_penalty_str": "Penalty -20",
+      "table_tag_str": "holy #a1ff3d",
+      "total_score": 363
+    }
+  },
+  "title_str": "#title 12 races\n",
+  "tracks": [
+    "Bowser Jr.'s Fort",
+    "Color Wonderland",
+    "Starry Cityscape",
+    "3DS Neo Bowser City",
+    "Mech Factory",
+    "New Moon Manor",
+    "Final Grounds",
+    "Desert Fort",
+    "Pipe Underworld",
+    "Skyline Avenue",
+    "GBA Ribbon Road",
+    "Anthill & Apian Apts."
+  ],
+  "week": 1
+}

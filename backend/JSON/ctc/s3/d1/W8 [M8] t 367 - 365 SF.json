@@ -1,0 +1,787 @@
+{
+  "division": "d1",
+  "format": "5v5",
+  "league": "ctc",
+  "match_label": "[M8] t 367 - 365 SF",
+  "races_played": 12,
+  "rxx": [
+    "r11396389"
+  ],
+  "season": "s3",
+  "teams": {
+    "ψ": {
+      "hex_color": "#b1ffd9",
+      "penalties": 0,
+      "players": {
+        "1766-9597-2636": {
+          "flag": "au",
+          "gp_scores": [
+            [
+              4,
+              12,
+              3,
+              8
+            ],
+            [
+              4,
+              15,
+              4,
+              15
+            ],
+            [
+              8,
+              15,
+              4,
+              10
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Lochie",
+          "mii_name": "ψ jones",
+          "penalties": 0,
+          "race_positions": [
+            6,
+            2,
+            7,
+            4,
+            6,
+            1,
+            6,
+            1,
+            4,
+            1,
+            6,
+            3
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            4,
+            12,
+            3,
+            8,
+            4,
+            15,
+            4,
+            15,
+            8,
+            15,
+            4,
+            10
+          ],
+          "subbed_out": false,
+          "table_name": "Lochie",
+          "table_str": "Lochie 27|38|37",
+          "tag": "ψ",
+          "total_score": 102
+        },
+        "1981-6868-2283": {
+          "flag": "co",
+          "gp_scores": [
+            [
+              1,
+              1,
+              0,
+              15
+            ],
+            [
+              0,
+              1,
+              1,
+              1
+            ],
+            [
+              0,
+              1,
+              0,
+              1
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "psycho",
+          "mii_name": "ψ Psycho",
+          "penalties": 0,
+          "race_positions": [
+            9,
+            9,
+            10,
+            1,
+            10,
+            9,
+            9,
+            9,
+            10,
+            9,
+            10,
+            9
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "runner",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            1,
+            1,
+            0,
+            15,
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0,
+            1
+          ],
+          "subbed_out": false,
+          "table_name": "psycho",
+          "table_str": "psycho 17|3|2",
+          "tag": "ψ",
+          "total_score": 22
+        },
+        "2239-4126-5685": {
+          "flag": "pride",
+          "gp_scores": [
+            [
+              12,
+              6,
+              10,
+              3
+            ],
+            [
+              8,
+              4,
+              12,
+              3
+            ],
+            [
+              10,
+              6,
+              3,
+              8
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "kitkatkittycat",
+          "mii_name": "ψ kitty:)",
+          "penalties": 0,
+          "race_positions": [
+            2,
+            5,
+            3,
+            7,
+            4,
+            6,
+            2,
+            7,
+            3,
+            5,
+            7,
+            4
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            12,
+            6,
+            10,
+            3,
+            8,
+            4,
+            12,
+            3,
+            10,
+            6,
+            3,
+            8
+          ],
+          "subbed_out": false,
+          "table_name": "kitkatkittycat",
+          "table_str": "kitkatkittycat 31|27|27",
+          "tag": "ψ",
+          "total_score": 85
+        },
+        "3527-8879-2316": {
+          "flag": "us_ny",
+          "gp_scores": [
+            [
+              6,
+              10,
+              8,
+              0
+            ],
+            [
+              3,
+              10,
+              2,
+              6
+            ],
+            [
+              2,
+              3,
+              2,
+              2
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "ZachNY",
+          "mii_name": "ψ Zach",
+          "penalties": 0,
+          "race_positions": [
+            5,
+            3,
+            4,
+            10,
+            7,
+            3,
+            8,
+            5,
+            8,
+            7,
+            8,
+            8
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "bagger",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            6,
+            10,
+            8,
+            0,
+            3,
+            10,
+            2,
+            6,
+            2,
+            3,
+            2,
+            2
+          ],
+          "subbed_out": false,
+          "table_name": "ZachNY",
+          "table_str": "ZachNY 24|21|9",
+          "tag": "ψ",
+          "total_score": 54
+        },
+        "4601-6224-7273": {
+          "flag": "us",
+          "gp_scores": [
+            [
+              8,
+              15,
+              4,
+              6
+            ],
+            [
+              10,
+              8,
+              6,
+              10
+            ],
+            [
+              6,
+              4,
+              12,
+              15
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "James",
+          "mii_name": "ψ James",
+          "penalties": 0,
+          "race_positions": [
+            4,
+            1,
+            6,
+            5,
+            3,
+            4,
+            5,
+            3,
+            5,
+            6,
+            2,
+            1
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            8,
+            15,
+            4,
+            6,
+            10,
+            8,
+            6,
+            10,
+            6,
+            4,
+            12,
+            15
+          ],
+          "subbed_out": false,
+          "table_name": "James",
+          "table_str": "James 33|34|37",
+          "tag": "ψ",
+          "total_score": 104
+        }
+      },
+      "table_penalty_str": "",
+      "table_tag_str": "ψ #b1ffd9",
+      "total_score": 367
+    },
+    "ミ★": {
+      "hex_color": "#ffbbb1",
+      "penalties": 0,
+      "players": {
+        "0564-3778-1101": {
+          "flag": "pr",
+          "gp_scores": [
+            [
+              3,
+              4,
+              2,
+              12
+            ],
+            [
+              2,
+              6,
+              3,
+              4
+            ],
+            [
+              4,
+              12,
+              8,
+              12
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "mike",
+          "mii_name": "ミ★ mike",
+          "penalties": 0,
+          "race_positions": [
+            7,
+            6,
+            8,
+            2,
+            8,
+            5,
+            7,
+            6,
+            6,
+            2,
+            4,
+            2
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            3,
+            4,
+            2,
+            12,
+            2,
+            6,
+            3,
+            4,
+            4,
+            12,
+            8,
+            12
+          ],
+          "subbed_out": false,
+          "table_name": "mike",
+          "table_str": "mike 21|15|36",
+          "tag": "ミ★",
+          "total_score": 72
+        },
+        "1337-4410-5658": {
+          "flag": "us",
+          "gp_scores": [
+            [
+              0,
+              0,
+              1,
+              1
+            ],
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Bowser498",
+          "mii_name": "ミ★ B498",
+          "penalties": 0,
+          "race_positions": [
+            10,
+            10,
+            9,
+            9,
+            9,
+            10,
+            10,
+            10,
+            9,
+            10,
+            9,
+            10
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0
+          ],
+          "subbed_out": false,
+          "table_name": "Bowser498",
+          "table_str": "Bowser498 2|1|2",
+          "tag": "ミ★",
+          "total_score": 5
+        },
+        "2282-3373-6466": {
+          "flag": "us_nc",
+          "gp_scores": [
+            [
+              2,
+              2,
+              12,
+              4
+            ],
+            [
+              12,
+              12,
+              15,
+              12
+            ],
+            [
+              15,
+              8,
+              15,
+              6
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "ABHILASH",
+          "mii_name": "ミ★ アビラシュ",
+          "penalties": 0,
+          "race_positions": [
+            8,
+            8,
+            2,
+            6,
+            2,
+            2,
+            1,
+            2,
+            1,
+            4,
+            1,
+            5
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            2,
+            2,
+            12,
+            4,
+            12,
+            12,
+            15,
+            12,
+            15,
+            8,
+            15,
+            6
+          ],
+          "subbed_out": false,
+          "table_name": "ABHILASH",
+          "table_str": "ABHILASH 20|51|44",
+          "tag": "ミ★",
+          "total_score": 115
+        },
+        "2540-0487-3969": {
+          "flag": "ru",
+          "gp_scores": [
+            [
+              15,
+              8,
+              6,
+              2
+            ],
+            [
+              15,
+              3,
+              10,
+              8
+            ],
+            [
+              12,
+              10,
+              10,
+              4
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Sparkster",
+          "mii_name": "ミ★ Spark",
+          "penalties": 0,
+          "race_positions": [
+            1,
+            4,
+            5,
+            8,
+            1,
+            7,
+            3,
+            4,
+            2,
+            3,
+            3,
+            6
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            15,
+            8,
+            6,
+            2,
+            15,
+            3,
+            10,
+            8,
+            12,
+            10,
+            10,
+            4
+          ],
+          "subbed_out": false,
+          "table_name": "Sparkster",
+          "table_str": "Sparkster 31|36|36",
+          "tag": "ミ★",
+          "total_score": 103
+        },
+        "5074-0806-7470": {
+          "flag": "us",
+          "gp_scores": [
+            [
+              10,
+              3,
+              15,
+              10
+            ],
+            [
+              6,
+              2,
+              8,
+              2
+            ],
+            [
+              3,
+              2,
+              6,
+              3
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "mischief",
+          "mii_name": "ミ★ ナ°",
+          "penalties": 0,
+          "race_positions": [
+            3,
+            7,
+            1,
+            3,
+            5,
+            8,
+            4,
+            8,
+            7,
+            8,
+            5,
+            7
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            10,
+            3,
+            15,
+            10,
+            6,
+            2,
+            8,
+            2,
+            3,
+            2,
+            6,
+            3
+          ],
+          "subbed_out": false,
+          "table_name": "mischief",
+          "table_str": "mischief 38|18|14",
+          "tag": "ミ★",
+          "total_score": 70
+        }
+      },
+      "table_penalty_str": "",
+      "table_tag_str": "ミ★ #ffbbb1",
+      "total_score": 365
+    }
+  },
+  "title_str": "#title 12 races\n",
+  "tracks": [
+    "Final Grounds",
+    "Christmas Court",
+    "Twin Peaks",
+    "Mushroom Peaks",
+    "Cherry Blossom Garden",
+    "Gothic Castle",
+    "Infernal Pipeyard",
+    "Spooky Swamp",
+    "Toadette's Castle",
+    "Ghost House",
+    "Sahara Hideout",
+    "Wario's Climate Cataclysm"
+  ],
+  "week": 8
+}

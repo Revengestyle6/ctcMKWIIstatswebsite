@@ -57,6 +57,11 @@ function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; 
 function validFriendCode(value: string): boolean { return /^\d{4}-\d{4}-\d{4}$/.test(value); }
 function numberValue(value: number | undefined): string { return value === undefined ? "" : String(value); }
 function isFfa(format = ""): boolean { return format.trim().toLowerCase() === "ffa"; }
+function metadataValue(field: "league" | "season" | "division" | "match_label", value: string): string {
+  if (field === "season" && /^\d+$/.test(value)) return `s${value}`;
+  if (field === "division" && /^\d+$/.test(value)) return `d${value}`;
+  return value;
+}
 
 function normalized(value: string | undefined): string { return (value ?? "").trim().toLowerCase(); }
 
@@ -151,6 +156,18 @@ function validation(match: MatchJson, races: RaceDraft[], identities: Record<str
     && normalized(scope.division) === normalized(match.division)
   );
   const resolvedTeamIds = new Map<number, string>();
+  const configuredTeamTags = new Map<string, string>();
+  Object.entries(match.teams ?? {}).forEach(([teamKey, team]) => {
+    const tag = teamTag(teamKey, team);
+    const normalizedTag = normalized(tag);
+    if (!normalizedTag) {
+      issues.push({ level: "error", message: "Every team needs a tag." });
+      return;
+    }
+    const prior = configuredTeamTags.get(normalizedTag);
+    if (prior && prior !== teamKey) issues.push({ level: "error", message: `Team tag ${tag} is configured more than once.` });
+    configuredTeamTags.set(normalizedTag, teamKey);
+  });
   if (teamsLoaded) {
     Object.entries(match.teams ?? {}).forEach(([teamKey, team]) => {
       const tag = teamTag(teamKey, team);
@@ -698,7 +715,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 : false;
             const listId = field === "match_label" ? undefined : `${field}-options`;
             return <label key={field} className="text-sm font-semibold capitalize text-gray-200">{field.replace("_", " ")}
-              <input list={listId} value={String(match[field] ?? "")} onChange={(e) => updateMatch({ [field]: e.target.value })} className={`${inputClass} ${valid === true ? "border-emerald-400/70" : approved ? "border-amber-300/70" : valid === false && scopesLoaded ? "border-red-400/70" : ""}`} />
+              <input list={listId} value={String(match[field] ?? "")} onChange={(e) => updateMatch({ [field]: metadataValue(field, e.target.value) })} className={`${inputClass} ${valid === true ? "border-emerald-400/70" : approved ? "border-amber-300/70" : valid === false && scopesLoaded ? "border-red-400/70" : ""}`} />
               {valid !== null && <span className={`mt-1 block text-xs ${valid ? "text-emerald-300" : approved ? "text-amber-300" : scopesLoaded ? "text-red-300" : "text-gray-400"}`}>{valid ? "Confirmed in database" : approved ? "Approved as a new database entry" : scopesLoaded ? "No matching database record" : "Checking database..."}</span>}
             </label>;
           })}
@@ -733,7 +750,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
           return <article key={teamKey} className="border border-white/10 bg-black/25 p-4">
           <div className="grid gap-3 sm:grid-cols-[1fr_8rem_8rem]">
             <label className={smallLabel}>Team tag<input list="team-scope-options" value={currentTag} onChange={(e) => updateTeam(teamKey, (current) => ({ ...current, table_tag_str: `${e.target.value} ${teamColor(current)}` }))} className={`${inputClass} ${resolvedTeam ? "border-emerald-400/70" : approvedTeam ? "border-amber-300/70" : teamsLoaded ? "border-red-400/70" : ""}`} />
-              <span className={`mt-1 block text-xs ${resolvedTeam ? "text-emerald-300" : approvedTeam ? "text-amber-300" : teamsLoaded ? "text-red-300" : "text-gray-400"}`}>{resolvedTeam ? `Confirmed: ${resolvedTeam.display_name || resolvedTeam.canonical_name}` : approvedTeam ? proposedTeamEntry?.kind === "existing_team_new_scope" ? `Existing team; approved for ${match.season} ${match.division}` : "Approved as a completely new team" : teamsLoaded ? "Not found in selected league/season/division" : "Checking database..."}</span>
+              <span className={`mt-1 block text-xs ${resolvedTeam ? "text-emerald-300" : approvedTeam ? "text-amber-300" : teamsLoaded ? "text-red-300" : "text-gray-400"}`}>{resolvedTeam ? <>Confirmed: <span className="normal-case">{resolvedTeam.display_name || resolvedTeam.canonical_name}</span></> : approvedTeam ? proposedTeamEntry?.kind === "existing_team_new_scope" ? `Existing team; approved for ${match.season} ${match.division}` : "Approved as a completely new team" : teamsLoaded ? "Not found in selected league/season/division" : "Checking database..."}</span>
             </label>
             <label className={smallLabel}>Color<input value={teamColor(team)} onChange={(e) => updateTeam(teamKey, (current) => ({ ...current, hex_color: e.target.value.toUpperCase(), table_tag_str: `${teamTag(teamKey, current)} ${e.target.value.toUpperCase()}` }))} className={`${inputClass} text-center uppercase`} /></label>
             <label className={smallLabel}>Penalty<input type="number" value={team.penalties ?? 0} onChange={(e) => updateTeam(teamKey, (current) => ({ ...current, penalties: Number(e.target.value) || 0 }))} className={inputClass} /></label>

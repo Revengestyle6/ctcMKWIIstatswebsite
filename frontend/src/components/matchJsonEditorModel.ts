@@ -67,11 +67,13 @@ export function defaultRoleForPosition(format: string | undefined, position: num
 }
 
 export function teamTag(teamKey: string, team: TeamJson): string {
-  return (team.table_tag_str ?? "").replace(/#[0-9a-f]{3,6}/i, "").trim() || teamKey;
+  if (!("table_tag_str" in team)) return teamKey;
+  return String(team.table_tag_str ?? "").replace(/#[0-9a-f]{3,6}/i, "").trim();
 }
 
 export function teamColor(team: TeamJson): string {
-  return team.hex_color || (team.table_tag_str ?? "").match(/#[0-9a-f]{3,6}/i)?.[0].toUpperCase() || "#64748B";
+  if ("hex_color" in team) return String(team.hex_color ?? "");
+  return (team.table_tag_str ?? "").match(/#[0-9a-f]{3,6}/i)?.[0].toUpperCase() || "#64748B";
 }
 
 export function playerLabel(player: MatchPlayerJson, friendCode: string): string {
@@ -211,7 +213,7 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
         reason: result.reason,
       })));
     const penalties = Number(team.penalties ?? 0);
-    return [teamKey, {
+    return [tag, {
       ...team,
       table_tag_str: `${tag} ${color}`,
       table_penalty_str: penalties ? `Penalty -${penalties}` : "",

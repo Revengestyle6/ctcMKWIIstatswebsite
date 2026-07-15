@@ -1,0 +1,787 @@
+{
+  "division": "d1",
+  "format": "5v5",
+  "league": "ctc",
+  "match_label": "[M3] O 299 - 433 6c",
+  "races_played": 12,
+  "rxx": [
+    "r11388673"
+  ],
+  "season": "s3",
+  "teams": {
+    "6¢": {
+      "hex_color": "#ff8cfd",
+      "penalties": 0,
+      "players": {
+        "0134-8552-1611": {
+          "flag": "us",
+          "gp_scores": [
+            [
+              15,
+              6,
+              15,
+              6
+            ],
+            [
+              2,
+              2,
+              12,
+              4
+            ],
+            [
+              3,
+              10,
+              10,
+              15
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Stubbz",
+          "mii_name": "6¢ stubbz",
+          "penalties": 0,
+          "race_positions": [
+            1,
+            5,
+            1,
+            5,
+            8,
+            8,
+            2,
+            6,
+            7,
+            3,
+            3,
+            1
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            15,
+            6,
+            15,
+            6,
+            2,
+            2,
+            12,
+            4,
+            3,
+            10,
+            10,
+            15
+          ],
+          "subbed_out": false,
+          "table_name": "Stubbz",
+          "table_str": "Stubbz 42|20|38",
+          "tag": "6¢",
+          "total_score": 100
+        },
+        "2926-5841-3809": {
+          "flag": "ca",
+          "gp_scores": [
+            [
+              3,
+              4,
+              10,
+              15
+            ],
+            [
+              15,
+              10,
+              15,
+              12
+            ],
+            [
+              2,
+              8,
+              15,
+              12
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "zilla",
+          "mii_name": "6¢ zl",
+          "penalties": 0,
+          "race_positions": [
+            7,
+            6,
+            3,
+            1,
+            1,
+            3,
+            1,
+            2,
+            8,
+            4,
+            1,
+            2
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            3,
+            4,
+            10,
+            15,
+            15,
+            10,
+            15,
+            12,
+            2,
+            8,
+            15,
+            12
+          ],
+          "subbed_out": false,
+          "table_name": "zilla",
+          "table_str": "zilla 32|52|37",
+          "tag": "6¢",
+          "total_score": 121
+        },
+        "3871-5056-8304": {
+          "flag": "am",
+          "gp_scores": [
+            [
+              2,
+              3,
+              8,
+              12
+            ],
+            [
+              10,
+              12,
+              3,
+              3
+            ],
+            [
+              10,
+              15,
+              12,
+              10
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Ivan",
+          "mii_name": "6¢ Ivan",
+          "penalties": 0,
+          "race_positions": [
+            8,
+            7,
+            4,
+            2,
+            3,
+            2,
+            7,
+            7,
+            3,
+            1,
+            2,
+            3
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            2,
+            3,
+            8,
+            12,
+            10,
+            12,
+            3,
+            3,
+            10,
+            15,
+            12,
+            10
+          ],
+          "subbed_out": false,
+          "table_name": "Ivan",
+          "table_str": "Ivan 25|28|47",
+          "tag": "6¢",
+          "total_score": 100
+        },
+        "4172-1265-3554": {
+          "flag": "world",
+          "gp_scores": [
+            [
+              0,
+              1,
+              0,
+              1
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Cyrene",
+          "mii_name": "6¢ Masako",
+          "penalties": 0,
+          "race_positions": [
+            10,
+            9,
+            10,
+            9,
+            9,
+            10,
+            9,
+            10,
+            9,
+            10,
+            10,
+            10
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "subbed_out": false,
+          "table_name": "Cyrene",
+          "table_str": "Cyrene 2|2|1",
+          "tag": "6¢",
+          "total_score": 5
+        },
+        "4642-8389-5822": {
+          "flag": "ca",
+          "gp_scores": [
+            [
+              12,
+              2,
+              12,
+              10
+            ],
+            [
+              12,
+              8,
+              4,
+              6
+            ],
+            [
+              15,
+              12,
+              6,
+              8
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "arti",
+          "mii_name": "6¢ arti",
+          "penalties": 0,
+          "race_positions": [
+            2,
+            8,
+            2,
+            3,
+            2,
+            4,
+            6,
+            5,
+            1,
+            2,
+            5,
+            4
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            12,
+            2,
+            12,
+            10,
+            12,
+            8,
+            4,
+            6,
+            15,
+            12,
+            6,
+            8
+          ],
+          "subbed_out": false,
+          "table_name": "arti",
+          "table_str": "arti 36|30|41",
+          "tag": "6¢",
+          "total_score": 107
+        }
+      },
+      "table_penalty_str": "",
+      "table_tag_str": "6¢ #ff8cfd",
+      "total_score": 433
+    },
+    "Ω": {
+      "hex_color": "#fdff8c",
+      "penalties": 0,
+      "players": {
+        "0263-7077-1962": {
+          "flag": "dk",
+          "gp_scores": [
+            [
+              10,
+              12,
+              2,
+              4
+            ],
+            [
+              3,
+              6,
+              6,
+              2
+            ],
+            [
+              4,
+              6,
+              8,
+              6
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Ice",
+          "mii_name": "Ω Ice",
+          "penalties": 0,
+          "race_positions": [
+            3,
+            2,
+            8,
+            6,
+            7,
+            5,
+            5,
+            8,
+            6,
+            5,
+            4,
+            5
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            10,
+            12,
+            2,
+            4,
+            3,
+            6,
+            6,
+            2,
+            4,
+            6,
+            8,
+            6
+          ],
+          "subbed_out": false,
+          "table_name": "Ice",
+          "table_str": "Ice 28|17|24",
+          "tag": "Ω",
+          "total_score": 69
+        },
+        "0435-5102-8204": {
+          "flag": "ca_sk",
+          "gp_scores": [
+            [
+              4,
+              10,
+              3,
+              3
+            ],
+            [
+              4,
+              15,
+              10,
+              15
+            ],
+            [
+              8,
+              2,
+              4,
+              2
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Rock SaltNL",
+          "mii_name": "Ω Indy",
+          "penalties": 0,
+          "race_positions": [
+            6,
+            3,
+            7,
+            7,
+            6,
+            1,
+            3,
+            1,
+            4,
+            8,
+            6,
+            8
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            4,
+            10,
+            3,
+            3,
+            4,
+            15,
+            10,
+            15,
+            8,
+            2,
+            4,
+            2
+          ],
+          "subbed_out": false,
+          "table_name": "Rock SaltNL",
+          "table_str": "Rock SaltNL 20|44|16",
+          "tag": "Ω",
+          "total_score": 80
+        },
+        "2196-4364-5904": {
+          "flag": "nl",
+          "gp_scores": [
+            [
+              1,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              1,
+              1
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Joris",
+          "mii_name": "Ω Joris",
+          "penalties": 0,
+          "race_positions": [
+            9,
+            10,
+            9,
+            10,
+            10,
+            9,
+            10,
+            9,
+            10,
+            9,
+            9,
+            9
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            1,
+            1
+          ],
+          "subbed_out": false,
+          "table_name": "Joris",
+          "table_str": "Joris 2|2|3",
+          "tag": "Ω",
+          "total_score": 7
+        },
+        "3570-8255-6316": {
+          "flag": "ca_nu",
+          "gp_scores": [
+            [
+              6,
+              15,
+              6,
+              2
+            ],
+            [
+              6,
+              4,
+              2,
+              8
+            ],
+            [
+              12,
+              4,
+              3,
+              3
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Rock SaltCAN",
+          "mii_name": "Ω★BO$HI",
+          "penalties": 0,
+          "race_positions": [
+            5,
+            1,
+            5,
+            8,
+            5,
+            6,
+            8,
+            4,
+            2,
+            6,
+            7,
+            7
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            6,
+            15,
+            6,
+            2,
+            6,
+            4,
+            2,
+            8,
+            12,
+            4,
+            3,
+            3
+          ],
+          "subbed_out": false,
+          "table_name": "Rock SaltCAN",
+          "table_str": "Rock SaltCAN 29|20|22",
+          "tag": "Ω",
+          "total_score": 71
+        },
+        "4172-1295-1847": {
+          "flag": "uy",
+          "gp_scores": [
+            [
+              8,
+              8,
+              4,
+              8
+            ],
+            [
+              8,
+              3,
+              8,
+              10
+            ],
+            [
+              6,
+              3,
+              2,
+              4
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "scrimshaw",
+          "mii_name": "Ω mackerel",
+          "penalties": 0,
+          "race_positions": [
+            4,
+            4,
+            6,
+            4,
+            4,
+            7,
+            4,
+            3,
+            5,
+            7,
+            8,
+            6
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            8,
+            8,
+            4,
+            8,
+            8,
+            3,
+            8,
+            10,
+            6,
+            3,
+            2,
+            4
+          ],
+          "subbed_out": false,
+          "table_name": "scrimshaw",
+          "table_str": "scrimshaw 28|29|15",
+          "tag": "Ω",
+          "total_score": 72
+        }
+      },
+      "table_penalty_str": "",
+      "table_tag_str": "Ω #fdff8c",
+      "total_score": 299
+    }
+  },
+  "title_str": "#title 12 races\n",
+  "tracks": [
+    "Desert Fort",
+    "Medieval Castlegrounds",
+    "GBA Riverside Park",
+    "Infernal Pipeyard",
+    "Color Wonderland",
+    "Amanita Abyss",
+    "Castle of Time",
+    "3DS Rosalina's Ice World",
+    "N64 Wario Stadium",
+    "Fungal Jungle",
+    "Honeybee Hideout",
+    "Lost Fortress"
+  ],
+  "week": 3
+}
