@@ -223,7 +223,7 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
                 <td className="px-4 py-3 text-right font-bold">{value(row.metrics.points_per_race)}</td>
                 <td className="px-4 py-3 text-right">{value(row.metrics.bag_point_rate, "%")}</td>
                 <td className="px-4 py-3 text-right">{value(row.metrics.zero_point_rate, "%")}</td>
-                <td className="px-4 py-3 text-right">{row.metrics.opponent_point_differential > 0 ? `+${row.metrics.opponent_point_differential}` : row.metrics.opponent_point_differential}</td>
+                <td className="px-4 py-3 text-right">{row.metrics.counterpart_races === 0 ? "-" : row.metrics.opponent_point_differential > 0 ? `+${row.metrics.opponent_point_differential}` : row.metrics.opponent_point_differential}</td>
                 <td className="px-4 py-3">{row.last_appearance.season.toUpperCase()} {row.last_appearance.division.toUpperCase()} {row.last_appearance.week ? `W${row.last_appearance.week}` : ""}</td>
               </tr>
             ))}</tbody>

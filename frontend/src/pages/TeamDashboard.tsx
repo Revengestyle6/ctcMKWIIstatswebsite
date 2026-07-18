@@ -108,25 +108,20 @@ export default function TeamDashboard() {
   }, [numericTeamId, season, division, opponentId, minRaces]);
 
   useEffect(() => {
-    if (activeTab === "overview" || !Number.isInteger(numericTeamId) || numericTeamId < 1) return;
+    if (activeTab !== "roster" || !Number.isInteger(numericTeamId) || numericTeamId < 1) return;
     let cancelled = false;
-    const requestKey = activeTab === "roster" ? rosterQueryKey : tracksQueryKey;
+    const requestKey = rosterQueryKey;
     setTabLoadingKey(requestKey);
     setTabError(null);
-    const query = {
+    fetchTeamRoster(numericTeamId, {
       season: season || undefined,
       division: division || undefined,
       opponent_team_id: opponentId ? Number(opponentId) : undefined,
       min_races: minRaces,
-    };
-    const request = activeTab === "roster"
-      ? fetchTeamRoster(numericTeamId, { ...query, role })
-      : fetchTeamTracks(numericTeamId, query);
-    request
+      role,
+    })
       .then((response) => {
-        if (cancelled) return;
-        if (activeTab === "roster") setRosterResult({ key: requestKey, value: response as TeamRoster });
-        else setTracksResult({ key: requestKey, value: response as TeamTracks });
+        if (!cancelled) setRosterResult({ key: requestKey, value: response });
       })
       .catch((requestError: unknown) => {
         if (!cancelled) {
@@ -142,7 +137,38 @@ export default function TeamDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, numericTeamId, season, division, opponentId, minRaces, role, rosterQueryKey, tracksQueryKey]);
+  }, [activeTab, numericTeamId, season, division, opponentId, minRaces, role, rosterQueryKey]);
+
+  useEffect(() => {
+    if (activeTab !== "tracks" || !Number.isInteger(numericTeamId) || numericTeamId < 1) return;
+    let cancelled = false;
+    const requestKey = tracksQueryKey;
+    setTabLoadingKey(requestKey);
+    setTabError(null);
+    fetchTeamTracks(numericTeamId, {
+      season: season || undefined,
+      division: division || undefined,
+      opponent_team_id: opponentId ? Number(opponentId) : undefined,
+      min_races: minRaces,
+    })
+      .then((response) => {
+        if (!cancelled) setTracksResult({ key: requestKey, value: response });
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) {
+          setTabError({
+            key: requestKey,
+            message: requestError instanceof Error ? requestError.message : "Failed to load dashboard tab.",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTabLoadingKey("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, numericTeamId, season, division, opponentId, minRaces, tracksQueryKey]);
 
   function updateQuery(name: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -215,6 +241,13 @@ export default function TeamDashboard() {
           entityOptions={opponentOptions}
           minRaces={minRaces}
           disabled={loading}
+          extraControl={activeTab === "roster" ? (
+            <RoleModeToggle
+              value={role}
+              disabled={tabLoading}
+              onChange={(value) => updateQuery("role", value === "runner" ? "" : value)}
+            />
+          ) : undefined}
           onSeasonChange={(value) => updateQuery("season", value)}
           onDivisionChange={(value) => updateQuery("division", value)}
           onEntityChange={(value) => updateQuery("opponent_team_id", value)}
@@ -227,13 +260,6 @@ export default function TeamDashboard() {
         tabs={[{ id: "overview", label: "Overview" }, { id: "roster", label: "Roster" }, { id: "tracks", label: "Tracks" }]}
         active={activeTab}
         onChange={(tab) => updateQuery("tab", tab === "overview" ? "" : tab)}
-        extraControl={activeTab === "roster" ? (
-          <RoleModeToggle
-            value={role}
-            disabled={tabLoading}
-            onChange={(value) => updateQuery("role", value === "runner" ? "" : value)}
-          />
-        ) : undefined}
       />
 
       {activeTab === "overview" && <>
