@@ -27,6 +27,7 @@ from match_upload import (
 from models import DatabaseAdditionLog, Match
 from stats_db import AmbiguousPlayerError
 from dashboard_stats import DashboardError
+from player_role_analytics import normalize_role
 from flask_cors import CORS
 from sqlalchemy import select
 
@@ -43,6 +44,10 @@ def _season_arg():
 
 def _division_arg():
     return request.args.get("division")
+
+
+def _role_arg():
+    return normalize_role(request.args.get("role"))
 
 
 def _error_response(error):
@@ -141,8 +146,11 @@ def player_stats():
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
     try:
-        results = stats.findtopplayertracks(player_name, min_races=2, division=division, season=season)
-        return jsonify({"player": player_name, "results": results})
+        role = _role_arg()
+        results = stats.findtopplayertracks(
+            player_name, min_races=2, division=division, season=season, role=role
+        )
+        return jsonify({"player": player_name, "role": role, "results": results})
     except Exception as e:
         return _error_response(e)
 
@@ -154,17 +162,13 @@ def player_avg():
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
     try:
-        avg, player_name_formatted, team_name, races = stats.findplayeravg(
+        result = stats.findplayeravg(
             player_name,
             division=division,
             season=season,
+            role=_role_arg(),
         )
-        return jsonify({
-            "avg": avg,
-            "player_name": player_name_formatted,
-            "team_name": team_name,
-            "races": races
-        })
+        return jsonify(result)
     except Exception as e:
         return _error_response(e)
     
@@ -206,12 +210,14 @@ def api_player_identities():
 @app.route("/api/players/<int:player_id>/overview", methods=["GET"])
 def api_player_dashboard_overview(player_id):
     try:
+        role = _role_arg()
         return jsonify(dashboards.get_player_overview(
             player_id,
             season=_season_arg(),
             division=_division_arg(),
             team_id=_optional_int_arg("team_id"),
             min_races=_minimum_races_arg(),
+            role=role,
         ))
     except Exception as error:
         return _error_response(error)
@@ -220,11 +226,13 @@ def api_player_dashboard_overview(player_id):
 @app.route("/api/players/<int:player_id>/performance", methods=["GET"])
 def api_player_dashboard_performance(player_id):
     try:
+        role = _role_arg()
         return jsonify(dashboards.get_player_performance(
             player_id,
             season=_season_arg(),
             division=_division_arg(),
             team_id=_optional_int_arg("team_id"),
+            role=role,
         ))
     except Exception as error:
         return _error_response(error)
@@ -233,12 +241,14 @@ def api_player_dashboard_performance(player_id):
 @app.route("/api/players/<int:player_id>/tracks", methods=["GET"])
 def api_player_dashboard_tracks(player_id):
     try:
+        role = _role_arg()
         return jsonify(dashboards.get_player_tracks(
             player_id,
             season=_season_arg(),
             division=_division_arg(),
             team_id=_optional_int_arg("team_id"),
             min_races=_minimum_races_arg(),
+            role=role,
         ))
     except Exception as error:
         return _error_response(error)
@@ -261,12 +271,14 @@ def api_team_dashboard_overview(team_id):
 @app.route("/api/teams/<int:team_id>/roster", methods=["GET"])
 def api_team_dashboard_roster(team_id):
     try:
+        role = _role_arg()
         return jsonify(dashboards.get_team_roster(
             team_id,
             season=_season_arg(),
             division=_division_arg(),
             opponent_team_id=_optional_int_arg("opponent_team_id"),
             min_races=_minimum_races_arg(),
+            role=role,
         ))
     except Exception as error:
         return _error_response(error)
@@ -335,11 +347,14 @@ def api_divisions():
 @app.route("/api/top-team-players", methods=["GET"])
 def api_top_team_players():
     team = request.args.get("team")
-    min_races = int(request.args.get("min_races", 12))
     division = _division_arg()
     season = _season_arg()
     try:
-        players = stats.findtopteamplayers(team, min_races, division=division, season=season)
+        role = _role_arg()
+        min_races = int(request.args.get("min_races", 12))
+        players = stats.findtopteamplayers(
+            team, min_races, division=division, season=season, role=role
+        )
         return jsonify(players)
     except Exception as e:
         print(f"Error in api_top_team_players: {e}")
@@ -637,13 +652,20 @@ def api_tracks():
 @cache.cached(timeout=3600, query_string=True)
 def api_top_tracks():
     track = request.args.get("track")
-    min_races = int(request.args.get("min_races", 2))
     division = _division_arg()
     season = _season_arg()
     if not track:
         return jsonify({"error": "Track name is required"}), 400
     try:
-        results = stats.findtoptracks(track, min_races=min_races, division=division, season=season)
+        role = _role_arg()
+        min_races = int(request.args.get("min_races", 2))
+        results = stats.findtoptracks(
+            track,
+            min_races=min_races,
+            division=division,
+            season=season,
+            role=role,
+        )
         return jsonify(results)
     except Exception as e:
         print(f"Error in api_top_tracks: {e}")

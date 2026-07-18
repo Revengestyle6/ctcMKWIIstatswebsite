@@ -2,7 +2,9 @@ from dataclasses import dataclass
 
 from sqlalchemy import and_, desc, func, select
 
+import dashboard_stats as dashboards
 from database import get_session_factory
+from player_role_analytics import normalize_role
 from models import (
     Division,
     Match,
@@ -282,6 +284,7 @@ def _resolve_team(session, team, scope):
     query = team.strip().lower()
     row = session.execute(
         select(
+            Team.team_id,
             TeamSeasonEntry.team_season_entry_id,
             TeamSeasonEntry.clan_tag,
             TeamSeasonEntry.display_name,
@@ -319,14 +322,6 @@ def _resolve_track(session, track, scope):
         valid_tracks = list_tracks(season=scope.season_code, division=scope.division_code)
         raise AnalyticsError(f"Invalid Track Name, Valid Tracks: {valid_tracks}")
     return row
-
-
-def _format_avg_rows(rows):
-    return [f"{row['name']} - {row['average']} pts ({row['races']} races)" for row in rows]
-
-
-def _format_track_rows(rows):
-    return [f"{row['track']} - {row['average']} pts ({row['races']} races)" for row in rows]
 
 
 def list_players(season=None, division=None):
@@ -861,63 +856,58 @@ def get_match_detail(match_id, session=None):
         }
 
 
-def findplayeravg(player, track="", division=None, team="", season=None):
+def findplayeravg(player, track="", division=None, team="", season=None, role="runner"):
+    role = normalize_role(role)
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
         player_row = _resolve_player(session, player, scope)
-        team_filter = None
+        team_row = None
         if team:
-            team_filter = _resolve_team(session, team, scope).team_season_entry_id
+            team_row = _resolve_team(session, team, scope)
 
         if track:
             track_row = _resolve_track(session, track, scope)
-            stmt = (
-                select(
-                    func.avg(RacePlayerResult.score).label("average"),
-                    func.count(RacePlayerResult.race_player_result_id).label("races"),
-                )
-                .join(Race, Race.race_id == RacePlayerResult.race_id)
-                .join(Match, Match.match_id == Race.match_id)
-                .where(
-                    Match.season_id == scope.season_id,
-                    Match.division_id == scope.division_id,
-                    RacePlayerResult.player_id == player_row.player_id,
-                    Race.track_id == track_row.track_id,
-                    _score_filter(),
-                )
+            tracks = dashboards.get_player_tracks(
+                player_row.player_id,
+                season=scope.season_code,
+                division=scope.division_code,
+                team_id=team_row.team_id if team_row else None,
+                min_races=1,
+                role=role,
+                session=session,
             )
-            row = session.execute(stmt).one()
-            return (
-                round(float(row.average or 0), 1),
-                _display_player(player_row),
-                track_row.canonical_name,
-                int(row.races or 0),
+            metrics = next(
+                (row for row in tracks["tracks"] if row["track_id"] == track_row.track_id),
+                None,
             )
+            if metrics is None:
+                metrics = {
+                    "role": role,
+                    "races": 0,
+                    "scored_races": 0,
+                    "total_points": 0,
+                    "points_per_race": None,
+                }
+            else:
+                metrics = {key: value for key, value in metrics.items() if key not in {"track_id", "name"}}
+        else:
+            overview = dashboards.get_player_overview(
+                player_row.player_id,
+                season=scope.season_code,
+                division=scope.division_code,
+                team_id=team_row.team_id if team_row else None,
+                role=role,
+                session=session,
+            )
+            metrics = overview["metrics"]
 
-        filters = [
-            Match.season_id == scope.season_id,
-            Match.division_id == scope.division_id,
-            RacePlayerResult.player_id == player_row.player_id,
-            _score_filter(),
-        ]
-        if team_filter is not None:
-            filters.append(RacePlayerResult.team_season_entry_id == team_filter)
-
-        row = session.execute(
-            select(
-                (func.avg(RacePlayerResult.score) * 12).label("average"),
-                func.count(RacePlayerResult.race_player_result_id).label("races"),
-            )
-            .join(Race, Race.race_id == RacePlayerResult.race_id)
-            .join(Match, Match.match_id == Race.match_id)
-            .where(*filters)
-        ).one()
-        return (
-            round(float(row.average or 0), 1),
-            _display_player(player_row),
-            player_row.clan_tag,
-            int(row.races or 0),
-        )
+        return {
+            "role": role,
+            "player_id": player_row.player_id,
+            "player_name": _display_player(player_row),
+            "team_name": team_row.clan_tag if team_row else player_row.clan_tag,
+            "metrics": metrics,
+        }
 
 
 def findteamavg(team, track, division=None, season=None):
@@ -945,33 +935,19 @@ def findteamavg(team, track, division=None, season=None):
         return round(average, 1), team_row.clan_tag, track_row.canonical_name, races
 
 
-def top_player_tracks(player, min_races=2, division=None, season=None):
+def top_player_tracks(player, min_races=2, division=None, season=None, role="runner"):
+    role = normalize_role(role)
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
         player_row = _resolve_player(session, player, scope)
-        rows = session.execute(
-            select(
-                Track.canonical_name.label("track"),
-                func.avg(RacePlayerResult.score).label("average"),
-                func.count(RacePlayerResult.race_player_result_id).label("races"),
-            )
-            .join(Race, Race.race_id == RacePlayerResult.race_id)
-            .join(Match, Match.match_id == Race.match_id)
-            .join(Track, Track.track_id == Race.track_id)
-            .where(
-                Match.season_id == scope.season_id,
-                Match.division_id == scope.division_id,
-                RacePlayerResult.player_id == player_row.player_id,
-                _score_filter(),
-            )
-            .group_by(Track.track_id, Track.canonical_name)
-            .having(func.count(RacePlayerResult.race_player_result_id) >= min_races)
-            .order_by(desc("average"), desc("races"), Track.canonical_name)
-        ).all()
-        return [
-            {"track": row.track, "average": round(float(row.average or 0), 1), "races": int(row.races)}
-            for row in rows
-        ]
+        return dashboards.get_player_tracks(
+            player_row.player_id,
+            season=scope.season_code,
+            division=scope.division_code,
+            min_races=min_races,
+            role=role,
+            session=session,
+        )["tracks"]
 
 
 def top_team_tracks(team, min_races=2, division=None, season=None):
@@ -1003,102 +979,34 @@ def top_team_tracks(team, min_races=2, division=None, season=None):
         ]
 
 
-def top_team_players(team, min_races=12, division=None, season=None):
+def top_team_players(team, min_races=12, division=None, season=None, role="runner"):
+    role = normalize_role(role)
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
         team_row = _resolve_team(session, team, scope)
-        rows = session.execute(
-            select(
-                Player.player_id,
-                Player.canonical_lounge_name,
-                Player.primary_friend_code,
-                (func.avg(RacePlayerResult.score) * 12).label("average"),
-                func.count(RacePlayerResult.race_player_result_id).label("races"),
-            )
-            .join(Player, Player.player_id == RacePlayerResult.player_id)
-            .join(
-                PlayerSeasonEntry,
-                and_(
-                    PlayerSeasonEntry.player_id == RacePlayerResult.player_id,
-                    PlayerSeasonEntry.season_id == scope.season_id,
-                    PlayerSeasonEntry.division_id == scope.division_id,
-                    PlayerSeasonEntry.team_season_entry_id == team_row.team_season_entry_id,
-                ),
-            )
-            .join(Race, Race.race_id == RacePlayerResult.race_id)
-            .join(Match, Match.match_id == Race.match_id)
-            .where(
-                Match.season_id == scope.season_id,
-                Match.division_id == scope.division_id,
-                RacePlayerResult.team_season_entry_id == team_row.team_season_entry_id,
-                _score_filter(),
-            )
-            .group_by(Player.player_id, Player.canonical_lounge_name, Player.primary_friend_code)
-            .having(func.count(RacePlayerResult.race_player_result_id) >= min_races)
-            .order_by(desc("average"), desc("races"), Player.player_id)
-        ).all()
-        display_names = _display_names_for_players(
-            session,
-            [row.player_id for row in rows],
-            {row.player_id: row.canonical_lounge_name for row in rows},
-        )
-        return [
-            {
-                "name": display_names.get(row.player_id, ""),
-                "average": round(float(row.average or 0), 1),
-                "races": int(row.races),
-            }
-            for row in rows
-        ]
+        return dashboards.get_team_roster(
+            team_row.team_id,
+            season=scope.season_code,
+            division=scope.division_code,
+            min_races=min_races,
+            role=role,
+            session=session,
+        )["players"]
 
 
-def top_track_players(track, min_races=2, division=None, season=None):
+def top_track_players(track, min_races=2, division=None, season=None, role="runner"):
+    role = normalize_role(role)
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
         track_row = _resolve_track(session, track, scope)
-        rows = session.execute(
-            select(
-                Player.player_id,
-                Player.canonical_lounge_name,
-                Player.primary_friend_code,
-                (func.avg(RacePlayerResult.score) * 12).label("average"),
-                func.count(RacePlayerResult.race_player_result_id).label("races"),
-            )
-            .join(Player, Player.player_id == RacePlayerResult.player_id)
-            .join(
-                PlayerSeasonEntry,
-                and_(
-                    PlayerSeasonEntry.player_id == RacePlayerResult.player_id,
-                    PlayerSeasonEntry.season_id == scope.season_id,
-                    PlayerSeasonEntry.division_id == scope.division_id,
-                    PlayerSeasonEntry.team_season_entry_id == RacePlayerResult.team_season_entry_id,
-                ),
-            )
-            .join(Race, Race.race_id == RacePlayerResult.race_id)
-            .join(Match, Match.match_id == Race.match_id)
-            .where(
-                Match.season_id == scope.season_id,
-                Match.division_id == scope.division_id,
-                Race.track_id == track_row.track_id,
-                _score_filter(),
-            )
-            .group_by(Player.player_id, Player.canonical_lounge_name, Player.primary_friend_code)
-            .having(func.count(RacePlayerResult.race_player_result_id) >= min_races)
-            .order_by(desc("average"), desc("races"), Player.player_id)
-        ).all()
-        display_names = _display_names_for_players(
-            session,
-            [row.player_id for row in rows],
-            {row.player_id: row.canonical_lounge_name for row in rows},
-        )
-        return [
-            {
-                "name": display_names.get(row.player_id, ""),
-                "average": round(float(row.average or 0), 1),
-                "races": int(row.races),
-            }
-            for row in rows
-        ]
+        return dashboards.get_track_player_rankings(
+            track_row.track_id,
+            season=scope.season_code,
+            division=scope.division_code,
+            min_races=min_races,
+            role=role,
+            session=session,
+        )["players"]
 
 
 def top_track_teams(track, min_races=2, division=None, season=None):
@@ -1133,21 +1041,21 @@ def top_track_teams(track, min_races=2, division=None, season=None):
         ]
 
 
-def findtopplayertracks(player, min_races=2, division=None, season=None):
-    return _format_track_rows(top_player_tracks(player, min_races, division, season))
+def findtopplayertracks(player, min_races=2, division=None, season=None, role="runner"):
+    return top_player_tracks(player, min_races, division, season, role)
 
 
 def findtopteamtracks(team, min_races=2, division=None, season=None):
-    return _format_track_rows(top_team_tracks(team, min_races, division, season))
+    return top_team_tracks(team, min_races, division, season)
 
 
-def findtopteamplayers(team, min_races=12, division=None, season=None):
-    return _format_avg_rows(top_team_players(team, min_races, division, season))
+def findtopteamplayers(team, min_races=12, division=None, season=None, role="runner"):
+    return top_team_players(team, min_races, division, season, role)
 
 
-def findtoptracks(track, min_races=2, division=None, season=None):
-    return _format_avg_rows(top_track_players(track, min_races, division, season))
+def findtoptracks(track, min_races=2, division=None, season=None, role="runner"):
+    return top_track_players(track, min_races, division, season, role)
 
 
 def findtopteamsontrack(track, min_races=2, division=None, season=None):
-    return _format_avg_rows(top_track_teams(track, min_races, division, season))
+    return top_track_teams(track, min_races, division, season)

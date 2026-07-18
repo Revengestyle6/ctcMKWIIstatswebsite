@@ -693,6 +693,93 @@ def get_player_tracks(
     }
 
 
+def get_track_player_rankings(
+    track_id,
+    season,
+    division,
+    role="runner",
+    min_races=2,
+    session=None,
+):
+    role = normalize_role(role)
+    if session is None:
+        with SessionLocal() as owned_session:
+            return get_track_player_rankings(
+                track_id,
+                season=season,
+                division=division,
+                role=role,
+                min_races=min_races,
+                session=owned_session,
+            )
+
+    scope = _resolve_scope(session, season=season, division=division)
+    if scope.season_id is None or scope.division_id is None:
+        raise DashboardError("Track player rankings require season and division.")
+    if not session.get(Track, track_id):
+        raise DashboardNotFound("Track not found.")
+
+    rows = list(session.execute(
+        select(
+            RacePlayerResult.player_id,
+            RacePlayerResult.race_id,
+            RacePlayerResult.match_team_id,
+            RacePlayerResult.score,
+            RacePlayerResult.position,
+            RacePlayerResult.role,
+            RacePlayerResult.role_source,
+            Player.canonical_lounge_name,
+        )
+        .join(Race, Race.race_id == RacePlayerResult.race_id)
+        .join(Match, Match.match_id == Race.match_id)
+        .join(Player, Player.player_id == RacePlayerResult.player_id)
+        .where(
+            Race.track_id == track_id,
+            Match.season_id == scope.season_id,
+            Match.division_id == scope.division_id,
+        )
+        .order_by(RacePlayerResult.player_id, Race.race_id)
+    ).all())
+    confirmed = confirmed_5v5_race_ids(session, rows)
+    _, classified = role_coverage(rows, confirmed)
+    by_player = defaultdict(list)
+    for item in classified:
+        by_player[item[0].player_id].append(item)
+
+    players = []
+    exact_sort_values = {}
+    for player_id, player_rows in by_player.items():
+        metrics = summarize_role_rows(player_rows, role)
+        if metrics["scored_races"] < min_races:
+            continue
+        coverage, _ = role_coverage([item[0] for item in player_rows], confirmed)
+        name = player_rows[0][0].canonical_lounge_name or f"Player {player_id}"
+        exact_sort_values[player_id] = (
+            metrics["total_points"] / metrics["scored_races"]
+            * (12 if role == "runner" else 1)
+        )
+        players.append({
+            "player_id": player_id,
+            "name": name,
+            "role": role,
+            "metrics": metrics,
+            "role_coverage": coverage,
+        })
+
+    players.sort(key=lambda row: (
+        -exact_sort_values[row["player_id"]],
+        row["player_id"],
+        row["name"].lower(),
+    ))
+    return {
+        "role": role,
+        "scope": _scope_payload(scope),
+        "track_id": track_id,
+        "minimum_races": min_races,
+        "players": players,
+    }
+
+
 def _team_identity(session, team, scope):
     entry_rows = session.execute(
         select(

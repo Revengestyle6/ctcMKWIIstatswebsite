@@ -10,6 +10,7 @@ from dashboard_stats import (
     get_player_overview,
     get_player_performance,
     get_player_tracks,
+    get_track_player_rankings,
     get_team_overview,
     get_team_roster,
     get_team_tracks,
@@ -434,6 +435,45 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.assertEqual(get_player_tracks(
             self.player_id, role="bagger", min_races=5, session=self.session
         )["tracks"], [])
+
+    def test_track_player_rankings_keep_roles_separate_and_preserve_bagger_points(self):
+        runner = get_track_player_rankings(
+            self.track.track_id,
+            season="s2",
+            division="d1",
+            role="runner",
+            min_races=1,
+            session=self.session,
+        )
+        bagger = get_track_player_rankings(
+            self.track.track_id,
+            season="s2",
+            division="d1",
+            role="bagger",
+            min_races=4,
+            session=self.session,
+        )
+
+        runner_player = next(row for row in runner["players"] if row["player_id"] == self.player_id)
+        bagger_player = next(row for row in bagger["players"] if row["player_id"] == self.player_id)
+        self.assertEqual(runner_player["metrics"]["total_points"], 6)
+        self.assertEqual(runner_player["metrics"]["scored_races"], 1)
+        self.assertNotIn("bag_points", runner_player["metrics"])
+        self.assertEqual(bagger_player["metrics"]["total_points"], 7)
+        self.assertEqual(bagger_player["metrics"]["bag_points"], 3)
+        self.assertNotIn("twelve_race_pace", bagger_player["metrics"])
+        self.assertEqual(bagger["scope"], {"season": "s2", "division": "d1"})
+        self.assertEqual(bagger_player["role_coverage"]["total"], 8)
+
+        thresholded = get_track_player_rankings(
+            self.track.track_id,
+            season="s2",
+            division="d1",
+            role="bagger",
+            min_races=5,
+            session=self.session,
+        )
+        self.assertNotIn(self.player_id, [row["player_id"] for row in thresholded["players"]])
 
     def test_rankings_classify_each_player_and_use_selected_role_eligibility(self):
         runner = get_player_overview(
