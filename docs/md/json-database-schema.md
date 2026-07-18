@@ -440,13 +440,14 @@ One row per player's result in one race.
 | `role_source` | text | `manual`, `inferred`, or `unknown`. |
 | `is_subbed_out_result` | boolean | Useful when score/position is missing or null. |
 
-For the bagging/running flag, the JSON does not explicitly say "bagger" or "runner". The current CSV extractor infers bagging when a race score is exactly `1`, but that should not be treated as permanent truth. Store an inferred role, then allow manual correction.
+Historical JSON usually does not explicitly say "bagger" or "runner". Newer editor output can provide a manual role in `race_roles`; that value is authoritative. Otherwise, store a role inferred from placement so it can still be audited or manually corrected.
 
 Suggested initial inference:
 
-- `score = 1`: `role = bagger`, `role_source = inferred`
-- otherwise: `role = runner`, `role_source = inferred`
-- if score or position is missing/null: `role = unknown`, `role_source = unknown`
+- explicit `race_roles` value: preserve it with `role_source = manual`
+- position 9 or 10: `role = bagger`, `role_source = inferred`
+- position 1 through 8: `role = runner`, `role_source = inferred`
+- missing or invalid position: `role = unknown`, `role_source = unknown`
 
 If CTC has a better official rule, encode that rule in the importer and keep `role_source` so future audits are possible.
 

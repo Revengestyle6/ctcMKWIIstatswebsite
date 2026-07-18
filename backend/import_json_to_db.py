@@ -2,13 +2,14 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import re
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, update
 
 from database import DEFAULT_DB_PATH, BASE_DIR, get_session_factory, init_database
 from models import (
@@ -426,12 +427,66 @@ def get_or_create_track(session, track_name: str) -> Track:
     return track
 
 
-def infer_role(score: int | None, position: int | None) -> tuple[str, str]:
-    if score is None or position is None:
+def infer_role(position: int | None) -> tuple[str, str]:
+    if (
+        isinstance(position, bool)
+        or not isinstance(position, (int, float))
+        or not math.isfinite(position)
+        or position != int(position)
+        or not 1 <= position <= 10
+    ):
         return "unknown", "unknown"
-    if score == 1:
+    if position >= 9:
         return "bagger", "inferred"
     return "runner", "inferred"
+
+
+def resolve_role(explicit_role: Any, position: int | None) -> tuple[str, str]:
+    normalized_role = (
+        explicit_role.strip().lower() if isinstance(explicit_role, str) else None
+    )
+    if normalized_role in {"runner", "bagger"}:
+        return normalized_role, "manual"
+    return infer_role(position)
+
+
+def backfill_inferred_roles(session) -> int:
+    non_manual_sources = ("inferred", "unknown")
+    bagger_result = session.execute(
+        update(RacePlayerResult)
+        .where(
+            RacePlayerResult.role_source.in_(non_manual_sources),
+            RacePlayerResult.position.in_((9, 10)),
+            or_(
+                RacePlayerResult.role != "bagger",
+                RacePlayerResult.role_source != "inferred",
+            ),
+        )
+        .values(role="bagger", role_source="inferred")
+    )
+    runner_result = session.execute(
+        update(RacePlayerResult)
+        .where(
+            RacePlayerResult.role_source.in_(non_manual_sources),
+            RacePlayerResult.position.between(1, 8),
+            or_(
+                RacePlayerResult.role != "runner",
+                RacePlayerResult.role_source != "inferred",
+            ),
+        )
+        .values(role="runner", role_source="inferred")
+    )
+    return (bagger_result.rowcount or 0) + (runner_result.rowcount or 0)
+
+
+def repair_inferred_roles(db_path: Path) -> int:
+    init_database(db_path)
+    SessionLocal = get_session_factory(db_path)
+    with SessionLocal.begin() as session:
+        updated_rows = backfill_inferred_roles(session)
+    print(f"Database: {db_path.resolve()}")
+    print(f"Repaired inferred roles: {updated_rows}")
+    return updated_rows
 
 
 def normalize_match_objects(data: Any) -> tuple[str, list[dict[str, Any]]]:
@@ -663,11 +718,8 @@ def import_match(
                         )
                         recorded_missing_races.add(race_number)
                     score = None
-                manual_role = race_roles[idx] if idx < len(race_roles) else None
-                if manual_role in {"runner", "bagger"}:
-                    role, role_source = manual_role, "manual"
-                else:
-                    role, role_source = infer_role(score, position)
+                explicit_role = race_roles[idx] if idx < len(race_roles) else None
+                role, role_source = resolve_role(explicit_role, position)
                 session.add(
                     RacePlayerResult(
                         race_id=race.race_id,
@@ -1054,11 +1106,19 @@ def main():
     parser = argparse.ArgumentParser(description="Import archived match JSON files into the analytics SQLite database.")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH, help="SQLite database path.")
     parser.add_argument("--json-root", type=Path, default=JSON_ROOT, help="Root JSON archive directory.")
-    parser.add_argument("--rebuild", action="store_true", help="Delete and rebuild the SQLite database first.")
+    operation = parser.add_mutually_exclusive_group()
+    operation.add_argument("--rebuild", action="store_true", help="Delete and rebuild the SQLite database first.")
+    operation.add_argument(
+        "--repair-inferred-roles",
+        action="store_true",
+        help="Repair all existing non-manual roles from their recorded placements.",
+    )
     args = parser.parse_args()
 
     args.db.parent.mkdir(parents=True, exist_ok=True)
-    if args.rebuild:
+    if args.repair_inferred_roles:
+        repair_inferred_roles(args.db)
+    elif args.rebuild:
         rebuild_database(args.db, args.json_root)
     else:
         import_json_tree(args.db, args.json_root)

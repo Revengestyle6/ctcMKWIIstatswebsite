@@ -46,7 +46,7 @@ export default function PlayerDashboard() {
   const division = searchParams.get("division") ?? "";
   const teamId = searchParams.get("team_id") ?? "";
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
-  const minRaces = Math.min(500, Math.max(1, Number(searchParams.get("min_races")) || 12));
+  const minRaces = Math.min(500, Math.max(1, Number(searchParams.get("min_races")) || 2));
   const requestedTab = searchParams.get("tab") ?? "overview";
   const activeTab = ["overview", "performance", "tracks"].includes(requestedTab) ? requestedTab : "overview";
   const overviewQueryKey = JSON.stringify([

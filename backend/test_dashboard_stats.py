@@ -19,6 +19,7 @@ from dashboard_stats import (
     get_team_tracks,
 )
 from database import Base
+from import_json_to_db import backfill_inferred_roles
 from models import (
     Division,
     Match,
@@ -404,6 +405,91 @@ class DashboardRoleContractTests(unittest.TestCase):
             [row["player_score"] for row in bagger["recent_matches"]],
             [None, 7, None],
         )
+
+    def test_role_backfill_repairs_analytics_and_is_idempotent(self):
+        target = self._selected_result(2, 1)
+        target.role = "runner"
+        target.role_source = "inferred"
+
+        wrong_bagger = (
+            self.session.query(RacePlayerResult)
+            .filter(
+                RacePlayerResult.race_id == target.race_id,
+                RacePlayerResult.player_id != self.player_id,
+                RacePlayerResult.role == "runner",
+                RacePlayerResult.position <= 8,
+            )
+            .first()
+        )
+        wrong_bagger.role = "bagger"
+        wrong_bagger.role_source = "inferred"
+
+        nonmatching_runner = self._selected_result(1, 1)
+        nonmatching_runner.role_source = "inferred"
+
+        unknown_runner = self._selected_result(1, 3)
+        unknown_bagger = self._selected_result(2, 3)
+
+        manual_zero = (
+            self.session.query(RacePlayerResult)
+            .filter(
+                RacePlayerResult.race_id == target.race_id,
+                RacePlayerResult.player_id != self.player_id,
+                RacePlayerResult.score == 0,
+                RacePlayerResult.position == 10,
+            )
+            .one()
+        )
+        manual_zero.role = "runner"
+        manual_zero.role_source = "manual"
+        self.session.flush()
+
+        before_runner = get_player_overview(
+            self.player_id, role="runner", session=self.session
+        )
+        before_bagger = get_player_overview(
+            self.player_id, role="bagger", session=self.session
+        )
+        self.assertEqual(before_runner["metrics"]["races"], 7)
+        self.assertEqual(before_bagger["metrics"]["races"], 4)
+
+        self.assertEqual(backfill_inferred_roles(self.session), 4)
+        self.assertEqual(backfill_inferred_roles(self.session), 0)
+        self.session.refresh(target)
+        self.session.refresh(wrong_bagger)
+        self.session.refresh(nonmatching_runner)
+        self.session.refresh(unknown_runner)
+        self.session.refresh(unknown_bagger)
+        self.session.refresh(manual_zero)
+
+        self.assertEqual((target.role, target.role_source), ("bagger", "inferred"))
+        self.assertEqual(
+            (wrong_bagger.role, wrong_bagger.role_source),
+            ("runner", "inferred"),
+        )
+        self.assertEqual(
+            (nonmatching_runner.role, nonmatching_runner.role_source),
+            ("runner", "inferred"),
+        )
+        self.assertEqual(
+            (unknown_runner.role, unknown_runner.role_source),
+            ("runner", "inferred"),
+        )
+        self.assertEqual(
+            (unknown_bagger.role, unknown_bagger.role_source),
+            ("bagger", "inferred"),
+        )
+        self.assertEqual((manual_zero.role, manual_zero.role_source), ("runner", "manual"))
+
+        after_runner = get_player_overview(
+            self.player_id, role="runner", session=self.session
+        )
+        after_bagger = get_player_overview(
+            self.player_id, role="bagger", session=self.session
+        )
+        self.assertEqual(after_runner["metrics"]["races"], 6)
+        self.assertEqual(after_bagger["metrics"]["races"], 5)
+        self.assertEqual(after_bagger["metrics"]["zero_points"], 1)
 
     def test_performance_contract_distributions_and_coverage_are_role_specific(self):
         runner = get_player_performance(self.player_id, role=" RUNNER ", session=self.session)

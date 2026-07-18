@@ -14,11 +14,11 @@ zero-point races.
 
 ## Approved Behavior
 
-For automatically inferred roles with both a valid score and placement:
+For automatically inferred roles with a valid placement:
 
 - placements 1 through 8 are runners;
 - placements 9 and 10 are baggers;
-- missing or invalid score or placement data remains unknown; and
+- missing or invalid placement data remains unknown; and
 - an explicit `race_roles` value remains authoritative and is never
   overwritten by automatic inference or repair.
 
@@ -30,11 +30,10 @@ to contribute to `zero_points` and `zero_point_rate`.
 
 ### Import-time inference
 
-Update the importer's role inference helper to classify by placement rather
-than treating a score of one as the only bagger signal. The helper will retain
-its existing requirement that both score and placement be present, validate
-the expected race result ranges, and return unknown for incomplete or invalid
-inputs.
+Update the importer's role inference helper to classify solely by placement
+rather than treating a score of one as the bagger signal. A valid placement is
+enough to infer a role even when the recorded score is missing or inconsistent;
+results without a valid placement remain unknown.
 
 The manual-role branch in `import_match` remains unchanged, so source data
 that explicitly identifies a runner or bagger still wins over inference.
@@ -42,18 +41,15 @@ that explicitly identifies a runner or bagger still wins over inference.
 ### Existing-data repair
 
 Add an explicit, idempotent importer maintenance command for the current
-SQLite database. The repair updates a row from runner to bagger only when all
-of the following are true:
+SQLite database. For every non-manual row with a valid placement, the repair:
 
-- `role = 'runner'`;
-- `role_source = 'inferred'`;
-- `score = 0`; and
-- `position = 10`.
+- sets positions 1 through 8 to inferred runner; and
+- sets positions 9 and 10 to inferred bagger.
 
-The command does not modify manual roles, unknown rows, one-point bagger rows,
-or any other result. It runs in one transaction, prints the number of updated
-rows, and rolls back on failure. Re-running it updates zero rows after the
-first successful repair.
+The command does not modify manual roles or placement-less results. It also
+promotes placement-bearing unknown rows to their inferred role. It runs in one
+transaction, prints the number of changed rows, and rolls back on failure.
+Re-running it updates zero rows after the first successful repair.
 
 The repair will be exposed as a dedicated CLI option on
 `backend/import_json_to_db.py` rather than run implicitly during every normal
@@ -71,8 +67,8 @@ therefore fixes every current role-aware consumer consistently.
 
 - The maintenance command initializes/checks the existing schema using the
   project's normal database setup before running.
-- The update predicate is deliberately narrow and includes `role_source` so
-  manually assigned runner rows cannot be changed.
+- The update predicates always exclude `role_source = manual`, so explicitly
+  assigned roles cannot be changed even when they disagree with placement.
 - The command reports its target database and affected-row count.
 - Database errors fail the command without committing a partial repair.
 - The repair option is mutually exclusive with import/rebuild actions to keep
@@ -85,13 +81,14 @@ Importer unit tests will cover:
 - ninth place with one point infers bagger;
 - tenth place with zero points infers bagger;
 - placements 1 through 8 infer runner;
-- missing and invalid score/placement combinations remain unknown; and
+- missing and invalid placements remain unknown; and
 - manual roles continue to override inferred roles during import.
 
 Backfill tests will use a temporary SQLite database and verify that:
 
-- only inferred runner rows with score zero and position ten are repaired;
-- manual runner rows and nonmatching inferred rows are untouched;
+- every incorrect non-manual placement-bearing role is repaired in either
+  direction;
+- placement-bearing unknown rows become inferred and manual rows are untouched;
 - the reported update count is correct; and
 - a second run makes no changes.
 

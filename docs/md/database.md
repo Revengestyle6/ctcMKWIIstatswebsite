@@ -103,7 +103,9 @@ The importer:
 - stores full raw match JSON on the `matches` row
 - keeps team/player/track aliases and raw names
 - expands race scores and positions into `race_player_results`
-- infers `bagger` when race score is `1`
+- preserves an explicit per-race `runner` or `bagger` role when present
+- otherwise infers `bagger` for 9th/10th and `runner` for 1st-8th
+- keeps results without a valid placement `unknown`
 - marks non-two-team matches as `needs_review`
 
 ## Team Tag Cleaning
