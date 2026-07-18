@@ -272,6 +272,52 @@ export interface TeamTracks {
   tracks: TeamTrackRow[];
 }
 
+export interface LegacyPlayerTracksResponse {
+  player: string;
+  role: PlayerRoleMode;
+  results: PlayerTrackRow[];
+}
+
+export interface LegacyPlayerAverageResponse {
+  role: PlayerRoleMode;
+  player_id: number;
+  player_name: string;
+  team_name: string | null;
+  metrics: PlayerRoleMetrics;
+}
+
+export type LegacyTeamRosterPlayer = TeamRosterPlayer & {
+  role: PlayerRoleMode;
+};
+
+export interface LegacyTrackPlayerRow {
+  player_id: number;
+  name: string | null;
+  role: PlayerRoleMode;
+  races: number;
+  scored_races: number;
+  points_per_race: number | null;
+  twelve_race_pace: number | null;
+  bag_point_rate: number | null;
+  zero_point_rate: number | null;
+  average_placement: number | null;
+  total_points: number;
+  excluded_score_rows: number;
+  role_coverage?: RoleCoverage;
+}
+
+export interface LegacyTeamTrackRow {
+  track: string;
+  average: number;
+  races: number;
+}
+
+export interface LegacyTrackTeamRow {
+  name: string;
+  average: number;
+  races: number;
+}
+
 export function fetchPlayerOverview(playerId: number, query: DashboardQuery): Promise<PlayerOverview> {
   return fetchJson(`/api/players/${playerId}/overview`, query);
 }

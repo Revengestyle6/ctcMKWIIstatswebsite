@@ -1,243 +1,219 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import React from "react";
 import { fetchJson } from "../api";
-import SeasonDivisionSelector from "./SeasonDivisionSelector";
+import {
+  type LegacyTrackPlayerRow,
+  type LegacyTrackTeamRow,
+  type PlayerRoleMode,
+} from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
+import { RoleModeToggle } from "./RoleModeToggle";
+import SeasonDivisionSelector from "./SeasonDivisionSelector";
+
+function value(valueToFormat: number | null, suffix = ""): string {
+  return valueToFormat === null ? "-" : `${valueToFormat}${suffix}`;
+}
 
 export default function TopTracks(): React.JSX.Element {
   const {
-    seasons,
-    divisions,
-    season,
-    division,
-    loadingScope,
-    scopeError,
-    setSeason,
-    setDivision,
+    seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision,
   } = useSeasonDivision();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
   const [tracks, setTracks] = useState<string[]>([]);
-  const [selectedTrack, setSelectedTrack] = useState<string>("");
-  const [topPlayers, setTopPlayers] = useState<string[]>([]);
-  const [topTeams, setTopTeams] = useState<string[]>([]);
-  const [minRaces, setMinRaces] = useState<number>(2);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
+  const [selectedTrack, setSelectedTrack] = useState("");
+  const [playerResult, setPlayerResult] = useState<{ key: string; rows: LegacyTrackPlayerRow[] } | null>(null);
+  const [teamResult, setTeamResult] = useState<{ key: string; rows: LegacyTrackTeamRow[] } | null>(null);
+  const [minRaces, setMinRaces] = useState(2);
+  const [playersLoading, setPlayersLoading] = useState(false);
+  const [teamsLoading, setTeamsLoading] = useState(false);
+  const [playersError, setPlayersError] = useState("");
+  const [teamsError, setTeamsError] = useState("");
+  const playerKey = JSON.stringify([selectedTrack, season, division, minRaces, role]);
+  const teamKey = JSON.stringify([selectedTrack, season, division, minRaces]);
+  const topPlayers = playerResult?.key === playerKey ? playerResult.rows : [];
+  const topTeams = teamResult?.key === teamKey ? teamResult.rows : [];
 
   useEffect(() => {
     let cancelled = false;
-
-    async function loadTracks() {
-      if (!season || !division) return;
-      setTracks([]);
-      setSelectedTrack("");
-      setTopPlayers([]);
-      setTopTeams([]);
-      setError("");
-      try {
-        const data = await fetchJson<string[]>("/api/tracks", { season, division });
+    if (!season || !division) return;
+    setTracks([]);
+    setSelectedTrack("");
+    setPlayerResult(null);
+    setTeamResult(null);
+    fetchJson<string[]>("/api/tracks", { season, division })
+      .then((data) => {
         if (cancelled) return;
         setTracks(data);
         setSelectedTrack(data[0] ?? "");
-      } catch (err) {
-        if (cancelled) return;
-        console.error("Error fetching tracks:", err);
-        setError("Failed to load tracks.");
-      }
-    }
-
-    loadTracks();
-    return () => {
-      cancelled = true;
-    };
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setPlayersError(requestError instanceof Error ? requestError.message : "Failed to load tracks.");
+      });
+    return () => { cancelled = true; };
   }, [season, division]);
 
   useEffect(() => {
     let cancelled = false;
+    if (!selectedTrack || !season || !division) return;
+    setPlayersLoading(true);
+    setPlayersError("");
+    fetchJson<LegacyTrackPlayerRow[]>("/api/top-tracks", {
+      track: selectedTrack, min_races: minRaces, season, division, role,
+    })
+      .then((rows) => { if (!cancelled) setPlayerResult({ key: playerKey, rows }); })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setPlayersError(requestError instanceof Error ? requestError.message : "Failed to load player rankings.");
+      })
+      .finally(() => { if (!cancelled) setPlayersLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedTrack, season, division, minRaces, role, playerKey]);
 
-    async function fetchTrackData() {
-      if (!selectedTrack || !season || !division) return;
-      setLoading(true);
-      setError("");
-      try {
-        const playersData = await fetchJson<string[]>("/api/top-tracks", {
-          track: selectedTrack,
-          min_races: minRaces,
-          season,
-          division,
-        });
-        const teamsData = await fetchJson<string[]>("/api/top-teams-on-track", {
-          track: selectedTrack,
-          min_races: minRaces,
-          season,
-          division,
-        });
-        if (cancelled) return;
-        setTopPlayers(playersData);
-        setTopTeams(teamsData);
-      } catch (err) {
-        if (cancelled) return;
-        console.error("Error fetching track data:", err);
-        setError("Failed to fetch data for this track.");
-        setTopPlayers([]);
-        setTopTeams([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedTrack || !season || !division) return;
+    setTeamsLoading(true);
+    setTeamsError("");
+    fetchJson<LegacyTrackTeamRow[]>("/api/top-teams-on-track", {
+      track: selectedTrack, min_races: minRaces, season, division,
+    })
+      .then((rows) => { if (!cancelled) setTeamResult({ key: teamKey, rows }); })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setTeamsError(requestError instanceof Error ? requestError.message : "Failed to load team rankings.");
+      })
+      .finally(() => { if (!cancelled) setTeamsLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedTrack, season, division, minRaces, teamKey]);
 
-    fetchTrackData();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedTrack, season, division, minRaces]);
-
-  const combinedError = scopeError || error;
+  function updateRole(nextRole: PlayerRoleMode) {
+    const next = new URLSearchParams(searchParams);
+    if (nextRole === "runner") next.delete("role");
+    else next.set("role", nextRole);
+    setSearchParams(next, { replace: true });
+  }
 
   return (
-    <div className="relative min-h-screen text-white font-sans p-6">
-      <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
-        <div className="flex justify-between items-center max-w-7xl mx-auto px-2">
-          <Link to="/" className="text-blue-400 hover:text-blue-300 font-semibold">
-            &lt; Back
-          </Link>
-          <h1 className="text-3xl font-bold text-center flex-1">Best Track Averages</h1>
-          <div className="w-32"></div>
-          <img
-            src="/images/CTC_LOGO/ctclogo.webp"
-            alt="Logo"
-            className="w-12 h-12 rounded-lg"
-            loading="lazy"
-          />
+    <div className="relative min-h-screen p-6 font-sans text-white">
+      <div className="fixed inset-x-0 top-0 z-50 bg-black/40 p-4 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-2">
+          <Link to="/" className="font-semibold text-blue-400 hover:text-blue-300">&lt; Back</Link>
+          <h1 className="flex-1 text-center text-3xl font-bold">Best Track Averages</h1>
+          <div className="w-32" />
+          <img src="/images/CTC_LOGO/ctclogo.webp" alt="Logo" className="h-12 w-12 rounded-lg" loading="lazy" />
         </div>
       </div>
 
-      <div className="pt-24 max-w-4xl mx-auto">
-        <div className="mb-8 space-y-4 bg-black/30 p-6 rounded-lg border border-white/20">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="mx-auto max-w-7xl pt-24">
+        <div className="mb-8 rounded-lg border border-white/20 bg-black/30 p-6">
+          <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-2 lg:grid-cols-5">
             <SeasonDivisionSelector
-              season={season}
-              division={division}
-              seasons={seasons}
-              divisions={divisions}
-              disabled={loadingScope}
-              onSeasonChange={setSeason}
-              onDivisionChange={setDivision}
+              season={season} division={division} seasons={seasons} divisions={divisions}
+              disabled={loadingScope} onSeasonChange={setSeason} onDivisionChange={setDivision}
               className="md:col-span-2"
             />
-
             <div>
-              <label className="block text-sm font-semibold mb-2">Track</label>
-              <select
-                value={selectedTrack}
-                onChange={(event) => setSelectedTrack(event.target.value)}
+              <label className="mb-2 block text-sm font-semibold">Track</label>
+              <select value={selectedTrack} onChange={(event) => setSelectedTrack(event.target.value)}
                 disabled={!division || tracks.length === 0}
-                className="w-full p-2 bg-white text-black border border-gray-600 rounded hover:border-gray-400 focus:outline-none focus:border-blue-400"
-              >
+                className="w-full rounded border border-gray-600 bg-white p-2 text-black hover:border-gray-400 focus:border-blue-400 focus:outline-none">
                 <option value="">Select a track</option>
-                {tracks.map((track) => (
-                  <option key={track} value={track}>
-                    {track}
-                  </option>
-                ))}
+                {tracks.map((track) => <option key={track} value={track}>{track}</option>)}
               </select>
             </div>
-
             <div>
-              <label className="block text-sm font-semibold mb-2">Min Races</label>
-              <input
-                type="number"
-                min="1"
-                value={minRaces}
-                onChange={(event) => setMinRaces(Math.max(1, parseInt(event.target.value) || 1))}
-                className="w-full p-2 bg-white text-black border border-gray-600 rounded hover:border-gray-400 focus:outline-none focus:border-blue-400"
-              />
+              <label className="mb-2 block text-sm font-semibold">Min races</label>
+              <input type="number" min="1" value={minRaces}
+                onChange={(event) => setMinRaces(Math.max(1, Number(event.target.value) || 1))}
+                className="w-full rounded border border-gray-600 bg-white p-2 text-black hover:border-gray-400 focus:border-blue-400 focus:outline-none" />
             </div>
+            <RoleModeToggle value={role} onChange={updateRole} disabled={playersLoading} />
           </div>
         </div>
 
-        {combinedError && (
-          <div className="mb-6 p-4 bg-red-900/50 border border-red-600 rounded text-red-200">
-            {combinedError}
+        {(scopeError || playersError || teamsError) && (
+          <div className="mb-6 rounded border border-red-600 bg-red-900/50 p-4 text-red-200">
+            {scopeError || playersError || teamsError}
           </div>
         )}
 
-        {loading && <div className="text-center py-8 text-gray-300">Loading data...</div>}
-
-        {!loading && (topPlayers.length > 0 || topTeams.length > 0) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {topPlayers.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-bold mb-4 text-center">Top Players</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full bg-black/70 backdrop-blur-sm shadow-md rounded-xl overflow-hidden">
-                    <thead className="bg-black/90">
-                      <tr>
-                        <th className="text-left px-4 py-2 font-semibold text-white">#</th>
-                        <th className="text-left px-4 py-2 font-semibold text-white">Player Stats</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topPlayers
-                        .filter((player) => {
-                          const scoreMatch = player.match(/(\d+(?:\.\d+)?)\s*pts/);
-                          const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
-                          return score >= 2;
-                        })
-                        .map((player, index) => (
-                          <tr
-                            key={index}
-                            className={index % 2 === 0 ? "bg-black/50" : "bg-black/70"}
-                          >
-                            <td className="px-4 py-2 font-semibold text-blue-400">
-                              {index + 1}
-                            </td>
-                            <td className="px-4 py-2 text-white">{player}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <section>
+            <h2 className="mb-4 text-center text-2xl font-bold">Top {role === "runner" ? "Runners" : "Baggers"}</h2>
+            {playersLoading ? <p className="py-8 text-center text-gray-300">Loading player rankings...</p> : (
+              topPlayers.length > 0 ? <PlayerRankingTable rows={topPlayers} role={role} season={season} division={division} />
+                : selectedTrack && !playersError ? <p className="py-8 text-center text-gray-300">No qualifying {role} results.</p> : null
             )}
-
-            {topTeams.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-bold mb-4 text-center">Top Teams</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full bg-black/70 backdrop-blur-sm shadow-md rounded-xl overflow-hidden">
-                    <thead className="bg-black/90">
-                      <tr>
-                        <th className="text-left px-4 py-2 font-semibold text-white">#</th>
-                        <th className="text-left px-4 py-2 font-semibold text-white">Team Stats</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topTeams
-                        .filter((team) => {
-                          const scoreMatch = team.match(/(\d+(?:\.\d+)?)\s*pts/);
-                          const score = scoreMatch ? parseFloat(scoreMatch[1]) : 0;
-                          return score >= 2;
-                        })
-                        .map((team, index) => (
-                          <tr
-                            key={index}
-                            className={index % 2 === 0 ? "bg-black/50" : "bg-black/70"}
-                          >
-                            <td className="px-4 py-2 font-semibold text-blue-400">
-                              {index + 1}
-                            </td>
-                            <td className="px-4 py-2 text-white">{team}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+          </section>
+          <section>
+            <h2 className="mb-4 text-center text-2xl font-bold">Top Teams</h2>
+            {teamsLoading ? <p className="py-8 text-center text-gray-300">Loading team rankings...</p> : (
+              topTeams.length > 0 ? <TeamRankingTable rows={topTeams} />
+                : selectedTrack && !teamsError ? <p className="py-8 text-center text-gray-300">No qualifying team results.</p> : null
             )}
-          </div>
-        )}
+          </section>
+        </div>
       </div>
     </div>
   );
+}
+
+function PlayerRankingTable({ rows, role, season, division }: {
+  rows: LegacyTrackPlayerRow[]; role: PlayerRoleMode; season: string; division: string;
+}) {
+  return <div className="overflow-x-auto rounded-lg border border-white/10">
+    <table className="min-w-full bg-black/70 text-sm backdrop-blur-sm">
+      <thead className="bg-black/90"><tr>
+        <th scope="col" className="px-4 py-3 text-left">Player</th>
+        <th scope="col" className="px-4 py-3 text-right">Races</th>
+        <th scope="col" className="px-4 py-3 text-right">Scored</th>
+        {role === "runner" ? <>
+          <th scope="col" className="px-4 py-3 text-right">12-race pace</th>
+          <th scope="col" className="px-4 py-3 text-right">PPR</th>
+          <th scope="col" className="px-4 py-3 text-right">Avg place</th>
+        </> : <>
+          <th scope="col" className="px-4 py-3 text-right">Bag PPR</th>
+          <th scope="col" className="px-4 py-3 text-right">Bag-point rate</th>
+          <th scope="col" className="px-4 py-3 text-right">Zero-point rate</th>
+          <th scope="col" className="px-4 py-3 text-right">Avg place</th>
+        </>}
+      </tr></thead>
+      <tbody>{rows.map((row, index) => <tr key={row.player_id} className={index % 2 === 0 ? "bg-black/50" : "bg-black/70"}>
+        <td className="whitespace-nowrap px-4 py-3 font-semibold">
+          <Link to={`/players/${row.player_id}?season=${season}&division=${division}&role=${role}`} className="text-blue-200 hover:text-blue-100">
+            {row.name ?? `Player ${row.player_id}`}
+          </Link>
+        </td>
+        <td className="px-4 py-3 text-right">{row.races}</td>
+        <td className="px-4 py-3 text-right">{row.scored_races}</td>
+        {role === "runner" ? <>
+          <td className="px-4 py-3 text-right font-semibold">{value(row.twelve_race_pace)}</td>
+          <td className="px-4 py-3 text-right">{value(row.points_per_race)}</td>
+          <td className="px-4 py-3 text-right">{value(row.average_placement)}</td>
+        </> : <>
+          <td className="px-4 py-3 text-right font-semibold">{value(row.points_per_race)}</td>
+          <td className="px-4 py-3 text-right">{value(row.bag_point_rate, "%")}</td>
+          <td className="px-4 py-3 text-right">{value(row.zero_point_rate, "%")}</td>
+          <td className="px-4 py-3 text-right">{value(row.average_placement)}</td>
+        </>}
+      </tr>)}</tbody>
+    </table>
+  </div>;
+}
+
+function TeamRankingTable({ rows }: { rows: LegacyTrackTeamRow[] }) {
+  return <div className="overflow-x-auto rounded-lg border border-white/10">
+    <table className="min-w-full bg-black/70 text-sm backdrop-blur-sm">
+      <thead className="bg-black/90"><tr>
+        <th scope="col" className="px-4 py-3 text-left">Team</th>
+        <th scope="col" className="px-4 py-3 text-right">Average</th>
+        <th scope="col" className="px-4 py-3 text-right">Races</th>
+      </tr></thead>
+      <tbody>{rows.map((row, index) => <tr key={row.name} className={index % 2 === 0 ? "bg-black/50" : "bg-black/70"}>
+        <td className="px-4 py-3 font-semibold text-blue-200">{row.name}</td>
+        <td className="px-4 py-3 text-right">{value(row.average)}</td>
+        <td className="px-4 py-3 text-right">{row.races}</td>
+      </tr>)}</tbody>
+    </table>
+  </div>;
 }
