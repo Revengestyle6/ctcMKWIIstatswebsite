@@ -5,10 +5,12 @@ import {
   fetchTeamOverview,
   fetchTeamRoster,
   fetchTeamTracks,
+  type PlayerRoleMode,
   type TeamOverview,
   type TeamRoster,
   type TeamTracks,
 } from "../dashboardApi";
+import { RoleModeToggle } from "../components/RoleModeToggle";
 import {
   DashboardScopeControls,
   DashboardShell,
@@ -39,16 +41,27 @@ export default function TeamDashboard() {
   const [opponentOptions, setOpponentOptions] = useState<ScopeEntityOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [roster, setRoster] = useState<TeamRoster | null>(null);
-  const [tracks, setTracks] = useState<TeamTracks | null>(null);
-  const [tabLoading, setTabLoading] = useState(false);
-  const [tabError, setTabError] = useState("");
+  const [rosterResult, setRosterResult] = useState<{ key: string; value: TeamRoster } | null>(null);
+  const [tracksResult, setTracksResult] = useState<{ key: string; value: TeamTracks } | null>(null);
+  const [tabLoadingKey, setTabLoadingKey] = useState("");
+  const [tabError, setTabError] = useState<{ key: string; message: string } | null>(null);
   const season = searchParams.get("season") ?? "";
   const division = searchParams.get("division") ?? "";
   const opponentId = searchParams.get("opponent_team_id") ?? "";
+  const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
   const minRaces = Math.min(500, Math.max(1, Number(searchParams.get("min_races")) || 12));
   const requestedTab = searchParams.get("tab") ?? "overview";
   const activeTab = ["overview", "roster", "tracks"].includes(requestedTab) ? requestedTab : "overview";
+  const rosterQueryKey = JSON.stringify([numericTeamId, season, division, opponentId, minRaces, role]);
+  const tracksQueryKey = JSON.stringify([numericTeamId, season, division, opponentId, minRaces]);
+  const activeTabQueryKey = activeTab === "roster" ? rosterQueryKey : tracksQueryKey;
+  const roster = rosterResult?.key === rosterQueryKey ? rosterResult.value : null;
+  const tracks = tracksResult?.key === tracksQueryKey ? tracksResult.value : null;
+  const visibleTabError = tabError?.key === activeTabQueryKey ? tabError.message : "";
+  const tabLoading = activeTab !== "overview" && (
+    tabLoadingKey === activeTabQueryKey
+    || (!(activeTab === "roster" ? roster : tracks) && !visibleTabError)
+  );
 
   useEffect(() => {
     fetchTeamScopes()
@@ -97,8 +110,9 @@ export default function TeamDashboard() {
   useEffect(() => {
     if (activeTab === "overview" || !Number.isInteger(numericTeamId) || numericTeamId < 1) return;
     let cancelled = false;
-    setTabLoading(true);
-    setTabError("");
+    const requestKey = activeTab === "roster" ? rosterQueryKey : tracksQueryKey;
+    setTabLoadingKey(requestKey);
+    setTabError(null);
     const query = {
       season: season || undefined,
       division: division || undefined,
@@ -106,24 +120,29 @@ export default function TeamDashboard() {
       min_races: minRaces,
     };
     const request = activeTab === "roster"
-      ? fetchTeamRoster(numericTeamId, query)
+      ? fetchTeamRoster(numericTeamId, { ...query, role })
       : fetchTeamTracks(numericTeamId, query);
     request
       .then((response) => {
         if (cancelled) return;
-        if (activeTab === "roster") setRoster(response as TeamRoster);
-        else setTracks(response as TeamTracks);
+        if (activeTab === "roster") setRosterResult({ key: requestKey, value: response as TeamRoster });
+        else setTracksResult({ key: requestKey, value: response as TeamTracks });
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setTabError(requestError instanceof Error ? requestError.message : "Failed to load dashboard tab.");
+        if (!cancelled) {
+          setTabError({
+            key: requestKey,
+            message: requestError instanceof Error ? requestError.message : "Failed to load dashboard tab.",
+          });
+        }
       })
       .finally(() => {
-        if (!cancelled) setTabLoading(false);
+        if (!cancelled) setTabLoadingKey("");
       });
     return () => {
       cancelled = true;
     };
-  }, [activeTab, numericTeamId, season, division, opponentId, minRaces]);
+  }, [activeTab, numericTeamId, season, division, opponentId, minRaces, role, rosterQueryKey, tracksQueryKey]);
 
   function updateQuery(name: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -208,6 +227,13 @@ export default function TeamDashboard() {
         tabs={[{ id: "overview", label: "Overview" }, { id: "roster", label: "Roster" }, { id: "tracks", label: "Tracks" }]}
         active={activeTab}
         onChange={(tab) => updateQuery("tab", tab === "overview" ? "" : tab)}
+        extraControl={activeTab === "roster" ? (
+          <RoleModeToggle
+            value={role}
+            disabled={tabLoading}
+            onChange={(value) => updateQuery("role", value === "runner" ? "" : value)}
+          />
+        ) : undefined}
       />
 
       {activeTab === "overview" && <>
@@ -263,9 +289,11 @@ export default function TeamDashboard() {
         )}
       </section>
       </>}
-      {activeTab !== "overview" && <TabState loading={tabLoading} error={tabError} />}
-      {activeTab === "roster" && !tabLoading && !tabError && roster && <TeamRosterView data={roster} />}
-      {activeTab === "tracks" && !tabLoading && !tabError && tracks && <TeamTracksView data={tracks} />}
+      {activeTab !== "overview" && <TabState loading={tabLoading} error={visibleTabError} />}
+      {activeTab === "roster" && !tabLoading && !visibleTabError && roster && (
+        <TeamRosterView key={rosterQueryKey} data={roster} teamId={numericTeamId} />
+      )}
+      {activeTab === "tracks" && !tabLoading && !visibleTabError && tracks && <TeamTracksView data={tracks} />}
     </DashboardShell>
   );
 }

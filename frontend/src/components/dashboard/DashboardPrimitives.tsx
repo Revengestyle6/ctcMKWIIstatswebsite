@@ -91,23 +91,36 @@ export function MetricGrid({ items }: { items: MetricItem[] }) {
   );
 }
 
-export function DashboardTabs({ tabs, active, onChange }: { tabs: DashboardTab[]; active: string; onChange: (tab: string) => void }) {
+export function DashboardTabs({
+  tabs,
+  active,
+  onChange,
+  extraControl,
+}: {
+  tabs: DashboardTab[];
+  active: string;
+  onChange: (tab: string) => void;
+  extraControl?: ReactNode;
+}) {
   return (
-    <nav className="mb-5 overflow-x-auto border-b border-white/10" aria-label="Dashboard tabs">
-      <div className="flex min-w-max">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`border-b-2 px-4 py-3 font-semibold transition ${active === tab.id ? "border-blue-400 text-white" : "border-transparent text-gray-400 hover:text-white"}`}
-            aria-current={active === tab.id ? "page" : undefined}
-            onClick={() => onChange(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-    </nav>
+    <div className="mb-5 flex flex-col gap-3 border-b border-white/10 sm:flex-row sm:items-end sm:justify-between">
+      <nav className="overflow-x-auto" aria-label="Dashboard tabs">
+        <div className="flex min-w-max">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={`border-b-2 px-4 py-3 font-semibold transition ${active === tab.id ? "border-blue-400 text-white" : "border-transparent text-gray-400 hover:text-white"}`}
+              aria-current={active === tab.id ? "page" : undefined}
+              onClick={() => onChange(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </nav>
+      {extraControl ? <div className="shrink-0 pb-2">{extraControl}</div> : null}
+    </div>
   );
 }
 

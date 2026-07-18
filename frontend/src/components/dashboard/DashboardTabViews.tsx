@@ -121,20 +121,115 @@ export function PlayerTracksView({ data }: { data: PlayerTracks }) {
   );
 }
 
-export function TeamRosterView({ data }: { data: TeamRoster }) {
+export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: number }) {
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("pace");
+  const [sort, setSort] = useState(data.role === "runner" ? "pace" : "points");
+  const isRunner = data.role === "runner";
+  const roleLabel = isRunner ? "Runner" : "Bagger";
+  const selectedRoleRows = isRunner
+    ? data.role_coverage.explicit_runner + data.role_coverage.inferred_runner
+    : data.role_coverage.explicit_bagger + data.role_coverage.inferred_bagger;
+
   const rows = useMemo(() => {
-    const filtered = data.players.filter((player) => player.name.toLowerCase().includes(query.toLowerCase()) || player.friend_codes.some((code) => code.includes(query)));
-    return [...filtered].sort((a, b) => sort === "races" ? b.races - a.races : sort === "name" ? a.name.localeCompare(b.name) : b.twelve_race_pace - a.twelve_race_pace);
-  }, [data.players, query, sort]);
+    const normalizedQuery = query.toLowerCase();
+    const filtered = data.players.filter((player) => (
+      player.metrics.role === data.role
+      && (player.name.toLowerCase().includes(normalizedQuery) || player.friend_codes.some((code) => code.includes(query)))
+    ));
+    const nullableDescending = (a: number | null, b: number | null) => {
+      if (a === null && b === null) return 0;
+      if (a === null) return 1;
+      if (b === null) return -1;
+      return b - a;
+    };
+    return [...filtered].sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "matches") return b.matches - a.matches || a.name.localeCompare(b.name);
+      if (sort === "races") return b.metrics.races - a.metrics.races || a.name.localeCompare(b.name);
+      if (sort === "bag-point-rate") {
+        const aRate = a.metrics.role === "bagger" ? a.metrics.bag_point_rate : null;
+        const bRate = b.metrics.role === "bagger" ? b.metrics.bag_point_rate : null;
+        return nullableDescending(aRate, bRate) || a.name.localeCompare(b.name);
+      }
+      if (sort === "points") {
+        return nullableDescending(a.metrics.points_per_race, b.metrics.points_per_race) || a.name.localeCompare(b.name);
+      }
+      const aPace = a.metrics.role === "runner" ? a.metrics.twelve_race_pace : null;
+      const bPace = b.metrics.role === "runner" ? b.metrics.twelve_race_pace : null;
+      return nullableDescending(aPace, bPace) || a.name.localeCompare(b.name);
+    });
+  }, [data.players, data.role, query, sort]);
+
+  const playerLink = (playerId: number) => {
+    const params = new URLSearchParams({ role: data.role, team_id: String(teamId), min_races: String(data.minimum_races) });
+    if (data.scope.season) params.set("season", data.scope.season);
+    if (data.scope.division) params.set("division", data.scope.division);
+    return `/players/${playerId}?${params.toString()}`;
+  };
+
   return (
     <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
+      <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-gray-300">
+        <p>
+          <span className="font-semibold text-white">{roleLabel} role coverage:</span>{" "}
+          {selectedRoleRows} selected-role assignments across {data.role_coverage.total} roster race assignments.
+        </p>
+        <p className="mt-1 text-xs text-gray-400">
+          {data.role_coverage.explicit_runner} explicit runner, {data.role_coverage.inferred_runner} inferred runner,{" "}
+          {data.role_coverage.explicit_bagger} explicit bagger, {data.role_coverage.inferred_bagger} inferred bagger,{" "}
+          {data.role_coverage.unknown} unknown
+          {data.role_coverage.known_rate === null ? "" : ` (${data.role_coverage.known_rate}% known)`}.
+        </p>
+      </div>
       <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row">
         <input className="min-h-10 flex-1 rounded-md border border-white/20 bg-zinc-950 px-3 text-white" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search roster" />
-        <select className="min-h-10 rounded-md border border-white/20 bg-zinc-950 px-3 text-white" value={sort} onChange={(event) => setSort(event.target.value)}><option value="pace">12-race pace</option><option value="races">Most races</option><option value="name">Player name</option></select>
+        <select className="min-h-10 rounded-md border border-white/20 bg-zinc-950 px-3 text-white" value={sort} onChange={(event) => setSort(event.target.value)}>
+          {isRunner ? <option value="pace">12-race pace</option> : <option value="points">Points per race</option>}
+          {!isRunner && <option value="bag-point-rate">Bag-point rate</option>}
+          <option value="races">Most role races</option>
+          <option value="matches">Most matches</option>
+          <option value="name">Player name</option>
+        </select>
       </div>
-      {rows.length === 0 ? <p className="p-8 text-center text-gray-400">No players meet the current minimum of {data.minimum_races} races.</p> : <div className="overflow-x-auto"><table className="min-w-[920px] w-full text-sm"><thead className="bg-black/70 text-left text-gray-400"><tr><th className="px-4 py-3">Player</th><th className="px-4 py-3">Friend codes</th><th className="px-4 py-3 text-right">Matches</th><th className="px-4 py-3 text-right">Races</th><th className="px-4 py-3 text-right">12-race pace</th><th className="px-4 py-3 text-right">Runner avg</th><th className="px-4 py-3">Last seen</th></tr></thead><tbody>{rows.map((row) => <tr key={row.player_id} className="border-t border-white/10"><td className="px-4 py-3"><Link to={`/players/${row.player_id}`} className="font-semibold text-blue-300 hover:text-blue-200">{row.name}</Link></td><td className="px-4 py-3 text-gray-400">{row.friend_codes.join(", ")}</td><td className="px-4 py-3 text-right">{row.matches}</td><td className="px-4 py-3 text-right">{row.races}</td><td className="px-4 py-3 text-right font-bold">{row.twelve_race_pace}</td><td className="px-4 py-3 text-right">{value(row.runner_average)} <span className="text-xs text-gray-500">({row.runner_races})</span></td><td className="px-4 py-3">{row.last_appearance.season.toUpperCase()} {row.last_appearance.division.toUpperCase()} {row.last_appearance.week ? `W${row.last_appearance.week}` : ""}</td></tr>)}</tbody></table></div>}
+      {rows.length === 0 ? (
+        <p className="p-8 text-center text-gray-400">No {roleLabel.toLowerCase()} players meet the current minimum of {data.minimum_races} scored races.</p>
+      ) : isRunner ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-[940px] w-full text-sm">
+            <thead className="bg-black/70 text-left text-gray-400"><tr><th className="px-4 py-3">Player</th><th className="px-4 py-3">Friend codes</th><th className="px-4 py-3 text-right">Matches</th><th className="px-4 py-3 text-right">Runner races/scored</th><th className="px-4 py-3 text-right">12-race pace</th><th className="px-4 py-3 text-right">Points/race</th><th className="px-4 py-3">Last seen</th></tr></thead>
+            <tbody>{rows.map((row) => row.metrics.role === "runner" && (
+              <tr key={row.player_id} className="border-t border-white/10">
+                <td className="px-4 py-3"><Link to={playerLink(row.player_id)} className="font-semibold text-blue-300 hover:text-blue-200">{row.name}</Link></td>
+                <td className="px-4 py-3 text-gray-400">{row.friend_codes.join(", ") || "-"}</td>
+                <td className="px-4 py-3 text-right">{row.matches}</td>
+                <td className="px-4 py-3 text-right">{row.metrics.races} / {row.metrics.scored_races}</td>
+                <td className="px-4 py-3 text-right font-bold">{value(row.metrics.twelve_race_pace)}</td>
+                <td className="px-4 py-3 text-right">{value(row.metrics.points_per_race)}</td>
+                <td className="px-4 py-3">{row.last_appearance.season.toUpperCase()} {row.last_appearance.division.toUpperCase()} {row.last_appearance.week ? `W${row.last_appearance.week}` : ""}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-[1160px] w-full text-sm">
+            <thead className="bg-black/70 text-left text-gray-400"><tr><th className="px-4 py-3">Player</th><th className="px-4 py-3">Friend codes</th><th className="px-4 py-3 text-right">Matches</th><th className="px-4 py-3 text-right">Bagger races/scored</th><th className="px-4 py-3 text-right">Points/race</th><th className="px-4 py-3 text-right">Bag-point rate</th><th className="px-4 py-3 text-right">Zero-point rate</th><th className="px-4 py-3 text-right">Opponent point diff</th><th className="px-4 py-3">Last seen</th></tr></thead>
+            <tbody>{rows.map((row) => row.metrics.role === "bagger" && (
+              <tr key={row.player_id} className="border-t border-white/10">
+                <td className="px-4 py-3"><Link to={playerLink(row.player_id)} className="font-semibold text-blue-300 hover:text-blue-200">{row.name}</Link></td>
+                <td className="px-4 py-3 text-gray-400">{row.friend_codes.join(", ") || "-"}</td>
+                <td className="px-4 py-3 text-right">{row.matches}</td>
+                <td className="px-4 py-3 text-right">{row.metrics.races} / {row.metrics.scored_races}</td>
+                <td className="px-4 py-3 text-right font-bold">{value(row.metrics.points_per_race)}</td>
+                <td className="px-4 py-3 text-right">{value(row.metrics.bag_point_rate, "%")}</td>
+                <td className="px-4 py-3 text-right">{value(row.metrics.zero_point_rate, "%")}</td>
+                <td className="px-4 py-3 text-right">{row.metrics.opponent_point_differential > 0 ? `+${row.metrics.opponent_point_differential}` : row.metrics.opponent_point_differential}</td>
+                <td className="px-4 py-3">{row.last_appearance.season.toUpperCase()} {row.last_appearance.division.toUpperCase()} {row.last_appearance.week ? `W${row.last_appearance.week}` : ""}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
