@@ -9,6 +9,7 @@ import stats_db
 class RoleApiTests(unittest.TestCase):
     def setUp(self):
         app_module.app.config.update(TESTING=True)
+        app_module.cache.clear()
         self.client = app_module.app.test_client()
 
     def test_dashboard_role_defaults_to_runner_and_forwards(self):
@@ -52,6 +53,21 @@ class RoleApiTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(mocked.call_args.kwargs["role"], "bagger")
 
+    def test_legacy_role_defaults_to_runner_and_forwards(self):
+        cases = (
+            ("/api/player?name=DefaultRole", app_module.stats, "findtopplayertracks"),
+            ("/api/player-avg?name=DefaultRole", app_module.stats, "findplayeravg"),
+            ("/api/top-team-players?team=default-role", app_module.stats, "findtopteamplayers"),
+            ("/api/top-tracks?track=Default+Role", app_module.stats, "findtoptracks"),
+        )
+        for path, owner, function_name in cases:
+            with self.subTest(path=path), patch.object(
+                owner, function_name, return_value=[]
+            ) as mocked:
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(mocked.call_args.kwargs["role"], "runner")
+
     def test_invalid_role_returns_400_before_player_backend_is_called(self):
         cases = (
             ("/api/player?name=Example&role=all", app_module.stats, "findtopplayertracks"),
@@ -81,6 +97,22 @@ class RoleApiTests(unittest.TestCase):
             ) as mocked:
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 200)
+                self.assertNotIn("role", mocked.call_args.kwargs)
+
+    def test_legacy_team_and_match_routes_remain_role_independent(self):
+        cases = (
+            ("/api/top-team-tracks?team=no-role&role=bagger", app_module.stats, "findtopteamtracks"),
+            ("/api/top-teams-on-track?track=No+Role&role=bagger", app_module.stats, "findtopteamsontrack"),
+            ("/api/matches?team=no-role&role=bagger", app_module.stats, "list_matches"),
+            ("/api/matches/987654?role=bagger", app_module.stats, "get_match_detail"),
+        )
+        for path, owner, function_name in cases:
+            with self.subTest(path=path), patch.object(
+                owner, function_name, return_value={"unchanged": True}
+            ) as mocked:
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.get_json(), {"unchanged": True})
                 self.assertNotIn("role", mocked.call_args.kwargs)
 
     def test_legacy_routes_return_structured_json(self):
@@ -159,7 +191,7 @@ class LegacyRoleDelegationTests(unittest.TestCase):
             stats_db.dashboards, "get_team_roster", return_value={"players": [{"player_id": 7}]}
         ) as roster:
             players = stats_db.top_team_players("a", role="bagger")
-        self.assertEqual(players, [{"player_id": 7}])
+        self.assertEqual(players, [{"player_id": 7, "role": "bagger"}])
         self.assertEqual(roster.call_args.args, (4,))
         self.assertEqual(roster.call_args.kwargs["role"], "bagger")
 

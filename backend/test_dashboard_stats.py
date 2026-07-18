@@ -696,6 +696,83 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.assertEqual(rankings[0]["rank"], 1)
         self.assertEqual(rankings[1]["rank"], 2)
 
+    def test_track_rankings_use_exact_metric_then_races_name_and_id(self):
+        self._add_close_ranking_scope()
+        rankings = get_track_player_rankings(
+            self.track.track_id,
+            season="s3",
+            division="d1",
+            role="bagger",
+            min_races=200,
+            session=self.session,
+        )
+        self.assertEqual(
+            [row["player_id"] for row in rankings["players"]],
+            self.tied_runner_ids,
+        )
+
+        s3_results = (
+            self.session.query(RacePlayerResult)
+            .join(Race, Race.race_id == RacePlayerResult.race_id)
+            .join(Match, Match.match_id == Race.match_id)
+            .join(Season, Season.season_id == Match.season_id)
+            .filter(Season.season_code == "s3")
+        )
+        for result in s3_results.all():
+            result.score = 0
+        self.session.flush()
+        rankings = get_track_player_rankings(
+            self.track.track_id,
+            season="s3",
+            division="d1",
+            role="bagger",
+            min_races=200,
+            session=self.session,
+        )
+        self.assertEqual(
+            [row["player_id"] for row in rankings["players"]],
+            list(reversed(self.tied_runner_ids)),
+        )
+
+        extra = (
+            s3_results
+            .filter(RacePlayerResult.player_id == self.tied_runner_ids[1])
+            .order_by(RacePlayerResult.race_player_result_id.desc())
+            .first()
+        )
+        self.session.delete(extra)
+        self.players[1].canonical_lounge_name = "Zulu Tie"
+        self.players[2].canonical_lounge_name = "Alpha Tie"
+        self.session.flush()
+        rankings = get_track_player_rankings(
+            self.track.track_id,
+            season="s3",
+            division="d1",
+            role="bagger",
+            min_races=200,
+            session=self.session,
+        )
+        self.assertEqual(
+            [row["player_id"] for row in rankings["players"]],
+            list(reversed(self.tied_runner_ids)),
+        )
+
+        self.players[1].canonical_lounge_name = "Same Tie"
+        self.players[2].canonical_lounge_name = "Same Tie"
+        self.session.flush()
+        rankings = get_track_player_rankings(
+            self.track.track_id,
+            season="s3",
+            division="d1",
+            role="bagger",
+            min_races=200,
+            session=self.session,
+        )
+        self.assertEqual(
+            [row["player_id"] for row in rankings["players"]],
+            self.tied_runner_ids,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

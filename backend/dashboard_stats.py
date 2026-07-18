@@ -768,8 +768,9 @@ def get_track_player_rankings(
 
     players.sort(key=lambda row: (
         -exact_sort_values[row["player_id"]],
-        row["player_id"],
+        -row["metrics"]["races"],
         row["name"].lower(),
+        row["player_id"],
     ))
     return {
         "role": role,

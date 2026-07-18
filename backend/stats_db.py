@@ -984,7 +984,7 @@ def top_team_players(team, min_races=12, division=None, season=None, role="runne
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
         team_row = _resolve_team(session, team, scope)
-        return dashboards.get_team_roster(
+        players = dashboards.get_team_roster(
             team_row.team_id,
             season=scope.season_code,
             division=scope.division_code,
@@ -992,6 +992,7 @@ def top_team_players(team, min_races=12, division=None, season=None, role="runne
             role=role,
             session=session,
         )["players"]
+        return [{**player, "role": role} for player in players]
 
 
 def top_track_players(track, min_races=2, division=None, season=None, role="runner"):
