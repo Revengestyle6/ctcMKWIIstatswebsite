@@ -94,6 +94,38 @@ class RoleApiTests(unittest.TestCase):
         self.assertEqual(track_response.status_code, 400)
         noisy_print.assert_not_called()
 
+    def test_legacy_player_rankings_reject_invalid_minimum_races_before_backend_call(self):
+        cases = (
+            ("/api/top-team-players?team=a", app_module.stats, "findtopteamplayers"),
+            ("/api/top-tracks?track=Test+Track", app_module.stats, "findtoptracks"),
+        )
+        invalid_values = ("0", "-1", "501", "not-a-number")
+        for path, owner, function_name in cases:
+            for invalid_value in invalid_values:
+                with self.subTest(path=path, min_races=invalid_value), patch.object(
+                    owner, function_name
+                ) as mocked:
+                    response = self.client.get(f"{path}&min_races={invalid_value}")
+                    self.assertEqual(response.status_code, 400)
+                    mocked.assert_not_called()
+
+    def test_legacy_player_rankings_accept_minimum_race_bounds(self):
+        cases = (
+            ("/api/top-team-players?team=a", app_module.stats, "findtopteamplayers"),
+            ("/api/top-tracks?track=Test+Track", app_module.stats, "findtoptracks"),
+        )
+        for path, owner, function_name in cases:
+            for minimum in (1, 500):
+                with self.subTest(path=path, min_races=minimum), patch.object(
+                    owner, function_name, return_value=[]
+                ) as mocked:
+                    response = self.client.get(f"{path}&min_races={minimum}")
+                    self.assertEqual(response.status_code, 200)
+                    if function_name == "findtopteamplayers":
+                        self.assertEqual(mocked.call_args.args[1], minimum)
+                    else:
+                        self.assertEqual(mocked.call_args.kwargs["min_races"], minimum)
+
     def test_team_overview_and_tracks_never_receive_role(self):
         cases = (
             ("/api/teams/4/overview?role=bagger", "get_team_overview"),

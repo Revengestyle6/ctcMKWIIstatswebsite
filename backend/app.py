@@ -351,10 +351,10 @@ def api_top_team_players():
     season = _season_arg()
     try:
         role = _role_arg()
-    except ValueError as error:
+        min_races = _minimum_races_arg()
+    except (DashboardError, ValueError) as error:
         return _error_response(error)
     try:
-        min_races = int(request.args.get("min_races", 12))
         players = stats.findtopteamplayers(
             team, min_races, division=division, season=season, role=role
         )
@@ -661,10 +661,10 @@ def api_top_tracks():
         return jsonify({"error": "Track name is required"}), 400
     try:
         role = _role_arg()
-    except ValueError as error:
+        min_races = _minimum_races_arg()
+    except (DashboardError, ValueError) as error:
         return _error_response(error)
     try:
-        min_races = int(request.args.get("min_races", 2))
         results = stats.findtoptracks(
             track,
             min_races=min_races,

@@ -37,7 +37,7 @@ export function PlayerPerformanceView({ data }: { data: PlayerPerformance }) {
       { label: "Bag-point rate", value: value(metrics.bag_point_rate, "%"), detail: `${metrics.bag_points} races with points` },
       { label: "Zero-point rate", value: value(metrics.zero_point_rate, "%"), detail: `${metrics.zero_points} zero-point races` },
       { label: "Average place", value: value(metrics.average_placement), detail: "Recorded bagger placements" },
-      { label: "Opponent point diff", value: metrics.opponent_point_differential > 0 ? `+${metrics.opponent_point_differential}` : String(metrics.opponent_point_differential), detail: `${metrics.counterpart_races} comparable races` },
+      { label: "Opponent point diff", value: metrics.counterpart_races === 0 ? "-" : metrics.opponent_point_differential > 0 ? `+${metrics.opponent_point_differential}` : String(metrics.opponent_point_differential), detail: `${metrics.counterpart_races} comparable races` },
     ];
   return (
     <div className="space-y-6">
