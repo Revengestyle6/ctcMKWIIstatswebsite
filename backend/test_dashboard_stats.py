@@ -33,7 +33,7 @@ from models import (
 )
 
 
-class DashboardOverviewTests(unittest.TestCase):
+class DashboardRoleContractTests(unittest.TestCase):
     def setUp(self):
         engine = create_engine("sqlite:///:memory:", future=True)
         Base.metadata.create_all(engine)
@@ -44,144 +44,66 @@ class DashboardOverviewTests(unittest.TestCase):
         self.session.close()
 
     def _seed(self):
-        s1 = Season(league_code="ctc", season_code="s1", season_number=1, name="Season 1")
-        s2 = Season(league_code="ctc", season_code="s2", season_number=2, name="Season 2")
-        self.session.add_all([s1, s2])
+        seasons = [
+            Season(league_code="ctc", season_code="s1", season_number=1, name="Season 1"),
+            Season(league_code="ctc", season_code="s2", season_number=2, name="Season 2"),
+        ]
+        self.session.add_all(seasons)
         self.session.flush()
-        d1_s1 = Division(season_id=s1.season_id, division_code="d1", division_name="Division 1")
-        d1_s2 = Division(season_id=s2.season_id, division_code="d1", division_name="Division 1")
+        divisions = {
+            season.season_code: Division(
+                season_id=season.season_id,
+                division_code="d1",
+                division_name="Division 1",
+            )
+            for season in seasons
+        }
         alpha = Team(canonical_name="Alpha", canonical_tag="a")
         beta = Team(canonical_name="Beta", canonical_tag="b")
-        self.session.add_all([d1_s1, d1_s2, alpha, beta])
+        self.session.add_all([*divisions.values(), alpha, beta])
         self.session.flush()
+        self.alpha_id = alpha.team_id
 
         entries = {}
-        for season, division in [(s1, d1_s1), (s2, d1_s2)]:
-            for team in [alpha, beta]:
+        for season in seasons:
+            for team in (alpha, beta):
                 entry = TeamSeasonEntry(
                     team_id=team.team_id,
                     season_id=season.season_id,
-                    division_id=division.division_id,
+                    division_id=divisions[season.season_code].division_id,
                     display_name=team.canonical_name,
                     clan_tag=team.canonical_tag,
-                    hex_color="#3366FF" if team == alpha else "#DD3344",
+                    hex_color="#3366FF" if team is alpha else "#DD3344",
                 )
                 self.session.add(entry)
                 self.session.flush()
                 entries[(season.season_code, team.canonical_tag)] = entry
 
-        player = Player(canonical_lounge_name="Runner", primary_friend_code="1111-2222-3333")
-        self.session.add(player)
+        players = [Player(canonical_lounge_name=f"Player {index}") for index in range(10)]
+        players[0].canonical_lounge_name = "Role Switcher"
+        players[0].primary_friend_code = "1111-2222-3333"
+        self.session.add_all(players)
         self.session.flush()
-        self.player_id = player.player_id
-        self.alpha_id = alpha.team_id
+        self.player_id = players[0].player_id
+        self.tied_runner_ids = [players[1].player_id, players[2].player_id]
         self.session.add_all([
-            PlayerFriendCode(player_id=player.player_id, friend_code="1111-2222-3333"),
-            PlayerFriendCode(player_id=player.player_id, friend_code="4444-5555-6666"),
-            PlayerAlias(player_id=player.player_id, alias_type="mii_name", alias_value="a Runner"),
+            PlayerFriendCode(player_id=self.player_id, friend_code="1111-2222-3333"),
+            PlayerFriendCode(player_id=self.player_id, friend_code="4444-5555-6666"),
+            PlayerAlias(player_id=self.player_id, alias_type="mii_name", alias_value="a Switch"),
         ])
 
         track = Track(canonical_name="Test Track")
         self.session.add(track)
         self.session.flush()
-
+        # Selected-player rows exercise explicit, inferred, invalid, and unknown cases.
         match_specs = [
-            (s1, d1_s1, 1, [15, 12, 10, 8], 40, 5, 35, 30),
-            (s2, d1_s2, 2, [32, 6, 5, 4], 22, 0, 22, 40),
+            ("s1", 1, [15, 12, 10, 8], ["runner", "runner", "unknown", "runner"], [1, 3, 5, 4], 40, 5, 35, 30),
+            ("s2", 2, [0, 1, 4, 2], ["bagger", "bagger", "unknown", "bagger"], [10, 9, 9, 10], 22, 0, 22, 40),
+            ("s2", 3, [6, 32, 99, 9], ["runner", "runner", "bagger", "unknown"], [3, 5, 10, None], 45, 2, 43, 40),
         ]
-        for season, division, week, scores, raw_score, penalty, final_score, opponent_score in match_specs:
-            source = SourceFile(
-                season_id=season.season_id,
-                division_id=division.division_id,
-                source_path=f"JSON/ctc/{season.season_code}/d1/w{week}.json",
-                source_filename=f"w{week}.json",
-                file_sha256=f"hash-{week}",
-                json_shape="single",
-            )
-            self.session.add(source)
-            self.session.flush()
-            match = Match(
-                season_id=season.season_id,
-                division_id=division.division_id,
-                source_file_id=source.source_file_id,
-                week_number=week,
-                match_label=f"Week {week}",
-                format="5v5",
-                races_played=4,
-            )
-            self.session.add(match)
-            self.session.flush()
-            alpha_match_team = MatchTeam(
-                match_id=match.match_id,
-                team_season_entry_id=entries[(season.season_code, "a")].team_season_entry_id,
-                raw_team_key="a",
-                raw_total_score=raw_score,
-                team_penalty_points=penalty,
-                final_score=final_score,
-            )
-            beta_match_team = MatchTeam(
-                match_id=match.match_id,
-                team_season_entry_id=entries[(season.season_code, "b")].team_season_entry_id,
-                raw_team_key="b",
-                raw_total_score=opponent_score,
-                final_score=opponent_score,
-            )
-            self.session.add_all([alpha_match_team, beta_match_team])
-            self.session.flush()
-            player_entry = PlayerSeasonEntry(
-                player_id=player.player_id,
-                team_season_entry_id=entries[(season.season_code, "a")].team_season_entry_id,
-                season_id=season.season_id,
-                division_id=division.division_id,
-                primary_lounge_name="Runner",
-                primary_mii_name="a Runner",
-                flag="us",
-                first_seen_match_id=match.match_id,
-                last_seen_match_id=match.match_id,
-            )
-            self.session.add(player_entry)
-            self.session.flush()
-            match_player = MatchPlayer(
-                match_team_id=alpha_match_team.match_team_id,
-                player_id=player.player_id,
-                player_season_entry_id=player_entry.player_season_entry_id,
-                friend_code_raw="1111-2222-3333",
-                lounge_name_raw="Runner",
-                mii_name_raw="a Runner",
-                raw_total_score=sum(scores),
-            )
-            self.session.add(match_player)
-            self.session.flush()
-            for race_number, score in enumerate(scores, start=1):
-                race = Race(
-                    match_id=match.match_id,
-                    race_number=race_number,
-                    track_id=track.track_id,
-                    track_name_raw="Test Track",
-                )
-                self.session.add(race)
-                self.session.flush()
-                role = "unknown" if season.season_code == "s2" and race_number in {1, 4} else "runner"
-                position = 5 if season.season_code == "s2" and race_number == 1 else (10 if race_number == 4 else 16 - score)
-                self.session.add(RacePlayerResult(
-                    race_id=race.race_id,
-                    match_player_id=match_player.match_player_id,
-                    player_id=player.player_id,
-                    match_team_id=alpha_match_team.match_team_id,
-                    team_season_entry_id=entries[(season.season_code, "a")].team_season_entry_id,
-                    score=score,
-                    position=position,
-                    role=role,
-                    role_source="unknown" if role == "unknown" else "manual",
-                ))
-                if season.season_code == "s1" and race_number == 1:
-                    self.session.add(RaceTeamResult(
-                        race_id=race.race_id,
-                        match_team_id=alpha_match_team.match_team_id,
-                        score=3,
-                        result_type="missing_player",
-                        reason="short_roster",
-                    ))
+        for spec in match_specs:
+            self._add_match(spec, seasons, divisions, entries, players, track)
+
         self.session.add_all([
             TeamLogo(
                 team_id=alpha.team_id,
@@ -191,7 +113,7 @@ class DashboardOverviewTests(unittest.TestCase):
             ),
             TeamLogo(
                 team_id=alpha.team_id,
-                season_id=s2.season_id,
+                season_id=seasons[1].season_id,
                 asset_path="images/team-logos/1/season-2.webp",
                 alt_text="Alpha Season 2 logo",
                 priority=10,
@@ -199,55 +121,273 @@ class DashboardOverviewTests(unittest.TestCase):
         ])
         self.session.commit()
 
-    def test_player_career_and_season_scopes(self):
-        career = get_player_overview(self.player_id, session=self.session)
-        self.assertEqual(career["metrics"]["races"], 8)
-        self.assertEqual(career["metrics"]["matches"], 2)
-        self.assertEqual(career["metrics"]["seasons"], 2)
-        self.assertEqual(career["metrics"]["total_points"], 60)
-        self.assertEqual(career["metrics"]["excluded_score_rows"], 1)
-        self.assertEqual(len(career["identity"]["friend_codes"]), 2)
-        self.assertEqual(career["recent_matches"][0]["season"], "s2")
+    def _add_match(self, spec, seasons, divisions, entries, players, track):
+        code, week, scores, roles, positions, raw, penalty, final, opponent = spec
+        season = next(item for item in seasons if item.season_code == code)
+        source = SourceFile(
+            season_id=season.season_id,
+            division_id=divisions[code].division_id,
+            source_path=f"JSON/ctc/{code}/d1/w{week}.json",
+            source_filename=f"w{week}.json",
+            file_sha256=f"hash-{code}-{week}",
+            json_shape="single",
+        )
+        self.session.add(source)
+        self.session.flush()
+        match = Match(
+            season_id=season.season_id,
+            division_id=divisions[code].division_id,
+            source_file_id=source.source_file_id,
+            week_number=week,
+            match_label=f"Week {week}",
+            format="5v5",
+            races_played=4,
+        )
+        self.session.add(match)
+        self.session.flush()
+        match_teams = []
+        for tag, team_score, team_penalty, team_final in (
+            ("a", raw, penalty, final),
+            ("b", opponent, 0, opponent),
+        ):
+            match_team = MatchTeam(
+                match_id=match.match_id,
+                team_season_entry_id=entries[(code, tag)].team_season_entry_id,
+                raw_team_key=tag,
+                raw_total_score=team_score,
+                team_penalty_points=team_penalty,
+                final_score=team_final,
+            )
+            self.session.add(match_team)
+            self.session.flush()
+            match_teams.append(match_team)
 
-        season = get_player_overview(self.player_id, season="1", session=self.session)
-        self.assertEqual(season["metrics"]["races"], 4)
-        self.assertEqual(season["metrics"]["total_points"], 45)
-        self.assertEqual(season["record"]["wins"], 1)
+        match_players = []
+        for index, player in enumerate(players):
+            team_index = 0 if index < 5 else 1
+            entry = entries[(code, "a" if team_index == 0 else "b")]
+            player_entry = self.session.query(PlayerSeasonEntry).filter_by(
+                player_id=player.player_id,
+                team_season_entry_id=entry.team_season_entry_id,
+            ).one_or_none()
+            if player_entry is None:
+                player_entry = PlayerSeasonEntry(
+                    player_id=player.player_id,
+                    team_season_entry_id=entry.team_season_entry_id,
+                    season_id=season.season_id,
+                    division_id=divisions[code].division_id,
+                    primary_lounge_name=player.canonical_lounge_name,
+                    flag="us",
+                    first_seen_match_id=match.match_id,
+                    last_seen_match_id=match.match_id,
+                )
+                self.session.add(player_entry)
+                self.session.flush()
+            else:
+                player_entry.last_seen_match_id = match.match_id
+            match_player = MatchPlayer(
+                match_team_id=match_teams[team_index].match_team_id,
+                player_id=player.player_id,
+                player_season_entry_id=player_entry.player_season_entry_id,
+                friend_code_raw=f"{player.player_id:04d}-0000-0000",
+                lounge_name_raw=player.canonical_lounge_name,
+            )
+            self.session.add(match_player)
+            self.session.flush()
+            match_players.append(match_player)
 
-    def test_team_records_use_final_scores_and_logo_scope(self):
+        opponent_bagger_scores = [0, 2, 1, 0]
+        for race_index in range(4):
+            race = Race(
+                match_id=match.match_id,
+                race_number=race_index + 1,
+                track_id=track.track_id,
+                track_name_raw=track.canonical_name,
+            )
+            self.session.add(race)
+            self.session.flush()
+            selected_role = roles[race_index]
+            selected_is_bagger = selected_role == "bagger" or (
+                selected_role == "unknown" and positions[race_index] in {9, 10}
+            )
+            for index, player in enumerate(players):
+                team_index = 0 if index < 5 else 1
+                role = "runner"
+                score = 5
+                position = (index % 5) + 1 + team_index * 5
+                role_source = "manual"
+                if index == 0:
+                    role = selected_role
+                    score = scores[race_index]
+                    position = positions[race_index]
+                    role_source = "unknown" if role == "unknown" else "manual"
+                elif index == 4 and not selected_is_bagger:
+                    role, score, position = "bagger", 1, 9
+                elif index == 9:
+                    role = "bagger"
+                    score = opponent_bagger_scores[race_index]
+                    position = 10
+                self.session.add(RacePlayerResult(
+                    race_id=race.race_id,
+                    match_player_id=match_players[index].match_player_id,
+                    player_id=player.player_id,
+                    match_team_id=match_teams[team_index].match_team_id,
+                    team_season_entry_id=entries[(code, "a" if team_index == 0 else "b")].team_season_entry_id,
+                    score=score,
+                    position=position,
+                    role=role,
+                    role_source=role_source,
+                ))
+            if code == "s1" and race_index == 0:
+                self.session.add(RaceTeamResult(
+                    race_id=race.race_id,
+                    match_team_id=match_teams[0].match_team_id,
+                    score=3,
+                    result_type="missing_player",
+                    reason="short_roster",
+                ))
+
+    def test_overview_strictly_separates_roles_and_keeps_match_context(self):
+        runner = get_player_overview(self.player_id, role="runner", session=self.session)
+        bagger = get_player_overview(self.player_id, role="bagger", session=self.session)
+
+        self.assertEqual(runner["role"], "runner")
+        self.assertEqual(runner["metrics"]["total_points"], 51)
+        self.assertEqual(runner["metrics"]["races"], 6)
+        self.assertEqual(runner["metrics"]["excluded_score_rows"], 1)
+        self.assertEqual(runner["metrics"]["best_match_score"], 45)
+        self.assertEqual(runner["metrics"]["best_gp_score"], 45)
+        self.assertIn("twelve_race_pace", runner["metrics"])
+        self.assertNotIn("bag_points", runner["metrics"])
+
+        self.assertEqual(bagger["metrics"]["total_points"], 7)
+        self.assertEqual(bagger["metrics"]["bag_points"], 3)
+        self.assertEqual(bagger["metrics"]["excluded_score_rows"], 1)
+        self.assertIn("opponent_point_differential", bagger["metrics"])
+        self.assertNotIn("twelve_race_pace", bagger["metrics"])
+        self.assertEqual(
+            [row["match_id"] for row in runner["recent_matches"]],
+            [row["match_id"] for row in bagger["recent_matches"]],
+        )
+        self.assertEqual([row["player_score"] for row in runner["recent_matches"]], [6, 0, 45])
+        self.assertEqual([row["role_races"] for row in runner["recent_matches"]], [2, 0, 4])
+        self.assertEqual([row["player_score"] for row in bagger["recent_matches"]], [0, 7, 0])
+
+    def test_performance_contract_distributions_and_coverage_are_role_specific(self):
+        runner = get_player_performance(self.player_id, role=" RUNNER ", session=self.session)
+        bagger = get_player_performance(self.player_id, role="bagger", session=self.session)
+
+        self.assertEqual(set(runner), {
+            "player_id", "role", "scope", "metrics", "role_coverage",
+            "score_distribution", "placement_distribution", "by_race_number", "by_gp_number",
+        })
+        self.assertEqual(runner["metrics"]["total_points"], 51)
+        self.assertEqual(bagger["metrics"]["total_points"], 7)
+        self.assertEqual(bagger["metrics"]["bag_points"], 3)
+        self.assertIn({"score": 4, "races": 1}, bagger["score_distribution"])
+        self.assertNotIn({"score": 15, "races": 1}, bagger["score_distribution"])
+        self.assertEqual(runner["role_coverage"], bagger["role_coverage"])
+        self.assertEqual(runner["role_coverage"]["inferred_runner"], 1)
+        self.assertEqual(runner["role_coverage"]["inferred_bagger"], 1)
+        self.assertEqual(runner["role_coverage"]["unknown"], 1)
+        self.assertEqual(runner["metrics"]["excluded_score_rows"], 1)
+        self.assertEqual(bagger["metrics"]["excluded_score_rows"], 1)
+
+    def test_tracks_filter_and_threshold_use_only_selected_role(self):
+        runner = get_player_tracks(self.player_id, role="runner", min_races=5, session=self.session)
+        bagger = get_player_tracks(self.player_id, role="bagger", min_races=4, session=self.session)
+        self.assertEqual(runner["tracks"][0]["total_points"], 51)
+        self.assertEqual(runner["tracks"][0]["races"], 6)
+        self.assertEqual(runner["tracks"][0]["scored_races"], 5)
+        self.assertIn("podium_rate", runner["tracks"][0])
+        self.assertNotIn("bag_point_rate", runner["tracks"][0])
+        self.assertEqual(bagger["tracks"][0]["total_points"], 7)
+        self.assertEqual(bagger["tracks"][0]["bag_points"], 3)
+        self.assertEqual(get_player_tracks(
+            self.player_id, role="bagger", min_races=5, session=self.session
+        )["tracks"], [])
+
+    def test_rankings_classify_each_player_and_use_selected_role_eligibility(self):
+        runner = get_player_overview(
+            self.player_id, season="s2", division="d1", role="runner", min_races=2, session=self.session
+        )
+        bagger = get_player_overview(
+            self.player_id, season="s2", division="d1", role="bagger", min_races=4, session=self.session
+        )
+        self.assertFalse(runner["ranking"]["eligible"])
+        self.assertTrue(bagger["ranking"]["eligible"])
+        self.assertEqual(bagger["ranking"]["metric"], "bagger_points_per_race")
+        self.assertEqual(bagger["ranking"]["value"], 1.75)
+
+        tied = [
+            get_player_overview(
+                player_id,
+                season="s2",
+                division="d1",
+                role="runner",
+                min_races=8,
+                session=self.session,
+            )["ranking"]
+            for player_id in self.tied_runner_ids
+        ]
+        self.assertTrue(all(item["eligible"] for item in tied))
+        self.assertEqual(tied[0]["value"], tied[1]["value"])
+        self.assertEqual(tied[0]["rank"], tied[1]["rank"])
+
+    def test_team_roster_uses_selected_role_for_metrics_threshold_and_sorting(self):
+        runner = get_team_roster(
+            self.alpha_id, season="s2", division="d1", role="runner", min_races=1, session=self.session
+        )
+        bagger = get_team_roster(
+            self.alpha_id, season="s2", division="d1", role="bagger", min_races=4, session=self.session
+        )
+        selected_runner = next(row for row in runner["players"] if row["player_id"] == self.player_id)
+        self.assertEqual(selected_runner["metrics"]["total_points"], 6)
+        self.assertEqual(selected_runner["metrics"]["scored_races"], 1)
+        thresholded_runner = get_team_roster(
+            self.alpha_id,
+            season="s2",
+            division="d1",
+            role="runner",
+            min_races=2,
+            session=self.session,
+        )
+        self.assertNotIn(
+            self.player_id,
+            [row["player_id"] for row in thresholded_runner["players"]],
+        )
+        selected = next(row for row in bagger["players"] if row["player_id"] == self.player_id)
+        self.assertEqual(selected["matches"], 2)
+        self.assertEqual(selected["metrics"]["total_points"], 7)
+        self.assertEqual(selected["metrics"]["counterpart_races"], 4)
+        self.assertEqual(selected["first_appearance"]["week"], 2)
+        self.assertEqual(selected["last_appearance"]["week"], 3)
+        self.assertEqual(bagger["role"], "bagger")
+
+    def test_team_result_contracts_remain_role_independent(self):
         career = get_team_overview(self.alpha_id, session=self.session)
-        self.assertEqual(career["record"], {"wins": 1, "losses": 1, "ties": 0, "unknown": 0})
-        self.assertEqual(career["metrics"]["total_penalties"], 5)
+        self.assertEqual(career["record"], {"wins": 2, "losses": 1, "ties": 0, "unknown": 0})
+        self.assertEqual(career["metrics"]["total_penalties"], 7)
         self.assertEqual(career["identity"]["logo_url"], "/images/team-logos/1/default.webp")
-
         season = get_team_overview(self.alpha_id, season="s2", division="d1", session=self.session)
-        self.assertEqual(season["record"]["losses"], 1)
-        self.assertEqual(season["metrics"]["average_differential"], -18.0)
+        self.assertEqual(season["record"], {"wins": 1, "losses": 1, "ties": 0, "unknown": 0})
+        self.assertEqual(season["metrics"]["average_differential"], -7.5)
         self.assertEqual(season["identity"]["logo_url"], "/images/team-logos/1/season-2.webp")
 
-    def test_runner_inference_and_player_track_threshold(self):
-        performance = get_player_performance(self.player_id, session=self.session)
-        self.assertEqual(performance["runner_metrics"]["races"], 7)
-        self.assertEqual(performance["role_coverage"]["explicit_runner"], 6)
-        self.assertEqual(performance["role_coverage"]["inferred_runner"], 1)
-        self.assertEqual(performance["role_coverage"]["inferred_bagger"], 1)
-        self.assertEqual(performance["runner_metrics"]["excluded_score_rows"], 1)
-
-        tracks = get_player_tracks(self.player_id, min_races=8, session=self.session)
-        self.assertEqual(tracks["tracks"], [])
-        tracks = get_player_tracks(self.player_id, min_races=7, session=self.session)
-        self.assertEqual(tracks["tracks"][0]["races"], 7)
-
-    def test_team_roster_and_tracks_include_missing_player_points(self):
-        roster = get_team_roster(self.alpha_id, min_races=1, session=self.session)
-        self.assertEqual(len(roster["players"]), 1)
-        self.assertEqual(roster["players"][0]["player_id"], self.player_id)
-        self.assertEqual(roster["players"][0]["runner_races"], 7)
-
         tracks = get_team_tracks(self.alpha_id, min_races=1, session=self.session)
-        self.assertEqual(len(tracks["tracks"]), 1)
-        self.assertEqual(tracks["tracks"][0]["races"], 8)
-        self.assertEqual(tracks["tracks"][0]["average_score"], 7.88)
+        self.assertEqual(tracks["tracks"][0]["races"], 12)
+        self.assertEqual(tracks["tracks"][0]["average_score"], 23.5)
+
+    def test_invalid_role_is_rejected(self):
+        for function, args in (
+            (get_player_overview, (self.player_id,)),
+            (get_player_performance, (self.player_id,)),
+            (get_player_tracks, (self.player_id,)),
+            (get_team_roster, (self.alpha_id,)),
+        ):
+            with self.subTest(function=function.__name__):
+                with self.assertRaisesRegex(ValueError, "role must be runner or bagger"):
+                    function(*args, role="all", session=self.session)
 
 
 if __name__ == "__main__":

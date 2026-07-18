@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import desc, or_, select
 
 from database import get_session_factory
 from models import (
@@ -20,6 +20,15 @@ from models import (
     TeamLogo,
     TeamSeasonEntry,
     Track,
+)
+from player_role_analytics import (
+    bagger_counterpart_summary,
+    confirmed_5v5_race_ids,
+    normalize_role,
+    role_coverage,
+    summarize_role_rows,
+    valid_placement,
+    valid_race_score,
 )
 
 
@@ -105,10 +114,6 @@ def _scope_payload(scope):
 
 def _round(value, digits=2):
     return round(float(value), digits) if value is not None else None
-
-
-def _valid_race_score(score):
-    return score is not None and 0 <= int(score) <= 15
 
 
 def _result(own_score, opponent_score):
@@ -313,66 +318,6 @@ def _player_race_rows(session, player_id, scope, team_id=None):
     return session.execute(statement.order_by(Match.match_id, Race.race_number)).all()
 
 
-def _confirmed_5v5_race_ids(session, rows):
-    confirmed = {
-        row.race_id
-        for row in rows
-        if (row.format or "").strip().lower() == "5v5"
-    }
-    candidate_ids = {
-        row.race_id
-        for row in rows
-        if row.race_id not in confirmed and row.position is not None
-    }
-    if not candidate_ids:
-        return confirmed
-    inferred_rows = session.execute(
-        select(RacePlayerResult.race_id)
-        .where(
-            RacePlayerResult.race_id.in_(candidate_ids),
-            RacePlayerResult.position.is_not(None),
-        )
-        .group_by(RacePlayerResult.race_id)
-        .having(
-            func.count(func.distinct(RacePlayerResult.position)) == 10,
-            func.min(RacePlayerResult.position) == 1,
-            func.max(RacePlayerResult.position) == 10,
-            func.count(func.distinct(RacePlayerResult.match_team_id)) == 2,
-        )
-    ).scalars()
-    confirmed.update(inferred_rows)
-    return confirmed
-
-
-def _role_classification(row, confirmed_5v5_ids):
-    if row.role in {"runner", "bagger"}:
-        source = "inferred" if row.role_source == "inferred" else "explicit"
-        return row.role, source
-    if row.race_id in confirmed_5v5_ids and row.position is not None:
-        return ("runner" if int(row.position) <= 8 else "bagger"), "inferred"
-    return "unknown", "unknown"
-
-
-def _role_coverage(rows, confirmed_5v5_ids):
-    coverage = {
-        "explicit_runner": 0,
-        "inferred_runner": 0,
-        "explicit_bagger": 0,
-        "inferred_bagger": 0,
-        "unknown": 0,
-        "total": len(rows),
-    }
-    classified = []
-    for row in rows:
-        role, source = _role_classification(row, confirmed_5v5_ids)
-        key = "unknown" if role == "unknown" else f"{source}_{role}"
-        coverage[key] += 1
-        classified.append((row, role, source))
-    known = coverage["total"] - coverage["unknown"]
-    coverage["known_rate"] = _round(known / coverage["total"] * 100) if coverage["total"] else None
-    return coverage, classified
-
-
 def _match_team_rows(session, match_ids):
     if not match_ids:
         return []
@@ -404,30 +349,43 @@ def _final_score(row):
     return int(row.raw_total_score or 0) - int(row.team_penalty_points or 0)
 
 
-def _player_ranking(session, player_id, scope, min_races):
+def _player_ranking(session, player_id, scope, min_races, role):
     if scope.season_id is None or scope.division_id is None:
         return None
-    rows = session.execute(
+    rows = list(session.execute(
         select(
             RacePlayerResult.player_id,
-            func.sum(RacePlayerResult.score).label("points"),
-            func.count(RacePlayerResult.score).label("races"),
+            RacePlayerResult.race_id,
+            RacePlayerResult.match_team_id,
+            RacePlayerResult.score,
+            RacePlayerResult.position,
+            RacePlayerResult.role,
+            RacePlayerResult.role_source,
         )
         .join(Race, Race.race_id == RacePlayerResult.race_id)
         .join(Match, Match.match_id == Race.match_id)
         .where(
             Match.season_id == scope.season_id,
             Match.division_id == scope.division_id,
-            RacePlayerResult.score.between(0, 15),
+            or_(RacePlayerResult.score.is_not(None), RacePlayerResult.position.is_not(None)),
         )
-        .group_by(RacePlayerResult.player_id)
-        .having(func.count(RacePlayerResult.score) >= min_races)
-    ).all()
-    values = {
-        row.player_id: (float(row.points or 0) / int(row.races)) * 12
-        for row in rows
-        if row.races
-    }
+    ).all())
+    confirmed = confirmed_5v5_race_ids(session, rows)
+    _, classified = role_coverage(rows, confirmed)
+    by_player = defaultdict(list)
+    for classified_row in classified:
+        by_player[classified_row[0].player_id].append(classified_row)
+
+    values = {}
+    for current_player_id, player_rows in by_player.items():
+        metrics = summarize_role_rows(player_rows, role)
+        if metrics["scored_races"] < min_races:
+            continue
+        values[current_player_id] = (
+            metrics["twelve_race_pace"]
+            if role == "runner"
+            else metrics["points_per_race"]
+        )
     target = values.get(player_id)
     if target is None:
         return {"eligible": False, "minimum_races": min_races, "population": len(values)}
@@ -437,12 +395,21 @@ def _player_ranking(session, player_id, scope, min_races):
         "rank": rank,
         "population": len(values),
         "minimum_races": min_races,
-        "metric": "12_race_pace",
+        "metric": "12_race_pace" if role == "runner" else "bagger_points_per_race",
         "value": _round(target),
     }
 
 
-def get_player_overview(player_id, season=None, division=None, team_id=None, min_races=12, session=None):
+def get_player_overview(
+    player_id,
+    season=None,
+    division=None,
+    team_id=None,
+    min_races=12,
+    role="runner",
+    session=None,
+):
+    role = normalize_role(role)
     if session is None:
         with SessionLocal() as owned_session:
             return get_player_overview(
@@ -451,6 +418,7 @@ def get_player_overview(player_id, season=None, division=None, team_id=None, min
                 division=division,
                 team_id=team_id,
                 min_races=min_races,
+                role=role,
                 session=owned_session,
             )
 
@@ -462,11 +430,19 @@ def get_player_overview(player_id, season=None, division=None, team_id=None, min
         raise DashboardError("Unknown team filter.")
 
     rows = _player_race_rows(session, player_id, scope, team_id=team_id)
-    numeric_scores = [int(row.score) for row in rows if _valid_race_score(row.score)]
-    positions = [int(row.position) for row in rows if row.position is not None]
+    confirmed = confirmed_5v5_race_ids(session, rows)
+    coverage, classified = role_coverage(rows, confirmed)
+    selected = [item for item in classified if item[1] == role]
+    metrics = summarize_role_rows(classified, role)
+    if role == "bagger":
+        metrics.update(bagger_counterpart_summary(session, player_id, classified))
+
     match_groups = defaultdict(list)
     for row in rows:
         match_groups[row.match_id].append(row)
+    selected_by_match = defaultdict(list)
+    for row, _classified_role, _source in selected:
+        selected_by_match[row.match_id].append(row)
     match_ids = list(match_groups)
     teams_by_match = defaultdict(list)
     for row in _match_team_rows(session, match_ids):
@@ -476,7 +452,8 @@ def get_player_overview(player_id, season=None, division=None, team_id=None, min
     match_scores = []
     for match_id, match_rows in match_groups.items():
         first = match_rows[0]
-        player_score = sum(int(row.score) for row in match_rows if _valid_race_score(row.score))
+        role_rows = selected_by_match[match_id]
+        player_score = sum(row.score for row in role_rows if valid_race_score(row.score))
         own_team = next(
             (team for team in teams_by_match[match_id] if team.match_team_id == first.match_team_id),
             None,
@@ -509,9 +486,10 @@ def get_player_overview(player_id, season=None, division=None, team_id=None, min
             ],
             "result": match_result,
             "player_score": player_score,
-            "races": len({row.race_id for row in match_rows}),
+            "role_races": len({row.race_id for row in role_rows}),
         })
-        match_scores.append(player_score)
+        if role_rows:
+            match_scores.append(player_score)
 
     recent_matches.sort(
         key=lambda row: (row["season_number"] or 0, row["week"] or 0, row["match_id"]),
@@ -519,55 +497,53 @@ def get_player_overview(player_id, season=None, division=None, team_id=None, min
     )
 
     gp_scores = []
-    for match_rows in match_groups.values():
+    for match_rows in selected_by_match.values():
         gp_groups = defaultdict(list)
         for row in match_rows:
             gp_groups[(int(row.race_number) - 1) // 4].append(row)
         for gp_index, gp_rows in gp_groups.items():
             expected = set(range(gp_index * 4 + 1, gp_index * 4 + 5))
-            race_numbers = {int(row.race_number) for row in gp_rows if _valid_race_score(row.score)}
+            race_numbers = {int(row.race_number) for row in gp_rows if valid_race_score(row.score)}
             if race_numbers == expected:
-                gp_scores.append(sum(int(row.score) for row in gp_rows if _valid_race_score(row.score)))
+                gp_scores.append(sum(row.score for row in gp_rows if valid_race_score(row.score)))
 
     record = {"wins": 0, "losses": 0, "ties": 0, "unknown": 0}
     for row in recent_matches:
         record[_record_key(row["result"])] += 1
 
     identity = _player_identity(session, player)
+    metrics.update({
+        "matches": len(match_groups),
+        "seasons": len({row.season_id for row in rows}),
+        "teams": len({row.team_id for row in rows}),
+        "best_match_score": max(match_scores, default=None),
+        "best_gp_score": max(gp_scores, default=None),
+    })
     return {
         "identity": identity,
+        "role": role,
         "scope": {**_scope_payload(scope), "team_id": team_id},
-        "metrics": {
-            "races": len({row.race_id for row in rows}),
-            "matches": len(match_groups),
-            "seasons": len({row.season_id for row in rows}),
-            "teams": len({row.team_id for row in rows}),
-            "total_points": sum(numeric_scores),
-            "points_per_race": _round(sum(numeric_scores) / len(numeric_scores)) if numeric_scores else None,
-            "twelve_race_pace": _round((sum(numeric_scores) / len(numeric_scores)) * 12) if numeric_scores else None,
-            "best_match_score": max(match_scores, default=None),
-            "best_gp_score": max(gp_scores, default=None),
-            "race_wins": sum(1 for position in positions if position == 1),
-            "podiums": sum(1 for position in positions if position <= 3),
-            "top_three_rate": _round(sum(1 for position in positions if position <= 3) / len(positions) * 100) if positions else None,
-            "excluded_score_rows": sum(1 for row in rows if row.score is not None and not _valid_race_score(row.score)),
-        },
+        "metrics": metrics,
+        "role_coverage": coverage,
         "record": record,
-        "ranking": _player_ranking(session, player_id, scope, min_races),
+        "ranking": _player_ranking(session, player_id, scope, min_races, role),
         "recent_matches": recent_matches[:5],
         "score_trend": [
             {
                 "match_id": row["match_id"],
                 "label": row["label"],
                 "score": row["player_score"],
-                "races": row["races"],
+                "role_races": row["role_races"],
             }
             for row in reversed(recent_matches[:10])
         ],
     }
 
 
-def get_player_performance(player_id, season=None, division=None, team_id=None, session=None):
+def get_player_performance(
+    player_id, season=None, division=None, team_id=None, role="runner", session=None
+):
+    role = normalize_role(role)
     if session is None:
         with SessionLocal() as owned_session:
             return get_player_performance(
@@ -575,6 +551,7 @@ def get_player_performance(player_id, season=None, division=None, team_id=None, 
                 season=season,
                 division=division,
                 team_id=team_id,
+                role=role,
                 session=owned_session,
             )
     if not session.get(Player, player_id):
@@ -583,38 +560,30 @@ def get_player_performance(player_id, season=None, division=None, team_id=None, 
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
     rows = _player_race_rows(session, player_id, scope, team_id=team_id)
-    confirmed = _confirmed_5v5_race_ids(session, rows)
-    coverage, classified = _role_coverage(rows, confirmed)
-    runner_rows = [row for row, role, _source in classified if role == "runner"]
-    runner_scores = [int(row.score) for row in runner_rows if _valid_race_score(row.score)]
-    runner_positions = [int(row.position) for row in runner_rows if row.position is not None]
+    confirmed = confirmed_5v5_race_ids(session, rows)
+    coverage, classified = role_coverage(rows, confirmed)
+    selected_rows = [row for row, classified_role, _source in classified if classified_role == role]
+    metrics = summarize_role_rows(classified, role)
+    if role == "bagger":
+        metrics.update(bagger_counterpart_summary(session, player_id, classified))
 
     score_distribution = defaultdict(int)
     placement_distribution = defaultdict(int)
     by_race_number = defaultdict(list)
     by_gp_number = defaultdict(list)
-    for row in runner_rows:
-        if _valid_race_score(row.score):
-            score_distribution[int(row.score)] += 1
-            by_race_number[int(row.race_number)].append(int(row.score))
-            by_gp_number[((int(row.race_number) - 1) // 4) + 1].append(int(row.score))
-        if row.position is not None:
+    for row in selected_rows:
+        if valid_race_score(row.score):
+            score_distribution[row.score] += 1
+            by_race_number[int(row.race_number)].append(row.score)
+            by_gp_number[((int(row.race_number) - 1) // 4) + 1].append(row.score)
+        if valid_placement(row.position):
             placement_distribution[int(row.position)] += 1
 
     return {
         "player_id": player_id,
+        "role": role,
         "scope": {**_scope_payload(scope), "team_id": team_id},
-        "runner_metrics": {
-            "races": len(runner_rows),
-            "scored_races": len(runner_scores),
-            "points_per_race": _round(sum(runner_scores) / len(runner_scores)) if runner_scores else None,
-            "twelve_race_pace": _round(sum(runner_scores) / len(runner_scores) * 12) if runner_scores else None,
-            "average_placement": _round(sum(runner_positions) / len(runner_positions)) if runner_positions else None,
-            "wins": sum(1 for position in runner_positions if position == 1),
-            "podiums": sum(1 for position in runner_positions if position <= 3),
-            "podium_rate": _round(sum(1 for position in runner_positions if position <= 3) / len(runner_positions) * 100) if runner_positions else None,
-            "excluded_score_rows": sum(1 for row in runner_rows if row.score is not None and not _valid_race_score(row.score)),
-        },
+        "metrics": metrics,
         "role_coverage": coverage,
         "score_distribution": [
             {"score": score, "races": races}
@@ -643,7 +612,16 @@ def get_player_performance(player_id, season=None, division=None, team_id=None, 
     }
 
 
-def get_player_tracks(player_id, season=None, division=None, team_id=None, min_races=12, session=None):
+def get_player_tracks(
+    player_id,
+    season=None,
+    division=None,
+    team_id=None,
+    min_races=12,
+    role="runner",
+    session=None,
+):
+    role = normalize_role(role)
     if session is None:
         with SessionLocal() as owned_session:
             return get_player_tracks(
@@ -652,6 +630,7 @@ def get_player_tracks(player_id, season=None, division=None, team_id=None, min_r
                 division=division,
                 team_id=team_id,
                 min_races=min_races,
+                role=role,
                 session=owned_session,
             )
     if not session.get(Player, player_id):
@@ -660,50 +639,41 @@ def get_player_tracks(player_id, season=None, division=None, team_id=None, min_r
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
     rows = _player_race_rows(session, player_id, scope, team_id=team_id)
-    confirmed = _confirmed_5v5_race_ids(session, rows)
-    _coverage, classified = _role_coverage(rows, confirmed)
-    tracks = defaultdict(lambda: {
-        "name": "",
-        "scores": [],
-        "positions": [],
-        "runner_scores": [],
-        "runner_races": 0,
-    })
-    for row, role, _source in classified:
-        track = tracks[row.track_id]
-        track["name"] = row.track_name
-        if _valid_race_score(row.score):
-            track["scores"].append(int(row.score))
-        if row.position is not None:
-            track["positions"].append(int(row.position))
-        if role == "runner":
-            track["runner_races"] += 1
-            if _valid_race_score(row.score):
-                track["runner_scores"].append(int(row.score))
+    confirmed = confirmed_5v5_race_ids(session, rows)
+    coverage, classified = role_coverage(rows, confirmed)
+    tracks = defaultdict(list)
+    names = {}
+    for item in classified:
+        row, classified_role, _source = item
+        if classified_role != role:
+            continue
+        tracks[row.track_id].append(item)
+        names[row.track_id] = row.track_name
 
     results = []
-    for track_id, track in tracks.items():
-        scores = track["scores"]
-        if len(scores) < min_races:
+    for track_id, track_rows in tracks.items():
+        track_metrics = summarize_role_rows(track_rows, role)
+        if track_metrics["scored_races"] < min_races:
             continue
-        positions = track["positions"]
-        runner_scores = track["runner_scores"]
+        track_metrics.pop("role")
         results.append({
             "track_id": track_id,
-            "name": track["name"],
-            "races": len(scores),
-            "average": _round(sum(scores) / len(scores)),
-            "runner_races": track["runner_races"],
-            "runner_average": _round(sum(runner_scores) / len(runner_scores)) if runner_scores else None,
-            "wins": sum(1 for position in positions if position == 1),
-            "podiums": sum(1 for position in positions if position <= 3),
-            "top_three_rate": _round(sum(1 for position in positions if position <= 3) / len(positions) * 100) if positions else None,
+            "name": names[track_id],
+            "role": role,
+            **track_metrics,
         })
-    results.sort(key=lambda row: (-row["average"], -row["races"], row["name"].lower()))
+    results.sort(key=lambda row: (
+        row["points_per_race"] is None,
+        -(row["points_per_race"] or 0),
+        -row["races"],
+        row["name"].lower(),
+    ))
     return {
         "player_id": player_id,
+        "role": role,
         "scope": {**_scope_payload(scope), "team_id": team_id},
         "minimum_races": min_races,
+        "role_coverage": coverage,
         "tracks": results,
     }
 
@@ -964,7 +934,16 @@ def _filtered_team_match_ids(session, team_id, scope, opponent_team_id=None):
     ]
 
 
-def get_team_roster(team_id, season=None, division=None, opponent_team_id=None, min_races=12, session=None):
+def get_team_roster(
+    team_id,
+    season=None,
+    division=None,
+    opponent_team_id=None,
+    min_races=12,
+    role="runner",
+    session=None,
+):
+    role = normalize_role(role)
     if session is None:
         with SessionLocal() as owned_session:
             return get_team_roster(
@@ -973,6 +952,7 @@ def get_team_roster(team_id, season=None, division=None, opponent_team_id=None, 
                 division=division,
                 opponent_team_id=opponent_team_id,
                 min_races=min_races,
+                role=role,
                 session=owned_session,
             )
     if not session.get(Team, team_id):
@@ -984,6 +964,7 @@ def get_team_roster(team_id, season=None, division=None, opponent_team_id=None, 
     if not match_ids:
         return {
             "team_id": team_id,
+            "role": role,
             "scope": {**_scope_payload(scope), "opponent_team_id": opponent_team_id},
             "minimum_races": min_races,
             "players": [],
@@ -993,6 +974,7 @@ def get_team_roster(team_id, season=None, division=None, opponent_team_id=None, 
         select(
             RacePlayerResult.player_id,
             RacePlayerResult.race_id,
+            RacePlayerResult.match_team_id,
             RacePlayerResult.score,
             RacePlayerResult.position,
             RacePlayerResult.role,
@@ -1024,15 +1006,16 @@ def get_team_roster(team_id, season=None, division=None, opponent_team_id=None, 
         )
         .order_by(Season.season_number, Match.week_number, Match.match_id, Race.race_number)
     ).all()
-    confirmed = _confirmed_5v5_race_ids(session, rows)
-    _coverage, classified = _role_coverage(rows, confirmed)
-    by_player = defaultdict(lambda: {"rows": [], "runner_rows": [], "name": ""})
-    for row, role, _source in classified:
+    confirmed = confirmed_5v5_race_ids(session, rows)
+    _coverage, classified = role_coverage(rows, confirmed)
+    by_player = defaultdict(lambda: {"classified": [], "name": ""})
+    for item in classified:
+        row, classified_role, _source = item
+        if classified_role != role:
+            continue
         player = by_player[row.player_id]
-        player["rows"].append(row)
+        player["classified"].append(item)
         player["name"] = row.canonical_lounge_name or f"Player {row.player_id}"
-        if role == "runner":
-            player["runner_rows"].append(row)
 
     player_ids = list(by_player)
     codes_by_player = defaultdict(list)
@@ -1045,27 +1028,26 @@ def get_team_roster(team_id, season=None, division=None, opponent_team_id=None, 
 
     players = []
     for player_id, data in by_player.items():
-        player_rows = data["rows"]
-        scores = [int(row.score) for row in player_rows if _valid_race_score(row.score)]
-        runner_scores = [int(row.score) for row in data["runner_rows"] if _valid_race_score(row.score)]
+        player_rows = [row for row, _role, _source in data["classified"]]
+        metrics = summarize_role_rows(data["classified"], role)
+        if metrics["scored_races"] < min_races:
+            continue
+        if role == "bagger":
+            metrics.update(
+                bagger_counterpart_summary(session, player_id, data["classified"])
+            )
         ordered = sorted(
             player_rows,
             key=lambda row: (row.season_number or 0, row.week_number or 0, row.match_id, row.race_number),
         )
         first = ordered[0]
         last = ordered[-1]
-        if len(scores) < min_races:
-            continue
         players.append({
             "player_id": player_id,
             "name": data["name"],
             "friend_codes": codes_by_player[player_id],
             "matches": len({row.match_id for row in player_rows}),
-            "races": len(scores),
-            "points_per_race": _round(sum(scores) / len(scores)),
-            "twelve_race_pace": _round(sum(scores) / len(scores) * 12),
-            "runner_races": len(data["runner_rows"]),
-            "runner_average": _round(sum(runner_scores) / len(runner_scores)) if runner_scores else None,
+            "metrics": metrics,
             "first_appearance": {
                 "match_id": first.match_id,
                 "season": first.season_code,
@@ -1079,9 +1061,16 @@ def get_team_roster(team_id, season=None, division=None, opponent_team_id=None, 
                 "week": last.week_number,
             },
         })
-    players.sort(key=lambda row: (-row["twelve_race_pace"], -row["races"], row["name"].lower()))
+    sort_metric = "twelve_race_pace" if role == "runner" else "points_per_race"
+    players.sort(key=lambda row: (
+        row["metrics"][sort_metric] is None,
+        -(row["metrics"][sort_metric] or 0),
+        -row["metrics"]["races"],
+        row["name"].lower(),
+    ))
     return {
         "team_id": team_id,
+        "role": role,
         "scope": {**_scope_payload(scope), "opponent_team_id": opponent_team_id},
         "minimum_races": min_races,
         "players": players,
