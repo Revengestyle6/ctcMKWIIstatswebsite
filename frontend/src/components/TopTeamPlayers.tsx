@@ -9,6 +9,7 @@ import {
 } from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { RoleModeToggle } from "./RoleModeToggle";
+import { LegacyStatHeader } from "./LegacyStatHeader";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
 function value(valueToFormat: number | null, suffix = ""): string {
@@ -127,20 +128,15 @@ export default function TopTeamPlayers(): React.JSX.Element {
 
   return (
     <div className="relative min-h-screen p-6 font-sans text-white">
-      <div className="fixed inset-x-0 top-0 z-50 bg-black/40 p-4 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-2">
-          <Link to="/" className="font-semibold text-blue-400 hover:text-blue-300">&lt; Back</Link>
-          <h1 className="flex-1 text-center text-3xl font-bold">Best Team Averages</h1>
-          <div className="w-32" />
-          <img src="/images/CTC_LOGO/ctclogo.webp" alt="Logo" className="h-12 w-12 rounded-lg" loading="lazy" />
-        </div>
-      </div>
+      <LegacyStatHeader title="Team Statistics" />
 
       <div className="mx-auto max-w-6xl pt-24">
         {(scopeError || playersError || tracksError) && (
           <p className="mb-4 text-center text-red-400">{scopeError || playersError || tracksError}</p>
         )}
-        <div className="mb-6 flex flex-col flex-wrap justify-center gap-4 md:flex-row md:items-end">
+        <div className="mb-6 rounded-xl border border-white/15 bg-black/45 p-5 shadow-lg backdrop-blur-sm">
+          <p className="mb-4 text-sm text-gray-300">Compare a team&apos;s player production and strongest tracks.</p>
+          <div className="flex flex-col flex-wrap gap-4 md:flex-row md:items-end">
           <SeasonDivisionSelector
             season={season} division={division} seasons={seasons} divisions={divisions}
             disabled={loadingScope} onSeasonChange={setSeason} onDivisionChange={setDivision}
@@ -162,6 +158,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
               onChange={(event) => setMinRaces(Number(event.target.value))} className="w-48" />
           </div>
           <RoleModeToggle value={role} onChange={updateRole} disabled={playersLoading} />
+          </div>
         </div>
 
         {role === "bagger" && <BaggerDisclosure />}
@@ -197,8 +194,8 @@ function PlayerTable({ rows, role, season, division, teamId }: {
   return (
     <section className="mb-8">
       <h2 className="mb-4 text-center text-2xl font-bold">Top {role === "runner" ? "Runners" : "Baggers"}</h2>
-      <div className="overflow-x-auto rounded-lg border border-white/10">
-        <table className="min-w-full bg-black/70 text-sm backdrop-blur-sm">
+      <div className="overflow-x-auto rounded-lg border border-white/10 shadow-lg">
+        <table className="min-w-full bg-black/70 text-sm tabular-nums backdrop-blur-sm">
           <thead className="bg-black/90"><tr>
             <th scope="col" className="px-4 py-3 text-left">Player</th>
             <th scope="col" className="px-4 py-3 text-right">Matches</th>
@@ -220,7 +217,7 @@ function PlayerTable({ rows, role, season, division, teamId }: {
             const metrics = row.metrics;
             const query = new URLSearchParams({ season, division, role });
             if (teamId) query.set("team_id", String(teamId));
-            return <tr key={row.player_id} className={index % 2 === 0 ? "bg-black/50" : "bg-black/70"}>
+            return <tr key={row.player_id} className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}>
               <td className="whitespace-nowrap px-4 py-3 font-semibold">
                 <Link to={`/players/${row.player_id}?${query}`} className="text-blue-200 hover:text-blue-100">{row.name}</Link>
               </td>
@@ -249,14 +246,14 @@ function PlayerTable({ rows, role, season, division, teamId }: {
 function TeamTrackTable({ rows }: { rows: LegacyTeamTrackRow[] }) {
   return <section className="mb-8">
     <h2 className="mb-4 text-center text-2xl font-bold">Top Team Tracks</h2>
-    <div className="overflow-x-auto rounded-lg border border-white/10">
-      <table className="min-w-full bg-black/70 text-sm backdrop-blur-sm">
+    <div className="overflow-x-auto rounded-lg border border-white/10 shadow-lg">
+      <table className="min-w-full bg-black/70 text-sm tabular-nums backdrop-blur-sm">
         <thead className="bg-black/90"><tr>
           <th scope="col" className="px-4 py-3 text-left">Track</th>
           <th scope="col" className="px-4 py-3 text-right">Average team score</th>
           <th scope="col" className="px-4 py-3 text-right">Races</th>
         </tr></thead>
-        <tbody>{rows.map((row, index) => <tr key={row.track} className={index % 2 === 0 ? "bg-black/50" : "bg-black/70"}>
+        <tbody>{rows.map((row, index) => <tr key={row.track} className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}>
           <td className="px-4 py-3 font-semibold text-blue-200">{row.track}</td>
           <td className="px-4 py-3 text-right">{value(row.average)}</td>
           <td className="px-4 py-3 text-right">{row.races}</td>
