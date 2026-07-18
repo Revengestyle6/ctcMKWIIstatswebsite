@@ -19,18 +19,29 @@ export function TabState({ loading, error }: { loading: boolean; error: string }
 }
 
 export function PlayerPerformanceView({ data }: { data: PlayerPerformance }) {
-  const metrics = data.runner_metrics;
+  const metrics = data.metrics;
   const coverage = data.role_coverage;
+  const isRunner = metrics.role === "runner";
+  const metricItems = isRunner
+    ? [
+      { label: "12-race pace", value: value(metrics.twelve_race_pace), detail: metrics.excluded_score_rows ? `${metrics.excluded_score_rows} invalid score rows excluded` : "Runner scoring" },
+      { label: "Runner races", value: String(metrics.races), detail: `${metrics.scored_races} scored` },
+      { label: "Points per race", value: value(metrics.points_per_race), detail: "Runner races" },
+      { label: "Race wins", value: String(metrics.wins), detail: "Runner races" },
+      { label: "Podiums", value: String(metrics.podiums), detail: `${value(metrics.podium_rate, "%")} podium rate` },
+      { label: "Average place", value: value(metrics.average_placement), detail: "Runner placements" },
+    ]
+    : [
+      { label: "Bagging points", value: String(metrics.total_points), detail: `${value(metrics.points_per_race)} per bagging race` },
+      { label: "Bagger races", value: String(metrics.races), detail: `${metrics.scored_races} scored` },
+      { label: "Bag-point rate", value: value(metrics.bag_point_rate, "%"), detail: `${metrics.bag_points} races with points` },
+      { label: "Zero-point rate", value: value(metrics.zero_point_rate, "%"), detail: `${metrics.zero_points} zero-point races` },
+      { label: "Average place", value: value(metrics.average_placement), detail: "Recorded bagger placements" },
+      { label: "Opponent point diff", value: metrics.opponent_point_differential > 0 ? `+${metrics.opponent_point_differential}` : String(metrics.opponent_point_differential), detail: `${metrics.counterpart_races} comparable races` },
+    ];
   return (
     <div className="space-y-6">
-      <MetricGrid items={[
-        { label: "Runner pace", value: value(metrics.twelve_race_pace), detail: metrics.excluded_score_rows ? `${metrics.excluded_score_rows} invalid score rows excluded` : `${value(metrics.points_per_race)} points per race` },
-        { label: "Runner races", value: String(metrics.races), detail: `${metrics.scored_races} scored` },
-        { label: "Average place", value: value(metrics.average_placement), detail: "Runner placements" },
-        { label: "Race wins", value: String(metrics.wins), detail: `${metrics.podiums} podiums` },
-        { label: "Podium rate", value: value(metrics.podium_rate, "%"), detail: "Runner races" },
-        { label: "Role coverage", value: value(coverage.known_rate, "%"), detail: `${coverage.unknown} unknown races` },
-      ]} />
+      <MetricGrid items={metricItems} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-md border border-white/10 bg-black/70 p-5">
@@ -44,27 +55,33 @@ export function PlayerPerformanceView({ data }: { data: PlayerPerformance }) {
             <div className="flex justify-between border-b border-white/10 pb-2"><dt className="text-gray-400">Total</dt><dd className="font-bold">{coverage.total}</dd></div>
           </dl>
           <details className="mt-4 text-sm text-gray-300">
-            <summary className="cursor-pointer font-semibold text-blue-300">Runner calculation</summary>
-            <p className="mt-2 leading-6">Explicit roles take precedence. Unknown roles are inferred only for confirmed 5v5 races: positions 1-8 are runners and positions 9-10 are baggers. Awarded points without a placement remain unknown.</p>
+            <summary className="cursor-pointer font-semibold text-blue-300">{isRunner ? "Runner calculation" : "Bagger methodology"}</summary>
+            <p className="mt-2 leading-6">
+              {isRunner
+                ? "Explicit roles take precedence. Unknown roles are inferred only for confirmed 5v5 races: positions 1-8 are runners and positions 9-10 are baggers. Awarded points without a placement remain unknown."
+                : "Bagging statistics report scoring outcomes only. A bag point is any race with more than zero points. Shock acquisition is not recorded, so these values do not measure complete bagging effectiveness."}
+            </p>
           </details>
         </section>
 
         <section className="rounded-md border border-white/10 bg-black/70 p-5">
-          <h3 className="mb-4 text-lg font-bold">Runner score distribution</h3>
+          <h3 className="mb-4 text-lg font-bold">{isRunner ? "Runner" : "Bagger"} score distribution</h3>
           <TrendRows values={data.score_distribution.map((item) => ({ id: item.score, label: `${item.score} pts`, value: item.races }))} />
         </section>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
-          <h3 className="border-b border-white/10 px-5 py-4 text-lg font-bold">By race number</h3>
+          <h3 className="border-b border-white/10 px-5 py-4 text-lg font-bold">{isRunner ? "Runner" : "Bagger"} scoring by race number</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm"><thead className="bg-black/60 text-gray-400"><tr><th className="px-4 py-3 text-left">Race</th><th className="px-4 py-3 text-right">Average</th><th className="px-4 py-3 text-right">Races</th></tr></thead><tbody>{data.by_race_number.map((row) => <tr key={row.race_number} className="border-t border-white/10"><td className="px-4 py-3">R{row.race_number}</td><td className="px-4 py-3 text-right font-bold">{row.average}</td><td className="px-4 py-3 text-right text-gray-300">{row.races}</td></tr>)}</tbody></table>
+            <table className="w-full min-w-[420px] text-sm"><thead className="bg-black/60 text-gray-400"><tr><th className="px-4 py-3 text-left">Race</th><th className="px-4 py-3 text-right">Points/race</th><th className="px-4 py-3 text-right">Scored races</th></tr></thead><tbody>{data.by_race_number.map((row) => <tr key={row.race_number} className="border-t border-white/10"><td className="px-4 py-3">R{row.race_number}</td><td className="px-4 py-3 text-right font-bold">{row.average}</td><td className="px-4 py-3 text-right text-gray-300">{row.races}</td></tr>)}</tbody></table>
           </div>
         </section>
         <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
-          <h3 className="border-b border-white/10 px-5 py-4 text-lg font-bold">By GP</h3>
-          <table className="w-full text-sm"><thead className="bg-black/60 text-gray-400"><tr><th className="px-4 py-3 text-left">GP</th><th className="px-4 py-3 text-right">Average</th><th className="px-4 py-3 text-right">Races</th></tr></thead><tbody>{data.by_gp_number.map((row) => <tr key={row.gp_number} className="border-t border-white/10"><td className="px-4 py-3">GP {row.gp_number}</td><td className="px-4 py-3 text-right font-bold">{row.average}</td><td className="px-4 py-3 text-right text-gray-300">{row.races}</td></tr>)}</tbody></table>
+          <h3 className="border-b border-white/10 px-5 py-4 text-lg font-bold">{isRunner ? "Runner" : "Bagger"} scoring by GP</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[420px] text-sm"><thead className="bg-black/60 text-gray-400"><tr><th className="px-4 py-3 text-left">GP</th><th className="px-4 py-3 text-right">Points/race</th><th className="px-4 py-3 text-right">Scored races</th></tr></thead><tbody>{data.by_gp_number.map((row) => <tr key={row.gp_number} className="border-t border-white/10"><td className="px-4 py-3">GP {row.gp_number}</td><td className="px-4 py-3 text-right font-bold">{row.average}</td><td className="px-4 py-3 text-right text-gray-300">{row.races}</td></tr>)}</tbody></table>
+          </div>
         </section>
       </div>
     </div>
@@ -77,19 +94,29 @@ export function PlayerTracksView({ data }: { data: PlayerTracks }) {
   const rows = useMemo(() => {
     const filtered = data.tracks.filter((track) => track.name.toLowerCase().includes(query.toLowerCase()));
     return [...filtered].sort((a, b) => {
-      if (sort === "worst") return a.average - b.average || b.races - a.races;
-      if (sort === "races") return b.races - a.races || b.average - a.average;
+      const aPoints = a.points_per_race;
+      const bPoints = b.points_per_race;
+      const unavailableOrder = aPoints === null && bPoints === null ? 0 : aPoints === null ? 1 : bPoints === null ? -1 : null;
+      const bestPoints = unavailableOrder ?? bPoints! - aPoints!;
+      const worstPoints = unavailableOrder ?? aPoints! - bPoints!;
+      if (sort === "worst") return worstPoints || b.races - a.races || a.name.localeCompare(b.name);
+      if (sort === "races") return b.races - a.races || bestPoints || a.name.localeCompare(b.name);
       if (sort === "name") return a.name.localeCompare(b.name);
-      return b.average - a.average || b.races - a.races;
+      return bestPoints || b.races - a.races || a.name.localeCompare(b.name);
     });
   }, [data.tracks, query, sort]);
+  const isRunner = data.role === "runner";
   return (
     <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
       <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row">
         <input className="min-h-10 flex-1 rounded-md border border-white/20 bg-zinc-950 px-3 text-white" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tracks" />
-        <select className="min-h-10 rounded-md border border-white/20 bg-zinc-950 px-3 text-white" value={sort} onChange={(event) => setSort(event.target.value)}><option value="best">Best average</option><option value="worst">Lowest average</option><option value="races">Most played</option><option value="name">Track name</option></select>
+        <select className="min-h-10 rounded-md border border-white/20 bg-zinc-950 px-3 text-white" value={sort} onChange={(event) => setSort(event.target.value)}><option value="best">Best {isRunner ? "runner" : "bagger"} scoring</option><option value="worst">Lowest {isRunner ? "runner" : "bagger"} scoring</option><option value="races">Most role races</option><option value="name">Track name</option></select>
       </div>
-      {rows.length === 0 ? <p className="p-8 text-center text-gray-400">No tracks meet the current minimum of {data.minimum_races} races.</p> : <div className="overflow-x-auto"><table className="min-w-[760px] w-full text-sm"><thead className="bg-black/70 text-left text-gray-400"><tr><th className="px-4 py-3">Track</th><th className="px-4 py-3 text-right">Average</th><th className="px-4 py-3 text-right">Races</th><th className="px-4 py-3 text-right">Runner avg</th><th className="px-4 py-3 text-right">Wins</th><th className="px-4 py-3 text-right">Podiums</th><th className="px-4 py-3 text-right">Top 3</th></tr></thead><tbody>{rows.map((row) => <tr key={row.track_id} className="border-t border-white/10"><td className="px-4 py-3 font-semibold">{row.name}</td><td className="px-4 py-3 text-right font-bold">{row.average}</td><td className="px-4 py-3 text-right">{row.races}</td><td className="px-4 py-3 text-right">{value(row.runner_average)} <span className="text-xs text-gray-500">({row.runner_races})</span></td><td className="px-4 py-3 text-right">{row.wins}</td><td className="px-4 py-3 text-right">{row.podiums}</td><td className="px-4 py-3 text-right">{value(row.top_three_rate, "%")}</td></tr>)}</tbody></table></div>}
+      {rows.length === 0 ? <p className="p-8 text-center text-gray-400">No {isRunner ? "runner" : "bagger"} tracks meet the current minimum of {data.minimum_races} scored races.</p> : <div className="overflow-x-auto">{isRunner ? (
+        <table className="min-w-[820px] w-full text-sm"><thead className="bg-black/70 text-left text-gray-400"><tr><th className="px-4 py-3">Track</th><th className="px-4 py-3 text-right">Points/race</th><th className="px-4 py-3 text-right">Runner races/scored</th><th className="px-4 py-3 text-right">Avg place</th><th className="px-4 py-3 text-right">Wins</th><th className="px-4 py-3 text-right">Podiums</th><th className="px-4 py-3 text-right">Podium rate</th></tr></thead><tbody>{rows.map((row) => row.role === "runner" && <tr key={row.track_id} className="border-t border-white/10"><td className="px-4 py-3 font-semibold">{row.name}</td><td className="px-4 py-3 text-right font-bold">{value(row.points_per_race)}</td><td className="px-4 py-3 text-right">{row.races} / {row.scored_races}</td><td className="px-4 py-3 text-right">{value(row.average_placement)}</td><td className="px-4 py-3 text-right">{row.wins}</td><td className="px-4 py-3 text-right">{row.podiums}</td><td className="px-4 py-3 text-right">{value(row.podium_rate, "%")}</td></tr>)}</tbody></table>
+      ) : (
+        <table className="min-w-[880px] w-full text-sm"><thead className="bg-black/70 text-left text-gray-400"><tr><th className="px-4 py-3">Track</th><th className="px-4 py-3 text-right">Points/bagging race</th><th className="px-4 py-3 text-right">Bagger races/scored</th><th className="px-4 py-3 text-right">Total bagging points</th><th className="px-4 py-3 text-right">Bag-point rate</th><th className="px-4 py-3 text-right">Zero-point rate</th><th className="px-4 py-3 text-right">Avg place</th></tr></thead><tbody>{rows.map((row) => row.role === "bagger" && <tr key={row.track_id} className="border-t border-white/10"><td className="px-4 py-3 font-semibold">{row.name}</td><td className="px-4 py-3 text-right font-bold">{value(row.points_per_race)}</td><td className="px-4 py-3 text-right">{row.races} / {row.scored_races}</td><td className="px-4 py-3 text-right">{row.total_points}</td><td className="px-4 py-3 text-right">{value(row.bag_point_rate, "%")}</td><td className="px-4 py-3 text-right">{value(row.zero_point_rate, "%")}</td><td className="px-4 py-3 text-right">{value(row.average_placement)}</td></tr>)}</tbody></table>
+      )}</div>}
     </section>
   );
 }

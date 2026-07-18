@@ -246,8 +246,9 @@ export function TrendRows({
   return (
     <div className="space-y-2">
       {values.map((item) => {
+        const unavailable = item.value === null;
         const value = item.value ?? 0;
-        const width = `${Math.max(2, Math.abs(value) / max * 100)}%`;
+        const width = unavailable ? "0%" : `${Math.max(2, Math.abs(value) / max * 100)}%`;
         const color = signed && value < 0 ? "bg-rose-400" : "bg-blue-400";
         return (
           <div key={item.id} className="grid grid-cols-[5rem_1fr_3.5rem] items-center gap-3 text-sm">
@@ -255,7 +256,9 @@ export function TrendRows({
             <div className="h-2 overflow-hidden rounded bg-white/10">
               <div className={`h-full ${color}`} style={{ width }} />
             </div>
-            <span className="text-right font-semibold text-gray-200">{signed && value > 0 ? "+" : ""}{value}</span>
+            <span className={`text-right font-semibold ${unavailable ? "text-gray-500" : "text-gray-200"}`}>
+              {unavailable ? "-" : `${signed && value > 0 ? "+" : ""}${value}`}
+            </span>
           </div>
         );
       })}

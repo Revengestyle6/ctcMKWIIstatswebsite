@@ -4,10 +4,12 @@ import {
   fetchPlayerOverview,
   fetchPlayerPerformance,
   fetchPlayerTracks,
+  type PlayerRoleMode,
   type PlayerOverview,
   type PlayerPerformance,
   type PlayerTracks,
 } from "../dashboardApi";
+import { RoleModeToggle } from "../components/RoleModeToggle";
 import {
   DashboardScopeControls,
   DashboardShell,
@@ -25,6 +27,10 @@ function numberValue(value: number | null, suffix = ""): string {
   return value === null ? "-" : `${value}${suffix}`;
 }
 
+function signedValue(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
 export default function PlayerDashboard() {
   const { playerId = "" } = useParams();
   const numericPlayerId = Number(playerId);
@@ -39,6 +45,7 @@ export default function PlayerDashboard() {
   const season = searchParams.get("season") ?? "";
   const division = searchParams.get("division") ?? "";
   const teamId = searchParams.get("team_id") ?? "";
+  const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
   const minRaces = Math.min(500, Math.max(1, Number(searchParams.get("min_races")) || 12));
   const requestedTab = searchParams.get("tab") ?? "overview";
   const activeTab = ["overview", "performance", "tracks"].includes(requestedTab) ? requestedTab : "overview";
@@ -57,6 +64,7 @@ export default function PlayerDashboard() {
       division: division || undefined,
       team_id: teamId ? Number(teamId) : undefined,
       min_races: minRaces,
+      role,
     })
       .then((response) => {
         if (!cancelled) setData(response);
@@ -70,7 +78,7 @@ export default function PlayerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [numericPlayerId, season, division, teamId, minRaces]);
+  }, [numericPlayerId, season, division, teamId, minRaces, role]);
 
   useEffect(() => {
     if (activeTab === "overview" || !Number.isInteger(numericPlayerId) || numericPlayerId < 1) return;
@@ -82,6 +90,7 @@ export default function PlayerDashboard() {
       division: division || undefined,
       team_id: teamId ? Number(teamId) : undefined,
       min_races: minRaces,
+      role,
     };
     const request = activeTab === "performance"
       ? fetchPlayerPerformance(numericPlayerId, query)
@@ -101,7 +110,7 @@ export default function PlayerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, numericPlayerId, season, division, teamId, minRaces]);
+  }, [activeTab, numericPlayerId, season, division, teamId, minRaces, role]);
 
   function updateQuery(name: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -132,14 +141,24 @@ export default function PlayerDashboard() {
 
   const { identity, metrics, record } = data;
   const currentTeam = identity.current_team;
-  const metricItems = [
-    { label: "12-race pace", value: numberValue(metrics.twelve_race_pace), detail: metrics.excluded_score_rows ? `${metrics.excluded_score_rows} invalid score rows excluded` : `${numberValue(metrics.points_per_race)} points per race` },
-    { label: "Races", value: String(metrics.races), detail: `${metrics.matches} matches` },
-    { label: "Race wins", value: String(metrics.race_wins), detail: `${metrics.podiums} podiums` },
-    { label: "Top-three rate", value: numberValue(metrics.top_three_rate, "%"), detail: "Placed races" },
-    { label: "Best match", value: numberValue(metrics.best_match_score), detail: "Player points" },
-    { label: "Best GP", value: numberValue(metrics.best_gp_score), detail: "Complete 4-race GP" },
-  ];
+  const metricItems = metrics.role === "runner"
+    ? [
+      { label: "12-race pace", value: numberValue(metrics.twelve_race_pace), detail: `${numberValue(metrics.points_per_race)} points per race` },
+      { label: "Runner races", value: String(metrics.races), detail: `${metrics.scored_races} scored` },
+      { label: "Race wins", value: String(metrics.wins), detail: "Runner races" },
+      { label: "Podiums", value: String(metrics.podiums), detail: `${numberValue(metrics.podium_rate, "%")} podium rate` },
+      { label: "Average place", value: numberValue(metrics.average_placement), detail: "Runner placements" },
+      { label: "Best runner match", value: numberValue(metrics.best_match_score), detail: `${numberValue(metrics.best_gp_score)} best complete GP` },
+    ]
+    : [
+      { label: "Bagging points", value: String(metrics.total_points), detail: `${numberValue(metrics.points_per_race)} per bagging race` },
+      { label: "Bagger races", value: String(metrics.races), detail: `${metrics.scored_races} scored` },
+      { label: "Bag-point rate", value: numberValue(metrics.bag_point_rate, "%"), detail: `${metrics.bag_points} races with points` },
+      { label: "Zero-point rate", value: numberValue(metrics.zero_point_rate, "%"), detail: `${metrics.zero_points} zero-point races` },
+      { label: "Average place", value: numberValue(metrics.average_placement), detail: "Recorded bagger placements" },
+      { label: "Opponent point diff", value: signedValue(metrics.opponent_point_differential), detail: `${metrics.counterpart_races} comparable races` },
+    ];
+  const roleLabel = metrics.role === "runner" ? "runner" : "bagger";
 
   return (
     <DashboardShell
@@ -187,6 +206,13 @@ export default function PlayerDashboard() {
           entityOptions={teamOptions}
           minRaces={minRaces}
           disabled={loading}
+          extraControl={
+            <RoleModeToggle
+              value={role}
+              disabled={loading}
+              onChange={(value: PlayerRoleMode) => updateQuery("role", value === "runner" ? "" : value)}
+            />
+          }
           onSeasonChange={(value) => updateQuery("season", value)}
           onDivisionChange={(value) => updateQuery("division", value)}
           onEntityChange={(value) => updateQuery("team_id", value)}
@@ -215,12 +241,18 @@ export default function PlayerDashboard() {
           {data.ranking && (
             <div className="mt-6">
               <RankingSummary rank={data.ranking.rank} population={data.ranking.population} minimum={data.ranking.minimum_races} />
+              <p className="mt-2 pl-4 text-xs text-gray-500">
+                Ranked by {metrics.role === "runner" ? "runner 12-race pace" : "bagger scoring points per race"}.
+              </p>
             </div>
           )}
         </section>
 
         <section className="rounded-md border border-white/10 bg-black/70 p-5 backdrop-blur-sm">
-          <h3 className="mb-4 text-lg font-bold">Recent scoring</h3>
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-lg font-bold">Recent {roleLabel} scoring</h3>
+            <p className="text-xs text-gray-500">{metrics.races} role races / {metrics.scored_races} scored</p>
+          </div>
           <TrendRows values={data.score_trend.map((item) => ({ id: item.match_id, label: item.label, value: item.score }))} />
         </section>
       </div>
@@ -235,7 +267,7 @@ export default function PlayerDashboard() {
           <div className="overflow-x-auto">
             <table className="min-w-[760px] w-full text-sm">
               <thead className="bg-black/70 text-left text-gray-400">
-                <tr><th className="px-4 py-3">Scope</th><th className="px-4 py-3">Match</th><th className="px-4 py-3">Team</th><th className="px-4 py-3">Opponent</th><th className="px-4 py-3 text-right">Score</th><th className="px-4 py-3 text-center">Result</th></tr>
+                <tr><th className="px-4 py-3">Scope</th><th className="px-4 py-3">Match</th><th className="px-4 py-3">Team</th><th className="px-4 py-3">Opponent</th><th className="px-4 py-3 text-right">{metrics.role === "runner" ? "Runner pts" : "Bagger pts"}</th><th className="px-4 py-3 text-center">Result</th></tr>
               </thead>
               <tbody>
                 {data.recent_matches.map((match) => (
@@ -244,7 +276,10 @@ export default function PlayerDashboard() {
                     <td className="px-4 py-3"><Link to={`/matches?season=${match.season}&division=${match.division}&match=${match.match_id}`} className="font-semibold text-blue-300 hover:text-blue-200">{match.label}</Link></td>
                     <td className="px-4 py-3"><Link to={`/teams/${match.team.team_id}`} className="hover:text-blue-200">{match.team.tag}</Link></td>
                     <td className="px-4 py-3">{match.opponents.map((opponent) => <Link key={opponent.team_id} to={`/teams/${opponent.team_id}`} className="mr-2 hover:text-blue-200">{opponent.tag}</Link>)}</td>
-                    <td className="px-4 py-3 text-right font-bold">{match.player_score}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="font-bold">{numberValue(match.player_score)}</span>
+                      <span className="block whitespace-nowrap text-xs font-normal text-gray-500">{match.role_races} races / {match.scored_role_races} scored</span>
+                    </td>
                     <td className="px-4 py-3 text-center"><ResultBadge result={match.result} /></td>
                   </tr>
                 ))}
