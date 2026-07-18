@@ -55,6 +55,7 @@ class PlayerLookupRow:
     primary_friend_code: str | None
     primary_lounge_name: str | None
     primary_mii_name: str | None
+    team_id: int
     clan_tag: str
     display_name: str
 
@@ -193,6 +194,7 @@ def _valid_players(session, scope):
             Player.primary_friend_code,
             PlayerSeasonEntry.primary_lounge_name,
             PlayerSeasonEntry.primary_mii_name,
+            Team.team_id,
             TeamSeasonEntry.clan_tag,
         )
         .join(PlayerSeasonEntry, PlayerSeasonEntry.player_id == Player.player_id)
@@ -200,6 +202,7 @@ def _valid_players(session, scope):
             TeamSeasonEntry,
             TeamSeasonEntry.team_season_entry_id == PlayerSeasonEntry.team_season_entry_id,
         )
+        .join(Team, Team.team_id == TeamSeasonEntry.team_id)
         .where(
             PlayerSeasonEntry.season_id == scope.season_id,
             PlayerSeasonEntry.division_id == scope.division_id,
@@ -214,6 +217,7 @@ def _valid_players(session, scope):
             primary_friend_code=row.primary_friend_code,
             primary_lounge_name=row.primary_lounge_name,
             primary_mii_name=row.primary_mii_name,
+            team_id=row.team_id,
             clan_tag=row.clan_tag,
             display_name=display_names.get(row.player_id, ""),
         )
@@ -334,6 +338,25 @@ def list_players(season=None, division=None):
             if display_name:
                 players[display_name.lower()] = display_name
         return sorted(players.values(), key=lambda name: name.lower())
+
+
+def list_player_directory(season=None, division=None):
+    with SessionLocal() as session:
+        scope = _get_scope(session, season=season, division=division)
+        players = {}
+        for row in _valid_players(session, scope):
+            display_name = _display_player(row)
+            if not display_name:
+                continue
+            entry = players.setdefault(row.player_id, {
+                "player_id": row.player_id,
+                "name": display_name,
+                "primary_friend_code": row.primary_friend_code,
+                "teams": [],
+            })
+            if not any(team["team_id"] == row.team_id for team in entry["teams"]):
+                entry["teams"].append({"team_id": row.team_id, "tag": row.clan_tag})
+        return sorted(players.values(), key=lambda entry: entry["name"].lower())
 
 
 def find_player_identities(friend_code=None, query=None, limit=12):
@@ -651,6 +674,7 @@ def get_match_detail(match_id, session=None):
                 MatchTeam.team_penalty_points,
                 MatchTeam.final_score,
                 MatchTeam.hex_color,
+                Team.team_id,
                 TeamSeasonEntry.clan_tag,
                 TeamSeasonEntry.display_name,
             )
@@ -658,6 +682,7 @@ def get_match_detail(match_id, session=None):
                 TeamSeasonEntry,
                 TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id,
             )
+            .join(Team, Team.team_id == TeamSeasonEntry.team_id)
             .where(MatchTeam.match_id == match.match_id)
             .order_by(MatchTeam.match_team_id)
         ).all()
@@ -778,6 +803,7 @@ def get_match_detail(match_id, session=None):
                 {
                     "match_team_id": row.match_team_id,
                     "team_season_entry_id": row.team_season_entry_id,
+                    "team_id": row.team_id,
                     "tag": row.clan_tag,
                     "name": row.display_name,
                     "raw_team_key": row.raw_team_key,

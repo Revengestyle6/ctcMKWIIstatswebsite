@@ -85,6 +85,17 @@ export function searchPlayerIdentities(query: string): Promise<{ reason: string;
   return fetchJson("/api/player-identities", { query });
 }
 
+export interface PlayerDirectoryEntry {
+  player_id: number;
+  name: string;
+  primary_friend_code: string | null;
+  teams: Array<{ team_id: number; tag: string }>;
+}
+
+export function fetchPlayerDirectory(season: string, division: string): Promise<PlayerDirectoryEntry[]> {
+  return fetchJson("/api/player-directory", { season, division });
+}
+
 export function searchTracks(query = ""): Promise<Array<{ track_id: number; name: string }>> {
   return fetchJson("/api/track-search", { query });
 }

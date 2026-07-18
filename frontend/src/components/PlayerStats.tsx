@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import axios, { AxiosError } from "axios";
-import { API_URL, fetchJson } from "../api";
+import { API_URL, fetchPlayerDirectory, type PlayerDirectoryEntry } from "../api";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
@@ -28,6 +28,7 @@ export default function PlayerStats() {
     setDivision,
   } = useSeasonDivision();
   const [players, setPlayers] = useState<string[]>([]);
+  const [playerDirectory, setPlayerDirectory] = useState<PlayerDirectoryEntry[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [results, setResults] = useState<string[]>([]);
   const [playerAvg, setPlayerAvg] = useState<PlayerAvgResponse | null>(null);
@@ -47,11 +48,12 @@ export default function PlayerStats() {
       setPlayerAvg(null);
       setError("");
       try {
-        const data = await fetchJson<string[]>("/api/players", { season, division });
+        const directory = await fetchPlayerDirectory(season, division);
         if (cancelled) return;
-        const sortedData = [...data].sort((a, b) =>
+        const sortedData = directory.map((entry) => entry.name).sort((a, b) =>
           a.toLowerCase().localeCompare(b.toLowerCase())
         );
+        setPlayerDirectory(directory);
         setPlayers(sortedData);
         setSelectedPlayer(sortedData[0] ?? "");
       } catch (err) {
@@ -116,6 +118,7 @@ export default function PlayerStats() {
   }, [selectedPlayer, season, division]);
 
   const combinedError = scopeError || error;
+  const selectedPlayerId = playerDirectory.find((entry) => entry.name === selectedPlayer)?.player_id;
 
   return (
     <div className="relative min-h-screen text-white font-sans p-6">
@@ -178,6 +181,14 @@ export default function PlayerStats() {
               </span>
             </p>
             <p className="text-sm text-gray-400">Total races: {playerAvg.races}</p>
+            {selectedPlayerId && (
+              <Link
+                to={`/players/${selectedPlayerId}?season=${season}&division=${division}`}
+                className="mt-4 inline-block font-semibold text-blue-300 hover:text-blue-200"
+              >
+                Open player dashboard &rarr;
+              </Link>
+            )}
           </div>
         )}
 

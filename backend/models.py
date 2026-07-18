@@ -92,6 +92,23 @@ class Team(Base):
     __table_args__ = (UniqueConstraint("canonical_tag", name="uq_team_canonical_tag"),)
 
 
+class TeamLogo(Base):
+    __tablename__ = "team_logos"
+
+    team_logo_id = Column(Integer, primary_key=True)
+    team_id = Column(Integer, ForeignKey("teams.team_id"), nullable=False, index=True)
+    season_id = Column(Integer, ForeignKey("seasons.season_id"), index=True)
+    asset_path = Column(Text, nullable=False)
+    alt_text = Column(Text, nullable=False)
+    priority = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("team_id", "season_id", "asset_path", name="uq_team_logo_asset"),
+    )
+
+
 class TeamSeasonEntry(Base):
     __tablename__ = "team_season_entries"
 

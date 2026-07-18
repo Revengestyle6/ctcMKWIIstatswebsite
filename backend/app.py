@@ -8,6 +8,7 @@ from flask import Flask, Response, jsonify, request, stream_with_context
 from flask_caching import Cache
 from flask_compress import Compress
 import stats_db as stats
+import dashboard_stats as dashboards
 from database import init_database
 from import_json_to_db import detect_new_entries, import_editor_match, import_preview_match
 from match_upload import (
@@ -25,6 +26,7 @@ from match_upload import (
 )
 from models import DatabaseAdditionLog, Match
 from stats_db import AmbiguousPlayerError
+from dashboard_stats import DashboardError
 from flask_cors import CORS
 from sqlalchemy import select
 
@@ -44,6 +46,8 @@ def _division_arg():
 
 
 def _error_response(error):
+    if isinstance(error, DashboardError):
+        return jsonify({"error": str(error)}), error.status_code
     if isinstance(error, AmbiguousPlayerError):
         return jsonify({
             "error": "Ambiguous player alias",
@@ -53,6 +57,24 @@ def _error_response(error):
             "candidates": error.candidates,
         }), 400
     return jsonify({"error": str(error)}), 400
+
+
+def _optional_int_arg(name):
+    value = request.args.get(name)
+    if value is None or value.strip() == "":
+        return None
+    try:
+        return int(value)
+    except ValueError as error:
+        raise DashboardError(f"{name} must be an integer.") from error
+
+
+def _minimum_races_arg():
+    value = _optional_int_arg("min_races")
+    value = 12 if value is None else value
+    if value < 1 or value > 500:
+        raise DashboardError("min_races must be between 1 and 500.")
+    return value
 
 
 def _match_request_payload():
@@ -158,6 +180,18 @@ def api_players():
         return _error_response(e)
 
 
+@app.route("/api/player-directory", methods=["GET"])
+@cache.cached(timeout=3600, query_string=True)
+def api_player_directory():
+    try:
+        return jsonify(stats.list_player_directory(
+            season=_season_arg(),
+            division=_division_arg(),
+        ))
+    except Exception as error:
+        return _error_response(error)
+
+
 @app.route("/api/player-identities", methods=["GET"])
 def api_player_identities():
     try:
@@ -167,6 +201,89 @@ def api_player_identities():
         ))
     except Exception as e:
         return _error_response(e)
+
+
+@app.route("/api/players/<int:player_id>/overview", methods=["GET"])
+def api_player_dashboard_overview(player_id):
+    try:
+        return jsonify(dashboards.get_player_overview(
+            player_id,
+            season=_season_arg(),
+            division=_division_arg(),
+            team_id=_optional_int_arg("team_id"),
+            min_races=_minimum_races_arg(),
+        ))
+    except Exception as error:
+        return _error_response(error)
+
+
+@app.route("/api/players/<int:player_id>/performance", methods=["GET"])
+def api_player_dashboard_performance(player_id):
+    try:
+        return jsonify(dashboards.get_player_performance(
+            player_id,
+            season=_season_arg(),
+            division=_division_arg(),
+            team_id=_optional_int_arg("team_id"),
+        ))
+    except Exception as error:
+        return _error_response(error)
+
+
+@app.route("/api/players/<int:player_id>/tracks", methods=["GET"])
+def api_player_dashboard_tracks(player_id):
+    try:
+        return jsonify(dashboards.get_player_tracks(
+            player_id,
+            season=_season_arg(),
+            division=_division_arg(),
+            team_id=_optional_int_arg("team_id"),
+            min_races=_minimum_races_arg(),
+        ))
+    except Exception as error:
+        return _error_response(error)
+
+
+@app.route("/api/teams/<int:team_id>/overview", methods=["GET"])
+def api_team_dashboard_overview(team_id):
+    try:
+        return jsonify(dashboards.get_team_overview(
+            team_id,
+            season=_season_arg(),
+            division=_division_arg(),
+            opponent_team_id=_optional_int_arg("opponent_team_id"),
+            min_races=_minimum_races_arg(),
+        ))
+    except Exception as error:
+        return _error_response(error)
+
+
+@app.route("/api/teams/<int:team_id>/roster", methods=["GET"])
+def api_team_dashboard_roster(team_id):
+    try:
+        return jsonify(dashboards.get_team_roster(
+            team_id,
+            season=_season_arg(),
+            division=_division_arg(),
+            opponent_team_id=_optional_int_arg("opponent_team_id"),
+            min_races=_minimum_races_arg(),
+        ))
+    except Exception as error:
+        return _error_response(error)
+
+
+@app.route("/api/teams/<int:team_id>/tracks", methods=["GET"])
+def api_team_dashboard_tracks(team_id):
+    try:
+        return jsonify(dashboards.get_team_tracks(
+            team_id,
+            season=_season_arg(),
+            division=_division_arg(),
+            opponent_team_id=_optional_int_arg("opponent_team_id"),
+            min_races=_minimum_races_arg(),
+        ))
+    except Exception as error:
+        return _error_response(error)
 
 
 @app.route("/api/track-search", methods=["GET"])

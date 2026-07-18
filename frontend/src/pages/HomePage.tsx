@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 
 const analyticsLinks = [
   { to: "/matches", title: "Match History", description: "Browse complete war tables, race results, tracks, and score progression." },
+  { to: "/players", title: "Player Dashboards", description: "Browse players and open complete career and season analytics." },
+  { to: "/teams", title: "Team Dashboards", description: "Browse teams, rosters, records, tracks, and match history." },
   { to: "/stats", title: "Player Statistics", description: "Review player averages, race counts, and track performance." },
-  { to: "/top-team-players", title: "Team Statistics", description: "Compare player production within a selected team." },
+  { to: "/top-team-players", title: "Team Statistics", description: "Compare player production and track results for a selected team." },
   { to: "/top-tracks", title: "Track Averages", description: "Find the strongest player and team results by track." },
   { to: "/best-matchups", title: "Team Matchups", description: "Compare head-to-head team and track performance." },
 ];

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import React from "react";
 import { fetchJson } from "../api";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
@@ -37,6 +37,7 @@ type MatchPlayer = {
 
 type MatchTeam = {
   match_team_id: number;
+  team_id: number;
   tag: string;
   name: string;
   hex_color: string;
@@ -373,12 +374,13 @@ function VerticalPlayerHeader({
   return (
     <th className="h-16 w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] px-1 pb-2 pt-1 text-center align-top">
       <span className="mt-0.5 block text-[10px] font-semibold text-blue-300">{medalLabel(rank - 1)}</span>
-      <span
+      <Link
+        to={`/players/${player.player_id}`}
         className="flex h-10 w-full items-center justify-center break-words text-center text-[11px] font-semibold leading-tight text-gray-100"
         title={player.name}
       >
         {player.name}
-      </span>
+      </Link>
     </th>
   );
 }
@@ -443,10 +445,10 @@ export function TraditionalTable({
                     className="sticky left-0 z-10 px-3 py-3 text-[1.6rem] font-bold leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
                     style={{ background: `linear-gradient(rgba(0,0,0,.28), rgba(0,0,0,.28)), ${color}` }}
                   >
-                    {team.tag}
+                    <Link to={`/teams/${team.team_id}`} className="hover:text-blue-100">{team.tag}</Link>
                   </td>
                   <td colSpan={columns.length} className="px-3 py-3 text-white">
-                    {team.name}
+                    <Link to={`/teams/${team.team_id}`} className="hover:text-blue-100">{team.name}</Link>
                     {team.team_penalties ? <span className="ml-3 text-sm text-rose-100">Penalty -{team.team_penalties}</span> : null}
                   </td>
                   <td className="px-3 py-3 text-center text-2xl font-bold text-white">{team.final_score}</td>
@@ -460,7 +462,7 @@ export function TraditionalTable({
                   <tr key={player.match_player_id} className={playerIndex % 2 === 0 ? "bg-white/5" : "bg-white/[.025]"}>
                     <th className="sticky left-0 z-10 bg-zinc-950 px-3 py-2 text-left font-semibold text-white">
                       <span className="mr-2 text-xs text-blue-300">{medalLabel(playerIndex)}</span>
-                      {player.name}
+                      <Link to={`/players/${player.player_id}`} className="hover:text-blue-200">{player.name}</Link>
                     </th>
                     {columns.map((column) => {
                       const value = scoreColumnValue(player, column);
@@ -667,11 +669,11 @@ export function VerticalScorecard({
           <tr className="bg-black/80 text-white">
             <th className="px-3 py-3 text-left">Track</th>
             <th colSpan={leftColumnCount} className="px-3 py-3 text-center text-[1.6rem] font-bold leading-none" style={{ backgroundColor: `${leftColor}aa` }}>
-              {leftTeam.tag}
+              <Link to={`/teams/${leftTeam.team_id}`} className="hover:text-blue-100">{leftTeam.tag}</Link>
             </th>
             <th className="px-3 py-3 text-center">Diff</th>
             <th colSpan={rightColumnCount} className="px-3 py-3 text-center text-[1.6rem] font-bold leading-none" style={{ backgroundColor: `${rightColor}aa` }}>
-              {rightTeam.tag}
+              <Link to={`/teams/${rightTeam.team_id}`} className="hover:text-blue-100">{rightTeam.tag}</Link>
             </th>
           </tr>
           <tr className="bg-zinc-950 text-xs text-gray-200">
@@ -780,6 +782,10 @@ export function VerticalScorecard({
 }
 
 export default function MatchHistory(): React.JSX.Element {
+  const [searchParams] = useSearchParams();
+  const requestedSeason = searchParams.get("season") ?? "";
+  const requestedDivision = searchParams.get("division") ?? "";
+  const requestedMatchId = Number(searchParams.get("match")) || null;
   const {
     seasons,
     divisions,
@@ -789,7 +795,7 @@ export default function MatchHistory(): React.JSX.Element {
     scopeError,
     setSeason,
     setDivision,
-  } = useSeasonDivision();
+  } = useSeasonDivision({ initialSeason: requestedSeason, initialDivision: requestedDivision });
   const [teams, setTeams] = useState<string[]>([]);
   const [matches, setMatches] = useState<MatchSummary[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>("");
@@ -841,7 +847,11 @@ export default function MatchHistory(): React.JSX.Element {
         });
         if (cancelled) return;
         setMatches(data);
-        setSelectedMatchId(data[0]?.match_id ?? null);
+        setSelectedMatchId(
+          requestedMatchId && data.some((match) => match.match_id === requestedMatchId)
+            ? requestedMatchId
+            : data[0]?.match_id ?? null
+        );
       } catch (err) {
         if (!cancelled) setError("Failed to load matches.");
       } finally {
@@ -852,7 +862,7 @@ export default function MatchHistory(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [season, division, selectedTeam]);
+  }, [season, division, selectedTeam, requestedMatchId]);
 
   useEffect(() => {
     let cancelled = false;

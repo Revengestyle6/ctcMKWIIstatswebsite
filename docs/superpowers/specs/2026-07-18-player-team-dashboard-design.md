@@ -183,14 +183,16 @@ for that season.
 
 ### Player Scores And Placements
 
-- Points per race includes every numeric `race_player_results.score`, including
-  awarded disconnect points.
+- Points per race includes numeric `race_player_results.score` values from 0
+  through 15, including valid awarded disconnect points. Values outside the
+  deterministic single-race range are excluded and reported because some
+  historical files stored GP totals in a race-score field.
 - Placement metrics include only results with a numeric placement.
 - Projected 12-race average equals points per race multiplied by 12. The UI
   labels it as a pace, not an actual match score.
-- Best match score sums the player's numeric race scores within a match.
+- Best match score sums the player's valid single-race scores within a match.
 - A completed GP is four consecutive race numbers in the same match. Best GP
-  sums the player's numeric scores for a complete four-race group. Incomplete
+  sums the player's valid single-race scores for a complete four-race group. Incomplete
   groups are excluded.
 - A player participated in a match when the player has at least one race result
   with a numeric score or placement. Merely appearing as an unused roster/sub

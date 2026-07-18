@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import React from "react";
-import { fetchJson } from "../api";
+import { fetchJson, fetchTeamScopes } from "../api";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
@@ -18,6 +18,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
   } = useSeasonDivision();
   const [teams, setTeams] = useState<string[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>("");
+  const [teamIds, setTeamIds] = useState<Record<string, number>>({});
   const [topPlayers, setTopPlayers] = useState<string[]>([]);
   const [topTracks, setTopTracks] = useState<string[]>([]);
   const [minRaces, setMinRaces] = useState<number>(12);
@@ -35,12 +36,20 @@ export default function TopTeamPlayers(): React.JSX.Element {
       setTopTracks([]);
       setError("");
       try {
-        const data = await fetchJson<string[]>("/api/teams", { season, division });
+        const [data, scopes] = await Promise.all([
+          fetchJson<string[]>("/api/teams", { season, division }),
+          fetchTeamScopes(),
+        ]);
         if (cancelled) return;
         const sortedData = [...data].sort((a, b) =>
           a.toLowerCase().localeCompare(b.toLowerCase())
         );
         setTeams(sortedData);
+        setTeamIds(Object.fromEntries(
+          scopes
+            .filter((scope) => scope.season === season && scope.division === division)
+            .map((scope) => [scope.clan_tag, scope.team_id])
+        ));
         setSelectedTeam(sortedData[0] ?? "");
       } catch (err) {
         if (cancelled) return;
@@ -157,6 +166,17 @@ export default function TopTeamPlayers(): React.JSX.Element {
             />
           </div>
         </div>
+
+        {selectedTeam && teamIds[selectedTeam] && (
+          <div className="mb-6 text-center">
+            <Link
+              to={`/teams/${teamIds[selectedTeam]}?season=${season}&division=${division}`}
+              className="font-semibold text-blue-300 hover:text-blue-200"
+            >
+              Open team dashboard &rarr;
+            </Link>
+          </div>
+        )}
 
         {loading && (
           <div className="text-center">

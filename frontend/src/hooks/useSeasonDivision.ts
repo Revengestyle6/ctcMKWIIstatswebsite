@@ -6,7 +6,8 @@ import {
   fetchSeasons,
 } from "../api";
 
-export function useSeasonDivision() {
+export function useSeasonDivision(options: { initialSeason?: string; initialDivision?: string } = {}) {
+  const { initialSeason = "", initialDivision = "" } = options;
   const [seasons, setSeasons] = useState<SeasonOption[]>([]);
   const [divisions, setDivisions] = useState<DivisionOption[]>([]);
   const [season, setSeason] = useState("");
@@ -24,7 +25,11 @@ export function useSeasonDivision() {
         const seasonData = await fetchSeasons();
         if (cancelled) return;
         setSeasons(seasonData);
-        setSeason(seasonData[0]?.season ?? "");
+        setSeason(
+          seasonData.some((entry) => entry.season === initialSeason)
+            ? initialSeason
+            : seasonData[0]?.season ?? ""
+        );
       } catch (error) {
         if (cancelled) return;
         setScopeError(error instanceof Error ? error.message : "Failed to load seasons.");
@@ -39,7 +44,7 @@ export function useSeasonDivision() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialSeason]);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +62,11 @@ export function useSeasonDivision() {
         const divisionData = await fetchDivisions(season);
         if (cancelled) return;
         setDivisions(divisionData);
-        setDivision(divisionData[0]?.division ?? "");
+        setDivision(
+          divisionData.some((entry) => entry.division === initialDivision)
+            ? initialDivision
+            : divisionData[0]?.division ?? ""
+        );
       } catch (error) {
         if (cancelled) return;
         setScopeError(error instanceof Error ? error.message : "Failed to load divisions.");
@@ -72,7 +81,7 @@ export function useSeasonDivision() {
     return () => {
       cancelled = true;
     };
-  }, [season]);
+  }, [season, initialDivision]);
 
   return {
     seasons,
