@@ -35,10 +35,18 @@ export default function PlayerStats() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!season || !division) return;
+    if (!season || !division) {
+      setPlayerDirectory([]);
+      setSelectedPlayer("");
+      setStats(null);
+      setLoading(false);
+      setError("");
+      return;
+    }
     setPlayerDirectory([]);
     setSelectedPlayer("");
     setStats(null);
+    setLoading(false);
     setError("");
     fetchPlayerDirectory(season, division)
       .then((directory) => {
@@ -57,7 +65,11 @@ export default function PlayerStats() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!selectedPlayer || !season || !division) return;
+    if (!selectedPlayer || !season || !division) {
+      setLoading(false);
+      setError("");
+      return;
+    }
     setLoading(true);
     setError("");
     Promise.all([
@@ -124,6 +136,8 @@ export default function PlayerStats() {
           <RoleModeToggle value={role} onChange={updateRole} disabled={loading} />
         </div>
 
+        {role === "bagger" && <BaggerDisclosure />}
+
         {(scopeError || error) && <p className="mt-4 text-center text-red-400">{scopeError || error}</p>}
         {loading && <p className="mt-6 text-center text-gray-300">Loading player statistics...</p>}
 
@@ -144,6 +158,7 @@ export default function PlayerStats() {
                   </>
                 ) : (
                   <>
+                    <Metric label="Bagging points" value={String(metrics.total_points)} />
                     <Metric label="Bagging points per race" value={value(metrics.points_per_race)} />
                     <Metric label="Bag-point rate" value={value(metrics.bag_point_rate, "%")} />
                     <Metric label="Zero-point rate" value={value(metrics.zero_point_rate, "%")} />
@@ -179,6 +194,14 @@ export default function PlayerStats() {
 
 function Metric({ label, value: metricValue }: { label: string; value: string }) {
   return <div><p className="text-xs font-semibold uppercase text-gray-400">{label}</p><p className="mt-1 text-lg font-bold text-white">{metricValue}</p></div>;
+}
+
+function BaggerDisclosure() {
+  return (
+    <p className="mb-5 rounded-md border border-amber-300/25 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+      Bagger statistics report scoring outcomes only. Shock acquisition is not recorded, and points do not measure overall bagging effectiveness.
+    </p>
+  );
 }
 
 function TrackTable({ tracks, role }: { tracks: PlayerTrackRow[]; role: PlayerRoleMode }) {

@@ -38,11 +38,27 @@ export default function TopTeamPlayers(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    if (!season || !division) return;
+    if (!season || !division) {
+      setTeams([]);
+      setSelectedTeam("");
+      setTeamIds({});
+      setPlayerResult(null);
+      setTrackResult(null);
+      setPlayersLoading(false);
+      setTracksLoading(false);
+      setPlayersError("");
+      setTracksError("");
+      return;
+    }
     setTeams([]);
     setSelectedTeam("");
+    setTeamIds({});
     setPlayerResult(null);
     setTrackResult(null);
+    setPlayersLoading(false);
+    setTracksLoading(false);
+    setPlayersError("");
+    setTracksError("");
     Promise.all([
       fetchJson<string[]>("/api/teams", { season, division }),
       fetchTeamScopes(),
@@ -66,7 +82,11 @@ export default function TopTeamPlayers(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    if (!selectedTeam || !season || !division) return;
+    if (!selectedTeam || !season || !division) {
+      setPlayersLoading(false);
+      setPlayersError("");
+      return;
+    }
     setPlayersLoading(true);
     setPlayersError("");
     fetchJson<LegacyTeamRosterPlayer[]>("/api/top-team-players", {
@@ -82,7 +102,11 @@ export default function TopTeamPlayers(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    if (!selectedTeam || !season || !division) return;
+    if (!selectedTeam || !season || !division) {
+      setTracksLoading(false);
+      setTracksError("");
+      return;
+    }
     setTracksLoading(true);
     setTracksError("");
     fetchJson<LegacyTeamTrackRow[]>("/api/top-team-tracks", { team: selectedTeam, season, division })
@@ -139,6 +163,8 @@ export default function TopTeamPlayers(): React.JSX.Element {
           </div>
           <RoleModeToggle value={role} onChange={updateRole} disabled={playersLoading} />
         </div>
+
+        {role === "bagger" && <BaggerDisclosure />}
 
         {selectedTeam && teamIds[selectedTeam] && (
           <div className="mb-6 text-center">
@@ -238,4 +264,12 @@ function TeamTrackTable({ rows }: { rows: LegacyTeamTrackRow[] }) {
       </table>
     </div>
   </section>;
+}
+
+function BaggerDisclosure() {
+  return (
+    <p className="mb-5 rounded-md border border-amber-300/25 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+      Bagger statistics report scoring outcomes only. Shock acquisition is not recorded, and points do not measure overall bagging effectiveness.
+    </p>
+  );
 }

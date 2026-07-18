@@ -37,11 +37,25 @@ export default function TopTracks(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    if (!season || !division) return;
+    if (!season || !division) {
+      setTracks([]);
+      setSelectedTrack("");
+      setPlayerResult(null);
+      setTeamResult(null);
+      setPlayersLoading(false);
+      setTeamsLoading(false);
+      setPlayersError("");
+      setTeamsError("");
+      return;
+    }
     setTracks([]);
     setSelectedTrack("");
     setPlayerResult(null);
     setTeamResult(null);
+    setPlayersLoading(false);
+    setTeamsLoading(false);
+    setPlayersError("");
+    setTeamsError("");
     fetchJson<string[]>("/api/tracks", { season, division })
       .then((data) => {
         if (cancelled) return;
@@ -56,7 +70,11 @@ export default function TopTracks(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    if (!selectedTrack || !season || !division) return;
+    if (!selectedTrack || !season || !division) {
+      setPlayersLoading(false);
+      setPlayersError("");
+      return;
+    }
     setPlayersLoading(true);
     setPlayersError("");
     fetchJson<LegacyTrackPlayerRow[]>("/api/top-tracks", {
@@ -72,7 +90,11 @@ export default function TopTracks(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    if (!selectedTrack || !season || !division) return;
+    if (!selectedTrack || !season || !division) {
+      setTeamsLoading(false);
+      setTeamsError("");
+      return;
+    }
     setTeamsLoading(true);
     setTeamsError("");
     fetchJson<LegacyTrackTeamRow[]>("/api/top-teams-on-track", {
@@ -130,6 +152,8 @@ export default function TopTracks(): React.JSX.Element {
             <RoleModeToggle value={role} onChange={updateRole} disabled={playersLoading} />
           </div>
         </div>
+
+        {role === "bagger" && <BaggerDisclosure />}
 
         {(scopeError || playersError || teamsError) && (
           <div className="mb-6 rounded border border-red-600 bg-red-900/50 p-4 text-red-200">
@@ -216,4 +240,12 @@ function TeamRankingTable({ rows }: { rows: LegacyTrackTeamRow[] }) {
       </tr>)}</tbody>
     </table>
   </div>;
+}
+
+function BaggerDisclosure() {
+  return (
+    <p className="mb-5 rounded-md border border-amber-300/25 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+      Bagger statistics report scoring outcomes only. Shock acquisition is not recorded, and points do not measure overall bagging effectiveness.
+    </p>
+  );
 }
