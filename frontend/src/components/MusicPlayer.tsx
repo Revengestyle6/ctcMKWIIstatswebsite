@@ -120,7 +120,7 @@ export default function MusicPlayer() {
                 />
               </svg>
               <h2 className="text-2xl font-bold text-white mb-2">Thanks for Visiting!</h2>
-              <p className="text-gray-400 mb-6"> (RESULTS TAKE 30-60 SECONDS TO LOAD.) Start Background Music?</p>
+              <p className="text-gray-400 mb-6">Start background music?</p>
               <div className="flex gap-3">
                 <button
                   onClick={startMusic}
