@@ -4,7 +4,8 @@ from sqlalchemy import and_, desc, func, select
 
 import dashboard_stats as dashboards
 from database import get_session_factory
-from player_role_analytics import normalize_role
+from player_display_names import _display_names_for_players
+from player_role_analytics import normalize_role, summarize_role_rows
 from models import (
     Division,
     Match,
@@ -84,62 +85,6 @@ def _display_player(row):
         or row.primary_mii_name
         or ""
     )
-
-
-def _ranked_alias_values(session, player_ids, alias_type, rank_by):
-    if not player_ids:
-        return {}
-
-    rows = session.execute(
-        select(
-            PlayerAlias.player_id,
-            PlayerAlias.alias_value,
-            func.count(PlayerAlias.player_alias_id).label("uses"),
-            func.max(PlayerAlias.last_seen_match_id).label("last_seen"),
-            func.max(PlayerAlias.player_alias_id).label("alias_id"),
-        )
-        .where(
-            PlayerAlias.player_id.in_(player_ids),
-            PlayerAlias.alias_type == alias_type,
-            PlayerAlias.alias_value.is_not(None),
-            func.trim(PlayerAlias.alias_value) != "",
-        )
-        .group_by(PlayerAlias.player_id, PlayerAlias.alias_value)
-    ).all()
-
-    ranked = {}
-    for row in rows:
-        last_seen = row.last_seen or 0
-        uses = row.uses or 0
-        alias_id = row.alias_id or 0
-        if rank_by == "recent":
-            key = (last_seen, uses, alias_id)
-        else:
-            key = (uses, last_seen, alias_id)
-        current = ranked.get(row.player_id)
-        if current is None or key > current[0]:
-            ranked[row.player_id] = (key, row.alias_value)
-
-    return {player_id: value for player_id, (_, value) in ranked.items()}
-
-
-def _display_names_for_players(session, player_ids, canonical_names=None):
-    player_ids = list(dict.fromkeys(player_ids))
-    canonical_names = canonical_names or {}
-    recent_lounge_names = _ranked_alias_values(session, player_ids, "lounge_name", "recent")
-    common_table_names = _ranked_alias_values(session, player_ids, "table_name", "common")
-    common_mii_names = _ranked_alias_values(session, player_ids, "mii_name", "common")
-
-    return {
-        player_id: (
-            recent_lounge_names.get(player_id)
-            or canonical_names.get(player_id)
-            or common_table_names.get(player_id)
-            or common_mii_names.get(player_id)
-            or ""
-        )
-        for player_id in player_ids
-    }
 
 
 def _score_filter():
@@ -872,7 +817,7 @@ def findplayeravg(player, track="", division=None, team="", season=None, role="r
                 season=scope.season_code,
                 division=scope.division_code,
                 team_id=team_row.team_id if team_row else None,
-                min_races=1,
+                min_races=0,
                 role=role,
                 session=session,
             )
@@ -881,13 +826,7 @@ def findplayeravg(player, track="", division=None, team="", season=None, role="r
                 None,
             )
             if metrics is None:
-                metrics = {
-                    "role": role,
-                    "races": 0,
-                    "scored_races": 0,
-                    "total_points": 0,
-                    "points_per_race": None,
-                }
+                metrics = summarize_role_rows([], role)
             else:
                 metrics = {key: value for key, value in metrics.items() if key not in {"track_id", "name"}}
         else:
@@ -1000,7 +939,7 @@ def top_track_players(track, min_races=2, division=None, season=None, role="runn
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
         track_row = _resolve_track(session, track, scope)
-        return dashboards.get_track_player_rankings(
+        players = dashboards.get_track_player_rankings(
             track_row.track_id,
             season=scope.season_code,
             division=scope.division_code,
@@ -1008,6 +947,27 @@ def top_track_players(track, min_races=2, division=None, season=None, role="runn
             role=role,
             session=session,
         )["players"]
+        rows = []
+        for player in players:
+            metrics = player.get("metrics", {})
+            row = {
+                "player_id": player.get("player_id"),
+                "name": player.get("name"),
+                "role": role,
+                "races": metrics.get("races"),
+                "scored_races": metrics.get("scored_races"),
+                "points_per_race": metrics.get("points_per_race"),
+                "twelve_race_pace": metrics.get("twelve_race_pace"),
+                "bag_point_rate": metrics.get("bag_point_rate"),
+                "zero_point_rate": metrics.get("zero_point_rate"),
+                "average_placement": metrics.get("average_placement"),
+                "total_points": metrics.get("total_points"),
+                "excluded_score_rows": metrics.get("excluded_score_rows"),
+            }
+            if "role_coverage" in player:
+                row["role_coverage"] = player["role_coverage"]
+            rows.append(row)
+        return rows
 
 
 def top_track_teams(track, min_races=2, division=None, season=None):

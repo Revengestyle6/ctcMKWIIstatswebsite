@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from sqlalchemy import desc, select
 
 from database import get_session_factory
+from player_display_names import _display_names_for_players
 from models import (
     Division,
     Match,
@@ -746,6 +747,16 @@ def get_track_player_rankings(
     for item in classified:
         by_player[item[0].player_id].append(item)
 
+    display_names = _display_names_for_players(
+        session,
+        by_player,
+        {
+            row.player_id: row.canonical_lounge_name
+            for row in rows
+            if row.canonical_lounge_name
+        },
+    )
+
     players = []
     exact_sort_values = {}
     for player_id, player_rows in by_player.items():
@@ -753,7 +764,7 @@ def get_track_player_rankings(
         if metrics["scored_races"] < min_races:
             continue
         coverage, _ = role_coverage([item[0] for item in player_rows], confirmed)
-        name = player_rows[0][0].canonical_lounge_name or f"Player {player_id}"
+        name = display_names.get(player_id) or f"Player {player_id}"
         exact_sort_values[player_id] = (
             metrics["total_points"] / metrics["scored_races"]
             * (12 if role == "runner" else 1)
@@ -1185,15 +1196,23 @@ def get_team_roster(
     confirmed = confirmed_5v5_race_ids(session, rows)
     coverage, classified = role_coverage(rows, confirmed)
     all_by_player = defaultdict(list)
-    by_player = defaultdict(lambda: {"classified": [], "name": ""})
+    by_player = defaultdict(lambda: {"classified": []})
     for item in classified:
         row, classified_role, _source = item
         all_by_player[row.player_id].append(item)
         if classified_role != role:
             continue
-        player = by_player[row.player_id]
-        player["classified"].append(item)
-        player["name"] = row.canonical_lounge_name or f"Player {row.player_id}"
+        by_player[row.player_id]["classified"].append(item)
+
+    display_names = _display_names_for_players(
+        session,
+        by_player,
+        {
+            row.player_id: row.canonical_lounge_name
+            for row in rows
+            if row.canonical_lounge_name
+        },
+    )
 
     counterpart_summaries = (
         _bulk_bagger_counterpart_summaries(session, classified, confirmed)
@@ -1229,7 +1248,7 @@ def get_team_roster(
         last = ordered[-1]
         players.append({
             "player_id": player_id,
-            "name": data["name"],
+            "name": display_names.get(player_id) or f"Player {player_id}",
             "friend_codes": codes_by_player[player_id],
             "matches": len({row.match_id for row in player_rows}),
             "metrics": metrics,

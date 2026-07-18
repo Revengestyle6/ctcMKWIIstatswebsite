@@ -1,10 +1,13 @@
 import unittest
+from contextlib import nullcontext
 from unittest.mock import patch
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import dashboard_stats as dashboard_module
+import app as app_module
+import stats_db
 from dashboard_stats import (
     DashboardError,
     get_player_overview,
@@ -474,6 +477,133 @@ class DashboardRoleContractTests(unittest.TestCase):
             session=self.session,
         )
         self.assertNotIn(self.player_id, [row["player_id"] for row in thresholded["players"]])
+
+    def test_track_rankings_and_roster_use_bulk_display_name_fallbacks(self):
+        self.session.add_all([
+            PlayerAlias(
+                player_id=self.player_id,
+                alias_type="lounge_name",
+                alias_value="Older Lounge",
+                last_seen_match_id=1,
+            ),
+            PlayerAlias(
+                player_id=self.player_id,
+                alias_type="lounge_name",
+                alias_value="Recent Lounge",
+                last_seen_match_id=3,
+            ),
+            PlayerAlias(
+                player_id=self.players[1].player_id,
+                alias_type="table_name",
+                alias_value="Ignored Table",
+            ),
+            PlayerAlias(
+                player_id=self.players[2].player_id,
+                alias_type="table_name",
+                alias_value="Table Fallback",
+            ),
+            PlayerAlias(
+                player_id=self.players[3].player_id,
+                alias_type="mii_name",
+                alias_value="Mii Fallback",
+            ),
+        ])
+        self.players[2].canonical_lounge_name = None
+        self.players[3].canonical_lounge_name = None
+        self.session.flush()
+
+        rankings = get_track_player_rankings(
+            self.track.track_id,
+            season="s2",
+            division="d1",
+            role="runner",
+            min_races=1,
+            session=self.session,
+        )
+        roster = get_team_roster(
+            self.alpha_id,
+            season="s2",
+            division="d1",
+            role="runner",
+            min_races=1,
+            session=self.session,
+        )
+        ranking_names = {row["player_id"]: row["name"] for row in rankings["players"]}
+        roster_names = {row["player_id"]: row["name"] for row in roster["players"]}
+        expected = {
+            self.player_id: "Recent Lounge",
+            self.players[1].player_id: "Player 1",
+            self.players[2].player_id: "Table Fallback",
+            self.players[3].player_id: "Mii Fallback",
+        }
+        for player_id, name in expected.items():
+            self.assertEqual(ranking_names[player_id], name)
+            self.assertEqual(roster_names[player_id], name)
+
+    def test_top_tracks_route_integrates_flat_schema_aliases_and_role_math(self):
+        self.session.add(PlayerAlias(
+            player_id=self.player_id,
+            alias_type="lounge_name",
+            alias_value="Route Alias",
+            last_seen_match_id=3,
+        ))
+        self.session.flush()
+        app_module.app.config.update(TESTING=True)
+        app_module.cache.clear()
+        client = app_module.app.test_client()
+        required_keys = {
+            "player_id", "name", "role", "races", "scored_races",
+            "points_per_race", "twelve_race_pace", "bag_point_rate",
+            "zero_point_rate", "average_placement", "total_points",
+            "excluded_score_rows",
+        }
+
+        with patch.object(stats_db, "SessionLocal", return_value=nullcontext(self.session)):
+            runner_response = client.get(
+                "/api/top-tracks?track=Test+Track&season=s2&division=d1&role=runner&min_races=1"
+            )
+            bagger_response = client.get(
+                "/api/top-tracks?track=Test+Track&season=s2&division=d1&role=bagger&min_races=4"
+            )
+
+        self.assertEqual(runner_response.status_code, 200)
+        self.assertEqual(bagger_response.status_code, 200)
+        runner = next(row for row in runner_response.get_json() if row["player_id"] == self.player_id)
+        bagger = next(row for row in bagger_response.get_json() if row["player_id"] == self.player_id)
+        self.assertEqual(set(runner), required_keys | {"role_coverage"})
+        self.assertEqual(set(bagger), required_keys | {"role_coverage"})
+        self.assertEqual(runner["name"], "Route Alias")
+        self.assertEqual(runner["total_points"], 6)
+        self.assertEqual(runner["twelve_race_pace"], 72.0)
+        self.assertIsNone(runner["bag_point_rate"])
+        self.assertIsNone(runner["zero_point_rate"])
+        self.assertEqual(bagger["name"], "Route Alias")
+        self.assertEqual(bagger["total_points"], 7)
+        self.assertIsNone(bagger["twelve_race_pace"])
+        self.assertEqual(bagger["bag_point_rate"], 75.0)
+        self.assertEqual(bagger["zero_point_rate"], 25.0)
+
+    def test_track_player_average_preserves_invalid_only_role_metrics(self):
+        self._selected_result(3, 1).score = 99
+        self.session.flush()
+        with patch.object(stats_db, "SessionLocal", return_value=nullcontext(self.session)):
+            result = stats_db.findplayeravg(
+                "Role Switcher",
+                track="Test Track",
+                season="s2",
+                division="d1",
+                role="runner",
+            )
+
+        metrics = result["metrics"]
+        self.assertEqual(metrics["races"], 2)
+        self.assertEqual(metrics["scored_races"], 0)
+        self.assertEqual(metrics["total_points"], 0)
+        self.assertIsNone(metrics["points_per_race"])
+        self.assertEqual(metrics["average_placement"], 4.0)
+        self.assertEqual(metrics["excluded_score_rows"], 2)
+        self.assertEqual(metrics["wins"], 0)
+        self.assertEqual(metrics["podiums"], 1)
 
     def test_rankings_classify_each_player_and_use_selected_role_eligibility(self):
         runner = get_player_overview(

@@ -86,6 +86,14 @@ class RoleApiTests(unittest.TestCase):
                 self.assertEqual(response.get_json(), {"error": "role must be runner or bagger."})
                 mocked.assert_not_called()
 
+    def test_invalid_role_on_printing_legacy_routes_is_quiet(self):
+        with patch("builtins.print") as noisy_print:
+            team_response = self.client.get("/api/top-team-players?team=a&role=all")
+            track_response = self.client.get("/api/top-tracks?track=Test+Track&role=all")
+        self.assertEqual(team_response.status_code, 400)
+        self.assertEqual(track_response.status_code, 400)
+        noisy_print.assert_not_called()
+
     def test_team_overview_and_tracks_never_receive_role(self):
         cases = (
             ("/api/teams/4/overview?role=bagger", "get_team_overview"),
@@ -204,7 +212,20 @@ class LegacyRoleDelegationTests(unittest.TestCase):
             return_value={"players": [{"player_id": 8}]},
         ) as rankings:
             players = stats_db.top_track_players("Alias Track", role="runner")
-        self.assertEqual(players, [{"player_id": 8}])
+        self.assertEqual(players, [{
+            "player_id": 8,
+            "name": None,
+            "role": "runner",
+            "races": None,
+            "scored_races": None,
+            "points_per_race": None,
+            "twelve_race_pace": None,
+            "bag_point_rate": None,
+            "zero_point_rate": None,
+            "average_placement": None,
+            "total_points": None,
+            "excluded_score_rows": None,
+        }])
         self.assertEqual(rankings.call_args.args, (9,))
         self.assertEqual(rankings.call_args.kwargs["role"], "runner")
 
