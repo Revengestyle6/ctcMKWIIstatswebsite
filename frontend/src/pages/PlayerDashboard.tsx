@@ -35,9 +35,9 @@ export default function PlayerDashboard() {
   const { playerId = "" } = useParams();
   const numericPlayerId = Number(playerId);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState<PlayerOverview | null>(null);
+  const [overview, setOverview] = useState<{ key: string; value: PlayerOverview } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [overviewError, setOverviewError] = useState<{ key: string; message: string } | null>(null);
   const [performance, setPerformance] = useState<PlayerPerformance | null>(null);
   const [tracks, setTracks] = useState<PlayerTracks | null>(null);
   const [tabLoading, setTabLoading] = useState(false);
@@ -49,16 +49,26 @@ export default function PlayerDashboard() {
   const minRaces = Math.min(500, Math.max(1, Number(searchParams.get("min_races")) || 12));
   const requestedTab = searchParams.get("tab") ?? "overview";
   const activeTab = ["overview", "performance", "tracks"].includes(requestedTab) ? requestedTab : "overview";
+  const overviewQueryKey = JSON.stringify([
+    playerId,
+    season,
+    division,
+    teamId ? Number(teamId) : null,
+    minRaces,
+    role,
+  ]);
+  const data = overview?.key === overviewQueryKey ? overview.value : null;
+  const error = overviewError?.key === overviewQueryKey ? overviewError.message : "";
 
   useEffect(() => {
     if (!Number.isInteger(numericPlayerId) || numericPlayerId < 1) {
-      setError("Player not found.");
+      setOverviewError({ key: overviewQueryKey, message: "Player not found." });
       setLoading(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
-    setError("");
+    setOverviewError(null);
     fetchPlayerOverview(numericPlayerId, {
       season: season || undefined,
       division: division || undefined,
@@ -67,10 +77,15 @@ export default function PlayerDashboard() {
       role,
     })
       .then((response) => {
-        if (!cancelled) setData(response);
+        if (!cancelled) setOverview({ key: overviewQueryKey, value: response });
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(requestError instanceof Error ? requestError.message : "Failed to load player dashboard.");
+        if (!cancelled) {
+          setOverviewError({
+            key: overviewQueryKey,
+            message: requestError instanceof Error ? requestError.message : "Failed to load player dashboard.",
+          });
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -78,7 +93,7 @@ export default function PlayerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [numericPlayerId, season, division, teamId, minRaces, role]);
+  }, [numericPlayerId, season, division, teamId, minRaces, role, overviewQueryKey]);
 
   useEffect(() => {
     if (activeTab === "overview" || !Number.isInteger(numericPlayerId) || numericPlayerId < 1) return;
