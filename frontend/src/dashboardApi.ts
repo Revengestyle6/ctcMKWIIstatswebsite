@@ -12,7 +12,7 @@ export interface RoleCoverage {
   known_rate: number | null;
 }
 
-interface CommonRoleMetrics {
+export interface BaseRoleMetrics {
   role: PlayerRoleMode;
   races: number;
   scored_races: number;
@@ -22,7 +22,7 @@ interface CommonRoleMetrics {
   excluded_score_rows: number;
 }
 
-export interface RunnerMetrics extends CommonRoleMetrics {
+export interface RunnerMetrics extends BaseRoleMetrics {
   role: "runner";
   twelve_race_pace: number | null;
   wins: number;
@@ -30,12 +30,15 @@ export interface RunnerMetrics extends CommonRoleMetrics {
   podium_rate: number | null;
 }
 
-export interface BaggerMetrics extends CommonRoleMetrics {
+export interface BaggerTrackMetrics extends BaseRoleMetrics {
   role: "bagger";
   bag_points: number;
   bag_point_rate: number | null;
   zero_points: number;
   zero_point_rate: number | null;
+}
+
+export interface BaggerMetrics extends BaggerTrackMetrics {
   counterpart_races: number;
   opponent_points_for: number;
   opponent_points_against: number;
@@ -43,6 +46,7 @@ export interface BaggerMetrics extends CommonRoleMetrics {
 }
 
 export type PlayerRoleMetrics = RunnerMetrics | BaggerMetrics;
+export type PlayerTrackMetrics = RunnerMetrics | BaggerTrackMetrics;
 
 export interface DashboardRanking {
   eligible: boolean;
@@ -218,7 +222,7 @@ export interface PlayerPerformance {
   by_gp_number: Array<{ gp_number: number; average: number; races: number }>;
 }
 
-export type PlayerTrackRow = PlayerRoleMetrics & {
+export type PlayerTrackRow = PlayerTrackMetrics & {
   track_id: number;
   name: string;
 };
