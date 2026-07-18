@@ -53,7 +53,7 @@ export default function PlayerDashboard() {
     playerId,
     season,
     division,
-    teamId ? Number(teamId) : null,
+    teamId,
     minRaces,
     role,
   ]);
