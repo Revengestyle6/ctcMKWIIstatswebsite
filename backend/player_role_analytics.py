@@ -25,7 +25,11 @@ def normalize_role(value):
 def _numeric_value(value):
     if isinstance(value, bool) or not isinstance(value, (Real, Decimal)):
         return None
-    if not math.isfinite(float(value)):
+    try:
+        finite = math.isfinite(float(value))
+    except (OverflowError, ValueError):
+        return None
+    if not finite:
         return None
     return value
 
@@ -35,14 +39,23 @@ def valid_race_score(score):
     return numeric_score is not None and 0 <= numeric_score <= 15
 
 
+def valid_placement(position):
+    numeric_position = _numeric_value(position)
+    return (
+        numeric_position is not None
+        and 1 <= numeric_position <= 10
+        and numeric_position == int(numeric_position)
+    )
+
+
 def classify_role(row, confirmed_ids):
     if row.role in VALID_ROLES:
         source = "inferred" if row.role_source == "inferred" else "explicit"
         return row.role, source
 
-    placement = _numeric_value(row.position)
-    if row.race_id not in confirmed_ids or placement is None:
+    if row.race_id not in confirmed_ids or not valid_placement(row.position):
         return "unknown", "unknown"
+    placement = int(row.position)
     if 1 <= placement <= 8:
         return "runner", "inferred"
     if 9 <= placement <= 10:
@@ -55,9 +68,17 @@ def confirmed_5v5_race_ids(session, rows):
     if not candidate_ids:
         return set()
 
-    all_results = session.execute(
-        select(RacePlayerResult).where(RacePlayerResult.race_id.in_(candidate_ids))
-    ).scalars()
+    all_results = list(
+        session.execute(
+            select(RacePlayerResult).where(
+                RacePlayerResult.race_id.in_(candidate_ids)
+            )
+        ).scalars()
+    )
+    return _confirmed_5v5_ids_from_results(all_results)
+
+
+def _confirmed_5v5_ids_from_results(all_results):
     by_race = defaultdict(list)
     for result in all_results:
         by_race[result.race_id].append(result)
@@ -65,6 +86,8 @@ def confirmed_5v5_race_ids(session, rows):
     confirmed = set()
     for race_id, race_rows in by_race.items():
         if len(race_rows) != 10:
+            continue
+        if len({row.player_id for row in race_rows}) != 10:
             continue
         by_team = defaultdict(list)
         for row in race_rows:
@@ -112,9 +135,9 @@ def summarize_role_rows(classified_rows, role):
     ]
     scores = [row.score for row in selected_rows if valid_race_score(row.score)]
     placements = [
-        placement
+        int(row.position)
         for row in selected_rows
-        if (placement := _numeric_value(row.position)) is not None
+        if valid_placement(row.position)
     ]
     total_points = sum(scores)
     scored_races = len(scores)
@@ -151,8 +174,8 @@ def summarize_role_rows(classified_rows, role):
                 "wins": wins,
                 "podiums": podiums,
                 "podium_rate": (
-                    round(podiums / scored_races * 100, 2)
-                    if scored_races
+                    round(podiums / len(placements) * 100, 2)
+                    if placements
                     else None
                 ),
             }
@@ -183,7 +206,7 @@ def bagger_counterpart_summary(session, selected_player_id, classified_rows):
     candidate_ids = {
         row.race_id
         for row, role, _ in classified_rows
-        if role == "bagger" and row.player_id == selected_player_id
+        if role == "bagger"
     }
     empty_summary = {
         "counterpart_races": 0,
@@ -201,7 +224,7 @@ def bagger_counterpart_summary(session, selected_player_id, classified_rows):
             )
         ).scalars()
     )
-    confirmed_ids = confirmed_5v5_race_ids(session, all_rows)
+    confirmed_ids = _confirmed_5v5_ids_from_results(all_rows)
     _, all_classified = role_coverage(all_rows, confirmed_ids)
     by_race = defaultdict(list)
     for classified in all_classified:
@@ -210,9 +233,12 @@ def bagger_counterpart_summary(session, selected_player_id, classified_rows):
     counterpart_races = 0
     points_for = 0
     points_against = 0
-    for race_id in candidate_ids & confirmed_ids:
+    for race_id in candidate_ids:
+        race_rows = by_race[race_id]
+        if len({row.match_team_id for row, _, _ in race_rows}) != 2:
+            continue
         baggers_by_team = defaultdict(list)
-        for row, role, _ in by_race[race_id]:
+        for row, role, _ in race_rows:
             if role == "bagger":
                 baggers_by_team[row.match_team_id].append(row)
         if len(baggers_by_team) != 2 or any(
@@ -221,11 +247,12 @@ def bagger_counterpart_summary(session, selected_player_id, classified_rows):
             continue
 
         baggers = [team_baggers[0] for team_baggers in baggers_by_team.values()]
-        selected = next(
-            (row for row in baggers if row.player_id == selected_player_id), None
-        )
-        if selected is None:
+        selected_baggers = [
+            row for row in baggers if row.player_id == selected_player_id
+        ]
+        if len(selected_baggers) != 1:
             continue
+        selected = selected_baggers[0]
         opponent = next(row for row in baggers if row is not selected)
         if not valid_race_score(selected.score) or not valid_race_score(opponent.score):
             continue
