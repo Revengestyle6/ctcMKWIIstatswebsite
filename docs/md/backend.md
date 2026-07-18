@@ -185,7 +185,7 @@ Returns formatted strings:
 Query params:
 
 - `track`, required
-- `min_races`, default `12`; must be between 1 and 500
+- `min_races`, default `2`; must be between 1 and 500
 - `season`, optional season code
 - `division`, optional division code
 - `role`, `runner` or `bagger`; defaults to `runner`

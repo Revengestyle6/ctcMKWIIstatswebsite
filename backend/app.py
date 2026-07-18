@@ -74,9 +74,9 @@ def _optional_int_arg(name):
         raise DashboardError(f"{name} must be an integer.") from error
 
 
-def _minimum_races_arg():
+def _minimum_races_arg(default=12):
     value = _optional_int_arg("min_races")
-    value = 12 if value is None else value
+    value = default if value is None else value
     if value < 1 or value > 500:
         raise DashboardError("min_races must be between 1 and 500.")
     return value
@@ -661,7 +661,7 @@ def api_top_tracks():
         return jsonify({"error": "Track name is required"}), 400
     try:
         role = _role_arg()
-        min_races = _minimum_races_arg()
+        min_races = _minimum_races_arg(default=2)
     except (DashboardError, ValueError) as error:
         return _error_response(error)
     try:

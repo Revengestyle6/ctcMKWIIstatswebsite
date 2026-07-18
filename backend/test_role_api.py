@@ -126,6 +126,21 @@ class RoleApiTests(unittest.TestCase):
                     else:
                         self.assertEqual(mocked.call_args.kwargs["min_races"], minimum)
 
+    def test_legacy_player_ranking_defaults_are_forwarded(self):
+        with patch.object(
+            app_module.stats, "findtopteamplayers", return_value=[]
+        ) as team_players:
+            response = self.client.get("/api/top-team-players?team=a")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(team_players.call_args.args[1], 12)
+
+        with patch.object(
+            app_module.stats, "findtoptracks", return_value=[]
+        ) as track_players:
+            response = self.client.get("/api/top-tracks?track=Test+Track")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(track_players.call_args.kwargs["min_races"], 2)
+
     def test_team_overview_and_tracks_never_receive_role(self):
         cases = (
             ("/api/teams/4/overview?role=bagger", "get_team_overview"),
