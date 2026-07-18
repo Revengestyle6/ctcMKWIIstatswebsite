@@ -1,5 +1,49 @@
 import { fetchJson } from "./api";
 
+export type PlayerRoleMode = "runner" | "bagger";
+
+export interface RoleCoverage {
+  explicit_runner: number;
+  inferred_runner: number;
+  explicit_bagger: number;
+  inferred_bagger: number;
+  unknown: number;
+  total: number;
+  known_rate: number | null;
+}
+
+interface CommonRoleMetrics {
+  role: PlayerRoleMode;
+  races: number;
+  scored_races: number;
+  total_points: number;
+  points_per_race: number | null;
+  average_placement: number | null;
+  excluded_score_rows: number;
+}
+
+export interface RunnerMetrics extends CommonRoleMetrics {
+  role: "runner";
+  twelve_race_pace: number | null;
+  wins: number;
+  podiums: number;
+  podium_rate: number | null;
+}
+
+export interface BaggerMetrics extends CommonRoleMetrics {
+  role: "bagger";
+  bag_points: number;
+  bag_point_rate: number | null;
+  zero_points: number;
+  zero_point_rate: number | null;
+  counterpart_races: number;
+  opponent_points_for: number;
+  opponent_points_against: number;
+  opponent_point_differential: number;
+}
+
+export type PlayerRoleMetrics = RunnerMetrics | BaggerMetrics;
+
 export interface DashboardRanking {
   eligible: boolean;
   rank?: number;
@@ -26,6 +70,17 @@ export interface PlayerAppearance {
   last_seen_match_id: number | null;
 }
 
+interface LegacyRunnerOverviewFields {
+  /** @deprecated Narrow metrics by role before reading RunnerMetrics.twelve_race_pace. */
+  twelve_race_pace: number | null;
+  /** @deprecated Narrow metrics by role before reading RunnerMetrics.podiums. */
+  podiums: number;
+  /** @deprecated Use RunnerMetrics.wins after narrowing by role. */
+  race_wins: number;
+  /** @deprecated Use RunnerMetrics.podium_rate after narrowing by role. */
+  top_three_rate: number | null;
+}
+
 export interface PlayerOverview {
   identity: {
     player_id: number;
@@ -45,26 +100,27 @@ export interface PlayerOverview {
     } | null;
     appearances: PlayerAppearance[];
   };
+  role: PlayerRoleMode;
   scope: { season: string | null; division: string | null; team_id: number | null };
-  metrics: {
-    races: number;
+  metrics: PlayerRoleMetrics & LegacyRunnerOverviewFields & {
     matches: number;
     seasons: number;
     teams: number;
-    total_points: number;
-    points_per_race: number | null;
-    twelve_race_pace: number | null;
     best_match_score: number | null;
     best_gp_score: number | null;
-    race_wins: number;
-    podiums: number;
-    top_three_rate: number | null;
-    excluded_score_rows: number;
   };
+  role_coverage: RoleCoverage;
   record: DashboardRecord;
   ranking: DashboardRanking | null;
   recent_matches: PlayerRecentMatch[];
-  score_trend: Array<{ match_id: number; label: string; score: number; races: number }>;
+  score_trend: Array<{
+    match_id: number;
+    label: string;
+    score: number | null;
+    role_races: number;
+    scored_role_races: number;
+    excluded_score_rows: number;
+  }>;
 }
 
 export interface DashboardOpponent {
@@ -84,8 +140,10 @@ export interface PlayerRecentMatch {
   team: DashboardOpponent;
   opponents: DashboardOpponent[];
   result: "win" | "loss" | "tie" | "unknown";
-  player_score: number;
-  races: number;
+  player_score: number | null;
+  role_races: number;
+  scored_role_races: number;
+  excluded_score_rows: number;
 }
 
 export interface TeamAppearance {
@@ -154,51 +212,49 @@ export interface DashboardQuery extends Record<string, string | number | undefin
   team_id?: number;
   opponent_team_id?: number;
   min_races?: number;
+  role?: PlayerRoleMode;
 }
 
 export interface PlayerPerformance {
   player_id: number;
-  runner_metrics: {
-    races: number;
-    scored_races: number;
-    points_per_race: number | null;
-    twelve_race_pace: number | null;
-    average_placement: number | null;
-    wins: number;
-    podiums: number;
-    podium_rate: number | null;
-    excluded_score_rows: number;
-  };
-  role_coverage: {
-    explicit_runner: number;
-    inferred_runner: number;
-    explicit_bagger: number;
-    inferred_bagger: number;
-    unknown: number;
-    total: number;
-    known_rate: number | null;
-  };
+  role: PlayerRoleMode;
+  scope: { season: string | null; division: string | null; team_id: number | null };
+  metrics: PlayerRoleMetrics;
+  role_coverage: RoleCoverage;
+  /** @deprecated Use metrics after DashboardTabViews is role-aware. */
+  runner_metrics: RunnerMetrics;
   score_distribution: Array<{ score: number; races: number }>;
   placement_distribution: Array<{ position: number; races: number }>;
   by_race_number: Array<{ race_number: number; average: number; races: number }>;
   by_gp_number: Array<{ gp_number: number; average: number; races: number }>;
 }
 
-export interface PlayerTrackRow {
-  track_id: number;
-  name: string;
-  races: number;
+interface LegacyPlayerTrackFields {
+  /** @deprecated Use points_per_race. */
   average: number;
+  /** @deprecated Use races. */
   runner_races: number;
+  /** @deprecated Use average_placement. */
   runner_average: number | null;
+  /** @deprecated Narrow by role before reading RunnerMetrics.wins. */
   wins: number;
+  /** @deprecated Narrow by role before reading RunnerMetrics.podiums. */
   podiums: number;
+  /** @deprecated Use podium_rate. */
   top_three_rate: number | null;
 }
 
+export type PlayerTrackRow = PlayerRoleMetrics & LegacyPlayerTrackFields & {
+  track_id: number;
+  name: string;
+};
+
 export interface PlayerTracks {
   player_id: number;
+  role: PlayerRoleMode;
+  scope: { season: string | null; division: string | null; team_id: number | null };
   minimum_races: number;
+  role_coverage: RoleCoverage;
   tracks: PlayerTrackRow[];
 }
 
@@ -207,10 +263,17 @@ export interface TeamRosterPlayer {
   name: string;
   friend_codes: string[];
   matches: number;
+  metrics: PlayerRoleMetrics;
+  role_coverage: RoleCoverage;
+  /** @deprecated Use metrics.races. */
   races: number;
+  /** @deprecated Use metrics.points_per_race. */
   points_per_race: number;
+  /** @deprecated Use RunnerMetrics.twelve_race_pace after narrowing by role. */
   twelve_race_pace: number;
+  /** @deprecated Use metrics.races. */
   runner_races: number;
+  /** @deprecated Use metrics.average_placement. */
   runner_average: number | null;
   first_appearance: { match_id: number; season: string; division: string; week: number | null };
   last_appearance: { match_id: number; season: string; division: string; week: number | null };
@@ -218,7 +281,10 @@ export interface TeamRosterPlayer {
 
 export interface TeamRoster {
   team_id: number;
+  role: PlayerRoleMode;
+  scope: { season: string | null; division: string | null; opponent_team_id: number | null };
   minimum_races: number;
+  role_coverage: RoleCoverage;
   players: TeamRosterPlayer[];
 }
 

@@ -119,6 +119,7 @@ interface ScopeControlsProps {
   entityId?: string;
   entityOptions?: ScopeEntityOption[];
   minRaces: number;
+  extraControl?: ReactNode;
   disabled?: boolean;
   onSeasonChange: (value: string) => void;
   onDivisionChange: (value: string) => void;
@@ -134,6 +135,7 @@ export function DashboardScopeControls({
   entityId = "",
   entityOptions = [],
   minRaces,
+  extraControl,
   disabled,
   onSeasonChange,
   onDivisionChange,
@@ -193,6 +195,8 @@ export function DashboardScopeControls({
           </select>
         </label>
       )}
+
+      {extraControl}
 
       <label className="flex min-w-36 flex-col gap-1 text-sm font-semibold text-gray-300">
         Minimum races
