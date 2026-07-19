@@ -24,6 +24,10 @@ dist/
 .vite/
 vite.config.ts.timestamp-*
 
+# Playwright output (approved baseline screenshots live under docs/baselines)
+frontend/test-results/
+frontend/playwright-report/
+
 # Environment files
 .env
 .env.local

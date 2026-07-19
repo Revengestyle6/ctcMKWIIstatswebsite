@@ -1,0 +1,162 @@
+{
+  "reference": {
+    "path": "data/ctc_stats.sqlite",
+    "player_count": 268,
+    "friend_code_count": 291
+  },
+  "candidate": {
+    "path": "/tmp/ctc_phase0_rebuild.sqlite",
+    "player_count": 273,
+    "friend_code_count": 291
+  },
+  "reference_players_split_in_candidate": [
+    {
+      "reference_player": {
+        "player_id": 3,
+        "canonical_lounge_name": "Ivan",
+        "primary_friend_code": "4043-2944-1210",
+        "friend_codes": [
+          "3871-5056-8304",
+          "4043-2944-1210"
+        ]
+      },
+      "candidate_players": [
+        {
+          "player_id": 3,
+          "canonical_lounge_name": "Ivan",
+          "primary_friend_code": "4043-2944-1210",
+          "friend_codes": [
+            "4043-2944-1210"
+          ]
+        },
+        {
+          "player_id": 266,
+          "canonical_lounge_name": "Ivan",
+          "primary_friend_code": "3871-5056-8304",
+          "friend_codes": [
+            "3871-5056-8304"
+          ]
+        }
+      ]
+    },
+    {
+      "reference_player": {
+        "player_id": 6,
+        "canonical_lounge_name": "kyzui",
+        "primary_friend_code": "1938-7576-8064",
+        "friend_codes": [
+          "1938-7576-8064",
+          "2926-6126-9292"
+        ]
+      },
+      "candidate_players": [
+        {
+          "player_id": 6,
+          "canonical_lounge_name": "kyzui",
+          "primary_friend_code": "1938-7576-8064",
+          "friend_codes": [
+            "1938-7576-8064"
+          ]
+        },
+        {
+          "player_id": 267,
+          "canonical_lounge_name": "SIX FIVE HTN",
+          "primary_friend_code": "2926-6126-9292",
+          "friend_codes": [
+            "2926-6126-9292"
+          ]
+        }
+      ]
+    },
+    {
+      "reference_player": {
+        "player_id": 93,
+        "canonical_lounge_name": "Flavian",
+        "primary_friend_code": "1981-7080-7744",
+        "friend_codes": [
+          "1981-7080-7744",
+          "3098-4111-1001"
+        ]
+      },
+      "candidate_players": [
+        {
+          "player_id": 93,
+          "canonical_lounge_name": "Flavian",
+          "primary_friend_code": "1981-7080-7744",
+          "friend_codes": [
+            "1981-7080-7744"
+          ]
+        },
+        {
+          "player_id": 273,
+          "canonical_lounge_name": "Flavian",
+          "primary_friend_code": "3098-4111-1001",
+          "friend_codes": [
+            "3098-4111-1001"
+          ]
+        }
+      ]
+    },
+    {
+      "reference_player": {
+        "player_id": 175,
+        "canonical_lounge_name": "scuttlebug",
+        "primary_friend_code": "3141-3583-8311",
+        "friend_codes": [
+          "3141-3583-8311",
+          "5031-1476-0709"
+        ]
+      },
+      "candidate_players": [
+        {
+          "player_id": 175,
+          "canonical_lounge_name": "scuttlebug",
+          "primary_friend_code": "3141-3583-8311",
+          "friend_codes": [
+            "3141-3583-8311"
+          ]
+        },
+        {
+          "player_id": 268,
+          "canonical_lounge_name": "Parvati Shallow",
+          "primary_friend_code": "5031-1476-0709",
+          "friend_codes": [
+            "5031-1476-0709"
+          ]
+        }
+      ]
+    },
+    {
+      "reference_player": {
+        "player_id": 204,
+        "canonical_lounge_name": "season",
+        "primary_friend_code": "4816-3694-6844",
+        "friend_codes": [
+          "3012-5129-6240",
+          "4816-3694-6844"
+        ]
+      },
+      "candidate_players": [
+        {
+          "player_id": 202,
+          "canonical_lounge_name": "season",
+          "primary_friend_code": "4816-3694-6844",
+          "friend_codes": [
+            "4816-3694-6844"
+          ]
+        },
+        {
+          "player_id": 272,
+          "canonical_lounge_name": "season",
+          "primary_friend_code": "3012-5129-6240",
+          "friend_codes": [
+            "3012-5129-6240"
+          ]
+        }
+      ]
+    }
+  ],
+  "candidate_players_split_in_reference": [],
+  "friend_codes_only_in_reference": [],
+  "friend_codes_only_in_candidate": []
+}

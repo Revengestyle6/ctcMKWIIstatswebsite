@@ -1,0 +1,206 @@
+{
+  "identity": {
+    "appearances": [
+      {
+        "division": "d1",
+        "hex_color": "#fcff3d",
+        "logo_url": "/images/team-logos/placeholder.webp",
+        "name": "e-",
+        "season": "s3",
+        "tag": "e-"
+      }
+    ],
+    "current_entry": {
+      "division": "d1",
+      "hex_color": "#fcff3d",
+      "name": "e-",
+      "season": "s3",
+      "tag": "e-"
+    },
+    "display_name": "e-",
+    "logo_url": "/images/team-logos/placeholder.webp",
+    "name": "e-",
+    "tag": "e-",
+    "team_id": 41
+  },
+  "metrics": {
+    "average_differential": -13.14,
+    "average_final_score": 357.29,
+    "best_win": 52,
+    "closest_match": -12,
+    "largest_loss": -114,
+    "matches": 7,
+    "penalties_per_match": 1.43,
+    "races": 84,
+    "total_penalties": 10,
+    "win_rate": 42.86
+  },
+  "ranking": {
+    "eligible": true,
+    "metric": "differential_per_race",
+    "minimum_races": 12,
+    "population": 6,
+    "rank": 5,
+    "value": -1.1
+  },
+  "recent_matches": [
+    {
+      "differential": 52,
+      "division": "d1",
+      "label": "[M10] O 340 - 392 e-",
+      "match_id": 243,
+      "opponent_score": 340,
+      "opponents": [
+        {
+          "name": "Ω",
+          "score": 340,
+          "tag": "Ω",
+          "team_id": 3
+        }
+      ],
+      "penalties": 0,
+      "races": 12,
+      "result": "win",
+      "score": 392,
+      "season": "s3",
+      "season_number": 3,
+      "week": 10
+    },
+    {
+      "differential": 38,
+      "division": "d1",
+      "label": "[M9] e- 385 - 347 O",
+      "match_id": 240,
+      "opponent_score": 347,
+      "opponents": [
+        {
+          "name": "Ω",
+          "score": 347,
+          "tag": "Ω",
+          "team_id": 3
+        }
+      ],
+      "penalties": 0,
+      "races": 12,
+      "result": "win",
+      "score": 385,
+      "season": "s3",
+      "season_number": 3,
+      "week": 9
+    },
+    {
+      "differential": 42,
+      "division": "d1",
+      "label": "[M8] e- 387 - 345 6c",
+      "match_id": 237,
+      "opponent_score": 345,
+      "opponents": [
+        {
+          "name": "6¢",
+          "score": 345,
+          "tag": "6¢",
+          "team_id": 1
+        }
+      ],
+      "penalties": 0,
+      "races": 12,
+      "result": "win",
+      "score": 387,
+      "season": "s3",
+      "season_number": 3,
+      "week": 8
+    },
+    {
+      "differential": -84,
+      "division": "d1",
+      "label": "[M5] t 408 - 324 e-",
+      "match_id": 233,
+      "opponent_score": 408,
+      "opponents": [
+        {
+          "name": "ψ",
+          "score": 408,
+          "tag": "ψ",
+          "team_id": 8
+        }
+      ],
+      "penalties": 0,
+      "races": 12,
+      "result": "loss",
+      "score": 324,
+      "season": "s3",
+      "season_number": 3,
+      "week": 5
+    },
+    {
+      "differential": -12,
+      "division": "d1",
+      "label": "[M3] SF 372 - 360 e-",
+      "match_id": 228,
+      "opponent_score": 372,
+      "opponents": [
+        {
+          "name": "ミ★",
+          "score": 372,
+          "tag": "ミ★",
+          "team_id": 26
+        }
+      ],
+      "penalties": 0,
+      "races": 12,
+      "result": "loss",
+      "score": 360,
+      "season": "s3",
+      "season_number": 3,
+      "week": 3
+    }
+  ],
+  "record": {
+    "losses": 4,
+    "ties": 0,
+    "unknown": 0,
+    "wins": 3
+  },
+  "scope": {
+    "division": "d1",
+    "opponent_team_id": null,
+    "season": "s3"
+  },
+  "score_trend": [
+    {
+      "differential": -14,
+      "label": "[M1] e- 349 - 363 holy",
+      "match_id": 221
+    },
+    {
+      "differential": -114,
+      "label": "[M2] holy 418 - 304 e-",
+      "match_id": 227
+    },
+    {
+      "differential": -12,
+      "label": "[M3] SF 372 - 360 e-",
+      "match_id": 228
+    },
+    {
+      "differential": -84,
+      "label": "[M5] t 408 - 324 e-",
+      "match_id": 233
+    },
+    {
+      "differential": 42,
+      "label": "[M8] e- 387 - 345 6c",
+      "match_id": 237
+    },
+    {
+      "differential": 38,
+      "label": "[M9] e- 385 - 347 O",
+      "match_id": 240
+    },
+    {
+      "differential": 52,
+      "label": "[M10] O 340 - 392 e-",
+      "match_id": 243
+    }
+  ]
+}
