@@ -1,0 +1,232 @@
+[
+  {
+    "import_status": "imported",
+    "label": "[M1] O 352 - 380 t",
+    "match_id": 222,
+    "races": 12,
+    "review_notes": null,
+    "scores": "380 - 352",
+    "teams": "ψ vs Ω",
+    "week": 1
+  },
+  {
+    "import_status": "imported",
+    "label": "[M1] SF 371 - 300 6c",
+    "match_id": 223,
+    "races": 11,
+    "review_notes": null,
+    "scores": "371 - 300",
+    "teams": "ミ★ vs 6¢",
+    "week": 1
+  },
+  {
+    "import_status": "imported",
+    "label": "[M1] e- 349 - 363 holy",
+    "match_id": 221,
+    "races": 12,
+    "review_notes": null,
+    "scores": "363 - 349",
+    "teams": "holy vs e-",
+    "week": 1
+  },
+  {
+    "import_status": "imported",
+    "label": "[M2] 6c 398 - 334 SF",
+    "match_id": 224,
+    "races": 12,
+    "review_notes": null,
+    "scores": "398 - 334",
+    "teams": "6¢ vs ミ★",
+    "week": 2
+  },
+  {
+    "import_status": "imported",
+    "label": "[M2] holy 418 - 304 e-",
+    "match_id": 227,
+    "races": 12,
+    "review_notes": null,
+    "scores": "418 - 304",
+    "teams": "holy vs e-",
+    "week": 2
+  },
+  {
+    "import_status": "imported",
+    "label": "[M2] t 379 - 353 O",
+    "match_id": 225,
+    "races": 12,
+    "review_notes": null,
+    "scores": "379 - 353",
+    "teams": "ψ vs Ω",
+    "week": 2
+  },
+  {
+    "import_status": "imported",
+    "label": "[M3] O 299 - 433 6c",
+    "match_id": 226,
+    "races": 12,
+    "review_notes": null,
+    "scores": "433 - 299",
+    "teams": "6¢ vs Ω",
+    "week": 3
+  },
+  {
+    "import_status": "imported",
+    "label": "[M3] SF 372 - 360 e-",
+    "match_id": 228,
+    "races": 12,
+    "review_notes": null,
+    "scores": "372 - 360",
+    "teams": "ミ★ vs e-",
+    "week": 3
+  },
+  {
+    "import_status": "imported",
+    "label": "[M3] t 349 - 375 holy",
+    "match_id": 229,
+    "races": 12,
+    "review_notes": null,
+    "scores": "375 - 349",
+    "teams": "holy vs ψ",
+    "week": 3
+  },
+  {
+    "import_status": "imported",
+    "label": "[M4] 6c 387 - 340 O",
+    "match_id": 230,
+    "races": 12,
+    "review_notes": null,
+    "scores": "387 - 340",
+    "teams": "6¢ vs Ω",
+    "week": 4
+  },
+  {
+    "import_status": "imported",
+    "label": "[M4] holy 364 - 368 t",
+    "match_id": 231,
+    "races": 12,
+    "review_notes": null,
+    "scores": "368 - 364",
+    "teams": "ψ vs holy",
+    "week": 4
+  },
+  {
+    "import_status": "imported",
+    "label": "[M5] SF 422 - 310 O",
+    "match_id": 232,
+    "races": 12,
+    "review_notes": null,
+    "scores": "422 - 310",
+    "teams": "ミ★ vs Ω",
+    "week": 5
+  },
+  {
+    "import_status": "imported",
+    "label": "[M5] t 408 - 324 e-",
+    "match_id": 233,
+    "races": 12,
+    "review_notes": null,
+    "scores": "408 - 324",
+    "teams": "ψ vs e-",
+    "week": 5
+  },
+  {
+    "import_status": "imported",
+    "label": "[M6] O 317 - 415 SF",
+    "match_id": 234,
+    "races": 12,
+    "review_notes": null,
+    "scores": "415 - 317",
+    "teams": "ミ★ vs Ω",
+    "week": 6
+  },
+  {
+    "import_status": "imported",
+    "label": "[M7] SF 312 - 176 t",
+    "match_id": 236,
+    "races": 8,
+    "review_notes": null,
+    "scores": "312 - 176",
+    "teams": "ミ★ vs ψ",
+    "week": 7
+  },
+  {
+    "import_status": "imported",
+    "label": "[M7] holy 398 - 309 O",
+    "match_id": 235,
+    "races": 12,
+    "review_notes": null,
+    "scores": "398 - 309",
+    "teams": "holy vs Ω",
+    "week": 7
+  },
+  {
+    "import_status": "imported",
+    "label": "[M8] O 316 - 416 holy",
+    "match_id": 238,
+    "races": 12,
+    "review_notes": null,
+    "scores": "416 - 316",
+    "teams": "holy vs Ω",
+    "week": 8
+  },
+  {
+    "import_status": "imported",
+    "label": "[M8] e- 387 - 345 6c",
+    "match_id": 237,
+    "races": 12,
+    "review_notes": null,
+    "scores": "387 - 345",
+    "teams": "e- vs 6¢",
+    "week": 8
+  },
+  {
+    "import_status": "imported",
+    "label": "[M8] t 367 - 365 SF",
+    "match_id": 239,
+    "races": 12,
+    "review_notes": null,
+    "scores": "367 - 365",
+    "teams": "ψ vs ミ★",
+    "week": 8
+  },
+  {
+    "import_status": "imported",
+    "label": "[M9] SF 393 - 314 holy",
+    "match_id": 241,
+    "races": 12,
+    "review_notes": null,
+    "scores": "393 - 314",
+    "teams": "ミ★ vs holy",
+    "week": 9
+  },
+  {
+    "import_status": "imported",
+    "label": "[M9] e- 385 - 347 O",
+    "match_id": 240,
+    "races": 12,
+    "review_notes": null,
+    "scores": "385 - 347",
+    "teams": "e- vs Ω",
+    "week": 9
+  },
+  {
+    "import_status": "imported",
+    "label": "[M10] O 340 - 392 e-",
+    "match_id": 243,
+    "races": 12,
+    "review_notes": null,
+    "scores": "392 - 340",
+    "teams": "e- vs Ω",
+    "week": 10
+  },
+  {
+    "import_status": "imported",
+    "label": "[M10] holy 406 - 306 SF",
+    "match_id": 242,
+    "races": 12,
+    "review_notes": null,
+    "scores": "406 - 306",
+    "teams": "holy vs ミ★",
+    "week": 10
+  }
+]

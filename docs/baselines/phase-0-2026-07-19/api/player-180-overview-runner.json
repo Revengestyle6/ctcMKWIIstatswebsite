@@ -1,0 +1,243 @@
+{
+  "identity": {
+    "aliases": {
+      "lounge_name": [
+        "8610"
+      ],
+      "mii_name": [
+        "e-gooby",
+        "sσρ 8610"
+      ],
+      "table_name": [
+        "8610"
+      ]
+    },
+    "appearances": [
+      {
+        "division": "d1",
+        "first_seen_match_id": 221,
+        "last_seen_match_id": 240,
+        "season": "s3",
+        "team_id": 41,
+        "team_name": "e-",
+        "team_tag": "e-"
+      },
+      {
+        "division": "d1",
+        "first_seen_match_id": 99,
+        "last_seen_match_id": 112,
+        "season": "s2",
+        "team_id": 27,
+        "team_name": "sσρ",
+        "team_tag": "sσρ"
+      }
+    ],
+    "canonical_lounge_name": "8610",
+    "current_team": {
+      "division": "d1",
+      "logo_url": "/images/team-logos/placeholder.webp",
+      "name": "e-",
+      "season": "s3",
+      "tag": "e-",
+      "team_id": 41
+    },
+    "flag": "us_ca",
+    "friend_codes": [
+      "4644-5717-7879"
+    ],
+    "name": "8610",
+    "player_id": 180,
+    "primary_friend_code": "4644-5717-7879"
+  },
+  "metrics": {
+    "average_placement": 5.0,
+    "best_gp_score": 43,
+    "best_match_score": 96,
+    "excluded_score_rows": 0,
+    "matches": 4,
+    "podium_rate": 31.25,
+    "podiums": 15,
+    "points_per_race": 6.62,
+    "races": 48,
+    "role": "runner",
+    "scored_races": 48,
+    "seasons": 1,
+    "teams": 1,
+    "total_points": 318,
+    "twelve_race_pace": 79.5,
+    "wins": 5
+  },
+  "ranking": {
+    "eligible": true,
+    "metric": "12_race_pace",
+    "minimum_races": 12,
+    "population": 37,
+    "rank": 28,
+    "value": 79.5
+  },
+  "recent_matches": [
+    {
+      "division": "d1",
+      "excluded_score_rows": 0,
+      "label": "[M9] e- 385 - 347 O",
+      "match_id": 240,
+      "opponents": [
+        {
+          "name": "Ω",
+          "score": 347,
+          "tag": "Ω",
+          "team_id": 3
+        }
+      ],
+      "player_score": 96,
+      "result": "win",
+      "role_races": 12,
+      "scored_role_races": 12,
+      "season": "s3",
+      "season_number": 3,
+      "team": {
+        "name": "e-",
+        "score": 385,
+        "tag": "e-",
+        "team_id": 41
+      },
+      "week": 9
+    },
+    {
+      "division": "d1",
+      "excluded_score_rows": 0,
+      "label": "[M5] t 408 - 324 e-",
+      "match_id": 233,
+      "opponents": [
+        {
+          "name": "ψ",
+          "score": 408,
+          "tag": "ψ",
+          "team_id": 8
+        }
+      ],
+      "player_score": 60,
+      "result": "loss",
+      "role_races": 12,
+      "scored_role_races": 12,
+      "season": "s3",
+      "season_number": 3,
+      "team": {
+        "name": "e-",
+        "score": 324,
+        "tag": "e-",
+        "team_id": 41
+      },
+      "week": 5
+    },
+    {
+      "division": "d1",
+      "excluded_score_rows": 0,
+      "label": "[M3] SF 372 - 360 e-",
+      "match_id": 228,
+      "opponents": [
+        {
+          "name": "ミ★",
+          "score": 372,
+          "tag": "ミ★",
+          "team_id": 26
+        }
+      ],
+      "player_score": 70,
+      "result": "loss",
+      "role_races": 12,
+      "scored_role_races": 12,
+      "season": "s3",
+      "season_number": 3,
+      "team": {
+        "name": "e-",
+        "score": 360,
+        "tag": "e-",
+        "team_id": 41
+      },
+      "week": 3
+    },
+    {
+      "division": "d1",
+      "excluded_score_rows": 0,
+      "label": "[M1] e- 349 - 363 holy",
+      "match_id": 221,
+      "opponents": [
+        {
+          "name": "holy",
+          "score": 363,
+          "tag": "holy",
+          "team_id": 40
+        }
+      ],
+      "player_score": 92,
+      "result": "loss",
+      "role_races": 12,
+      "scored_role_races": 12,
+      "season": "s3",
+      "season_number": 3,
+      "team": {
+        "name": "e-",
+        "score": 349,
+        "tag": "e-",
+        "team_id": 41
+      },
+      "week": 1
+    }
+  ],
+  "record": {
+    "losses": 3,
+    "ties": 0,
+    "unknown": 0,
+    "wins": 1
+  },
+  "role": "runner",
+  "role_coverage": {
+    "explicit_bagger": 0,
+    "explicit_runner": 48,
+    "inferred_bagger": 0,
+    "inferred_runner": 0,
+    "known_rate": 100.0,
+    "total": 48,
+    "unknown": 0
+  },
+  "scope": {
+    "division": "d1",
+    "season": "s3",
+    "team_id": null
+  },
+  "score_trend": [
+    {
+      "excluded_score_rows": 0,
+      "label": "[M1] e- 349 - 363 holy",
+      "match_id": 221,
+      "role_races": 12,
+      "score": 92,
+      "scored_role_races": 12
+    },
+    {
+      "excluded_score_rows": 0,
+      "label": "[M3] SF 372 - 360 e-",
+      "match_id": 228,
+      "role_races": 12,
+      "score": 70,
+      "scored_role_races": 12
+    },
+    {
+      "excluded_score_rows": 0,
+      "label": "[M5] t 408 - 324 e-",
+      "match_id": 233,
+      "role_races": 12,
+      "score": 60,
+      "scored_role_races": 12
+    },
+    {
+      "excluded_score_rows": 0,
+      "label": "[M9] e- 385 - 347 O",
+      "match_id": 240,
+      "role_races": 12,
+      "score": 96,
+      "scored_role_races": 12
+    }
+  ]
+}

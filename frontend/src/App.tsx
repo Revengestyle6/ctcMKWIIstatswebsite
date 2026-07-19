@@ -11,6 +11,7 @@ import MusicPlayer from "./components/MusicPlayer";
 import PlayerDashboard from "./pages/PlayerDashboard";
 import TeamDashboard from "./pages/TeamDashboard";
 import { PlayerDirectory, TeamDirectory } from "./pages/DashboardDirectories";
+import DatabaseHealthDashboard from "./pages/DatabaseHealthDashboard";
 import React from "react";
 
 export default function App(): React.JSX.Element {
@@ -30,6 +31,7 @@ export default function App(): React.JSX.Element {
         <Route path="/players" element={<PlayerDirectory />} />
         <Route path="/teams" element={<TeamDirectory />} />
         <Route path="/json-editor" element={<MatchJsonEditor />} />
+        <Route path="/database-health" element={<DatabaseHealthDashboard />} />
       </Routes>
     </BrowserRouter>
   );

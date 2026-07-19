@@ -10,6 +10,7 @@ This directory documents how the current Season 1 stats website is built, how da
 - [Data Pipeline](data-pipeline.md): MKW Table Bot JSON input format, extraction process, CSV schema, and current maintenance workflow.
 - [JSON Database Schema](json-database-schema.md): raw JSON structure analysis and a proposed analytics-ready relational schema.
 - [Analytics Database](database.md): SQLAlchemy/SQLite implementation, rebuild command, and current import summary.
+- [Database Health Dashboard](database-health-dashboard.md): implemented monitoring checks, UI behavior, limitations, and potential next steps.
 - [Backend Database Migration Plan](backend-database-migration-plan.md): plan for moving Flask analytics endpoints from CSV files to SQLite/SQLAlchemy.
 - [Frontend Backend Update Plan](frontend-backend-update-plan.md): plan for updating React pages to use season/division-aware database-backed API calls.
 - [Deployment](deployment.md): Render, Railway, Docker, GitHub Pages, and local development notes.

@@ -1,0 +1,99 @@
+{
+  "archive": {
+    "json_file_count": 245,
+    "root": "backend/JSON",
+    "total_bytes": 3102553,
+    "tree_sha256": "fcd218ce474c6f66677c44f1425310cbcb58c0b27f19a2295ea8977c68a77f3f"
+  },
+  "database": {
+    "path": "backend/data/ctc_stats.sqlite",
+    "size_bytes": 3952640,
+    "sqlite_version": "3.45.1"
+  },
+  "foreign_key_violations": [],
+  "health": {
+    "issue_count_by_category": {
+      "players": 11,
+      "results": 2,
+      "tracks": 2
+    },
+    "issue_count_by_severity": {
+      "info": 1,
+      "warning": 14
+    },
+    "issue_keys": [
+      "analytics-excluded-invalid-result",
+      "player-alias-collision:s1:d3:mii_name:cpfg",
+      "player-alias-collision:s1:d3:mii_name:cpfg mr. d",
+      "player-alias-collision:s1:d3:mii_name:fr cla`",
+      "player-alias-collision:s1:d4:mii_name:g25 cla`",
+      "player-alias-collision:s1:d4:mii_name:vf homri",
+      "player-alias-collision:s2:d1:mii_name:",
+      "player-alias-collision:s2:d2:mii_name:sts",
+      "player-alias-collision:s2:d4:mii_name:sn★b498",
+      "player-alias-collision:s2:d5:mii_name:ux★kei",
+      "player-alias-collision:s3:d1:mii_name:holy",
+      "player-alias-collision:s3:d2:mii_name:sts",
+      "similar-track:3dsbowserscastle:dsbowsercastle",
+      "similar-track:gbabowsercastle2:gbabowsercastle4",
+      "unplaced-scored-result"
+    ],
+    "status": "warning",
+    "summary": {
+      "critical": 0,
+      "dismissed": 10,
+      "informational": 275,
+      "matches_needing_review": 0,
+      "total_records": 38895,
+      "warnings": 36
+    }
+  },
+  "integrity_check": [
+    "ok"
+  ],
+  "registries": [
+    {
+      "bytes": 1116,
+      "path": "backend/data/analytics_excluded_race_blocks.json",
+      "sha256": "0f867bb0cb1e097fd5ef9caca4dd324405045f4a0b7284e4450220a2db5a7050"
+    },
+    {
+      "bytes": 2310,
+      "path": "backend/data/database_health_reviews.json",
+      "sha256": "b78b547c4b85a226bf7117fa39c5caaa992e9775943ed8f403e71123415a51a1"
+    },
+    {
+      "bytes": 3353,
+      "path": "backend/data/player_identities.csv",
+      "sha256": "b37ff06a2d7182cb921213ebc9c1f5adafae3ce336262d23236693b90d7e40dc"
+    },
+    {
+      "bytes": 2288,
+      "path": "backend/data/team_aliases.csv",
+      "sha256": "10e5acf81c57fa20c077d3082265784a6646c531c30abeb53e0c9d1aac6c88a1"
+    }
+  ],
+  "table_counts": {
+    "database_addition_logs": 291,
+    "divisions": 10,
+    "match_players": 2458,
+    "match_table_refs": 374,
+    "match_teams": 488,
+    "matches": 244,
+    "penalties": 93,
+    "player_aliases": 1362,
+    "player_friend_codes": 291,
+    "player_season_entries": 504,
+    "players": 268,
+    "race_player_results": 28898,
+    "race_team_results": 2,
+    "races": 2868,
+    "seasons": 3,
+    "source_files": 244,
+    "team_logos": 0,
+    "team_season_entries": 66,
+    "teams": 41,
+    "track_aliases": 195,
+    "tracks": 195
+  }
+}

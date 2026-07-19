@@ -1,0 +1,146 @@
+{
+  "minimum_races": 2,
+  "scope": {
+    "division": "d1",
+    "opponent_team_id": null,
+    "season": "s3"
+  },
+  "team_id": 41,
+  "tracks": [
+    {
+      "average_score": 36.67,
+      "name": "Pipe Underworld",
+      "races": 3,
+      "ties": 0,
+      "track_id": 24,
+      "win_rate": 66.67,
+      "wins": 2
+    },
+    {
+      "average_score": 36.5,
+      "name": "Desert Fort",
+      "races": 2,
+      "ties": 0,
+      "track_id": 60,
+      "win_rate": 100.0,
+      "wins": 2
+    },
+    {
+      "average_score": 36.0,
+      "name": "Final Grounds",
+      "races": 2,
+      "ties": 0,
+      "track_id": 20,
+      "win_rate": 100.0,
+      "wins": 2
+    },
+    {
+      "average_score": 35.0,
+      "name": "Castle of Darkness",
+      "races": 3,
+      "ties": 0,
+      "track_id": 112,
+      "win_rate": 66.67,
+      "wins": 2
+    },
+    {
+      "average_score": 34.0,
+      "name": "Tropical Factory",
+      "races": 2,
+      "ties": 0,
+      "track_id": 32,
+      "win_rate": 50.0,
+      "wins": 1
+    },
+    {
+      "average_score": 32.67,
+      "name": "Glimmer Express Trains",
+      "races": 3,
+      "ties": 0,
+      "track_id": 43,
+      "win_rate": 66.67,
+      "wins": 2
+    },
+    {
+      "average_score": 32.33,
+      "name": "Skyline Avenue",
+      "races": 3,
+      "ties": 0,
+      "track_id": 18,
+      "win_rate": 33.33,
+      "wins": 1
+    },
+    {
+      "average_score": 31.67,
+      "name": "Thump Bump Forest",
+      "races": 3,
+      "ties": 0,
+      "track_id": 103,
+      "win_rate": 66.67,
+      "wins": 2
+    },
+    {
+      "average_score": 30.5,
+      "name": "Canyon Run",
+      "races": 4,
+      "ties": 0,
+      "track_id": 47,
+      "win_rate": 50.0,
+      "wins": 2
+    },
+    {
+      "average_score": 30.0,
+      "name": "Lava Road",
+      "races": 2,
+      "ties": 0,
+      "track_id": 85,
+      "win_rate": 50.0,
+      "wins": 1
+    },
+    {
+      "average_score": 28.33,
+      "name": "New Moon Manor",
+      "races": 3,
+      "ties": 0,
+      "track_id": 125,
+      "win_rate": 33.33,
+      "wins": 1
+    },
+    {
+      "average_score": 26.0,
+      "name": "Bouldergeist's Ghostly Manor",
+      "races": 2,
+      "ties": 0,
+      "track_id": 175,
+      "win_rate": 0.0,
+      "wins": 0
+    },
+    {
+      "average_score": 26.0,
+      "name": "Melting Magma Melee",
+      "races": 2,
+      "ties": 0,
+      "track_id": 183,
+      "win_rate": 50.0,
+      "wins": 1
+    },
+    {
+      "average_score": 24.0,
+      "name": "Crystal Plains",
+      "races": 2,
+      "ties": 0,
+      "track_id": 131,
+      "win_rate": 0.0,
+      "wins": 0
+    },
+    {
+      "average_score": 23.5,
+      "name": "Halogen Highway",
+      "races": 2,
+      "ties": 0,
+      "track_id": 27,
+      "win_rate": 0.0,
+      "wins": 0
+    }
+  ]
+}

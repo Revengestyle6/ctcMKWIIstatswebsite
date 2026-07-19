@@ -1,0 +1,1946 @@
+{
+  "additions": {
+    "by_entity_type": {
+      "division": 2,
+      "match": 27,
+      "player": 3,
+      "player_alias": 103,
+      "player_friend_code": 8,
+      "player_season_entry": 74,
+      "season": 1,
+      "source_file": 27,
+      "team": 2,
+      "team_season_entry": 12,
+      "track": 16,
+      "track_alias": 16
+    },
+    "recent": [
+      {
+        "created_at": "2026-07-15T03:59:03.185614",
+        "details": {
+          "division_id": 9,
+          "player_id": 25,
+          "season_id": 3,
+          "team_season_entry_id": 66
+        },
+        "entity_id": 504,
+        "entity_type": "player_season_entry",
+        "id": 291,
+        "match_id": 244,
+        "summary": "Added season entry for player 25"
+      },
+      {
+        "created_at": "2026-07-15T03:59:03.185613",
+        "details": {
+          "division_id": 9,
+          "player_id": 22,
+          "season_id": 3,
+          "team_season_entry_id": 66
+        },
+        "entity_id": 503,
+        "entity_type": "player_season_entry",
+        "id": 290,
+        "match_id": 244,
+        "summary": "Added season entry for player 22"
+      },
+      {
+        "created_at": "2026-07-15T03:59:03.185613",
+        "details": {
+          "division_id": 9,
+          "player_id": 184,
+          "season_id": 3,
+          "team_season_entry_id": 66
+        },
+        "entity_id": 502,
+        "entity_type": "player_season_entry",
+        "id": 289,
+        "match_id": 244,
+        "summary": "Added season entry for player 184"
+      },
+      {
+        "created_at": "2026-07-15T03:59:03.185613",
+        "details": {
+          "division_id": 9,
+          "player_id": 131,
+          "season_id": 3,
+          "team_season_entry_id": 66
+        },
+        "entity_id": 501,
+        "entity_type": "player_season_entry",
+        "id": 288,
+        "match_id": 244,
+        "summary": "Added season entry for player 131"
+      },
+      {
+        "created_at": "2026-07-15T03:59:03.185613",
+        "details": {
+          "alias": "Mι starter",
+          "alias_type": "mii_name",
+          "player_id": 131
+        },
+        "entity_id": 1367,
+        "entity_type": "player_alias",
+        "id": 287,
+        "match_id": 244,
+        "summary": "Added mii_name alias Mι starter"
+      },
+      {
+        "created_at": "2026-07-15T03:59:03.185612",
+        "details": {
+          "division_id": 9,
+          "player_id": 24,
+          "season_id": 3,
+          "team_season_entry_id": 66
+        },
+        "entity_id": 500,
+        "entity_type": "player_season_entry",
+        "id": 286,
+        "match_id": 244,
+        "summary": "Added season entry for player 24"
+      },
+      {
+        "created_at": "2026-07-15T03:59:03.185612",
+        "details": {
+          "clan_tag": "Mι",
+          "division_id": 9,
+          "season_id": 3,
+          "team_id": 5
+        },
+        "entity_id": 66,
+        "entity_type": "team_season_entry",
+        "id": 285,
+        "match_id": 244,
+        "summary": "Added Mι to a season/division"
+      },
+      {
+        "created_at": "2026-07-15T03:59:03.185611",
+        "details": {
+          "division_id": 9,
+          "label": "[M8] CS 364 - 363 Mi",
+          "season_id": 3
+        },
+        "entity_id": 244,
+        "entity_type": "match",
+        "id": 284,
+        "match_id": 244,
+        "summary": "Committed match [M8] CS 364 - 363 Mi"
+      },
+      {
+        "created_at": "2026-07-15T03:59:03.185608",
+        "details": {
+          "sha256": "ddfc91afcdf8baa1e8d6cffd56a44f4b3a566d58bda95aa2a36dbc1cbe0af64b",
+          "source_path": "JSON/ctc/s3/d2/W8 [M8] CS 364 - 363 Mi.json"
+        },
+        "entity_id": 244,
+        "entity_type": "source_file",
+        "id": 283,
+        "match_id": 244,
+        "summary": "Archived JSON/ctc/s3/d2/W8 [M8] CS 364 - 363 Mi.json"
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772412",
+        "details": {
+          "alias": "e-thεrεαl",
+          "alias_type": "mii_name",
+          "player_id": 187
+        },
+        "entity_id": 1366,
+        "entity_type": "player_alias",
+        "id": 282,
+        "match_id": 243,
+        "summary": "Added mii_name alias e-thεrεαl"
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772412",
+        "details": {
+          "alias": "e-A..",
+          "alias_type": "mii_name",
+          "player_id": 175
+        },
+        "entity_id": 1365,
+        "entity_type": "player_alias",
+        "id": 281,
+        "match_id": 243,
+        "summary": "Added mii_name alias e-A.."
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772412",
+        "details": {
+          "friend_code": "5031-1476-0709",
+          "player_id": 175
+        },
+        "entity_id": 291,
+        "entity_type": "player_friend_code",
+        "id": 280,
+        "match_id": 243,
+        "summary": "Added friend code 5031-1476-0709"
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772412",
+        "details": {
+          "division_id": 10,
+          "player_id": 208,
+          "season_id": 3,
+          "team_season_entry_id": 61
+        },
+        "entity_id": 499,
+        "entity_type": "player_season_entry",
+        "id": 279,
+        "match_id": 243,
+        "summary": "Added season entry for player 208"
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772411",
+        "details": {
+          "alias": "e-Mιchael",
+          "alias_type": "mii_name",
+          "player_id": 208
+        },
+        "entity_id": 1364,
+        "entity_type": "player_alias",
+        "id": 278,
+        "match_id": 243,
+        "summary": "Added mii_name alias e-Mιchael"
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772411",
+        "details": {
+          "alias": "Sky High Island",
+          "track_id": 196
+        },
+        "entity_id": 196,
+        "entity_type": "track_alias",
+        "id": 277,
+        "match_id": 243,
+        "summary": "Added track alias Sky High Island"
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772411",
+        "details": {
+          "name": "Sky High Island"
+        },
+        "entity_id": 196,
+        "entity_type": "track",
+        "id": 276,
+        "match_id": 243,
+        "summary": "Added track Sky High Island"
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772410",
+        "details": {
+          "alias": "Quaking Mad Cliffs",
+          "track_id": 195
+        },
+        "entity_id": 195,
+        "entity_type": "track_alias",
+        "id": 275,
+        "match_id": 243,
+        "summary": "Added track alias Quaking Mad Cliffs"
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772410",
+        "details": {
+          "name": "Quaking Mad Cliffs"
+        },
+        "entity_id": 195,
+        "entity_type": "track",
+        "id": 274,
+        "match_id": 243,
+        "summary": "Added track Quaking Mad Cliffs"
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772410",
+        "details": {
+          "division_id": 10,
+          "label": "[M10] O 340 - 392 e-",
+          "season_id": 3
+        },
+        "entity_id": 243,
+        "entity_type": "match",
+        "id": 273,
+        "match_id": 243,
+        "summary": "Committed match [M10] O 340 - 392 e-"
+      },
+      {
+        "created_at": "2026-07-15T03:11:36.772407",
+        "details": {
+          "sha256": "53a631da28b55c8d1f05056e2b7ae60c312c323e05642edbfb3d353bba82735e",
+          "source_path": "JSON/ctc/s3/d1/W10 [M10] O 340 - 392 e-.json"
+        },
+        "entity_id": 243,
+        "entity_type": "source_file",
+        "id": 272,
+        "match_id": 243,
+        "summary": "Archived JSON/ctc/s3/d1/W10 [M10] O 340 - 392 e-.json"
+      },
+      {
+        "created_at": "2026-07-15T03:08:50.252634",
+        "details": {
+          "alias": "holy m",
+          "alias_type": "mii_name",
+          "player_id": 7
+        },
+        "entity_id": 1363,
+        "entity_type": "player_alias",
+        "id": 271,
+        "match_id": 242,
+        "summary": "Added mii_name alias holy m"
+      },
+      {
+        "created_at": "2026-07-15T03:08:50.252634",
+        "details": {
+          "division_id": 10,
+          "label": "[M10] holy 406 - 306 SF",
+          "season_id": 3
+        },
+        "entity_id": 242,
+        "entity_type": "match",
+        "id": 270,
+        "match_id": 242,
+        "summary": "Committed match [M10] holy 406 - 306 SF"
+      },
+      {
+        "created_at": "2026-07-15T03:08:50.252631",
+        "details": {
+          "sha256": "dcd0a8dcdb9ae124ec0603b4c73fd1421337effc1b59090a9816b8cec6e5be6e",
+          "source_path": "JSON/ctc/s3/d1/W10 [M10] holy 406 - 306 SF.json"
+        },
+        "entity_id": 242,
+        "entity_type": "source_file",
+        "id": 269,
+        "match_id": 242,
+        "summary": "Archived JSON/ctc/s3/d1/W10 [M10] holy 406 - 306 SF.json"
+      },
+      {
+        "created_at": "2026-07-15T03:05:48.178223",
+        "details": {
+          "alias": "holy teeth",
+          "alias_type": "mii_name",
+          "player_id": 76
+        },
+        "entity_id": 1362,
+        "entity_type": "player_alias",
+        "id": 268,
+        "match_id": 241,
+        "summary": "Added mii_name alias holy teeth"
+      },
+      {
+        "created_at": "2026-07-15T03:05:48.178223",
+        "details": {
+          "alias": "holy choir",
+          "alias_type": "mii_name",
+          "player_id": 6
+        },
+        "entity_id": 1361,
+        "entity_type": "player_alias",
+        "id": 267,
+        "match_id": 241,
+        "summary": "Added mii_name alias holy choir"
+      },
+      {
+        "created_at": "2026-07-15T03:05:48.178223",
+        "details": {
+          "alias": "ミ★ °",
+          "alias_type": "mii_name",
+          "player_id": 189
+        },
+        "entity_id": 1360,
+        "entity_type": "player_alias",
+        "id": 266,
+        "match_id": 241,
+        "summary": "Added mii_name alias ミ★ °"
+      },
+      {
+        "created_at": "2026-07-15T03:05:48.178222",
+        "details": {
+          "division_id": 10,
+          "label": "[M9] SF 393 - 314 holy",
+          "season_id": 3
+        },
+        "entity_id": 241,
+        "entity_type": "match",
+        "id": 265,
+        "match_id": 241,
+        "summary": "Committed match [M9] SF 393 - 314 holy"
+      },
+      {
+        "created_at": "2026-07-15T03:05:48.178220",
+        "details": {
+          "sha256": "3289a854ae3e7822a2dbfabba0e647b57be7c7c4017760b5cd7246f4af4321db",
+          "source_path": "JSON/ctc/s3/d1/W9 [M9] SF 393 - 314 holy.json"
+        },
+        "entity_id": 241,
+        "entity_type": "source_file",
+        "id": 264,
+        "match_id": 241,
+        "summary": "Archived JSON/ctc/s3/d1/W9 [M9] SF 393 - 314 holy.json"
+      },
+      {
+        "created_at": "2026-07-15T03:02:34.926553",
+        "details": {
+          "alias": "Royal Rainbow",
+          "track_id": 194
+        },
+        "entity_id": 194,
+        "entity_type": "track_alias",
+        "id": 263,
+        "match_id": 240,
+        "summary": "Added track alias Royal Rainbow"
+      },
+      {
+        "created_at": "2026-07-15T03:02:34.926553",
+        "details": {
+          "name": "Royal Rainbow"
+        },
+        "entity_id": 194,
+        "entity_type": "track",
+        "id": 262,
+        "match_id": 240,
+        "summary": "Added track Royal Rainbow"
+      },
+      {
+        "created_at": "2026-07-15T03:02:34.926553",
+        "details": {
+          "division_id": 10,
+          "label": "[M9] e- 385 - 347 O",
+          "season_id": 3
+        },
+        "entity_id": 240,
+        "entity_type": "match",
+        "id": 261,
+        "match_id": 240,
+        "summary": "Committed match [M9] e- 385 - 347 O"
+      },
+      {
+        "created_at": "2026-07-15T03:02:34.926549",
+        "details": {
+          "sha256": "23b29f4fd5d492ff8a946c555867d2d584f28dacc09e8d33a9fa9ad1e7c0e060",
+          "source_path": "JSON/ctc/s3/d1/W9 [M9] e- 385 - 347 O.json"
+        },
+        "entity_id": 240,
+        "entity_type": "source_file",
+        "id": 260,
+        "match_id": 240,
+        "summary": "Archived JSON/ctc/s3/d1/W9 [M9] e- 385 - 347 O.json"
+      },
+      {
+        "created_at": "2026-07-15T02:55:45.881422",
+        "details": {
+          "division_id": 10,
+          "label": "[M8] t 367 - 365 SF",
+          "season_id": 3
+        },
+        "entity_id": 239,
+        "entity_type": "match",
+        "id": 259,
+        "match_id": 239,
+        "summary": "Committed match [M8] t 367 - 365 SF"
+      },
+      {
+        "created_at": "2026-07-15T02:55:45.881420",
+        "details": {
+          "sha256": "a828bc85ff41409a2dd3bb962a09e9d39d3ddef2554972391f3fa6f4ad648ff5",
+          "source_path": "JSON/ctc/s3/d1/W8 [M8] t 367 - 365 SF.json"
+        },
+        "entity_id": 239,
+        "entity_type": "source_file",
+        "id": 258,
+        "match_id": 239,
+        "summary": "Archived JSON/ctc/s3/d1/W8 [M8] t 367 - 365 SF.json"
+      },
+      {
+        "created_at": "2026-07-15T02:53:34.425530",
+        "details": {
+          "division_id": 10,
+          "label": "[M8] O 316 - 416 holy",
+          "season_id": 3
+        },
+        "entity_id": 238,
+        "entity_type": "match",
+        "id": 257,
+        "match_id": 238,
+        "summary": "Committed match [M8] O 316 - 416 holy"
+      },
+      {
+        "created_at": "2026-07-15T02:53:34.425527",
+        "details": {
+          "sha256": "2f4211658a7625d6353fd67e66ddd0dcc39fff3332c93ef34696e94f4fb8ad71",
+          "source_path": "JSON/ctc/s3/d1/W8 [M8] O 316 - 416 holy.json"
+        },
+        "entity_id": 238,
+        "entity_type": "source_file",
+        "id": 256,
+        "match_id": 238,
+        "summary": "Archived JSON/ctc/s3/d1/W8 [M8] O 316 - 416 holy.json"
+      },
+      {
+        "created_at": "2026-07-15T02:49:29.013766",
+        "details": {
+          "alias": "6¢ joycons",
+          "alias_type": "mii_name",
+          "player_id": 2
+        },
+        "entity_id": 1359,
+        "entity_type": "player_alias",
+        "id": 255,
+        "match_id": 237,
+        "summary": "Added mii_name alias 6¢ joycons"
+      },
+      {
+        "created_at": "2026-07-15T02:49:29.013765",
+        "details": {
+          "alias": "Camp Kartigan",
+          "track_id": 193
+        },
+        "entity_id": 193,
+        "entity_type": "track_alias",
+        "id": 254,
+        "match_id": 237,
+        "summary": "Added track alias Camp Kartigan"
+      },
+      {
+        "created_at": "2026-07-15T02:49:29.013765",
+        "details": {
+          "name": "Camp Kartigan"
+        },
+        "entity_id": 193,
+        "entity_type": "track",
+        "id": 253,
+        "match_id": 237,
+        "summary": "Added track Camp Kartigan"
+      },
+      {
+        "created_at": "2026-07-15T02:49:29.013765",
+        "details": {
+          "alias": "GCN Baby Park",
+          "track_id": 192
+        },
+        "entity_id": 192,
+        "entity_type": "track_alias",
+        "id": 252,
+        "match_id": 237,
+        "summary": "Added track alias GCN Baby Park"
+      },
+      {
+        "created_at": "2026-07-15T02:49:29.013764",
+        "details": {
+          "name": "GCN Baby Park"
+        },
+        "entity_id": 192,
+        "entity_type": "track",
+        "id": 251,
+        "match_id": 237,
+        "summary": "Added track GCN Baby Park"
+      },
+      {
+        "created_at": "2026-07-15T02:49:29.013764",
+        "details": {
+          "division_id": 10,
+          "label": "[M8] e- 387 - 345 6c",
+          "season_id": 3
+        },
+        "entity_id": 237,
+        "entity_type": "match",
+        "id": 250,
+        "match_id": 237,
+        "summary": "Committed match [M8] e- 387 - 345 6c"
+      },
+      {
+        "created_at": "2026-07-15T02:49:29.013760",
+        "details": {
+          "sha256": "c4b075e009b8049f4ee7f4c5ac1132b260b52f67a362b87fed57e58ac35adb00",
+          "source_path": "JSON/ctc/s3/d1/W8 [M8] e- 387 - 345 6c.json"
+        },
+        "entity_id": 237,
+        "entity_type": "source_file",
+        "id": 249,
+        "match_id": 237,
+        "summary": "Archived JSON/ctc/s3/d1/W8 [M8] e- 387 - 345 6c.json"
+      },
+      {
+        "created_at": "2026-07-15T02:47:48.411070",
+        "details": {
+          "division_id": 10,
+          "label": "[M7] SF 312 - 176 t",
+          "season_id": 3
+        },
+        "entity_id": 236,
+        "entity_type": "match",
+        "id": 248,
+        "match_id": 236,
+        "summary": "Committed match [M7] SF 312 - 176 t"
+      },
+      {
+        "created_at": "2026-07-15T02:47:48.411066",
+        "details": {
+          "sha256": "3e42942e6bd35a19dc048915cb2913c673a4ed87a7c84241c0d5989cf2fc2e1d",
+          "source_path": "JSON/ctc/s3/d1/W7 [M7] SF 312 - 176 t.json"
+        },
+        "entity_id": 236,
+        "entity_type": "source_file",
+        "id": 247,
+        "match_id": 236,
+        "summary": "Archived JSON/ctc/s3/d1/W7 [M7] SF 312 - 176 t.json"
+      },
+      {
+        "created_at": "2026-07-15T02:38:37.898048",
+        "details": {
+          "division_id": 10,
+          "label": "[M7] holy 398 - 309 O",
+          "season_id": 3
+        },
+        "entity_id": 235,
+        "entity_type": "match",
+        "id": 246,
+        "match_id": 235,
+        "summary": "Committed match [M7] holy 398 - 309 O"
+      },
+      {
+        "created_at": "2026-07-15T02:38:37.898045",
+        "details": {
+          "sha256": "585e662330c273698bf014aee2a83d26b19f9be0df02a07025866cbb4a06b5d3",
+          "source_path": "JSON/ctc/s3/d1/W7 [M7] holy 398 - 309 O.json"
+        },
+        "entity_id": 235,
+        "entity_type": "source_file",
+        "id": 245,
+        "match_id": 235,
+        "summary": "Archived JSON/ctc/s3/d1/W7 [M7] holy 398 - 309 O.json"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980648",
+        "details": {
+          "division_id": 10,
+          "player_id": 270,
+          "season_id": 3,
+          "team_season_entry_id": 64
+        },
+        "entity_id": 498,
+        "entity_type": "player_season_entry",
+        "id": 244,
+        "match_id": 234,
+        "summary": "Added season entry for player 270"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980648",
+        "details": {
+          "alias": "sealion",
+          "alias_type": "table_name",
+          "player_id": 270
+        },
+        "entity_id": 1358,
+        "entity_type": "player_alias",
+        "id": 243,
+        "match_id": 234,
+        "summary": "Added table_name alias sealion"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980648",
+        "details": {
+          "alias": "ミ★ krs",
+          "alias_type": "mii_name",
+          "player_id": 270
+        },
+        "entity_id": 1357,
+        "entity_type": "player_alias",
+        "id": 242,
+        "match_id": 234,
+        "summary": "Added mii_name alias ミ★ krs"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980647",
+        "details": {
+          "alias": "sealion",
+          "alias_type": "lounge_name",
+          "player_id": 270
+        },
+        "entity_id": 1356,
+        "entity_type": "player_alias",
+        "id": 241,
+        "match_id": 234,
+        "summary": "Added lounge_name alias sealion"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980647",
+        "details": {
+          "friend_code": "0091-9222-5083",
+          "player_id": 270
+        },
+        "entity_id": 290,
+        "entity_type": "player_friend_code",
+        "id": 240,
+        "match_id": 234,
+        "summary": "Added friend code 0091-9222-5083"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980647",
+        "details": {
+          "name": "sealion",
+          "primary_friend_code": "0091-9222-5083"
+        },
+        "entity_id": 270,
+        "entity_type": "player",
+        "id": 239,
+        "match_id": 234,
+        "summary": "Added player sealion"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980647",
+        "details": {
+          "division_id": 10,
+          "player_id": 38,
+          "season_id": 3,
+          "team_season_entry_id": 64
+        },
+        "entity_id": 497,
+        "entity_type": "player_season_entry",
+        "id": 238,
+        "match_id": 234,
+        "summary": "Added season entry for player 38"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980646",
+        "details": {
+          "alias": "blarn",
+          "alias_type": "table_name",
+          "player_id": 38
+        },
+        "entity_id": 1355,
+        "entity_type": "player_alias",
+        "id": 237,
+        "match_id": 234,
+        "summary": "Added table_name alias blarn"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980646",
+        "details": {
+          "alias": "ミ★ justin",
+          "alias_type": "mii_name",
+          "player_id": 38
+        },
+        "entity_id": 1354,
+        "entity_type": "player_alias",
+        "id": 236,
+        "match_id": 234,
+        "summary": "Added mii_name alias ミ★ justin"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980645",
+        "details": {
+          "alias": "blarn",
+          "alias_type": "lounge_name",
+          "player_id": 38
+        },
+        "entity_id": 1353,
+        "entity_type": "player_alias",
+        "id": 235,
+        "match_id": 234,
+        "summary": "Added lounge_name alias blarn"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980645",
+        "details": {
+          "division_id": 10,
+          "label": "[M6] O 317 - 415 SF",
+          "season_id": 3
+        },
+        "entity_id": 234,
+        "entity_type": "match",
+        "id": 234,
+        "match_id": 234,
+        "summary": "Committed match [M6] O 317 - 415 SF"
+      },
+      {
+        "created_at": "2026-07-15T02:36:33.980642",
+        "details": {
+          "sha256": "4e0beec5a9cc6d8eb13f66bbe0e472128e3ed3addc1f7005c03f2c663d2153c7",
+          "source_path": "JSON/ctc/s3/d1/W6 [M6] O 317 - 415 SF.json"
+        },
+        "entity_id": 234,
+        "entity_type": "source_file",
+        "id": 233,
+        "match_id": 234,
+        "summary": "Archived JSON/ctc/s3/d1/W6 [M6] O 317 - 415 SF.json"
+      },
+      {
+        "created_at": "2026-07-15T02:21:20.289216",
+        "details": {
+          "division_id": 10,
+          "label": "[M5] t 408 - 324 e-",
+          "season_id": 3
+        },
+        "entity_id": 233,
+        "entity_type": "match",
+        "id": 232,
+        "match_id": 233,
+        "summary": "Committed match [M5] t 408 - 324 e-"
+      },
+      {
+        "created_at": "2026-07-15T02:21:20.289213",
+        "details": {
+          "sha256": "68b08cdf3db92763d0b1274f0b6d433ce84434e92500a1880a8cf793c2cc274d",
+          "source_path": "JSON/ctc/s3/d1/W5 [M5] t 408 - 324 e-.json"
+        },
+        "entity_id": 233,
+        "entity_type": "source_file",
+        "id": 231,
+        "match_id": 233,
+        "summary": "Archived JSON/ctc/s3/d1/W5 [M5] t 408 - 324 e-.json"
+      },
+      {
+        "created_at": "2026-07-15T02:20:25.709201",
+        "details": {
+          "division_id": 10,
+          "player_id": 58,
+          "season_id": 3,
+          "team_season_entry_id": 64
+        },
+        "entity_id": 496,
+        "entity_type": "player_season_entry",
+        "id": 230,
+        "match_id": 232,
+        "summary": "Added season entry for player 58"
+      },
+      {
+        "created_at": "2026-07-15T02:20:25.709201",
+        "details": {
+          "alias": "ミ★ Luke",
+          "alias_type": "mii_name",
+          "player_id": 58
+        },
+        "entity_id": 1352,
+        "entity_type": "player_alias",
+        "id": 229,
+        "match_id": 232,
+        "summary": "Added mii_name alias ミ★ Luke"
+      },
+      {
+        "created_at": "2026-07-15T02:20:25.709200",
+        "details": {
+          "alias": "Daisy's Palace",
+          "track_id": 191
+        },
+        "entity_id": 191,
+        "entity_type": "track_alias",
+        "id": 228,
+        "match_id": 232,
+        "summary": "Added track alias Daisy's Palace"
+      },
+      {
+        "created_at": "2026-07-15T02:20:25.709200",
+        "details": {
+          "name": "Daisy's Palace"
+        },
+        "entity_id": 191,
+        "entity_type": "track",
+        "id": 227,
+        "match_id": 232,
+        "summary": "Added track Daisy's Palace"
+      },
+      {
+        "created_at": "2026-07-15T02:20:25.709200",
+        "details": {
+          "division_id": 10,
+          "label": "[M5] SF 422 - 310 O",
+          "season_id": 3
+        },
+        "entity_id": 232,
+        "entity_type": "match",
+        "id": 226,
+        "match_id": 232,
+        "summary": "Committed match [M5] SF 422 - 310 O"
+      },
+      {
+        "created_at": "2026-07-15T02:20:25.709197",
+        "details": {
+          "sha256": "547671df238f7621e47ddcc26b946552b1a6b0b21e485219762d3b968baabe66",
+          "source_path": "JSON/ctc/s3/d1/W5 [M5] SF 422 - 310 O.json"
+        },
+        "entity_id": 232,
+        "entity_type": "source_file",
+        "id": 225,
+        "match_id": 232,
+        "summary": "Archived JSON/ctc/s3/d1/W5 [M5] SF 422 - 310 O.json"
+      },
+      {
+        "created_at": "2026-07-15T02:12:01.709737",
+        "details": {
+          "alias": "ψ ",
+          "alias_type": "mii_name",
+          "player_id": 269
+        },
+        "entity_id": 1351,
+        "entity_type": "player_alias",
+        "id": 224,
+        "match_id": 231,
+        "summary": "Added mii_name alias ψ "
+      },
+      {
+        "created_at": "2026-07-15T02:12:01.709737",
+        "details": {
+          "alias": "ψ 674161",
+          "alias_type": "mii_name",
+          "player_id": 199
+        },
+        "entity_id": 1350,
+        "entity_type": "player_alias",
+        "id": 223,
+        "match_id": 231,
+        "summary": "Added mii_name alias ψ 674161"
+      },
+      {
+        "created_at": "2026-07-15T02:12:01.709737",
+        "details": {
+          "division_id": 10,
+          "label": "[M4] holy 364 - 368 t",
+          "season_id": 3
+        },
+        "entity_id": 231,
+        "entity_type": "match",
+        "id": 222,
+        "match_id": 231,
+        "summary": "Committed match [M4] holy 364 - 368 t"
+      },
+      {
+        "created_at": "2026-07-15T02:12:01.709734",
+        "details": {
+          "sha256": "c2d89d3f59c80f56c04926e8c41766974b5690102f2a00ec5a3bd4cbeab70496",
+          "source_path": "JSON/ctc/s3/d1/W4 [M4] holy 364 - 368 t.json"
+        },
+        "entity_id": 231,
+        "entity_type": "source_file",
+        "id": 221,
+        "match_id": 231,
+        "summary": "Archived JSON/ctc/s3/d1/W4 [M4] holy 364 - 368 t.json"
+      },
+      {
+        "created_at": "2026-07-15T02:11:06.258921",
+        "details": {
+          "division_id": 10,
+          "label": "[M4] 6c 387 - 340 O",
+          "season_id": 3
+        },
+        "entity_id": 230,
+        "entity_type": "match",
+        "id": 220,
+        "match_id": 230,
+        "summary": "Committed match [M4] 6c 387 - 340 O"
+      },
+      {
+        "created_at": "2026-07-15T02:11:06.258915",
+        "details": {
+          "sha256": "c648a7af7ad2af0e2d90b57f8f256755c6b626fde4fe6838b9d2a873e2fb0166",
+          "source_path": "JSON/ctc/s3/d1/W4 [M4] 6c 387 - 340 O.json"
+        },
+        "entity_id": 230,
+        "entity_type": "source_file",
+        "id": 219,
+        "match_id": 230,
+        "summary": "Archived JSON/ctc/s3/d1/W4 [M4] 6c 387 - 340 O.json"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174520",
+        "details": {
+          "division_id": 10,
+          "player_id": 269,
+          "season_id": 3,
+          "team_season_entry_id": 62
+        },
+        "entity_id": 495,
+        "entity_type": "player_season_entry",
+        "id": 218,
+        "match_id": 229,
+        "summary": "Added season entry for player 269"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174520",
+        "details": {
+          "alias": "osf",
+          "alias_type": "table_name",
+          "player_id": 269
+        },
+        "entity_id": 1349,
+        "entity_type": "player_alias",
+        "id": 217,
+        "match_id": 229,
+        "summary": "Added table_name alias osf"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174519",
+        "details": {
+          "alias": "ψ osf",
+          "alias_type": "mii_name",
+          "player_id": 269
+        },
+        "entity_id": 1348,
+        "entity_type": "player_alias",
+        "id": 216,
+        "match_id": 229,
+        "summary": "Added mii_name alias ψ osf"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174519",
+        "details": {
+          "alias": "osf",
+          "alias_type": "lounge_name",
+          "player_id": 269
+        },
+        "entity_id": 1347,
+        "entity_type": "player_alias",
+        "id": 215,
+        "match_id": 229,
+        "summary": "Added lounge_name alias osf"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174519",
+        "details": {
+          "friend_code": "2840-7014-3413",
+          "player_id": 269
+        },
+        "entity_id": 289,
+        "entity_type": "player_friend_code",
+        "id": 214,
+        "match_id": 229,
+        "summary": "Added friend code 2840-7014-3413"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174519",
+        "details": {
+          "name": "osf",
+          "primary_friend_code": "2840-7014-3413"
+        },
+        "entity_id": 269,
+        "entity_type": "player",
+        "id": 213,
+        "match_id": 229,
+        "summary": "Added player osf"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174518",
+        "details": {
+          "division_id": 10,
+          "player_id": 37,
+          "season_id": 3,
+          "team_season_entry_id": 62
+        },
+        "entity_id": 494,
+        "entity_type": "player_season_entry",
+        "id": 212,
+        "match_id": 229,
+        "summary": "Added season entry for player 37"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174518",
+        "details": {
+          "alias": "holy",
+          "alias_type": "mii_name",
+          "player_id": 23
+        },
+        "entity_id": 1346,
+        "entity_type": "player_alias",
+        "id": 211,
+        "match_id": 229,
+        "summary": "Added mii_name alias holy"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174518",
+        "details": {
+          "alias": "holy",
+          "alias_type": "mii_name",
+          "player_id": 268
+        },
+        "entity_id": 1345,
+        "entity_type": "player_alias",
+        "id": 210,
+        "match_id": 229,
+        "summary": "Added mii_name alias holy"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174518",
+        "details": {
+          "division_id": 10,
+          "label": "[M3] t 349 - 375 holy",
+          "season_id": 3
+        },
+        "entity_id": 229,
+        "entity_type": "match",
+        "id": 209,
+        "match_id": 229,
+        "summary": "Committed match [M3] t 349 - 375 holy"
+      },
+      {
+        "created_at": "2026-07-15T02:09:47.174515",
+        "details": {
+          "sha256": "8ffbd12c3f34fc70e12581aac6056aded6263364745cfe2e03f3ddd69e2b1c26",
+          "source_path": "JSON/ctc/s3/d1/W3 [M3] t 349 - 375 holy.json"
+        },
+        "entity_id": 229,
+        "entity_type": "source_file",
+        "id": 208,
+        "match_id": 229,
+        "summary": "Archived JSON/ctc/s3/d1/W3 [M3] t 349 - 375 holy.json"
+      },
+      {
+        "created_at": "2026-07-15T01:53:33.017952",
+        "details": {
+          "alias": "e-xxdRynS",
+          "alias_type": "mii_name",
+          "player_id": 198
+        },
+        "entity_id": 1344,
+        "entity_type": "player_alias",
+        "id": 207,
+        "match_id": 228,
+        "summary": "Added mii_name alias e-xxdRynS"
+      },
+      {
+        "created_at": "2026-07-15T01:53:33.017952",
+        "details": {
+          "alias": "ミ★ λβhι",
+          "alias_type": "mii_name",
+          "player_id": 185
+        },
+        "entity_id": 1343,
+        "entity_type": "player_alias",
+        "id": 206,
+        "match_id": 228,
+        "summary": "Added mii_name alias ミ★ λβhι"
+      },
+      {
+        "created_at": "2026-07-15T01:53:33.017952",
+        "details": {
+          "alias": "ミ★ space",
+          "alias_type": "mii_name",
+          "player_id": 189
+        },
+        "entity_id": 1342,
+        "entity_type": "player_alias",
+        "id": 205,
+        "match_id": 228,
+        "summary": "Added mii_name alias ミ★ space"
+      },
+      {
+        "created_at": "2026-07-15T01:53:33.017951",
+        "details": {
+          "division_id": 10,
+          "label": "[M3] SF 372 - 360 e-",
+          "season_id": 3
+        },
+        "entity_id": 228,
+        "entity_type": "match",
+        "id": 204,
+        "match_id": 228,
+        "summary": "Committed match [M3] SF 372 - 360 e-"
+      },
+      {
+        "created_at": "2026-07-15T01:53:33.017949",
+        "details": {
+          "sha256": "926808983d1f1f24a59be77e200fa121f7c40e088a7028c7fc85fd7970f16443",
+          "source_path": "JSON/ctc/s3/d1/W3 [M3] SF 372 - 360 e-.json"
+        },
+        "entity_id": 228,
+        "entity_type": "source_file",
+        "id": 203,
+        "match_id": 228,
+        "summary": "Archived JSON/ctc/s3/d1/W3 [M3] SF 372 - 360 e-.json"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301186",
+        "details": {
+          "alias": "e-$19",
+          "alias_type": "mii_name",
+          "player_id": 187
+        },
+        "entity_id": 1341,
+        "entity_type": "player_alias",
+        "id": 202,
+        "match_id": 227,
+        "summary": "Added mii_name alias e-$19"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301185",
+        "details": {
+          "division_id": 10,
+          "player_id": 118,
+          "season_id": 3,
+          "team_season_entry_id": 61
+        },
+        "entity_id": 493,
+        "entity_type": "player_season_entry",
+        "id": 201,
+        "match_id": 227,
+        "summary": "Added season entry for player 118"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301185",
+        "details": {
+          "alias": "e-",
+          "alias_type": "mii_name",
+          "player_id": 118
+        },
+        "entity_id": 1340,
+        "entity_type": "player_alias",
+        "id": 200,
+        "match_id": 227,
+        "summary": "Added mii_name alias e-"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301185",
+        "details": {
+          "division_id": 10,
+          "player_id": 175,
+          "season_id": 3,
+          "team_season_entry_id": 61
+        },
+        "entity_id": 492,
+        "entity_type": "player_season_entry",
+        "id": 199,
+        "match_id": 227,
+        "summary": "Added season entry for player 175"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301184",
+        "details": {
+          "alias": "Parvati Shallow",
+          "alias_type": "table_name",
+          "player_id": 175
+        },
+        "entity_id": 1339,
+        "entity_type": "player_alias",
+        "id": 198,
+        "match_id": 227,
+        "summary": "Added table_name alias Parvati Shallow"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301184",
+        "details": {
+          "alias": "e-vanessa",
+          "alias_type": "mii_name",
+          "player_id": 175
+        },
+        "entity_id": 1338,
+        "entity_type": "player_alias",
+        "id": 197,
+        "match_id": 227,
+        "summary": "Added mii_name alias e-vanessa"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301184",
+        "details": {
+          "alias": "Parvati Shallow",
+          "alias_type": "lounge_name",
+          "player_id": 175
+        },
+        "entity_id": 1337,
+        "entity_type": "player_alias",
+        "id": 196,
+        "match_id": 227,
+        "summary": "Added lounge_name alias Parvati Shallow"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301184",
+        "details": {
+          "division_id": 10,
+          "player_id": 198,
+          "season_id": 3,
+          "team_season_entry_id": 61
+        },
+        "entity_id": 491,
+        "entity_type": "player_season_entry",
+        "id": 195,
+        "match_id": 227,
+        "summary": "Added season entry for player 198"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301183",
+        "details": {
+          "alias": "e-xxd6810",
+          "alias_type": "mii_name",
+          "player_id": 198
+        },
+        "entity_id": 1336,
+        "entity_type": "player_alias",
+        "id": 194,
+        "match_id": 227,
+        "summary": "Added mii_name alias e-xxd6810"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301183",
+        "details": {
+          "alias": "holy 10",
+          "alias_type": "mii_name",
+          "player_id": 10
+        },
+        "entity_id": 1335,
+        "entity_type": "player_alias",
+        "id": 193,
+        "match_id": 227,
+        "summary": "Added mii_name alias holy 10"
+      },
+      {
+        "created_at": "2026-07-15T01:44:20.301183",
+        "details": {
+          "alias": "holy 1",
+          "alias_type": "mii_name",
+          "player_id": 6
+        },
+        "entity_id": 1334,
+        "entity_type": "player_alias",
+        "id": 192,
+        "match_id": 227,
+        "summary": "Added mii_name alias holy 1"
+      }
+    ],
+    "total": 291
+  },
+  "archive": {
+    "hash_mismatches": [],
+    "missing_files": [],
+    "orphan_files": [],
+    "status": "skipped"
+  },
+  "counts": {
+    "database_addition_logs": 291,
+    "divisions": 10,
+    "match_players": 2458,
+    "match_table_refs": 374,
+    "match_teams": 488,
+    "matches": 244,
+    "penalties": 93,
+    "player_aliases": 1362,
+    "player_friend_codes": 291,
+    "player_season_entries": 504,
+    "players": 268,
+    "race_player_results": 28898,
+    "race_team_results": 2,
+    "races": 2868,
+    "seasons": 3,
+    "source_files": 244,
+    "team_logos": 0,
+    "team_season_entries": 66,
+    "teams": 41,
+    "track_aliases": 195,
+    "tracks": 195
+  },
+  "database": {
+    "foreign_key_violations": 0,
+    "integrity": "ok",
+    "latest_addition_at": "2026-07-15T03:59:03.185614",
+    "latest_import_at": "2026-07-15T03:59:03.156955",
+    "path": "<local-database-path>",
+    "size_bytes": 3952640
+  },
+  "generated_at": "<capture-time>",
+  "issues": [
+    {
+      "category": "players",
+      "count": 7,
+      "detail": "Mii Name alias “holy” maps to multiple players in S3 D1.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 6,
+          "label": "kyzui"
+        },
+        {
+          "id": 61,
+          "label": "Virox"
+        },
+        {
+          "id": 76,
+          "label": "jass"
+        },
+        {
+          "id": 7,
+          "label": "m1"
+        },
+        {
+          "id": 10,
+          "label": "ETH4N"
+        },
+        {
+          "id": 268,
+          "label": "TCR"
+        },
+        {
+          "id": 23,
+          "label": "winter"
+        }
+      ],
+      "is_dismissed": true,
+      "key": "player-alias-collision:s3:d1:mii_name:holy",
+      "review": {
+        "note": "They used same mii",
+        "reviewed_at": "2026-07-19T03:49:43.040343+00:00",
+        "reviewed_by": "local reviewer",
+        "status": "dismissed"
+      },
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "players",
+      "count": 5,
+      "detail": "Mii Name alias “fr cla`” maps to multiple players in S1 D3.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 89,
+          "label": "Mini Pekka"
+        },
+        {
+          "id": 91,
+          "label": "chatrestriction1"
+        },
+        {
+          "id": 92,
+          "label": "lord"
+        },
+        {
+          "id": 115,
+          "label": "squirrel"
+        },
+        {
+          "id": 90,
+          "label": "Orca"
+        }
+      ],
+      "is_dismissed": true,
+      "key": "player-alias-collision:s1:d3:mii_name:fr cla`",
+      "review": {
+        "note": "They used same mii",
+        "reviewed_at": "2026-07-19T03:50:02.201056+00:00",
+        "reviewed_by": "local reviewer",
+        "status": "dismissed"
+      },
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "players",
+      "count": 4,
+      "detail": "Mii Name alias “sts” maps to multiple players in S2 D2.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 46,
+          "label": "Loocas"
+        },
+        {
+          "id": 42,
+          "label": "JJ"
+        },
+        {
+          "id": 49,
+          "label": "Bally"
+        },
+        {
+          "id": 204,
+          "label": "season"
+        }
+      ],
+      "is_dismissed": true,
+      "key": "player-alias-collision:s2:d2:mii_name:sts",
+      "review": {
+        "note": "They used same mii",
+        "reviewed_at": "2026-07-19T03:50:11.905458+00:00",
+        "reviewed_by": "local reviewer",
+        "status": "dismissed"
+      },
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "players",
+      "count": 4,
+      "detail": "Mii Name alias “” maps to multiple players in S2 D1.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 173,
+          "label": "mhs"
+        },
+        {
+          "id": 40,
+          "label": "Lochie"
+        },
+        {
+          "id": 7,
+          "label": "m1"
+        },
+        {
+          "id": 76,
+          "label": "jass"
+        }
+      ],
+      "is_dismissed": true,
+      "key": "player-alias-collision:s2:d1:mii_name:",
+      "review": {
+        "note": "They used same mii",
+        "reviewed_at": "2026-07-19T03:50:21.732077+00:00",
+        "reviewed_by": "local reviewer",
+        "status": "dismissed"
+      },
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "players",
+      "count": 3,
+      "detail": "Mii Name alias “sts” maps to multiple players in S3 D2.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 49,
+          "label": "Bally"
+        },
+        {
+          "id": 42,
+          "label": "JJ"
+        },
+        {
+          "id": 46,
+          "label": "Loocas"
+        }
+      ],
+      "is_dismissed": true,
+      "key": "player-alias-collision:s3:d2:mii_name:sts",
+      "review": {
+        "note": "They used same mii",
+        "reviewed_at": "2026-07-19T03:50:31.016379+00:00",
+        "reviewed_by": "local reviewer",
+        "status": "dismissed"
+      },
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "players",
+      "count": 2,
+      "detail": "Mii Name alias “cpfg” maps to multiple players in S1 D3.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 105,
+          "label": "mysterious"
+        },
+        {
+          "id": 40,
+          "label": "Lochie"
+        }
+      ],
+      "is_dismissed": true,
+      "key": "player-alias-collision:s1:d3:mii_name:cpfg",
+      "review": {
+        "note": "They used same mii",
+        "reviewed_at": "2026-07-19T03:50:54.425960+00:00",
+        "reviewed_by": "local reviewer",
+        "status": "dismissed"
+      },
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "players",
+      "count": 2,
+      "detail": "Mii Name alias “cpfg mr. d” maps to multiple players in S1 D3.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 40,
+          "label": "Lochie"
+        },
+        {
+          "id": 103,
+          "label": "svarti"
+        }
+      ],
+      "is_dismissed": true,
+      "key": "player-alias-collision:s1:d3:mii_name:cpfg mr. d",
+      "review": {
+        "note": "They used same mii",
+        "reviewed_at": "2026-07-19T03:55:08.427259+00:00",
+        "reviewed_by": "local reviewer",
+        "status": "dismissed"
+      },
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "players",
+      "count": 2,
+      "detail": "Mii Name alias “g25 cla`” maps to multiple players in S1 D4.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 91,
+          "label": "chatrestriction1"
+        },
+        {
+          "id": 115,
+          "label": "squirrel"
+        }
+      ],
+      "is_dismissed": true,
+      "key": "player-alias-collision:s1:d4:mii_name:g25 cla`",
+      "review": {
+        "note": "They used same mii",
+        "reviewed_at": "2026-07-19T03:55:21.041814+00:00",
+        "reviewed_by": "local reviewer",
+        "status": "dismissed"
+      },
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "players",
+      "count": 2,
+      "detail": "Mii Name alias “sn★b498” maps to multiple players in S2 D4.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 83,
+          "label": "Bowser498"
+        },
+        {
+          "id": 56,
+          "label": "aeterna"
+        }
+      ],
+      "is_dismissed": false,
+      "key": "player-alias-collision:s2:d4:mii_name:sn★b498",
+      "review": null,
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "players",
+      "count": 2,
+      "detail": "Mii Name alias “ux★kei” maps to multiple players in S2 D5.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 28,
+          "label": "Charonplop"
+        },
+        {
+          "id": 265,
+          "label": "Vending Machine"
+        }
+      ],
+      "is_dismissed": false,
+      "key": "player-alias-collision:s2:d5:mii_name:ux★kei",
+      "review": null,
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "players",
+      "count": 2,
+      "detail": "Mii Name alias “vf homri” maps to multiple players in S1 D4.",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 156,
+          "label": "homri"
+        },
+        {
+          "id": 162,
+          "label": "uhhh bomb up"
+        }
+      ],
+      "is_dismissed": false,
+      "key": "player-alias-collision:s1:d4:mii_name:vf homri",
+      "review": null,
+      "severity": "warning",
+      "title": "Player alias collision"
+    },
+    {
+      "category": "results",
+      "count": 30,
+      "detail": "These raw scores or placements remain invalid for audit, but their complete reviewed race blocks are excluded from all race-derived analytics.",
+      "dismissible": false,
+      "entities": [
+        {
+          "id": 3471,
+          "label": "W8 6c O · race 9 · LukeGB",
+          "value": "score=34, position=1"
+        },
+        {
+          "id": 3495,
+          "label": "W8 6c O · race 9 · brody",
+          "value": "score=32, position=6"
+        },
+        {
+          "id": 3507,
+          "label": "W8 6c O · race 9 · Charlie",
+          "value": "score=18, position=5"
+        },
+        {
+          "id": 3531,
+          "label": "W8 6c O · race 9 · Rock SaltCAN",
+          "value": "score=42, position=3"
+        },
+        {
+          "id": 3567,
+          "label": "W8 6c O · race 9 · Ice",
+          "value": "score=17, position=7"
+        },
+        {
+          "id": 11432,
+          "label": "W9 u vf · race 9 · warz",
+          "value": "score=16, position=null"
+        },
+        {
+          "id": 18534,
+          "label": "W5 Sf2 xv · race 9 · Kenny M",
+          "value": "score=27, position=1"
+        },
+        {
+          "id": 18544,
+          "label": "W5 Sf2 xv · race 9 · Alexander",
+          "value": "score=16, position=2"
+        },
+        {
+          "id": 18554,
+          "label": "W5 Sf2 xv · race 9 · Bowser498",
+          "value": "score=25, position=3"
+        },
+        {
+          "id": 18584,
+          "label": "W5 Sf2 xv · race 9 · lord",
+          "value": "score=16, position=5"
+        },
+        {
+          "id": 20758,
+          "label": "W3 Cy Mi2 · race 1 · katphish",
+          "value": "score=46, position=2"
+        },
+        {
+          "id": 20762,
+          "label": "W3 Cy Mi2 · race 5 · katphish",
+          "value": "score=39, position=3"
+        },
+        {
+          "id": 20766,
+          "label": "W3 Cy Mi2 · race 9 · katphish",
+          "value": "score=24, position=2"
+        },
+        {
+          "id": 20770,
+          "label": "W3 Cy Mi2 · race 1 · sixfour",
+          "value": "score=74, position=1"
+        },
+        {
+          "id": 20774,
+          "label": "W3 Cy Mi2 · race 5 · sixfour",
+          "value": "score=18, position=1"
+        },
+        {
+          "id": 20782,
+          "label": "W3 Cy Mi2 · race 1 · Lewis",
+          "value": "score=42, position=4"
+        },
+        {
+          "id": 20786,
+          "label": "W3 Cy Mi2 · race 5 · Lewis",
+          "value": "score=27, position=2"
+        },
+        {
+          "id": 20790,
+          "label": "W3 Cy Mi2 · race 9 · Lewis",
+          "value": "score=21, position=1"
+        },
+        {
+          "id": 20794,
+          "label": "W3 Cy Mi2 · race 1 · josh 1810",
+          "value": "score=42, position=5"
+        },
+        {
+          "id": 20802,
+          "label": "W3 Cy Mi2 · race 9 · josh 1810",
+          "value": "score=19, position=7"
+        }
+      ],
+      "is_dismissed": false,
+      "key": "analytics-excluded-invalid-result",
+      "review": null,
+      "severity": "warning",
+      "title": "Reviewed legacy result excluded from analytics"
+    },
+    {
+      "category": "tracks",
+      "count": 2,
+      "detail": "Potential typo or unregistered alias (93.8% similarity).",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 31,
+          "label": "GBA Bowser Castle 2"
+        },
+        {
+          "id": 11,
+          "label": "GBA Bowser Castle 4"
+        }
+      ],
+      "is_dismissed": true,
+      "key": "similar-track:gbabowsercastle2:gbabowsercastle4",
+      "review": {
+        "note": "Confirmed distinct tracks: GBA Bowser Castle 2 and GBA Bowser Castle 4.",
+        "reviewed_at": "2026-07-18T00:00:00+00:00",
+        "reviewed_by": "project configuration",
+        "status": "dismissed"
+      },
+      "severity": "warning",
+      "title": "Similar canonical track names"
+    },
+    {
+      "category": "tracks",
+      "count": 2,
+      "detail": "Potential typo or unregistered alias (93.3% similarity).",
+      "dismissible": true,
+      "entities": [
+        {
+          "id": 17,
+          "label": "3DS Bowser's Castle"
+        },
+        {
+          "id": 126,
+          "label": "DS Bowser Castle"
+        }
+      ],
+      "is_dismissed": true,
+      "key": "similar-track:3dsbowserscastle:dsbowsercastle",
+      "review": {
+        "note": "Two different tracks",
+        "reviewed_at": "2026-07-19T03:23:39.758703+00:00",
+        "reviewed_by": "local reviewer",
+        "status": "dismissed"
+      },
+      "severity": "warning",
+      "title": "Similar canonical track names"
+    },
+    {
+      "category": "results",
+      "count": 275,
+      "detail": "This can represent a disconnect, but should remain visible for audit.",
+      "dismissible": false,
+      "entities": [
+        {
+          "id": 353,
+          "label": "W1 Mi TMNG · race 5 · Momiji",
+          "value": "score=3"
+        },
+        {
+          "id": 1527,
+          "label": "W3 Mi Za · race 1 · Tectrox",
+          "value": "score=8"
+        },
+        {
+          "id": 1528,
+          "label": "W3 Mi Za · race 2 · Tectrox",
+          "value": "score=2"
+        },
+        {
+          "id": 1529,
+          "label": "W3 Mi Za · race 3 · Tectrox",
+          "value": "score=8"
+        },
+        {
+          "id": 1530,
+          "label": "W3 Mi Za · race 4 · Tectrox",
+          "value": "score=3"
+        },
+        {
+          "id": 1531,
+          "label": "W3 Mi Za · race 5 · Tectrox",
+          "value": "score=12"
+        },
+        {
+          "id": 1532,
+          "label": "W3 Mi Za · race 6 · Tectrox",
+          "value": "score=3"
+        },
+        {
+          "id": 1545,
+          "label": "W3 Mi Za · race 7 · Lewis",
+          "value": "score=3"
+        },
+        {
+          "id": 1546,
+          "label": "W3 Mi Za · race 8 · Lewis",
+          "value": "score=3"
+        },
+        {
+          "id": 1547,
+          "label": "W3 Mi Za · race 9 · Lewis",
+          "value": "score=0"
+        },
+        {
+          "id": 1548,
+          "label": "W3 Mi Za · race 10 · Lewis",
+          "value": "score=0"
+        },
+        {
+          "id": 1549,
+          "label": "W3 Mi Za · race 11 · Lewis",
+          "value": "score=0"
+        },
+        {
+          "id": 1550,
+          "label": "W3 Mi Za · race 12 · Lewis",
+          "value": "score=0"
+        },
+        {
+          "id": 2007,
+          "label": "W4 6c Mi · race 1 · Stubbz",
+          "value": "score=3"
+        },
+        {
+          "id": 2008,
+          "label": "W4 6c Mi · race 2 · Stubbz",
+          "value": "score=3"
+        },
+        {
+          "id": 2803,
+          "label": "W6 Flag Mi · race 5 · Tectrox",
+          "value": "score=3"
+        },
+        {
+          "id": 3511,
+          "label": "W8 6c O · race 1 · Stubbz",
+          "value": "score=2"
+        },
+        {
+          "id": 3584,
+          "label": "W8 6c O · race 2 · Jonny",
+          "value": "score=0"
+        },
+        {
+          "id": 3585,
+          "label": "W8 6c O · race 3 · Jonny",
+          "value": "score=0"
+        },
+        {
+          "id": 3586,
+          "label": "W8 6c O · race 4 · Jonny",
+          "value": "score=0"
+        }
+      ],
+      "is_dismissed": false,
+      "key": "unplaced-scored-result",
+      "review": null,
+      "severity": "info",
+      "title": "Scored result without a placement"
+    }
+  ],
+  "status": "warning",
+  "summary": {
+    "critical": 0,
+    "dismissed": 10,
+    "informational": 275,
+    "matches_needing_review": 0,
+    "total_records": 38895,
+    "warnings": 36
+  }
+}

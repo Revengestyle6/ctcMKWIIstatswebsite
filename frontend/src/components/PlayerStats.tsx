@@ -9,6 +9,7 @@ import {
 } from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { RoleModeToggle } from "./RoleModeToggle";
+import { LegacyStatHeader } from "./LegacyStatHeader";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
 function value(value: number | null, suffix = ""): string {
@@ -23,6 +24,7 @@ export default function PlayerStats() {
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
   const [playerDirectory, setPlayerDirectory] = useState<PlayerDirectoryEntry[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState("");
+  const [playerSearch, setPlayerSearch] = useState("");
   const [stats, setStats] = useState<{
     key: string;
     tracks: LegacyPlayerTracksResponse;
@@ -38,6 +40,7 @@ export default function PlayerStats() {
     if (!season || !division) {
       setPlayerDirectory([]);
       setSelectedPlayer("");
+      setPlayerSearch("");
       setStats(null);
       setLoading(false);
       setError("");
@@ -45,6 +48,7 @@ export default function PlayerStats() {
     }
     setPlayerDirectory([]);
     setSelectedPlayer("");
+    setPlayerSearch("");
     setStats(null);
     setLoading(false);
     setError("");
@@ -55,7 +59,6 @@ export default function PlayerStats() {
           a.name.toLowerCase().localeCompare(b.name.toLowerCase())
         );
         setPlayerDirectory(sorted);
-        setSelectedPlayer(sorted[0]?.name ?? "");
       })
       .catch((requestError: unknown) => {
         if (!cancelled) setError(requestError instanceof Error ? requestError.message : "Failed to load players.");
@@ -97,6 +100,18 @@ export default function PlayerStats() {
     setSearchParams(next, { replace: true });
   }
 
+  function updatePlayerSearch(nextSearch: string) {
+    setPlayerSearch(nextSearch);
+    setSelectedPlayer("");
+  }
+
+  const normalizedPlayerSearch = playerSearch.trim().toLocaleLowerCase();
+  const filteredPlayers = useMemo(
+    () => normalizedPlayerSearch
+      ? playerDirectory.filter((entry) => entry.name.toLocaleLowerCase().includes(normalizedPlayerSearch))
+      : playerDirectory,
+    [playerDirectory, normalizedPlayerSearch]
+  );
   const selectedPlayerId = useMemo(
     () => playerDirectory.find((entry) => entry.name === selectedPlayer)?.player_id,
     [playerDirectory, selectedPlayer]
@@ -106,34 +121,51 @@ export default function PlayerStats() {
 
   return (
     <div className="relative min-h-screen p-6 font-sans text-white">
-      <div className="fixed inset-x-0 top-0 z-50 bg-black/40 p-4 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-2">
-          <Link to="/" className="font-semibold text-blue-400 hover:text-blue-300">&lt; Back</Link>
-          <h1 className="flex-1 text-center text-3xl font-bold">Player Statistics</h1>
-          <div className="w-32" />
-          <img src="/images/CTC_LOGO/ctclogo.webp" alt="Logo" className="h-12 w-12 rounded-lg" loading="lazy" />
-        </div>
-      </div>
+      <LegacyStatHeader title="Player Statistics" />
 
       <div className="mx-auto max-w-5xl pt-24">
-        <div className="mb-6 flex flex-col flex-wrap gap-4 md:flex-row md:items-end">
-          <SeasonDivisionSelector
-            season={season} division={division} seasons={seasons} divisions={divisions}
-            disabled={loadingScope} onSeasonChange={setSeason} onDivisionChange={setDivision}
-          />
-          <div>
-            <label className="mb-1 block font-semibold">Player</label>
-            <select
-              className="min-w-48 rounded-md border border-gray-400 bg-white px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={selectedPlayer}
-              onChange={(event) => setSelectedPlayer(event.target.value)}
-              disabled={!division || playerDirectory.length === 0}
-            >
-              <option value="">Select a player</option>
-              {playerDirectory.map((player) => <option key={player.player_id} value={player.name}>{player.name}</option>)}
-            </select>
+        <div className="mb-6 rounded-xl border border-white/15 bg-black/45 p-5 shadow-lg backdrop-blur-sm">
+          <p className="mb-4 text-sm text-gray-300">Choose a season and division, then search for a player by name.</p>
+          <div className="flex flex-col flex-wrap gap-4 md:flex-row md:items-end">
+            <SeasonDivisionSelector
+              season={season} division={division} seasons={seasons} divisions={divisions}
+              disabled={loadingScope} onSeasonChange={setSeason} onDivisionChange={setDivision}
+            />
+            <div className="min-w-64">
+              <label htmlFor="legacy-player-search" className="mb-1 block font-semibold">Search players</label>
+              <input
+                id="legacy-player-search"
+                type="search"
+                className="w-full rounded-t-md border border-gray-400 bg-white px-4 py-2 text-black placeholder:text-gray-500 focus:relative focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={playerSearch}
+                onChange={(event) => updatePlayerSearch(event.target.value)}
+                disabled={!division || playerDirectory.length === 0}
+                placeholder={playerDirectory.length > 0 ? "Search players..." : "No players available"}
+                autoComplete="off"
+              />
+              <label htmlFor="legacy-player-select" className="sr-only">Matching players</label>
+              <select
+                id="legacy-player-select"
+                className="w-full rounded-b-md border border-t-0 border-gray-400 bg-white px-4 py-2 text-black focus:relative focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={selectedPlayer}
+                onChange={(event) => setSelectedPlayer(event.target.value)}
+                disabled={!division || filteredPlayers.length === 0}
+              >
+                <option value="">
+                  {filteredPlayers.length === 0
+                    ? "No matching players"
+                    : `Select a player (${filteredPlayers.length})`}
+                </option>
+                {filteredPlayers.map((player) => (
+                  <option key={player.player_id} value={player.name}>{player.name}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-400">
+                Showing {filteredPlayers.length} of {playerDirectory.length} players
+              </p>
+            </div>
+            <RoleModeToggle value={role} onChange={updateRole} disabled={loading} />
           </div>
-          <RoleModeToggle value={role} onChange={updateRole} disabled={loading} />
         </div>
 
         {role === "bagger" && <BaggerDisclosure />}
@@ -186,7 +218,9 @@ export default function PlayerStats() {
         {!loading && selectedPlayer && !currentStats && !error && (
           <p className="mt-4 text-center text-gray-300">No results found.</p>
         )}
-        {!loading && !selectedPlayer && <p className="mt-4 text-center text-gray-400">Select a player to view statistics.</p>}
+        {!loading && !selectedPlayer && playerDirectory.length > 0 && (
+          <p className="mt-4 text-center text-gray-400">Search for and select a player to view statistics.</p>
+        )}
       </div>
     </div>
   );
@@ -207,8 +241,8 @@ function BaggerDisclosure() {
 function TrackTable({ tracks, role }: { tracks: PlayerTrackRow[]; role: PlayerRoleMode }) {
   if (tracks.length === 0) return <p className="mt-6 text-center text-gray-300">No qualifying track results.</p>;
   return (
-    <div className="mt-6 overflow-x-auto rounded-lg border border-white/10">
-      <table className="min-w-full bg-black/70 text-sm backdrop-blur-sm">
+    <div className="mt-6 overflow-x-auto rounded-lg border border-white/10 shadow-lg">
+      <table className="min-w-full bg-black/70 text-sm tabular-nums backdrop-blur-sm">
         <thead className="bg-black/90">
           <tr>
             <th scope="col" className="px-4 py-3 text-left">Track</th>
@@ -229,7 +263,7 @@ function TrackTable({ tracks, role }: { tracks: PlayerTrackRow[]; role: PlayerRo
         </thead>
         <tbody>
           {tracks.map((track, index) => (
-            <tr key={track.track_id} className={index % 2 === 0 ? "bg-black/50" : "bg-black/70"}>
+            <tr key={track.track_id} className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}>
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-blue-200">{track.name}</td>
               <td className="px-4 py-3 text-right">{track.races}</td>
               <td className="px-4 py-3 text-right">{track.scored_races}</td>

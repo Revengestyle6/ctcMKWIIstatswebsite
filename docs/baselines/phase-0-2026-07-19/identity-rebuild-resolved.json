@@ -1,0 +1,20 @@
+{
+  "identity_registry": {
+    "path": "backend/data/player_identities.csv",
+    "sha256": "b37ff06a2d7182cb921213ebc9c1f5adafae3ce336262d23236693b90d7e40dc"
+  },
+  "reference": {
+    "path": "data/ctc_stats.sqlite",
+    "player_count": 268,
+    "friend_code_count": 291
+  },
+  "candidate": {
+    "path": "/tmp/ctc_phase0_resolved.sqlite",
+    "player_count": 268,
+    "friend_code_count": 291
+  },
+  "reference_players_split_in_candidate": [],
+  "candidate_players_split_in_reference": [],
+  "friend_codes_only_in_reference": [],
+  "friend_codes_only_in_candidate": []
+}
