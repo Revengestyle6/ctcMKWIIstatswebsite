@@ -9,6 +9,8 @@ from flask_caching import Cache
 from flask_compress import Compress
 import stats_db as stats
 import dashboard_stats as dashboards
+import database_health as database_health_service
+from database_health_reviews import set_issue_review
 from database import init_database
 from import_json_to_db import detect_new_entries, import_editor_match, import_preview_match
 from match_upload import (
@@ -136,7 +138,7 @@ def _database_write_authorized():
 def _require_database_write_access():
     if _database_write_authorized():
         return None
-    return jsonify({"error": "Database uploads and addition logs require local or authenticated access."}), 403
+    return jsonify({"error": "Database administration requires local or authenticated access."}), 403
 
 @app.route("/api/player", methods=["GET"])
 def player_stats():
@@ -590,6 +592,48 @@ def api_database_additions():
         return jsonify([serialize_addition_log(row) for row in reversed(rows)])
 
 
+@app.route("/api/database-health", methods=["GET"])
+@cache.cached(timeout=30, query_string=True)
+def api_database_health():
+    include_archive = request.args.get("include_archive", "1").strip().lower() not in {"0", "false", "no"}
+    try:
+        with stats.SessionLocal() as session:
+            return jsonify(database_health_service.build_database_health(
+                session,
+                include_archive=include_archive,
+            ))
+    except Exception as error:
+        print(f"Error building database health report: {error}")
+        return jsonify({"error": "Failed to build database health report."}), 500
+
+
+@app.route("/api/database-health/reviews", methods=["POST"])
+def api_database_health_review():
+    access_error = _require_database_write_access()
+    if access_error:
+        return access_error
+    payload = request.get_json(silent=True) or {}
+    issue_key = payload.get("issue_key")
+    status = payload.get("status")
+    note = payload.get("note", "")
+    try:
+        with stats.SessionLocal() as session:
+            report = database_health_service.build_database_health(session, include_archive=False)
+        issue = next((item for item in report["issues"] if item["key"] == issue_key), None)
+        if not issue:
+            return jsonify({"error": "That health finding is no longer present."}), 404
+        if not issue["dismissible"]:
+            return jsonify({"error": "Hard data-integrity findings cannot be dismissed; fix the source record instead."}), 409
+        review = set_issue_review(issue_key, status, note)
+        cache.clear()
+        return jsonify({"issue_key": issue_key, "review": review})
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    except Exception as error:
+        print(f"Error reviewing database health finding: {error}")
+        return jsonify({"error": "Failed to save the database health review."}), 500
+
+
 @app.route("/api/database-additions/stream", methods=["GET"])
 def api_database_additions_stream():
     access_error = _require_database_write_access()
@@ -634,7 +678,16 @@ def api_top_team_tracks():
     division = _division_arg()
     season = _season_arg()
     try:
-        tracks = stats.findtopteamtracks(team, division=division, season=season)
+        min_races = _minimum_races_arg(default=2)
+    except DashboardError as error:
+        return _error_response(error)
+    try:
+        tracks = stats.findtopteamtracks(
+            team,
+            min_races=min_races,
+            division=division,
+            season=season,
+        )
         return jsonify(tracks)
     except Exception as e:
         print(f"Error in api_top_team_tracks: {e}")

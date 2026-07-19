@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "exclusions": [
+    {
+      "source_path": "JSON/ctc/s1/d1_2/W8 6c O.json",
+      "match_index": 0,
+      "blocks": [3],
+      "reason": "GP3 totals were collapsed into race 9 with unreliable adjacent race values."
+    },
+    {
+      "source_path": "JSON/ctc/s1/d4/W9 u vf.json",
+      "match_index": 0,
+      "blocks": [3],
+      "reason": "A substitution GP total was collapsed into race 9 with unreliable adjacent race values."
+    },
+    {
+      "source_path": "JSON/ctc/s2/d3/W5 Sf2 xv.json",
+      "match_index": 0,
+      "blocks": [3],
+      "reason": "A multi-room aggregate was collapsed into race 9; races 9-10 cannot be reconstructed."
+    },
+    {
+      "source_path": "JSON/ctc/s2/d4/W3 Cy Mi2.json",
+      "match_index": 0,
+      "blocks": [1, 2, 3],
+      "reason": "6/3/3 room-segment totals were stored as race scores, making all race-level values unreliable."
+    },
+    {
+      "source_path": "JSON/ctc/s2/d4/W9 vf Mi2.json",
+      "match_index": 0,
+      "blocks": [3],
+      "reason": "GP3 totals were collapsed into race 9 with unreliable adjacent race values."
+    }
+  ]
+}

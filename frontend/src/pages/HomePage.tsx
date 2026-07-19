@@ -9,6 +9,7 @@ const analyticsLinks = [
   { to: "/top-team-players", title: "Team Statistics", description: "Compare player production and track results for a selected team." },
   { to: "/top-tracks", title: "Track Averages", description: "Find the strongest player and team results by track." },
   { to: "/best-matchups", title: "Team Matchups", description: "Compare head-to-head team and track performance." },
+  { to: "/database-health", title: "Database Health", description: "Monitor additions, record counts, archive integrity, and data-quality findings." },
 ];
 
 export default function HomePage(): React.JSX.Element {

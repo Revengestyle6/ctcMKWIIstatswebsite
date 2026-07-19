@@ -67,6 +67,7 @@ export default function BestMatchups(): React.JSX.Element {
   const [selectedTeam2, setSelectedTeam2] = useState<string>("");
   const [team1Tracks, setTeam1Tracks] = useState<TrackStat[]>([]);
   const [team2Tracks, setTeam2Tracks] = useState<TrackStat[]>([]);
+  const [minRaces, setMinRaces] = useState(2);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
@@ -111,6 +112,7 @@ export default function BestMatchups(): React.JSX.Element {
         team,
         season,
         division,
+        min_races: minRaces,
       });
       return normalizeTracks(raw);
     }
@@ -142,7 +144,7 @@ export default function BestMatchups(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTeam, selectedTeam2, season, division]);
+  }, [selectedTeam, selectedTeam2, season, division, minRaces]);
 
   const comparisonRows = useMemo(() => {
     if (!selectedTeam || !selectedTeam2) return [];
@@ -228,6 +230,22 @@ export default function BestMatchups(): React.JSX.Element {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label htmlFor="matchup-min-races" className="mb-1 block font-semibold">Min races</label>
+              <input
+                id="matchup-min-races"
+                type="number"
+                min={1}
+                max={500}
+                value={minRaces}
+                onChange={(event) => {
+                  const nextValue = Number(event.target.value) || 1;
+                  setMinRaces(Math.min(500, Math.max(1, nextValue)));
+                }}
+                className="w-28 rounded-md border border-gray-400 bg-white px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
 
             <button

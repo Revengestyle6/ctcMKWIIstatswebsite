@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "reviews": {
+    "player-alias-collision:s1:d3:mii_name:cpfg": {
+      "status": "dismissed",
+      "note": "They used same mii",
+      "reviewed_at": "2026-07-19T03:50:54.425960+00:00",
+      "reviewed_by": "local reviewer"
+    },
+    "player-alias-collision:s1:d3:mii_name:cpfg mr. d": {
+      "status": "dismissed",
+      "note": "They used same mii",
+      "reviewed_at": "2026-07-19T03:55:08.427259+00:00",
+      "reviewed_by": "local reviewer"
+    },
+    "player-alias-collision:s1:d3:mii_name:fr cla`": {
+      "status": "dismissed",
+      "note": "They used same mii",
+      "reviewed_at": "2026-07-19T03:50:02.201056+00:00",
+      "reviewed_by": "local reviewer"
+    },
+    "player-alias-collision:s1:d4:mii_name:g25 cla`": {
+      "status": "dismissed",
+      "note": "They used same mii",
+      "reviewed_at": "2026-07-19T03:55:21.041814+00:00",
+      "reviewed_by": "local reviewer"
+    },
+    "player-alias-collision:s2:d1:mii_name:": {
+      "status": "dismissed",
+      "note": "They used same mii",
+      "reviewed_at": "2026-07-19T03:50:21.732077+00:00",
+      "reviewed_by": "local reviewer"
+    },
+    "player-alias-collision:s2:d2:mii_name:sts": {
+      "status": "dismissed",
+      "note": "They used same mii",
+      "reviewed_at": "2026-07-19T03:50:11.905458+00:00",
+      "reviewed_by": "local reviewer"
+    },
+    "player-alias-collision:s3:d1:mii_name:holy": {
+      "status": "dismissed",
+      "note": "They used same mii",
+      "reviewed_at": "2026-07-19T03:49:43.040343+00:00",
+      "reviewed_by": "local reviewer"
+    },
+    "player-alias-collision:s3:d2:mii_name:sts": {
+      "status": "dismissed",
+      "note": "They used same mii",
+      "reviewed_at": "2026-07-19T03:50:31.016379+00:00",
+      "reviewed_by": "local reviewer"
+    },
+    "similar-track:3dsbowserscastle:dsbowsercastle": {
+      "status": "dismissed",
+      "note": "Two different tracks",
+      "reviewed_at": "2026-07-19T03:23:39.758703+00:00",
+      "reviewed_by": "local reviewer"
+    },
+    "similar-track:gbabowsercastle2:gbabowsercastle4": {
+      "status": "dismissed",
+      "note": "Confirmed distinct tracks: GBA Bowser Castle 2 and GBA Bowser Castle 4.",
+      "reviewed_at": "2026-07-18T00:00:00+00:00",
+      "reviewed_by": "project configuration"
+    }
+  }
+}

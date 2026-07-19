@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 import dashboard_stats as dashboard_module
 import app as app_module
 import stats_db
+from analytics_eligibility import analytics_excluded_race_ids
 from dashboard_stats import (
     DashboardError,
     get_player_overview,
@@ -258,6 +259,54 @@ class DashboardRoleContractTests(unittest.TestCase):
                     result_type="missing_player",
                     reason="short_roster",
                 ))
+
+    def test_reviewed_legacy_block_is_excluded_from_analytics_but_kept_in_raw_detail(self):
+        match = self.session.query(Match).filter_by(week_number=3).one()
+        exclusion = ({
+            "source_path": "JSON/ctc/s2/d1/w3.json",
+            "match_index": 0,
+            "blocks": frozenset({1}),
+            "reason": "Test collapsed aggregate block.",
+        },)
+
+        with patch("analytics_eligibility._load_default_exclusions", return_value=exclusion):
+            excluded_ids = analytics_excluded_race_ids(self.session)
+            overview = get_player_overview(
+                self.player_id,
+                season="s2",
+                division="d1",
+                role="runner",
+                session=self.session,
+            )
+            team_tracks = get_team_tracks(
+                self.alpha_id,
+                season="s2",
+                division="d1",
+                min_races=1,
+                session=self.session,
+            )
+            with patch.object(stats_db, "SessionLocal", return_value=nullcontext(self.session)):
+                _average, _team, _track, legacy_race_count = stats_db.findteamavg(
+                    "a",
+                    "Test Track",
+                    season="s2",
+                    division="d1",
+                )
+
+        raw_detail = stats_db.get_match_detail(match.match_id, session=self.session)
+        match_race_ids = {
+            race_id for (race_id,) in self.session.query(Race.race_id).filter_by(match_id=match.match_id)
+        }
+
+        self.assertEqual(excluded_ids, match_race_ids)
+        self.assertEqual(overview["metrics"]["races"], 0)
+        self.assertEqual(team_tracks["tracks"][0]["races"], 4)
+        self.assertEqual(legacy_race_count, 4)
+        self.assertTrue(any(
+            32 in player["scores"]
+            for team in raw_detail["teams"]
+            for player in team["players"]
+        ))
 
     def _selected_result(self, week, race_number):
         return (

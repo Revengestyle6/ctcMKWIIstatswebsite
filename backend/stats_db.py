@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import and_, desc, func, select
 
+from analytics_eligibility import apply_analytics_race_filter
 import dashboard_stats as dashboards
 from database import get_session_factory
 from player_display_names import _display_names_for_players
@@ -854,7 +855,7 @@ def findteamavg(team, track, division=None, season=None):
         scope = _get_scope(session, season=season, division=division)
         team_row = _resolve_team(session, team, scope)
         track_row = _resolve_track(session, track, scope)
-        row = session.execute(
+        statement = (
             select(
                 func.sum(RacePlayerResult.score).label("points"),
                 func.count(func.distinct(Race.race_id)).label("races"),
@@ -868,7 +869,9 @@ def findteamavg(team, track, division=None, season=None):
                 Race.track_id == track_row.track_id,
                 _score_filter(),
             )
-        ).one()
+        )
+        statement = apply_analytics_race_filter(statement, session)
+        row = session.execute(statement).one()
         races = int(row.races or 0)
         average = (float(row.points or 0) / races) if races else 0.0
         return round(average, 1), team_row.clan_tag, track_row.canonical_name, races
@@ -893,7 +896,7 @@ def top_team_tracks(team, min_races=2, division=None, season=None):
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
         team_row = _resolve_team(session, team, scope)
-        rows = session.execute(
+        statement = (
             select(
                 Track.canonical_name.label("track"),
                 (func.sum(RacePlayerResult.score) / func.count(func.distinct(Race.race_id))).label("average"),
@@ -911,7 +914,9 @@ def top_team_tracks(team, min_races=2, division=None, season=None):
             .group_by(Track.track_id, Track.canonical_name)
             .having(func.count(func.distinct(Race.race_id)) >= min_races)
             .order_by(desc("average"), desc("races"), Track.canonical_name)
-        ).all()
+        )
+        statement = apply_analytics_race_filter(statement, session)
+        rows = session.execute(statement).all()
         return [
             {"track": row.track, "average": round(float(row.average or 0), 1), "races": int(row.races)}
             for row in rows
@@ -974,7 +979,7 @@ def top_track_teams(track, min_races=2, division=None, season=None):
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
         track_row = _resolve_track(session, track, scope)
-        rows = session.execute(
+        statement = (
             select(
                 TeamSeasonEntry.clan_tag.label("name"),
                 (func.sum(RacePlayerResult.score) / func.count(func.distinct(Race.race_id))).label("average"),
@@ -995,7 +1000,9 @@ def top_track_teams(track, min_races=2, division=None, season=None):
             .group_by(TeamSeasonEntry.team_season_entry_id, TeamSeasonEntry.clan_tag)
             .having(func.count(func.distinct(Race.race_id)) >= min_races)
             .order_by(desc("average"), desc("races"), TeamSeasonEntry.clan_tag)
-        ).all()
+        )
+        statement = apply_analytics_race_filter(statement, session)
+        rows = session.execute(statement).all()
         return [
             {"name": row.name, "average": round(float(row.average or 0), 1), "races": int(row.races)}
             for row in rows

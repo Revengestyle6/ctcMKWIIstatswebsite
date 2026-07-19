@@ -98,6 +98,7 @@ class RoleApiTests(unittest.TestCase):
         cases = (
             ("/api/top-team-players?team=a", app_module.stats, "findtopteamplayers"),
             ("/api/top-tracks?track=Test+Track", app_module.stats, "findtoptracks"),
+            ("/api/top-team-tracks?team=a", app_module.stats, "findtopteamtracks"),
         )
         invalid_values = ("0", "-1", "501", "not-a-number")
         for path, owner, function_name in cases:
@@ -113,6 +114,7 @@ class RoleApiTests(unittest.TestCase):
         cases = (
             ("/api/top-team-players?team=a", app_module.stats, "findtopteamplayers"),
             ("/api/top-tracks?track=Test+Track", app_module.stats, "findtoptracks"),
+            ("/api/top-team-tracks?team=a", app_module.stats, "findtopteamtracks"),
         )
         for path, owner, function_name in cases:
             for minimum in (1, 500):
@@ -140,6 +142,13 @@ class RoleApiTests(unittest.TestCase):
             response = self.client.get("/api/top-tracks?track=Test+Track")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(track_players.call_args.kwargs["min_races"], 2)
+
+        with patch.object(
+            app_module.stats, "findtopteamtracks", return_value=[]
+        ) as team_tracks:
+            response = self.client.get("/api/top-team-tracks?team=a")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(team_tracks.call_args.kwargs["min_races"], 2)
 
     def test_team_overview_and_tracks_never_receive_role(self):
         cases = (

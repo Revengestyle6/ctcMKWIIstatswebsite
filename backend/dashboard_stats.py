@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import desc, select
 
+from analytics_eligibility import apply_analytics_race_filter
 from database import get_session_factory
 from player_display_names import _display_names_for_players
 from models import (
@@ -313,6 +314,7 @@ def _player_race_rows(session, player_id, scope, team_id=None):
         statement = statement.where(Match.division_id == scope.division_id)
     if team_id is not None:
         statement = statement.where(Team.team_id == team_id)
+    statement = apply_analytics_race_filter(statement, session)
     return session.execute(statement.order_by(Match.match_id, Race.race_number)).all()
 
 
@@ -374,6 +376,7 @@ def _player_ranking(session, player_id, scope, min_races, role, team_id=None):
     )
     if team_id is not None:
         statement = statement.where(TeamSeasonEntry.team_id == team_id)
+    statement = apply_analytics_race_filter(statement, session)
     rows = list(session.execute(statement).all())
     confirmed = confirmed_5v5_race_ids(session, rows)
     _, classified = role_coverage(rows, confirmed)
@@ -720,7 +723,7 @@ def get_track_player_rankings(
     if not session.get(Track, track_id):
         raise DashboardNotFound("Track not found.")
 
-    rows = list(session.execute(
+    statement = (
         select(
             RacePlayerResult.player_id,
             RacePlayerResult.race_id,
@@ -740,7 +743,9 @@ def get_track_player_rankings(
             Match.division_id == scope.division_id,
         )
         .order_by(RacePlayerResult.player_id, Race.race_id)
-    ).all())
+    )
+    statement = apply_analytics_race_filter(statement, session)
+    rows = list(session.execute(statement).all())
     confirmed = confirmed_5v5_race_ids(session, rows)
     _, classified = role_coverage(rows, confirmed)
     by_player = defaultdict(list)
@@ -1158,7 +1163,7 @@ def get_team_roster(
             "players": [],
         }
 
-    rows = session.execute(
+    statement = (
         select(
             RacePlayerResult.player_id,
             RacePlayerResult.race_id,
@@ -1192,7 +1197,9 @@ def get_team_roster(
             TeamSeasonEntry.team_id == team_id,
         )
         .order_by(Season.season_number, Match.week_number, Match.match_id, Race.race_number)
-    ).all()
+    )
+    statement = apply_analytics_race_filter(statement, session)
+    rows = session.execute(statement).all()
     confirmed = confirmed_5v5_race_ids(session, rows)
     coverage, classified = role_coverage(rows, confirmed)
     all_by_player = defaultdict(list)
@@ -1308,7 +1315,7 @@ def get_team_tracks(team_id, season=None, division=None, opponent_team_id=None, 
             "tracks": [],
         }
 
-    own_rows = session.execute(
+    statement = (
         select(
             Race.race_id,
             Race.track_id,
@@ -1324,7 +1331,9 @@ def get_team_tracks(team_id, season=None, division=None, opponent_team_id=None, 
         )
         .where(Match.match_id.in_(match_ids), TeamSeasonEntry.team_id == team_id)
         .order_by(Race.race_id)
-    ).all()
+    )
+    statement = apply_analytics_race_filter(statement, session)
+    own_rows = session.execute(statement).all()
     race_ids = [row.race_id for row in own_rows]
     totals = defaultdict(int)
     for row in session.execute(
