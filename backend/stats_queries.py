@@ -582,18 +582,21 @@ def _team_penalties(session, match_id):
     rows = session.execute(
         select(
             Penalty.match_team_id,
-            func.sum(Penalty.penalty_points).label("penalties"),
-            func.group_concat(Penalty.raw_penalty_text, "; ").label("notes"),
+            Penalty.penalty_points,
+            Penalty.raw_penalty_text,
         )
         .where(Penalty.match_id == match_id, Penalty.penalty_scope == "team")
-        .group_by(Penalty.match_team_id)
+        .order_by(Penalty.match_team_id, Penalty.penalty_id)
     ).all()
+    penalties_by_team = {}
+    for row in rows:
+        penalty = penalties_by_team.setdefault(row.match_team_id, {"points": 0, "notes": []})
+        penalty["points"] += int(row.penalty_points or 0)
+        if row.raw_penalty_text:
+            penalty["notes"].append(row.raw_penalty_text)
     return {
-        row.match_team_id: {
-            "points": int(row.penalties or 0),
-            "notes": row.notes or "",
-        }
-        for row in rows
+        team_id: {"points": penalty["points"], "notes": "; ".join(penalty["notes"])}
+        for team_id, penalty in penalties_by_team.items()
     }
 
 

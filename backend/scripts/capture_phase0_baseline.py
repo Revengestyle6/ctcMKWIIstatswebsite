@@ -20,9 +20,11 @@ REPOSITORY_ROOT = BACKEND_DIR.parent
 OUTPUT_DIR = REPOSITORY_ROOT / "docs" / "baselines" / "phase-0-2026-07-19"
 API_OUTPUT_DIR = OUTPUT_DIR / "api"
 
-# A baseline must always describe the repository's local development database. Do
-# not accidentally capture a database supplied by the caller's shell environment.
-os.environ.pop("DATABASE_URL", None)
+# A deliberate baseline capture must always describe the repository's local
+# development database. Importers such as compare_phase0_api.py may intentionally
+# target another configured database, so preserve their environment.
+if __name__ == "__main__":
+    os.environ.pop("DATABASE_URL", None)
 sys.path.insert(0, str(BACKEND_DIR))
 
 from app import app  # noqa: E402

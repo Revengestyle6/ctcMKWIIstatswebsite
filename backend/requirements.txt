@@ -4,3 +4,5 @@ Flask-Caching==2.1.0
 Flask-Compress==1.15.0
 gunicorn==21.2.0
 SQLAlchemy>=2.0,<3.0
+alembic==1.18.5
+psycopg[binary]==3.3.4

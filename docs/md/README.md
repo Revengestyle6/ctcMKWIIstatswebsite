@@ -19,6 +19,7 @@
 - [Phase 0 Baseline](phase-0-production-baseline.md)
 - [Phase 1 Cleanup Inventory](repository-cleanup-inventory.md)
 - [Phase 2 No-Change Refactor](phase-2-no-change-refactor.md)
+- [Phase 3 Technical Specification](phase-3-technical-specification.md)
 - [Architecture Decision Records](../adr/README.md)
 - [Regression Baselines](../baselines/README.md)
 

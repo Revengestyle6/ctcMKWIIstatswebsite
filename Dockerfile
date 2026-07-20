@@ -11,6 +11,7 @@ COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir -r ./backend/requirements.txt
 
 COPY backend ./backend
+COPY alembic.ini ./alembic.ini
 COPY start.sh ./start.sh
 
 # The checked-in archive is imported during the image build. The runtime user

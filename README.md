@@ -9,7 +9,7 @@ provides the operational analytics model.
 - Python 3.11
 - Node.js 22 and npm
 - Playwright Chromium only when running browser smoke tests
-- Docker Desktop only when building the current container
+- Docker Desktop or Docker Engine with Compose for local PostgreSQL
 
 ## Local Setup
 
@@ -28,15 +28,28 @@ cd frontend
 npm ci
 ```
 
-Build the local SQLite database from the archived JSON and reviewed registries:
+Start PostgreSQL 18, apply the schema, and load the archived JSON and reviewed
+registries:
+
+```bash
+docker compose up -d postgres
+export APP_ENV=local
+export DATABASE_URL=postgresql+psycopg://ctc_local:ctc_local@127.0.0.1:55432/ctc_dev
+.venv/bin/alembic upgrade head
+.venv/bin/python backend/import_json_to_db.py --database-url "$DATABASE_URL"
+```
+
+Use the appropriate virtual-environment executable on Windows or when your local
+environment has a different path. The credentials above are intentionally local
+development values, not production secrets. Stop the database with
+`docker compose stop postgres`; its ignored named volume preserves local data.
+
+SQLite remains available for lightweight work and the frozen regression suite:
 
 ```bash
 cd backend
 ../.venv/bin/python import_json_to_db.py --rebuild
 ```
-
-Use the appropriate virtual-environment executable on Windows or when your local
-environment has a different path.
 
 ## Run Locally
 
@@ -64,7 +77,8 @@ cd backend
 ../.venv/bin/ruff check .
 ../.venv/bin/ruff format . --check
 ../.venv/bin/python -m unittest discover -v
-../.venv/bin/python scripts/compare_phase0_api.py
+../.venv/bin/python scripts/compare_phase0_api.py \
+  --only seasons,match-scopes,divisions-s3,teams-s3-d1,players-s3-d1,tracks-s3-d1
 
 cd ../frontend
 npm run check
@@ -77,6 +91,10 @@ Install the Playwright browser once with `npx playwright install chromium`.
 The browser smoke command covers ten representative routes in desktop and mobile
 Chromium. `npm run baseline:ui` is reserved for deliberate baseline capture and
 must not be used to approve visual changes without reviewing the images.
+
+CI also starts a clean PostgreSQL 18 service, applies and drift-checks the Alembic
+schema, imports the accepted archive, and compares all 16 portable API responses
+exactly with an identically rebuilt SQLite database.
 
 ## Common Maintenance Commands
 

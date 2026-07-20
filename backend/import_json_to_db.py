@@ -536,8 +536,10 @@ def import_match(
 ):
     teams = match_data.get("teams") or {}
     tracks = match_data.get("tracks") or []
-    match_label = match_label_override or (
-        path.stem if match_index == 0 else f"{path.stem} #{match_index + 1}"
+    match_label = (
+        match_label_override
+        or str(match_data.get("match_label") or "").strip()
+        or (path.stem if match_index == 0 else f"{path.stem} #{match_index + 1}")
     )
     review_notes = []
     if match_data.get("races_played") != len(tracks):
@@ -1134,9 +1136,9 @@ def rebuild_database(db_path: Path, json_root: Path):
     return import_json_tree(db_path, json_root)
 
 
-def import_json_tree(db_path: Path, json_root: Path):
-    init_database(db_path)
-    SessionLocal = get_session_factory(db_path)
+def import_json_tree(database_target: Path | str, json_root: Path):
+    init_database(database_target)
+    SessionLocal = get_session_factory(database_target)
     imported_matches = 0
     skipped_files = 0
     aliases = load_team_aliases()
@@ -1154,9 +1156,14 @@ def import_json_tree(db_path: Path, json_root: Path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Import archived match JSON files into the analytics SQLite database."
+        description="Import archived match JSON files into the configured analytics database."
     )
-    parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH, help="SQLite database path.")
+    database_group = parser.add_mutually_exclusive_group()
+    database_group.add_argument("--db", type=Path, help="SQLite database path.")
+    database_group.add_argument(
+        "--database-url",
+        help="SQLAlchemy database URL. PostgreSQL schemas must already be migrated.",
+    )
     parser.add_argument(
         "--json-root", type=Path, default=JSON_ROOT, help="Root JSON archive directory."
     )
@@ -1171,13 +1178,22 @@ def main():
     )
     args = parser.parse_args()
 
-    args.db.parent.mkdir(parents=True, exist_ok=True)
+    database_target = args.database_url or args.db or DEFAULT_DB_PATH
+    if isinstance(database_target, Path):
+        database_target.parent.mkdir(parents=True, exist_ok=True)
     if args.repair_inferred_roles:
-        repair_inferred_roles(args.db)
+        if not isinstance(database_target, Path):
+            parser.error("--repair-inferred-roles is currently a SQLite maintenance command.")
+        repair_inferred_roles(database_target)
     elif args.rebuild:
-        rebuild_database(args.db, args.json_root)
+        if not isinstance(database_target, Path):
+            parser.error(
+                "--rebuild deletes SQLite files only. Migrate an empty PostgreSQL database, "
+                "then import without --rebuild."
+            )
+        rebuild_database(database_target, args.json_root)
     else:
-        import_json_tree(args.db, args.json_root)
+        import_json_tree(database_target, args.json_root)
 
 
 if __name__ == "__main__":

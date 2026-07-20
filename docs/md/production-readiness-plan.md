@@ -3,7 +3,7 @@
 ## Status
 
 - Created: July 19, 2026
-- Phase: Phase 2 complete; ready for Phase 3
+- Phase: Phase 3 implementation in progress
 - Scope: Repository cleanup, documentation, production infrastructure, deployment, and ongoing operations
 - Accepted architecture: Firebase Hosting, Cloud Run, Cloud SQL for PostgreSQL,
   Cloud Storage, and Firebase Authentication
@@ -299,6 +299,11 @@ Done when:
 - Build, lint, type-check, and test commands pass from a clean clone.
 
 ### Phase 3: Production-Capable Application
+
+Design checkpoint proposed July 19, 2026. The PostgreSQL, migration, administrator,
+public review-queue, and accepted-archive design is in
+[`phase-3-technical-specification.md`](phase-3-technical-specification.md). No cloud
+resources are provisioned by this checkpoint.
 
 Tasks:
 

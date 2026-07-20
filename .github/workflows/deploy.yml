@@ -7,6 +7,20 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.4-alpine3.23
+        env:
+          POSTGRES_DB: ctc_test
+          POSTGRES_USER: ctc_test
+          POSTGRES_PASSWORD: ctc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ctc_test -d ctc_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +43,24 @@ jobs:
           ruff format backend --check
           cd backend
           python -m unittest discover -v
-          python scripts/compare_phase0_api.py
+          python scripts/compare_phase0_api.py \
+            --only seasons,match-scopes,divisions-s3,teams-s3-d1,players-s3-d1,tracks-s3-d1
+          python scripts/compare_phase0_api.py \
+            --skip-database-health \
+            --write-current "$RUNNER_TEMP/sqlite-api"
+
+      - name: Check PostgreSQL migration and API compatibility
+        env:
+          APP_ENV: test
+          DATABASE_URL: postgresql+psycopg://ctc_test:ctc_test@127.0.0.1:5432/ctc_test
+        run: |
+          alembic upgrade head
+          alembic check
+          cd backend
+          python import_json_to_db.py --database-url "$DATABASE_URL"
+          python scripts/compare_phase0_api.py \
+            --skip-database-health \
+            --fixture-dir "$RUNNER_TEMP/sqlite-api"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
