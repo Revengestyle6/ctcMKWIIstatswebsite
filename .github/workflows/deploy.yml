@@ -62,6 +62,17 @@ jobs:
             --skip-database-health \
             --fixture-dir "$RUNNER_TEMP/sqlite-api"
 
+      - name: Check Phase 3 PostgreSQL acceptance workflow
+        env:
+          APP_ENV: test
+          DATABASE_URL: postgresql+psycopg://ctc_test:ctc_test@127.0.0.1:5432/ctc_phase3
+          PHASE3_POSTGRES_TEST_URL: postgresql+psycopg://ctc_test:ctc_test@127.0.0.1:5432/ctc_phase3
+        run: |
+          PGPASSWORD=ctc_test createdb -h 127.0.0.1 -U ctc_test ctc_phase3
+          alembic upgrade head
+          cd backend
+          python -m unittest -v test_phase3_postgres_integration.py
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

@@ -14,7 +14,10 @@ cannot express reliably:
 - `player_identities.csv`
 - `team_aliases.csv`
 - `analytics_excluded_race_blocks.json`
-- `database_health_reviews.json`
+
+Database-health reviews now live in `health_issue_reviews`; the historical JSON
+file is retained only as legacy evidence until any reviewed entries are explicitly
+migrated.
 
 The archived source and registries must be preserved during every rebuild.
 
@@ -43,18 +46,19 @@ The importer prefers `.json` over a same-stem legacy `.txt`, fingerprints source
 files, resolves identities and team aliases, stores raw audit fields, expands races
 and results, preserves explicit roles, and records findings that require review.
 
-## Editor Upload Flow
+## Editor And Review Flow
 
 1. The browser compiles deterministic scores, totals, and canonical JSON.
 2. The preview endpoint validates the document and proposes new catalog entries.
-3. The reviewer approves allowable entries.
-4. The commit endpoint repeats validation and duplicate checks.
-5. The backend stages exact JSON bytes, imports normalized rows in one SQL
-   transaction, publishes the archive file, and records addition logs.
-6. Archive reconciliation detects interrupted or inconsistent local uploads.
-
-Cloud Storage and an explicit cross-system upload state machine will replace local
-archive publishing for production.
+3. An anonymous user can submit the canonical bytes to temporary queue storage;
+   this does not call the importer or change analytics.
+4. An authenticated admin claims, edits if necessary, and approves new catalog
+   entries in the existing editor.
+5. The acceptance service repeats validation and duplicate checks, commits all
+   normalized rows and audit records in PostgreSQL, then promotes the exact bytes
+   into the immutable accepted archive.
+6. Analytics can query the committed match immediately. Interrupted storage
+   promotion is marked `repair_required` and maintenance repairs it idempotently.
 
 ## Regression Checks
 

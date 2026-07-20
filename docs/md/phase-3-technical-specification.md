@@ -1,13 +1,11 @@
 # Phase 3 Production-Capable Application Specification
 
-- Status: Owner approved; implementation in progress
+- Status: local implementation complete; Phase 4 cloud checkpoint pending
 - Prepared: July 19, 2026
 - Scope: application and local development only; no cloud resources are created
 
-Implementation began with the PostgreSQL foundation: the local PostgreSQL 18
-service, strict database configuration, Psycopg, Alembic baseline, and PostgreSQL
-CI compatibility checks. Administrator and review-queue state follows in migration
-`0002_production_state`.
+The approved local implementation is documented in
+`phase-3-local-implementation.md`. No cloud resource has been provisioned.
 
 ## Goals
 
@@ -231,8 +229,9 @@ paths. Implementations are:
 - an in-memory/fake implementation for unit tests.
 
 The interface supports staging temporary bytes, promoting with an overwrite
-precondition, reading metadata, verifying a digest, deleting temporary objects,
-and listing only for reconciliation tools.
+precondition, reading/verifying bytes, and deleting temporary objects.
+Reconciliation is driven by durable database state rather than costly bucket-wide
+listing.
 
 ### Object Namespaces
 

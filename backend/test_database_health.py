@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import admin_auth
 import app as app_module
 import routes.admin as admin_routes
 from database import Base
@@ -246,6 +247,11 @@ class DatabaseHealthApiTests(unittest.TestCase):
     def test_health_route_forwards_archive_option(self):
         report = {"status": "healthy", "issues": []}
         with (
+            patch.object(
+                admin_auth,
+                "authenticate_admin",
+                return_value=admin_auth.AdminActor(1, "test-uid", "owner@example.com", "owner"),
+            ),
             patch.object(app_module.stats, "SessionLocal", return_value=nullcontext(object())),
             patch.object(
                 app_module.database_health_service, "build_database_health", return_value=report
@@ -261,6 +267,11 @@ class DatabaseHealthApiTests(unittest.TestCase):
         report = {"issues": [{"key": "similar-track:a:b", "dismissible": True}]}
         review = {"status": "dismissed", "note": "Confirmed separate tracks."}
         with (
+            patch.object(
+                admin_auth,
+                "authenticate_admin",
+                return_value=admin_auth.AdminActor(1, "test-uid", "owner@example.com", "owner"),
+            ),
             patch.object(app_module.stats, "SessionLocal", return_value=nullcontext(object())),
             patch.object(
                 app_module.database_health_service, "build_database_health", return_value=report
@@ -278,15 +289,24 @@ class DatabaseHealthApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["review"], review)
-        save_review.assert_called_once_with(
-            "similar-track:a:b",
-            "dismissed",
-            "Confirmed separate tracks.",
+        self.assertEqual(
+            save_review.call_args.args,
+            (
+                "similar-track:a:b",
+                "dismissed",
+                "Confirmed separate tracks.",
+            ),
         )
+        self.assertEqual(save_review.call_args.kwargs["reviewed_by_admin_user_id"], 1)
 
     def test_review_route_rejects_hard_integrity_finding(self):
         report = {"issues": [{"key": "invalid-result-value", "dismissible": False}]}
         with (
+            patch.object(
+                admin_auth,
+                "authenticate_admin",
+                return_value=admin_auth.AdminActor(1, "test-uid", "owner@example.com", "owner"),
+            ),
             patch.object(app_module.stats, "SessionLocal", return_value=nullcontext(object())),
             patch.object(
                 app_module.database_health_service, "build_database_health", return_value=report

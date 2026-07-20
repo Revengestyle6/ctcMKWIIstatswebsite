@@ -1,7 +1,3 @@
-import hmac
-import ipaddress
-import os
-
 from dashboard_stats import DashboardError
 from flask import jsonify, request
 from import_json_to_db import detect_new_entries
@@ -96,30 +92,8 @@ def duplicate_commit_response(session, source_file, fingerprint):
     return {
         "status": "duplicate",
         "match_id": match.match_id,
-        "archive_path": f"backend/{source_file.source_path}",
+        "archive_path": source_file.storage_object_key or source_file.source_path,
         "fingerprint": fingerprint,
         "additions": [],
         "message": "This exact match has already been uploaded.",
     }
-
-
-def database_write_authorized():
-    configured_token = os.environ.get("MATCH_UPLOAD_TOKEN")
-    authorization = request.headers.get("Authorization", "")
-    supplied_token = (
-        authorization.removeprefix("Bearer ").strip() if authorization.startswith("Bearer ") else ""
-    )
-    if configured_token:
-        return bool(supplied_token and hmac.compare_digest(configured_token, supplied_token))
-    try:
-        return ipaddress.ip_address(request.remote_addr or "").is_loopback
-    except ValueError:
-        return False
-
-
-def require_database_write_access():
-    if database_write_authorized():
-        return None
-    return jsonify(
-        {"error": "Database administration requires local or authenticated access."}
-    ), 403

@@ -1,4 +1,6 @@
-export const API_URL = import.meta.env.VITE_API_URL || "https://ctcmkwiistatswebsite.onrender.com";
+import { getAdminAuthHeaders } from "./authClient";
+
+export const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
 export interface SeasonOption {
   season: string;
@@ -30,7 +32,14 @@ function apiUrl(path: string, params?: Record<string, QueryValue>): URL {
 
 async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { params, ...requestOptions } = options;
-  const response = await fetch(apiUrl(path, params), requestOptions);
+  const authHeaders = await getAdminAuthHeaders();
+  const response = await fetch(apiUrl(path, params), {
+    ...requestOptions,
+    headers: {
+      ...authHeaders,
+      ...Object.fromEntries(new Headers(requestOptions.headers).entries()),
+    },
+  });
   if (response.ok) {
     return response.json() as Promise<T>;
   }
@@ -52,6 +61,14 @@ export async function fetchJson<T>(path: string, params?: Record<string, QueryVa
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
   return requestJson<T>(path, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function patchJson<T>(path: string, body: unknown): Promise<T> {
+  return requestJson<T>(path, {
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
@@ -146,10 +163,4 @@ export interface DatabaseAddition {
 
 export function fetchDatabaseAdditions(limit = 100): Promise<DatabaseAddition[]> {
   return fetchJson("/api/database-additions", { limit });
-}
-
-export function databaseAdditionStreamUrl(afterId = 0): string {
-  const url = apiUrl("/api/database-additions/stream");
-  if (afterId > 0) url.searchParams.set("after_id", String(afterId));
-  return url.toString();
 }

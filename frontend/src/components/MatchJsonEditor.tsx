@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   type DatabaseAddition,
-  databaseAdditionStreamUrl,
   fetchDatabaseAdditions,
   fetchMatchScopes,
   fetchPlayerIdentity,
@@ -13,6 +12,7 @@ import {
   searchTracks,
   type TeamScope,
 } from "../api";
+import { useAdminSession } from "../hooks/useAdminSession";
 import {
   type ChartMode,
   type MatchDetail,
@@ -51,6 +51,7 @@ import {
   numberValue,
   type PreviewMetadata,
   type PreviewResponse,
+  type ReviewSubmissionReceipt,
   validation,
   validFriendCode,
 } from "./matchJsonEditorValidation";
@@ -60,6 +61,7 @@ const inputClass =
 const smallLabel = "text-xs font-semibold uppercase text-gray-400";
 
 export default function MatchJsonEditor(): React.JSX.Element {
+  const auth = useAdminSession();
   const initial = clone(blankMatch);
   const [match, setMatch] = useState<MatchJson>(initial);
   const [races, setRaces] = useState<RaceDraft[]>(() => racesFromMatch(initial));
@@ -90,6 +92,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [commitLoading, setCommitLoading] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [commitResult, setCommitResult] = useState<CommitResult | null>(null);
+  const [submissionReceipt, setSubmissionReceipt] = useState<ReviewSubmissionReceipt | null>(null);
+  const [warningsAcknowledged, setWarningsAcknowledged] = useState(false);
+  const [reviewSubmissionId, setReviewSubmissionId] = useState<string | null>(null);
   const [additionLogs, setAdditionLogs] = useState<DatabaseAddition[]>([]);
   const [additionStreamStatus, setAdditionStreamStatus] = useState<
     "connecting" | "live" | "reconnecting"
@@ -144,6 +149,24 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const compiled = useMemo(() => compileMatch(match, races), [match, races]);
 
   useEffect(() => {
+    const storedDraft = sessionStorage.getItem("ctc-review-draft");
+    if (storedDraft) {
+      try {
+        const draft = JSON.parse(storedDraft) as {
+          submissionId?: string;
+          filename?: string;
+          match?: MatchJson;
+        };
+        if (draft.match && draft.submissionId) {
+          setMatch(draft.match);
+          setRaces(racesFromMatch(draft.match));
+          setFileName(draft.filename || "Queued match JSON");
+          setReviewSubmissionId(draft.submissionId);
+        }
+      } catch {
+        sessionStorage.removeItem("ctc-review-draft");
+      }
+    }
     setTablePreview(null);
     setPreviewMetadata(null);
     setPreviewError(null);
@@ -162,8 +185,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
   }, [tablePreview]);
 
   useEffect(() => {
+    if (!auth.session?.authenticated) return;
     let cancelled = false;
-    let source: EventSource | null = null;
     const mergeLogs = (incoming: DatabaseAddition[]) =>
       setAdditionLogs((current) => {
         const byId = new Map(current.map((entry) => [entry.id, entry]));
@@ -174,37 +197,26 @@ export default function MatchJsonEditor(): React.JSX.Element {
           .sort((left, right) => right.id - left.id)
           .slice(0, 100);
       });
-    const startStream = (afterId: number) => {
-      if (cancelled) return;
-      source = new EventSource(databaseAdditionStreamUrl(afterId));
-      source.onopen = () => setAdditionStreamStatus("live");
-      source.onerror = () => setAdditionStreamStatus("reconnecting");
-      source.addEventListener("addition", (event) => {
-        try {
-          mergeLogs([JSON.parse((event as MessageEvent<string>).data) as DatabaseAddition]);
-        } catch {
-          /* Ignore malformed stream events. */
-        }
-      });
+    const poll = () => {
+      if (cancelled || document.visibilityState !== "visible") return;
+      fetchDatabaseAdditions(100)
+        .then((history) => {
+          if (!cancelled) {
+            mergeLogs(history);
+            setAdditionStreamStatus("live");
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setAdditionStreamStatus("reconnecting");
+        });
     };
-    fetchDatabaseAdditions(100)
-      .then((history) => {
-        if (cancelled) return;
-        mergeLogs(history);
-        const afterId = history.reduce((maximum, entry) => Math.max(maximum, entry.id), 0);
-        startStream(afterId);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setAdditionStreamStatus("reconnecting");
-          startStream(0);
-        }
-      });
+    poll();
+    const interval = window.setInterval(poll, 15_000);
     return () => {
       cancelled = true;
-      source?.close();
+      window.clearInterval(interval);
     };
-  }, []);
+  }, [auth.session?.authenticated]);
 
   useEffect(() => {
     searchTracks()
@@ -653,12 +665,25 @@ export default function MatchJsonEditor(): React.JSX.Element {
   }
   async function confirmUpload(): Promise<void> {
     if (!previewMetadata || commitLoading) return;
-    if (!window.confirm(`Upload this match and archive it at ${previewMetadata.archive_path}?`))
-      return;
+    const isAdmin = auth.session?.authenticated === true;
+    const action = isAdmin ? "upload this match" : "submit this match for administrator review";
+    if (!window.confirm(`Confirm that you want to ${action}?`)) return;
     setCommitLoading(true);
     setCommitError(null);
     try {
-      const result = await postJson<CommitResult>("/api/matches/commit", {
+      if (!isAdmin) {
+        const receipt = await postJson<ReviewSubmissionReceipt>("/api/review-submissions", {
+          match: compiled,
+          original_filename: fileName,
+          warnings_acknowledged: warningsAcknowledged,
+        });
+        setSubmissionReceipt(receipt);
+        return;
+      }
+      const endpoint = reviewSubmissionId
+        ? `/api/admin/review-submissions/${reviewSubmissionId}/accept`
+        : "/api/matches/commit";
+      const result = await postJson<CommitResult>(endpoint, {
         match: compiled,
         approved_new_entries: newEntries
           .filter((entry) => approvalDecisions[entry.key] === "approved")
@@ -666,6 +691,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
         expected_preview_fingerprint: previewMetadata.fingerprint,
       });
       setCommitResult(result);
+      if (reviewSubmissionId) sessionStorage.removeItem("ctc-review-draft");
       if (result.match) setTablePreview(result.match);
       fetchMatchScopes()
         .then((scopes) => {
@@ -1836,17 +1862,37 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 </p>
               </div>
             )}
-            {tablePreview && previewMetadata && !commitResult && (
+            {submissionReceipt && (
+              <div className="mb-4 border border-blue-400/35 bg-blue-950/35 p-3 text-blue-100">
+                <p className="font-bold">Submitted for administrator review.</p>
+                <p className="mt-1 text-sm">
+                  Save receipt <strong>{submissionReceipt.receipt}</strong> to check its status.
+                </p>
+              </div>
+            )}
+            {tablePreview && previewMetadata && !commitResult && !submissionReceipt && (
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-y border-white/10 py-3">
                 <div>
                   <p className="font-semibold">
                     Preview complete; its database transaction has been rolled back.
                   </p>
                   <p className="text-sm text-gray-400">
-                    Confirming reruns validation and commits both the archive file and database
-                    records.
+                    {auth.session?.authenticated
+                      ? "Confirming reruns validation and commits the database before promoting the accepted archive object."
+                      : "You can submit this cleaned JSON to the administrator review queue; it will not change analytics yet."}
                   </p>
                 </div>
+                {!auth.session?.authenticated && issues.length > errorCount ? (
+                  <label className="w-full rounded border border-amber-300/25 bg-amber-950/25 p-3 text-sm text-amber-100">
+                    <input
+                      type="checkbox"
+                      checked={warningsAcknowledged}
+                      onChange={(event) => setWarningsAcknowledged(event.target.checked)}
+                      className="mr-2"
+                    />
+                    I reviewed and acknowledge the validation warnings above.
+                  </label>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -1857,11 +1903,23 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   </button>
                   <button
                     type="button"
-                    disabled={commitLoading || errorCount > 0}
+                    disabled={
+                      commitLoading ||
+                      errorCount > 0 ||
+                      (!auth.session?.authenticated &&
+                        issues.length > errorCount &&
+                        !warningsAcknowledged)
+                    }
                     onClick={confirmUpload}
                     className="rounded bg-emerald-500 px-4 py-2 font-bold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {commitLoading ? "Uploading..." : "Confirm upload"}
+                    {commitLoading
+                      ? "Working..."
+                      : auth.session?.authenticated
+                        ? reviewSubmissionId
+                          ? "Accept reviewed match"
+                          : "Confirm upload"
+                        : "Submit for admin review"}
                   </button>
                 </div>
                 {errorCount > 0 && (
@@ -1893,47 +1951,57 @@ export default function MatchJsonEditor(): React.JSX.Element {
           </section>
         )}
 
-        <section className="mt-5 border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold">Database Addition Log</h2>
-              <p className="mt-1 text-sm text-gray-400">
-                Committed catalog additions only; previews and failed uploads never appear.
-              </p>
+        {auth.session?.authenticated ? (
+          <section className="mt-5 border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-bold">Database Addition Log</h2>
+                <p className="mt-1 text-sm text-gray-400">
+                  Committed catalog additions only; previews and failed uploads never appear.
+                </p>
+              </div>
+              <span
+                className={`text-sm font-semibold ${additionStreamStatus === "live" ? "text-emerald-300" : "text-amber-300"}`}
+              >
+                {additionStreamStatus === "live"
+                  ? "Live"
+                  : additionStreamStatus === "connecting"
+                    ? "Connecting"
+                    : "Reconnecting"}
+              </span>
             </div>
-            <span
-              className={`text-sm font-semibold ${additionStreamStatus === "live" ? "text-emerald-300" : "text-amber-300"}`}
-            >
-              {additionStreamStatus === "live"
-                ? "Live"
-                : additionStreamStatus === "connecting"
-                  ? "Connecting"
-                  : "Reconnecting"}
-            </span>
-          </div>
-          <div className="mt-4 max-h-80 overflow-auto border-t border-white/10">
-            {additionLogs.length === 0 ? (
-              <p className="py-4 text-sm text-gray-400">No committed additions recorded yet.</p>
-            ) : (
-              additionLogs.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="grid gap-1 border-b border-white/10 py-2 text-sm sm:grid-cols-[10rem_1fr_auto] sm:items-center"
-                >
-                  <span className="font-semibold text-blue-300">
-                    {entry.entity_type.replaceAll("_", " ")}
-                  </span>
-                  <span>{entry.summary}</span>
-                  <span className="text-xs text-gray-500">
-                    {entry.created_at
-                      ? new Date(entry.created_at).toLocaleString()
-                      : `#${entry.id}`}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
+            <div className="mt-4 max-h-80 overflow-auto border-t border-white/10">
+              {additionLogs.length === 0 ? (
+                <p className="py-4 text-sm text-gray-400">No committed additions recorded yet.</p>
+              ) : (
+                additionLogs.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="grid gap-1 border-b border-white/10 py-2 text-sm sm:grid-cols-[10rem_1fr_auto] sm:items-center"
+                  >
+                    <span className="font-semibold text-blue-300">
+                      {entry.entity_type.replaceAll("_", " ")}
+                    </span>
+                    <span>{entry.summary}</span>
+                    <span className="text-xs text-gray-500">
+                      {entry.created_at
+                        ? new Date(entry.created_at).toLocaleString()
+                        : `#${entry.id}`}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        ) : (
+          <section className="mt-5 border border-white/10 bg-zinc-950/85 p-4 text-sm text-gray-300">
+            Public submissions enter the review queue only. Administrator sign-in is required to
+            import matches or view database addition details.{" "}
+            <Link to="/admin/access" className="text-blue-300">
+              Administrator sign-in
+            </Link>
+          </section>
+        )}
 
         {approvalModalOpen && (
           <div

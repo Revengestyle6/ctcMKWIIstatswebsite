@@ -14,10 +14,9 @@ COPY backend ./backend
 COPY alembic.ini ./alembic.ini
 COPY start.sh ./start.sh
 
-# The checked-in archive is imported during the image build. The runtime user
-# retains ownership because administrative uploads also update this directory.
-RUN python ./backend/import_json_to_db.py --rebuild \
-    && addgroup --system app \
+# Schema migrations and seed imports are explicit deployment jobs. The API image
+# never mutates a database while it is being built.
+RUN addgroup --system app \
     && adduser --system --ingroup app app \
     && chown -R app:app /app \
     && chmod +x /app/start.sh

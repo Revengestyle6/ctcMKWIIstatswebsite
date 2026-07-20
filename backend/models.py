@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 
 from database import Base
@@ -8,9 +9,11 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import relationship
 
@@ -62,11 +65,27 @@ class SourceFile(Base):
     source_filename = Column(Text, nullable=False)
     file_sha256 = Column(Text, nullable=False)
     json_shape = Column(Text, nullable=False)
+    storage_provider = Column(Text, nullable=False, default="local")
+    storage_object_key = Column(Text)
+    archive_status = Column(Text, nullable=False, default="complete")
+    storage_generation = Column(Text)
+    accepted_by_admin_user_id = Column(Integer, ForeignKey("admin_users.admin_user_id"))
+    review_submission_id = Column(Text, ForeignKey("review_submissions.submission_id"))
+    archived_at = Column(DateTime(timezone=True))
+    archive_attempts = Column(Integer, nullable=False, default=0)
+    last_archive_error_code = Column(Text)
     imported_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     __table_args__ = (
         UniqueConstraint("source_path", name="uq_source_file_path"),
         UniqueConstraint("file_sha256", name="uq_source_file_sha256"),
+        CheckConstraint(
+            "storage_provider IN ('local', 'gcs')", name="ck_source_file_storage_provider"
+        ),
+        CheckConstraint(
+            "archive_status IN ('pending', 'complete', 'repair_required')",
+            name="ck_source_file_archive_status",
+        ),
     )
 
 
@@ -364,3 +383,119 @@ class Penalty(Base):
             "penalty_scope IN ('team', 'player', 'race', 'unknown')", name="ck_penalty_scope"
         ),
     )
+
+
+class AdminUser(Base):
+    __tablename__ = "admin_users"
+
+    admin_user_id = Column(Integer, primary_key=True)
+    firebase_uid = Column(Text, unique=True)
+    email = Column(Text, nullable=False)
+    normalized_email = Column(Text, nullable=False, unique=True)
+    role = Column(Text, nullable=False, default="admin")
+    status = Column(Text, nullable=False, default="invited")
+    github_username = Column(Text)
+    database_access_status = Column(Text, nullable=False, default="not_requested")
+    repository_access_status = Column(Text, nullable=False, default="not_requested")
+    created_by_admin_user_id = Column(Integer, ForeignKey("admin_users.admin_user_id"))
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    activated_at = Column(DateTime(timezone=True))
+    revoked_at = Column(DateTime(timezone=True))
+    last_login_at = Column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint("role IN ('owner', 'admin')", name="ck_admin_user_role"),
+        CheckConstraint("status IN ('invited', 'active', 'revoked')", name="ck_admin_user_status"),
+        CheckConstraint(
+            "database_access_status IN ('not_requested', 'provisioned', 'revoked')",
+            name="ck_admin_user_database_access",
+        ),
+        CheckConstraint(
+            "repository_access_status IN ('not_requested', 'provisioned', 'revoked')",
+            name="ck_admin_user_repository_access",
+        ),
+    )
+
+
+class ReviewSubmission(Base):
+    __tablename__ = "review_submissions"
+
+    submission_id = Column(Text, primary_key=True, default=lambda: str(uuid.uuid4()))
+    fingerprint = Column(Text, nullable=False)
+    queue_object_key = Column(Text, nullable=False, unique=True)
+    original_filename = Column(Text, nullable=False)
+    content_length = Column(Integer, nullable=False)
+    validation_version = Column(Text, nullable=False)
+    warnings_json = Column(Text, nullable=False, default="[]")
+    warnings_acknowledged = Column(Boolean, nullable=False, default=False)
+    status = Column(Text, nullable=False, default="pending")
+    claimed_by_admin_user_id = Column(Integer, ForeignKey("admin_users.admin_user_id"))
+    claimed_at = Column(DateTime(timezone=True))
+    reviewed_by_admin_user_id = Column(Integer, ForeignKey("admin_users.admin_user_id"))
+    reviewed_at = Column(DateTime(timezone=True))
+    decision_note = Column(Text)
+    accepted_match_id = Column(
+        Integer,
+        ForeignKey(
+            "matches.match_id",
+            name="fk_review_submissions_accepted_match_id",
+            use_alter=True,
+        ),
+    )
+    submitted_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'in_review', 'accepted', 'rejected', 'expired', 'failed')",
+            name="ck_review_submission_status",
+        ),
+        Index("ix_review_submissions_status_submitted", "status", "submitted_at"),
+        Index("ix_review_submissions_fingerprint", "fingerprint"),
+        Index(
+            "uq_review_submissions_active_fingerprint",
+            "fingerprint",
+            unique=True,
+            postgresql_where=text("status IN ('pending', 'in_review')"),
+            sqlite_where=text("status IN ('pending', 'in_review')"),
+        ),
+    )
+
+
+class SubmissionRateLimit(Base):
+    __tablename__ = "submission_rate_limits"
+
+    network_key = Column(Text, primary_key=True)
+    window_started_at = Column(DateTime(timezone=True), primary_key=True)
+    request_count = Column(Integer, nullable=False, default=1)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+
+
+class HealthIssueReview(Base):
+    __tablename__ = "health_issue_reviews"
+
+    issue_key = Column(Text, primary_key=True)
+    status = Column(Text, nullable=False)
+    note = Column(Text, nullable=False, default="")
+    reviewed_by_admin_user_id = Column(
+        Integer, ForeignKey("admin_users.admin_user_id"), nullable=False
+    )
+    reviewed_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("status IN ('open', 'dismissed')", name="ck_health_issue_review_status"),
+    )
+
+
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_logs"
+
+    admin_audit_log_id = Column(Integer, primary_key=True)
+    admin_user_id = Column(Integer, ForeignKey("admin_users.admin_user_id"))
+    action = Column(Text, nullable=False, index=True)
+    target_type = Column(Text)
+    target_id = Column(Text)
+    request_id = Column(Text, nullable=False, index=True)
+    details_json = Column(Text, nullable=False, default="{}")
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)

@@ -85,6 +85,15 @@ export default function HomePage(): React.JSX.Element {
                 Create, validate, preview, and upload match data.
               </span>
             </Link>
+            <Link
+              to="/admin/access"
+              className="rounded-md border border-amber-300/30 bg-amber-950/65 px-4 py-4 transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-300"
+            >
+              <span className="block text-lg font-bold text-white">Administrator Access</span>
+              <span className="mt-1 block text-sm leading-5 text-gray-300">
+                Sign in, review queued JSON, and view database and repository onboarding.
+              </span>
+            </Link>
           </nav>
 
           <p className="mt-7 text-sm text-gray-300">Created by Lawrence</p>

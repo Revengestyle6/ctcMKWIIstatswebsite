@@ -21,3 +21,8 @@ backend/data/*.sqlite
 backend/data/*.sqlite-*
 backend/data/*.db
 backend/data/*.db-*
+backend/data/object_storage
+backend/JSON
+backend/backups
+backend/test_*.py
+frontend

@@ -805,6 +805,7 @@ def import_editor_match(
     file_sha256: str,
     json_shape: str = "single_match",
     player_identity_links: dict[str, int] | None = None,
+    source_metadata: dict[str, Any] | None = None,
 ) -> Match:
     league_code = str(match_data.get("league") or "ctc").strip().lower()
     season_code = str(match_data.get("season") or "").strip().lower()
@@ -822,6 +823,7 @@ def import_editor_match(
         source_filename=source_filename,
         file_sha256=file_sha256,
         json_shape=json_shape,
+        **(source_metadata or {}),
     )
     session.add(source_file)
     session.flush()
@@ -1075,6 +1077,9 @@ def import_file(
         source_filename=path.name,
         file_sha256=file_hash,
         json_shape=json_shape,
+        storage_provider="local",
+        storage_object_key=source_path,
+        archive_status="complete",
     )
     session.add(source_file)
     session.flush()

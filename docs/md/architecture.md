@@ -24,27 +24,26 @@ docs/archive/           historical material only
    through SQLAlchemy sessions.
 7. Flask returns structured JSON for the UI.
 
-The current frontend retains a temporary Render fallback in `api.ts`. Same-origin
-`/api` requests are the accepted production direction and will replace it before
-Firebase Hosting cutover.
+The frontend uses same-origin `/api` requests by default. Local or intentionally
+split deployments can override the origin with `VITE_API_URL`.
 
 ## Data Ownership
 
 - Archived JSON is the immutable input and audit record.
-- Reviewed CSV/JSON registries define player identity, team normalization,
-  analytics exclusions, and health-review decisions.
+- Reviewed CSV/JSON registries define player identity, team normalization, and
+  analytics exclusions. Health reviews are durable database records.
 - SQLite is generated local/test state.
-- PostgreSQL will be the production operational database.
+- PostgreSQL is the supported production operational database.
 - Git stores code, migrations, documentation, registries, and the historical JSON
   archive until durable object storage is implemented.
 
 ## Match Upload Flow
 
-The JSON editor compiles and previews a canonical document. Flask revalidates the
-preview, stages the archive file, imports all normalized database rows in one SQL
-transaction, publishes the staged file, and records addition logs. Local writes can
-be protected by `MATCH_UPLOAD_TOKEN`; Firebase administrator authentication and
-Cloud Storage are planned production changes.
+The JSON editor compiles and previews a canonical document. Anonymous users may
+submit it to a temporary review queue without changing analytics. An allowlisted
+Firebase administrator reviews it and uses the single acceptance service, which
+commits PostgreSQL first and then promotes the exact canonical bytes to immutable
+local/GCS archive storage. Audit and repair state are durable.
 
 ## Accepted Production Target
 

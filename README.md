@@ -66,9 +66,7 @@ npm run dev
 ```
 
 Vite serves the UI at `http://127.0.0.1:3000` and proxies `/api` to Flask at
-`http://127.0.0.1:5000`. The current frontend still has a Render fallback when
-`VITE_API_URL` is unset; replacing that fallback with same-origin API paths is
-scheduled before the Firebase cutover.
+`http://127.0.0.1:5000`. Hosted builds use same-origin `/api` requests by default.
 
 ## Verification
 
@@ -103,6 +101,7 @@ Run commands from `backend/` unless noted otherwise:
 ```bash
 ../.venv/bin/python scripts/inspect_db.py
 ../.venv/bin/python scripts/reconcile_json_archive.py
+../.venv/bin/python scripts/run_phase3_maintenance.py
 ../.venv/bin/python scripts/convert_txt_json.py --help
 ../.venv/bin/python scripts/merge_player_identities.py --help
 ```

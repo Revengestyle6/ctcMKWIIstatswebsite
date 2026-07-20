@@ -3,7 +3,6 @@ import logging
 import dashboard_stats as dashboards
 import stats_db as stats
 from dashboard_stats import DashboardError
-from extensions import cache
 from flask import Blueprint, jsonify, request
 
 from routes.common import (
@@ -56,7 +55,6 @@ def player_avg():
 
 
 @public_api.get("/api/players")
-@cache.cached(timeout=3600, query_string=True)
 def api_players():
     try:
         return jsonify(stats.list_players(season=season_arg(), division=division_arg()))
@@ -66,7 +64,6 @@ def api_players():
 
 
 @public_api.get("/api/player-directory")
-@cache.cached(timeout=3600, query_string=True)
 def api_player_directory():
     try:
         return jsonify(stats.list_player_directory(season=season_arg(), division=division_arg()))
@@ -195,7 +192,6 @@ def api_track_search():
 
 
 @public_api.get("/api/seasons")
-@cache.cached(timeout=3600, query_string=True)
 def api_seasons():
     try:
         return jsonify(stats.list_seasons())
@@ -205,7 +201,6 @@ def api_seasons():
 
 
 @public_api.get("/api/match-scopes")
-@cache.cached(timeout=3600)
 def api_match_scopes():
     try:
         return jsonify(stats.list_match_scopes())
@@ -214,7 +209,6 @@ def api_match_scopes():
 
 
 @public_api.get("/api/team-scopes")
-@cache.cached(timeout=3600)
 def api_team_scopes():
     try:
         return jsonify(stats.list_team_scopes())
@@ -223,7 +217,6 @@ def api_team_scopes():
 
 
 @public_api.get("/api/divisions")
-@cache.cached(timeout=3600, query_string=True)
 def api_divisions():
     try:
         return jsonify(stats.list_divisions(season=season_arg()))
@@ -255,7 +248,6 @@ def api_top_team_players():
 
 
 @public_api.get("/api/teams")
-@cache.cached(timeout=3600, query_string=True)
 def api_teams():
     try:
         return jsonify(stats.list_teams(season=season_arg(), division=division_arg()))
@@ -265,7 +257,6 @@ def api_teams():
 
 
 @public_api.get("/api/matches")
-@cache.cached(timeout=3600, query_string=True)
 def api_matches():
     try:
         return jsonify(
@@ -281,7 +272,6 @@ def api_matches():
 
 
 @public_api.get("/api/matches/<int:match_id>")
-@cache.cached(timeout=3600, query_string=True)
 def api_match_detail(match_id):
     try:
         return jsonify(stats.get_match_detail(match_id))
@@ -291,7 +281,6 @@ def api_match_detail(match_id):
 
 
 @public_api.get("/api/top-team-tracks")
-@cache.cached(timeout=3600, query_string=True)
 def api_top_team_tracks():
     try:
         min_races = minimum_races_arg(default=2)
@@ -312,7 +301,6 @@ def api_top_team_tracks():
 
 
 @public_api.get("/api/tracks")
-@cache.cached(timeout=3600, query_string=True)
 def api_tracks():
     try:
         return jsonify(stats.list_tracks(season=season_arg(), division=division_arg()))
@@ -322,7 +310,6 @@ def api_tracks():
 
 
 @public_api.get("/api/top-tracks")
-@cache.cached(timeout=3600, query_string=True)
 def api_top_tracks():
     track = request.args.get("track")
     if not track:
@@ -348,7 +335,6 @@ def api_top_tracks():
 
 
 @public_api.get("/api/top-teams-on-track")
-@cache.cached(timeout=3600, query_string=True)
 def api_top_teams_on_track():
     track = request.args.get("track")
     if not track:

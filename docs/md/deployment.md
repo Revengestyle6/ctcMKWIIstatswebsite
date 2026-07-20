@@ -18,18 +18,17 @@ See `docs/adr/` for accepted decisions and constraints.
 rollback deployment paths. They must not be removed until Cloud Run staging and its
 replacement workflow work. They are not the production target.
 
-## Current Docker Artifact
+## Phase 3 Docker Artifact
 
-The current image contains only the Python API, installs dependencies in a cacheable
-layer, rebuilds the regression SQLite database, and runs Gunicorn as the unprivileged
-`app` user. Removing unused Node/frontend runtime content reduced the local image
-from 269.2 MB in Phase 1 to 70.7 MB in Phase 2. The final Cloud Run image will not
-build production data into the image.
+The image contains only the Python API and runtime adapters, installs dependencies
+in a cacheable layer, and runs Gunicorn as the unprivileged `app` user. It excludes
+the frontend, tests, historical JSON, and generated databases. Image construction
+never migrates or imports a database; those are explicit deployment jobs.
 
 Build the current regression artifact from the repository root:
 
 ```bash
-docker build -t ctc-stats:phase2 .
+docker build -t ctc-stats:phase3 .
 ```
 
 ## Local Development

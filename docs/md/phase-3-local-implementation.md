@@ -1,0 +1,134 @@
+# Phase 3 Local Implementation
+
+- Status: implemented and locally verified
+- Scope: application, schema, adapters, local runtime, and CI gates
+- Cloud status: not provisioned; every Phase 4 resource remains an owner checkpoint
+
+## Delivered Components
+
+| Component | Location | Purpose |
+| --- | --- | --- |
+| Production-state schema | `backend/models.py`, migration `20260719_0002` | Administrators, queue, rate limits, audit, durable health reviews, and archive state |
+| Administrator authorization | `backend/admin_auth.py` | Verifies Firebase ID tokens and checks the database allowlist |
+| Owner bootstrap | `backend/scripts/bootstrap_owner.py` | Creates the first invited owner from an explicit verified email |
+| Review queue | `backend/review_queue.py`, `backend/routes/reviews.py` | Anonymous validation/submission and admin claim, reject, edit, and accept |
+| Accepted archive | `backend/archive_storage.py` | Local and GCS implementations with immutable no-overwrite promotion |
+| Acceptance state machine | `backend/acceptance_service.py` | One idempotent database-first path for direct and queued admin imports |
+| Maintenance | `backend/phase3_maintenance.py`, `backend/scripts/run_phase3_maintenance.py` | Expires temporary reviews and repairs interrupted accepted archives |
+| Access administration | `backend/routes/access.py`, `/admin/access` | Owner allowlist management and admin onboarding instructions |
+| Queue interface | `/admin/review-queue`, `/json-editor` | Admin review in the existing editor; public users submit without analytics writes |
+| Operations | `backend/routes/operations.py` | Liveness, exact-revision readiness, and public aggregate data health |
+
+Only acceptance creates analytics rows. Queue submission never invokes the importer.
+The PostgreSQL transaction commits first, so the new match is immediately visible.
+The exact canonical bytes are then promoted to `accepted/`. A storage failure leaves
+the visible match marked `repair_required`; maintenance safely completes it later.
+
+## Environment Configuration
+
+The committed `.env.example` lists local values. Staging and production values will
+be configured on Cloud Run or in Secret Manager only after owner approval.
+
+| Variable | Required where | Notes |
+| --- | --- | --- |
+| `APP_ENV` | All | `staging` and `production` reject SQLite and local archive storage |
+| `DATABASE_URL` | PostgreSQL environments | Runtime database credential; never a frontend variable |
+| `FIREBASE_PROJECT_ID` | Hosted API | Audience used to verify Firebase ID tokens |
+| `VITE_FIREBASE_*` | Hosted frontend build | Public Firebase web identifiers, not secrets |
+| `ARCHIVE_STORAGE_PROVIDER` | Hosted API | Must be `gcs` in staging/production |
+| `ARCHIVE_GCS_BUCKET` | Hosted API and maintenance job | Bucket name selected at the cloud checkpoint |
+| `SUBMISSION_RATE_LIMIT_SECRET` | Hosted API | Secret HMAC key; raw client IPs are never stored |
+| `MAX_REVIEW_SUBMISSION_BYTES` | Optional | Defaults to 1 MiB of canonical JSON |
+| `SUBMISSION_RATE_LIMIT` | Optional | Defaults to 10 submissions per window |
+| `ALLOW_DEV_AUTH` | Explicit local/test use only | Must remain false in hosted environments |
+
+The frontend defaults to its own origin. `VITE_API_URL` is needed only when the API
+is intentionally hosted on another origin. Firebase code is route/session gated so
+anonymous analytics traffic does not load the authentication bundle.
+
+## Local Operation
+
+Start PostgreSQL and migrate it from the repository root:
+
+```bash
+docker compose up -d postgres
+export APP_ENV=local
+export DATABASE_URL=postgresql+psycopg://ctc_local:ctc_local@127.0.0.1:55432/ctc_dev
+.venv/bin/alembic upgrade head
+.venv/bin/python backend/import_json_to_db.py --database-url "$DATABASE_URL"
+```
+
+Create the local owner only after choosing the email that should become the real
+owner identity:
+
+```bash
+cd backend
+../.venv/bin/python scripts/bootstrap_owner.py --email you@example.com
+```
+
+For an intentional local UI authentication override, set both
+`ALLOW_DEV_AUTH=true` for Flask and `VITE_ALLOW_DEV_AUTH=true` for Vite. This path
+is rejected as a production authentication design and exists only for local work.
+
+Run queue expiry and archive reconciliation from `backend/`:
+
+```bash
+../.venv/bin/python scripts/run_phase3_maintenance.py
+```
+
+In production this command will become a small scheduled Cloud Run Job using the
+same runtime database and bucket identities. Its schedule and resources require a
+separate Phase 4 approval.
+
+## Access Boundaries
+
+- Anonymous users can use analytics, edit/preview JSON, submit to the queue, and
+  query only their opaque receipt status.
+- Admins must use an allowlisted, verified Google account. They can claim/reject/
+  accept reviews, commit direct editor uploads, see detailed health, and view access
+  instructions.
+- Owners can additionally invite/revoke application admins and track their SQL and
+  repository onboarding status.
+- Application admins do not receive cloud resource management. Direct SQL will use
+  the `ctc_readonly` PostgreSQL group through Cloud SQL Auth Proxy.
+- GitHub Write access is granted separately. Admins work on branches and open pull
+  requests; protected branches require passing CI and owner/code-owner approval.
+
+The access page records provider onboarding status but deliberately cannot grant
+Google Cloud IAM or GitHub permissions. The owner performs those provider steps.
+
+## Verified Evidence
+
+- 72 backend tests pass locally; the PostgreSQL-only test is skipped unless its
+  dedicated URL is supplied.
+- Clean SQLite upgrade/check/downgrade succeeds.
+- Clean PostgreSQL 18 migration and `alembic check` succeed.
+- The accepted archive imports 244 matches and the established Phase 0 counts.
+- A dedicated PostgreSQL integration test accepts one match and queries it
+  immediately.
+- Frontend formatting/type checks and the production build pass.
+- All 20 desktop/mobile browser smoke checks pass.
+- The production API image builds without frontend, historical JSON, test files,
+  or a generated database and runs as an unprivileged user.
+- Container liveness, exact migration readiness, and aggregate data health return
+  healthy against PostgreSQL.
+
+## Phase 4 Owner Checkpoints
+
+No item below has been performed. Before each batch, review the exact project,
+region, resource name, access grants, settings, expected monthly cost, and any
+credentials or domain choices needed from the owner:
+
+1. Select/create the Google Cloud and Firebase projects; enable billing and APIs.
+2. Create the cost-first Cloud SQL instance and staging/production databases and
+   roles, including `ctc_readonly` and future-table default privileges.
+3. Create the archive/export bucket, retention/lifecycle rules, and service account.
+4. Configure Firebase Google sign-in and provide the public web configuration.
+5. Create secrets, migrate/import staging data, and bootstrap the owner email.
+6. Deploy Cloud Run staging with zero minimum instances and conservative maxima.
+7. Deploy Firebase Hosting staging and its same-origin `/api/**` rewrite.
+8. Validate admin sign-in, queue/acceptance, archive repair, read-only SQL, costs,
+   cold starts, and rollback before approving production.
+9. Configure GitHub Workload Identity Federation and protected deployment workflow.
+10. Repeat reviewed configuration for production, then retire transitional hosting
+    only after the rollback window.

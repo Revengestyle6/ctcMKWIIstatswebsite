@@ -419,13 +419,33 @@ def find_match_conflict(session, match_data: dict[str, Any]) -> Match | None:
 
 
 def reconcile_archive(session, root: Path | None = None) -> dict[str, list[dict[str, str]]]:
+    from archive_storage import get_archive_storage
+
     root = (root or json_root()).resolve()
+    storage = get_archive_storage()
     missing_files = []
     hash_mismatches = []
     known_paths = set()
     known_hashes = set()
     for source in session.scalars(select(SourceFile)).all():
         if source.source_path.startswith("preview/"):
+            continue
+        if source.storage_object_key and source.storage_object_key.startswith("accepted/"):
+            try:
+                content = storage.read(source.storage_object_key)
+            except Exception:
+                missing_files.append({"source_path": source.storage_object_key})
+                continue
+            actual_hash = hashlib.sha256(content).hexdigest()
+            if actual_hash != source.file_sha256:
+                hash_mismatches.append(
+                    {
+                        "source_path": source.storage_object_key,
+                        "database": source.file_sha256,
+                        "actual": actual_hash,
+                    }
+                )
+            known_hashes.add(source.file_sha256)
             continue
         relative = Path(source.source_path)
         if relative.parts and relative.parts[0] == "JSON":

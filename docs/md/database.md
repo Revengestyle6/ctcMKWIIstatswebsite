@@ -70,15 +70,16 @@ The clean registry rebuild matches the working identity partition exactly.
 
 ## Phase 3 Verification
 
-The first Phase 3 batch adds PostgreSQL configuration, Psycopg, Alembic, the local
-service, and CI integration coverage. CI verifies a clean migration, checks for
-model/schema drift, imports the authoritative archive, and compares all 16
+Phase 3 adds PostgreSQL configuration, Psycopg, Alembic, the local service,
+administrator/review/archive state, and CI integration coverage. CI verifies a
+clean migration, checks for model/schema drift, imports the authoritative archive,
+runs a PostgreSQL acceptance workflow, and compares all 16
 portable API responses exactly between clean SQLite and PostgreSQL databases. Six
 data-independent Phase 0 fixtures are also checked directly. The other frozen
 fixtures contain numeric IDs and incremental database history that a clean archive
 rebuild cannot reproduce; they remain review evidence and are not silently
-re-recorded. The SQLite-specific database-health fixture remains in the SQLite
-suite until its durable Phase 3 replacement is implemented.
+re-recorded. Detailed health is administrator-only and dialect-aware; public data
+health exposes only safe aggregate freshness state.
 
 Staging and production will be rebuilt from the authoritative JSON and registries
 rather than copied from SQLite. Setting `APP_ENV=staging` or `APP_ENV=production`

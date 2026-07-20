@@ -61,6 +61,14 @@ export type CommitResult = {
   additions: DatabaseAddition[];
   message: string;
   match?: MatchDetail;
+  archive_status?: "pending" | "complete" | "repair_required";
+};
+export type ReviewSubmissionReceipt = {
+  receipt: string;
+  status: string;
+  submitted_at: string;
+  updated_at: string;
+  expires_at: string;
 };
 
 export function clone<T>(value: T): T {

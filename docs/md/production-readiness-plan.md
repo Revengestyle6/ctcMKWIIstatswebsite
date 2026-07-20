@@ -3,7 +3,7 @@
 ## Status
 
 - Created: July 19, 2026
-- Phase: Phase 3 implementation in progress
+- Phase: Phase 3 local implementation complete; Phase 4 cloud checkpoints pending
 - Scope: Repository cleanup, documentation, production infrastructure, deployment, and ongoing operations
 - Accepted architecture: Firebase Hosting, Cloud Run, Cloud SQL for PostgreSQL,
   Cloud Storage, and Firebase Authentication
@@ -172,12 +172,11 @@ work is:
 
 - `railway.json`, `render.yaml`, and the GitHub Pages workflow remain only as
   transitional/rollback deployment definitions until Cloud Run staging works.
-- The frontend retains a hard-coded Render fallback until Phase 3 switches
-  production requests to same-origin `/api` paths.
+- The frontend now defaults to same-origin `/api` requests.
 - The JSON ingestion pipeline and editor UI are still substantial cohesive workflows;
   future changes should continue extracting independently testable behavior.
-- The regression image still seeds SQLite at build time. Production data migrations
-  and initialization move to explicit jobs in Phase 3.
+- The API image no longer contains or seeds SQLite/historical JSON. Migrations and
+  initialization are explicit deployment jobs.
 
 ## Refactoring Direction
 

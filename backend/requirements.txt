@@ -6,3 +6,5 @@ gunicorn==21.2.0
 SQLAlchemy>=2.0,<3.0
 alembic==1.18.5
 psycopg[binary]==3.3.4
+google-auth==2.56.0
+google-cloud-storage==3.13.0

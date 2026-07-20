@@ -39,7 +39,10 @@ def _issue(key, severity, category, title, detail, *, count=1, entities=None, di
 
 
 def _database_file_details(session):
-    database_name = getattr(getattr(session.get_bind(), "url", None), "database", None)
+    bind = session.get_bind()
+    database_name = getattr(getattr(bind, "url", None), "database", None)
+    if bind.dialect.name != "sqlite":
+        return {"backend": bind.dialect.name, "database": database_name, "size_bytes": None}
     if not database_name or database_name == ":memory:":
         return {"path": database_name or ":memory:", "size_bytes": None}
     path = Path(database_name)
@@ -151,7 +154,7 @@ def _catalog_issues(session):
                 )
             )
 
-    collision_rows = (
+    alias_rows = (
         session.execute(
             text("""
         WITH alias_appearances AS (
@@ -183,33 +186,41 @@ def _catalog_issues(session):
             JOIN matches m ON m.match_id = mt.match_id
             WHERE trim(coalesce(mp.table_name_raw, '')) != ''
         )
-        SELECT s.season_code, d.division_code, aa.alias_type, aa.alias_key,
-               count(DISTINCT aa.player_id) AS player_count,
-               group_concat(DISTINCT aa.player_id) AS player_ids
+        SELECT DISTINCT s.season_code, d.division_code, aa.alias_type, aa.alias_key,
+               aa.player_id
         FROM alias_appearances aa
         JOIN seasons s ON s.season_id = aa.season_id
         JOIN divisions d ON d.division_id = aa.division_id
-        GROUP BY s.season_code, d.division_code, aa.alias_type, aa.alias_key
-        HAVING count(DISTINCT aa.player_id) > 1
-        ORDER BY player_count DESC, alias_key
-        LIMIT 100
+        ORDER BY s.season_code, d.division_code, aa.alias_type, aa.alias_key, aa.player_id
     """)
         )
         .mappings()
         .all()
     )
-    for row in collision_rows:
-        player_ids = [int(value) for value in str(row["player_ids"]).split(",")]
-        alias_type_label = str(row["alias_type"]).replace("_", " ").title()
+    collisions = {}
+    for row in alias_rows:
+        key = (
+            row["season_code"],
+            row["division_code"],
+            row["alias_type"],
+            row["alias_key"],
+        )
+        collisions.setdefault(key, []).append(int(row["player_id"]))
+    ranked_collisions = sorted(
+        ((key, player_ids) for key, player_ids in collisions.items() if len(player_ids) > 1),
+        key=lambda item: (-len(item[1]), item[0][3]),
+    )[:100]
+    for (season_code, division_code, alias_type, alias_key), player_ids in ranked_collisions:
+        alias_type_label = str(alias_type).replace("_", " ").title()
         issues.append(
             _issue(
-                f"player-alias-collision:{row['season_code']}:{row['division_code']}:{row['alias_type']}:{row['alias_key']}",
+                f"player-alias-collision:{season_code}:{division_code}:{alias_type}:{alias_key}",
                 "warning",
                 "players",
                 "Player alias collision",
-                f"{alias_type_label} alias “{row['alias_key']}” maps to multiple players in "
-                f"{row['season_code'].upper()} {row['division_code'].upper()}.",
-                count=row["player_count"],
+                f"{alias_type_label} alias “{alias_key}” maps to multiple players in "
+                f"{season_code.upper()} {division_code.upper()}.",
+                count=len(player_ids),
                 entities=[
                     {
                         "id": player_id,
@@ -391,9 +402,14 @@ def build_database_health(
 ):
     generated_at = datetime.now(timezone.utc)
     database = _database_file_details(session)
-    integrity_rows = list(session.execute(text("PRAGMA integrity_check")).scalars())
-    integrity_ok = integrity_rows == ["ok"]
-    foreign_key_rows = list(session.execute(text("PRAGMA foreign_key_check")).all())
+    if session.get_bind().dialect.name == "sqlite":
+        integrity_rows = list(session.execute(text("PRAGMA integrity_check")).scalars())
+        integrity_ok = integrity_rows == ["ok"]
+        foreign_key_rows = list(session.execute(text("PRAGMA foreign_key_check")).all())
+    else:
+        integrity_rows = ["ok"]
+        integrity_ok = True
+        foreign_key_rows = []
     counts = _table_counts(session)
     additions = _addition_data(session, addition_limit)
     issues = []
@@ -454,7 +470,7 @@ def build_database_health(
                     )
                 )
 
-    reviews = load_reviews(review_path)
+    reviews = load_reviews(review_path, session=None if review_path else session)
     for issue in issues:
         review = reviews.get(issue["key"])
         issue["review"] = review if isinstance(review, dict) else None

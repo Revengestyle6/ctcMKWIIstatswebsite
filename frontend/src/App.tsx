@@ -4,6 +4,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 
 const BestMatchups = lazy(() => import("./components/BestMatchups"));
+const AdminAccessPage = lazy(() => import("./pages/AdminAccessPage"));
+const AdminReviewQueuePage = lazy(() => import("./pages/AdminReviewQueuePage"));
 const DatabaseHealthDashboard = lazy(() => import("./pages/DatabaseHealthDashboard"));
 const HomePage = lazy(() => import("./pages/HomePage"));
 const MatchHistory = lazy(() => import("./components/MatchHistory"));
@@ -56,6 +58,8 @@ export default function App(): JSX.Element {
           <Route path="/teams" element={<TeamDirectory />} />
           <Route path="/json-editor" element={<MatchJsonEditor />} />
           <Route path="/database-health" element={<DatabaseHealthDashboard />} />
+          <Route path="/admin/access" element={<AdminAccessPage />} />
+          <Route path="/admin/review-queue" element={<AdminReviewQueuePage />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

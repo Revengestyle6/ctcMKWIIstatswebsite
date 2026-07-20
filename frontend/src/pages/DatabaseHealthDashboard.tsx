@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import AdminSessionPanel from "../components/AdminSessionPanel";
 import { LegacyStatHeader } from "../components/LegacyStatHeader";
 import {
   type DatabaseHealthIssue,
@@ -7,6 +8,7 @@ import {
   type HealthSeverity,
   reviewDatabaseHealthIssue,
 } from "../databaseHealthApi";
+import { useAdminSession } from "../hooks/useAdminSession";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -201,6 +203,7 @@ function reportFilename(exportedAt: string): string {
 }
 
 export default function DatabaseHealthDashboard() {
+  const auth = useAdminSession();
   const [report, setReport] = useState<DatabaseHealthReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -215,6 +218,10 @@ export default function DatabaseHealthDashboard() {
   const [copiedIssueKey, setCopiedIssueKey] = useState("");
 
   useEffect(() => {
+    if (!auth.session?.authenticated) {
+      if (!auth.loading) setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError("");
@@ -234,7 +241,7 @@ export default function DatabaseHealthDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [includeArchive, refreshVersion]);
+  }, [auth.loading, auth.session?.authenticated, includeArchive, refreshVersion]);
 
   const categories = useMemo(
     () => Array.from(new Set((report?.issues ?? []).map((issue) => issue.category))).sort(),
@@ -266,6 +273,17 @@ export default function DatabaseHealthDashboard() {
       ),
     [report, additionType]
   );
+
+  if (!auth.loading && !auth.session?.authenticated) {
+    return (
+      <main className="relative z-10 min-h-screen bg-black/85 px-5 py-8 text-white sm:px-8">
+        <div className="mx-auto max-w-4xl border border-white/15 bg-zinc-950/90 p-5">
+          <h1 className="mb-4 text-3xl font-bold">Database Health</h1>
+          <AdminSessionPanel {...auth} />
+        </div>
+      </main>
+    );
+  }
 
   async function handleIssueReview(issue: DatabaseHealthIssue) {
     const status = issue.is_dismissed ? "open" : "dismissed";
