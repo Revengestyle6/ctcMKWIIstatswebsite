@@ -1,6 +1,8 @@
 node_modules
+**/node_modules
 npm-debug.log
 __pycache__
+**/__pycache__
 .git
 .gitignore
 .env
@@ -9,5 +11,13 @@ build
 dist
 .pytest_cache
 *.pyc
-.venv
-venv
+.venv*
+**/.venv*
+venv*
+docs
+.agents
+.codex
+backend/data/*.sqlite
+backend/data/*.sqlite-*
+backend/data/*.db
+backend/data/*.db-*

@@ -1,5 +1,5 @@
-import React from "react";
-import { DivisionOption, SeasonOption, formatDivisionName } from "../api";
+import type React from "react";
+import { type DivisionOption, formatDivisionName, type SeasonOption } from "../api";
 
 interface SeasonDivisionSelectorProps {
   season: string;
@@ -25,7 +25,9 @@ export default function SeasonDivisionSelector({
   return (
     <div className={`flex flex-col sm:flex-row gap-4 ${className}`}>
       <div>
-        <label htmlFor="season-selector" className="block font-semibold mb-1">Season</label>
+        <label htmlFor="season-selector" className="block font-semibold mb-1">
+          Season
+        </label>
         <select
           id="season-selector"
           className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-40"
@@ -42,7 +44,9 @@ export default function SeasonDivisionSelector({
       </div>
 
       <div>
-        <label htmlFor="division-selector" className="block font-semibold mb-1">Division</label>
+        <label htmlFor="division-selector" className="block font-semibold mb-1">
+          Division
+        </label>
         <select
           id="division-selector"
           className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-40"

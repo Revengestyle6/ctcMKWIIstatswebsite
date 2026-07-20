@@ -3,7 +3,7 @@
 ## Status
 
 - Created: July 19, 2026
-- Phase: Phase 0 complete; ready for Phase 1
+- Phase: Phase 2 complete; ready for Phase 3
 - Scope: Repository cleanup, documentation, production infrastructure, deployment, and ongoing operations
 - Accepted architecture: Firebase Hosting, Cloud Run, Cloud SQL for PostgreSQL,
   Cloud Storage, and Firebase Authentication
@@ -163,35 +163,21 @@ Set billing alerts before deploying any billable resource. Suggested monthly ale
 thresholds are $5, $10, $15, and $25. Budget alerts notify; they do not automatically
 cap spending.
 
-## Current Repository Findings
+## Remaining Repository Findings
 
-The cleanup phase should verify and address the following findings:
+Phase 1 resolved tracked-environment, legacy-pipeline, generated-documentation,
+duplicate-tooling, and stale-artifact findings. Phase 2 separated application
+boundaries, added checks, and reduced the API image by 73.7%. Remaining intentional
+work is:
 
-- The repository tracks more than 16,000 files and approximately 117 MB.
-- Root and backend Python virtual environments account for roughly 15,500 tracked
-  files. They are ignored now but still need to be removed from Git tracking.
-- IDE metadata, Python cache files, and at least one SQLite backup are tracked.
-- `railway.json`, `render.yaml`, and the GitHub Pages workflow describe competing or
-  superseded deployments.
-- `old-website-backup/` appears to contain an obsolete prototype.
-- `backend/CSV/`, `stats.py`, `find.py`, `extract.py`, and the old `main.py` appear to
-  belong to the superseded CSV analytics pipeline.
-- Maintenance scripts are mixed with runtime backend modules.
-- Generated PDF copies duplicate Markdown documentation and are stale.
-- Root and frontend Node packages overlap and use inconsistent tool versions.
-- The frontend contains unused Create React App artifacts and duplicate assets.
-- The frontend contains a hard-coded Render API fallback.
-- Several frontend and backend modules exceed 1,000 lines.
-- The Docker image rebuilds SQLite during image construction, installs Node in the
-  Python runtime layer, copies frontend output that Flask does not serve, and runs as
-  root.
-- The current GitHub workflow deploys only the frontend to GitHub Pages, uses old
-  action/runtime versions, does not use `npm ci`, and does not run tests or linting.
-
-Every proposed deletion must be documented and verified against runtime imports,
-scripts, tests, and deployment references before removal. Historical files that are
-useful for context should move to a clearly labeled archive rather than remain in
-the active application structure.
+- `railway.json`, `render.yaml`, and the GitHub Pages workflow remain only as
+  transitional/rollback deployment definitions until Cloud Run staging works.
+- The frontend retains a hard-coded Render fallback until Phase 3 switches
+  production requests to same-origin `/api` paths.
+- The JSON ingestion pipeline and editor UI are still substantial cohesive workflows;
+  future changes should continue extracting independently testable behavior.
+- The regression image still seeds SQLite at build time. Production data migrations
+  and initialization move to explicit jobs in Phase 3.
 
 ## Refactoring Direction
 
@@ -273,6 +259,9 @@ Done when:
 
 ### Phase 1: Repository Cleanup
 
+Completed July 19, 2026. The execution record and verification results are in
+[`phase-1-repository-cleanup.md`](phase-1-repository-cleanup.md).
+
 Tasks:
 
 - Stop tracking virtual environments, caches, IDE state, databases, and backups.
@@ -291,6 +280,9 @@ Done when:
 - Baseline behavior and tests are unchanged.
 
 ### Phase 2: No-Change Code Refactor
+
+Completed July 19, 2026. The implementation record and verification results are in
+[`phase-2-no-change-refactor.md`](phase-2-no-change-refactor.md).
 
 Tasks:
 

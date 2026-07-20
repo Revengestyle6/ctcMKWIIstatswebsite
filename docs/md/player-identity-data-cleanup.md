@@ -155,7 +155,7 @@ player_id | friend_code
 The current SQLite DB was migrated with:
 
 ```bash
-.venv-wsl/bin/python backend/merge_player_identities.py
+.venv-wsl/bin/python backend/scripts/merge_player_identities.py
 ```
 
 The script created a backup first:

@@ -36,7 +36,9 @@ def get_engine(db_path: Path | str | None = None):
 
 
 def get_session_factory(db_path: Path | str | None = None):
-    return sessionmaker(bind=get_engine(db_path), autoflush=False, expire_on_commit=False, future=True)
+    return sessionmaker(
+        bind=get_engine(db_path), autoflush=False, expire_on_commit=False, future=True
+    )
 
 
 def init_database(db_path: Path | str | None = None):

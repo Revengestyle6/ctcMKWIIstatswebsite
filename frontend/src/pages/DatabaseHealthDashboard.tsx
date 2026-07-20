@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { LegacyStatHeader } from "../components/LegacyStatHeader";
 import {
-  fetchDatabaseHealth,
-  reviewDatabaseHealthIssue,
   type DatabaseHealthIssue,
   type DatabaseHealthReport,
+  fetchDatabaseHealth,
   type HealthSeverity,
+  reviewDatabaseHealthIssue,
 } from "../databaseHealthApi";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
@@ -14,10 +14,29 @@ const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
 });
 
 const COUNT_GROUPS = [
-  { label: "Competition", tables: ["seasons", "divisions", "teams", "team_logos", "team_season_entries"] },
-  { label: "Player identity", tables: ["players", "player_friend_codes", "player_aliases", "player_season_entries"] },
-  { label: "Matches", tables: ["source_files", "matches", "match_table_refs", "match_teams", "match_players"] },
-  { label: "Races and results", tables: ["tracks", "track_aliases", "races", "race_team_results", "race_player_results", "penalties"] },
+  {
+    label: "Competition",
+    tables: ["seasons", "divisions", "teams", "team_logos", "team_season_entries"],
+  },
+  {
+    label: "Player identity",
+    tables: ["players", "player_friend_codes", "player_aliases", "player_season_entries"],
+  },
+  {
+    label: "Matches",
+    tables: ["source_files", "matches", "match_table_refs", "match_teams", "match_players"],
+  },
+  {
+    label: "Races and results",
+    tables: [
+      "tracks",
+      "track_aliases",
+      "races",
+      "race_team_results",
+      "race_player_results",
+      "penalties",
+    ],
+  },
   { label: "Audit", tables: ["database_addition_logs"] },
 ] as const;
 
@@ -81,7 +100,8 @@ function buildStructuredIssue(
       is_dismissed: issue.is_dismissed,
       review: issue.review,
     },
-    requested_action: "Investigate the finding and propose a source-of-truth remediation. Do not modify source data when the evidence is ambiguous without explicit approval.",
+    requested_action:
+      "Investigate the finding and propose a source-of-truth remediation. Do not modify source data when the evidence is ambiguous without explicit approval.",
   };
 }
 
@@ -98,24 +118,27 @@ function buildIssueQueueReport(
     `- Issue status: ${readableLabel(filters.status)}`,
     `- JSON archive checks: ${filters.includeArchive ? "Included" : "Skipped"}`,
   ].join("\n");
-  const issueSections = issues.length === 0
-    ? "No issues matched the selected filters."
-    : issues.map((issue, index) => {
-      const payload = buildStructuredIssue(issue, report, exportedAt);
-      return [
-        `### ${index + 1}. ${issue.title}`,
-        "",
-        `- Severity: ${readableLabel(issue.severity)}`,
-        `- Category: ${readableLabel(issue.category)}`,
-        `- Issue key: \`${issue.key}\``,
-        `- Affected records: ${issue.count}`,
-        `- Examples included: ${issue.entities.length}${issue.count > issue.entities.length ? " (truncated by the health API)" : ""}`,
-        "",
-        "````json",
-        JSON.stringify(payload, null, 2),
-        "````",
-      ].join("\n");
-    }).join("\n\n");
+  const issueSections =
+    issues.length === 0
+      ? "No issues matched the selected filters."
+      : issues
+          .map((issue, index) => {
+            const payload = buildStructuredIssue(issue, report, exportedAt);
+            return [
+              `### ${index + 1}. ${issue.title}`,
+              "",
+              `- Severity: ${readableLabel(issue.severity)}`,
+              `- Category: ${readableLabel(issue.category)}`,
+              `- Issue key: \`${issue.key}\``,
+              `- Affected records: ${issue.count}`,
+              `- Examples included: ${issue.entities.length}${issue.count > issue.entities.length ? " (truncated by the health API)" : ""}`,
+              "",
+              "````json",
+              JSON.stringify(payload, null, 2),
+              "````",
+            ].join("\n");
+          })
+          .join("\n\n");
 
   return [
     "# Database Health Issue Queue Report",
@@ -200,7 +223,10 @@ export default function DatabaseHealthDashboard() {
         if (!cancelled) setReport(nextReport);
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(requestError instanceof Error ? requestError.message : "Failed to load database health.");
+        if (!cancelled)
+          setError(
+            requestError instanceof Error ? requestError.message : "Failed to load database health."
+          );
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -215,32 +241,41 @@ export default function DatabaseHealthDashboard() {
     [report]
   );
   const normalizedIssueSearch = issueSearch.trim().toLocaleLowerCase();
-  const filteredIssues = useMemo(() => (report?.issues ?? []).filter((issue) => {
-    if (issueStatus === "active" && issue.is_dismissed) return false;
-    if (issueStatus === "dismissed" && !issue.is_dismissed) return false;
-    if (severity !== "all" && issue.severity !== severity) return false;
-    if (category !== "all" && issue.category !== category) return false;
-    if (!normalizedIssueSearch) return true;
-    return `${issue.title} ${issue.detail} ${issue.entities.map((entity) => entity.label).join(" ")}`
-      .toLocaleLowerCase()
-      .includes(normalizedIssueSearch);
-  }), [report, severity, category, normalizedIssueSearch, issueStatus]);
+  const filteredIssues = useMemo(
+    () =>
+      (report?.issues ?? []).filter((issue) => {
+        if (issueStatus === "active" && issue.is_dismissed) return false;
+        if (issueStatus === "dismissed" && !issue.is_dismissed) return false;
+        if (severity !== "all" && issue.severity !== severity) return false;
+        if (category !== "all" && issue.category !== category) return false;
+        if (!normalizedIssueSearch) return true;
+        return `${issue.title} ${issue.detail} ${issue.entities.map((entity) => entity.label).join(" ")}`
+          .toLocaleLowerCase()
+          .includes(normalizedIssueSearch);
+      }),
+    [report, severity, category, normalizedIssueSearch, issueStatus]
+  );
   const additionTypes = useMemo(
     () => Object.keys(report?.additions.by_entity_type ?? {}).sort(),
     [report]
   );
   const filteredAdditions = useMemo(
-    () => (report?.additions.recent ?? []).filter(
-      (addition) => additionType === "all" || addition.entity_type === additionType
-    ),
+    () =>
+      (report?.additions.recent ?? []).filter(
+        (addition) => additionType === "all" || addition.entity_type === additionType
+      ),
     [report, additionType]
   );
 
   async function handleIssueReview(issue: DatabaseHealthIssue) {
     const status = issue.is_dismissed ? "open" : "dismissed";
-    const note = status === "dismissed"
-      ? window.prompt("Why is this finding safe to dismiss? This reason will be saved for future reviewers.", issue.review?.note ?? "")
-      : "Restored to active review.";
+    const note =
+      status === "dismissed"
+        ? window.prompt(
+            "Why is this finding safe to dismiss? This reason will be saved for future reviewers.",
+            issue.review?.note ?? ""
+          )
+        : "Restored to active review.";
     if (note === null) return;
     setSavingIssueKey(issue.key);
     setError("");
@@ -248,7 +283,9 @@ export default function DatabaseHealthDashboard() {
       await reviewDatabaseHealthIssue(issue.key, status, note);
       setRefreshVersion((value) => value + 1);
     } catch (reviewError: unknown) {
-      setError(reviewError instanceof Error ? reviewError.message : "Failed to save the review decision.");
+      setError(
+        reviewError instanceof Error ? reviewError.message : "Failed to save the review decision."
+      );
     } finally {
       setSavingIssueKey("");
     }
@@ -272,16 +309,23 @@ export default function DatabaseHealthDashboard() {
     setError("");
     try {
       const exportedAt = new Date().toISOString();
-      const contents = buildIssueQueueReport(report, filteredIssues, {
-        severity,
-        category,
-        search: issueSearch,
-        status: issueStatus,
-        includeArchive,
-      }, exportedAt);
+      const contents = buildIssueQueueReport(
+        report,
+        filteredIssues,
+        {
+          severity,
+          category,
+          search: issueSearch,
+          status: issueStatus,
+          includeArchive,
+        },
+        exportedAt
+      );
       downloadMarkdown(reportFilename(exportedAt), contents);
     } catch (exportError: unknown) {
-      setError(exportError instanceof Error ? exportError.message : "Failed to generate the issue report.");
+      setError(
+        exportError instanceof Error ? exportError.message : "Failed to generate the issue report."
+      );
     }
   }
 
@@ -292,10 +336,15 @@ export default function DatabaseHealthDashboard() {
         <section className="mb-6 rounded-xl border border-white/15 bg-black/55 p-5 shadow-xl backdrop-blur-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-blue-200">Safe monitoring</p>
-              <h2 className="mt-1 text-2xl font-bold">Integrity, additions, counts, and review candidates</h2>
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-200">
+                Safe monitoring
+              </p>
+              <h2 className="mt-1 text-2xl font-bold">
+                Integrity, additions, counts, and review candidates
+              </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-300">
-                Fuzzy duplicate findings are review suggestions. Review decisions never merge or edit statistics records.
+                Fuzzy duplicate findings are review suggestions. Review decisions never merge or
+                edit statistics records.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -320,8 +369,19 @@ export default function DatabaseHealthDashboard() {
           </div>
         </section>
 
-        {error && <p role="alert" className="mb-6 rounded-lg border border-red-400/40 bg-red-950/60 p-4 text-red-100">{error}</p>}
-        {loading && !report && <p aria-live="polite" className="py-16 text-center text-gray-300">Running database health checks...</p>}
+        {error && (
+          <p
+            role="alert"
+            className="mb-6 rounded-lg border border-red-400/40 bg-red-950/60 p-4 text-red-100"
+          >
+            {error}
+          </p>
+        )}
+        {loading && !report && (
+          <p aria-live="polite" className="py-16 text-center text-gray-300">
+            Running database health checks...
+          </p>
+        )}
 
         {report && (
           <div className={loading ? "opacity-70 transition-opacity" : "transition-opacity"}>
@@ -367,17 +427,30 @@ export default function DatabaseHealthDashboard() {
 }
 
 function HealthSummary({ report }: { report: DatabaseHealthReport }) {
-  const statusStyles = report.status === "healthy"
-    ? "border-emerald-300/40 bg-emerald-950/55 text-emerald-100"
-    : report.status === "warning"
-      ? "border-amber-300/40 bg-amber-950/55 text-amber-100"
-      : "border-red-400/45 bg-red-950/60 text-red-100";
+  const statusStyles =
+    report.status === "healthy"
+      ? "border-emerald-300/40 bg-emerald-950/55 text-emerald-100"
+      : report.status === "warning"
+        ? "border-amber-300/40 bg-amber-950/55 text-amber-100"
+        : "border-red-400/45 bg-red-950/60 text-red-100";
   const cards = [
     { label: "Critical findings", value: report.summary.critical, color: "text-red-300" },
     { label: "Warnings", value: report.summary.warnings, color: "text-amber-200" },
-    { label: "Record count", value: report.summary.total_records.toLocaleString(), color: "text-white" },
-    { label: "Logged additions", value: report.additions.total.toLocaleString(), color: "text-blue-200" },
-    { label: "Needs review", value: report.summary.matches_needing_review, color: "text-amber-200" },
+    {
+      label: "Record count",
+      value: report.summary.total_records.toLocaleString(),
+      color: "text-white",
+    },
+    {
+      label: "Logged additions",
+      value: report.additions.total.toLocaleString(),
+      color: "text-blue-200",
+    },
+    {
+      label: "Needs review",
+      value: report.summary.matches_needing_review,
+      color: "text-amber-200",
+    },
     { label: "Dismissed findings", value: report.summary.dismissed, color: "text-gray-300" },
   ];
   return (
@@ -389,8 +462,13 @@ function HealthSummary({ report }: { report: DatabaseHealthReport }) {
           <p className="mt-1 text-xs opacity-80">Checked {formatDate(report.generated_at)}</p>
         </div>
         {cards.map((card) => (
-          <div key={card.label} className="rounded-xl border border-white/15 bg-black/60 p-4 shadow-lg">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{card.label}</p>
+          <div
+            key={card.label}
+            className="rounded-xl border border-white/15 bg-black/60 p-4 shadow-lg"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              {card.label}
+            </p>
             <p className={`mt-2 text-2xl font-bold tabular-nums ${card.color}`}>{card.value}</p>
           </div>
         ))}
@@ -399,7 +477,24 @@ function HealthSummary({ report }: { report: DatabaseHealthReport }) {
   );
 }
 
-function IssuePanel({ issues, total, severity, category, search, categories, issueStatus, savingIssueKey, copiedIssueKey, onSeverityChange, onCategoryChange, onSearchChange, onIssueStatusChange, onReview, onCopyIssue, onGenerateReport }: {
+function IssuePanel({
+  issues,
+  total,
+  severity,
+  category,
+  search,
+  categories,
+  issueStatus,
+  savingIssueKey,
+  copiedIssueKey,
+  onSeverityChange,
+  onCategoryChange,
+  onSearchChange,
+  onIssueStatusChange,
+  onReview,
+  onCopyIssue,
+  onGenerateReport,
+}: {
   issues: DatabaseHealthIssue[];
   total: number;
   severity: "all" | HealthSeverity;
@@ -423,7 +518,9 @@ function IssuePanel({ issues, total, severity, category, search, categories, iss
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold">Issue queue</h2>
-            <p className="mt-1 text-sm text-gray-400">Showing {issues.length} of {total} issue groups</p>
+            <p className="mt-1 text-sm text-gray-400">
+              Showing {issues.length} of {total} issue groups
+            </p>
           </div>
           <button
             type="button"
@@ -459,10 +556,13 @@ function IssuePanel({ issues, total, severity, category, search, categories, iss
               className="rounded-md border border-gray-500 bg-white px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               <option value="all">All categories</option>
-              {categories.map((value) => <option key={value} value={value}>{readableLabel(value)}</option>)}
+              {categories.map((value) => (
+                <option key={value} value={value}>
+                  {readableLabel(value)}
+                </option>
+              ))}
             </select>
-            <div
-              role="group"
+            <fieldset
               aria-label="Filter by issue status"
               className="grid grid-cols-2 rounded-md border border-gray-500 bg-black/30 p-1 sm:col-span-2"
             >
@@ -481,29 +581,37 @@ function IssuePanel({ issues, total, severity, category, search, categories, iss
                   {readableLabel(status)}
                 </button>
               ))}
-            </div>
+            </fieldset>
           </div>
         </div>
       </div>
       <div className="max-h-[46rem] space-y-3 overflow-y-auto p-4">
         {issues.length === 0 ? (
           <p className="py-10 text-center text-gray-300">No issues match the current filters.</p>
-        ) : issues.map((issue) => (
-          <IssueCard
-            key={issue.key}
-            issue={issue}
-            saving={savingIssueKey === issue.key}
-            copied={copiedIssueKey === issue.key}
-            onReview={onReview}
-            onCopy={onCopyIssue}
-          />
-        ))}
+        ) : (
+          issues.map((issue) => (
+            <IssueCard
+              key={issue.key}
+              issue={issue}
+              saving={savingIssueKey === issue.key}
+              copied={copiedIssueKey === issue.key}
+              onReview={onReview}
+              onCopy={onCopyIssue}
+            />
+          ))
+        )}
       </div>
     </section>
   );
 }
 
-function IssueCard({ issue, saving, copied, onReview, onCopy }: {
+function IssueCard({
+  issue,
+  saving,
+  copied,
+  onReview,
+  onCopy,
+}: {
   issue: DatabaseHealthIssue;
   saving: boolean;
   copied: boolean;
@@ -511,34 +619,53 @@ function IssueCard({ issue, saving, copied, onReview, onCopy }: {
   onCopy: (issue: DatabaseHealthIssue) => void;
 }) {
   return (
-    <details className={`rounded-lg border p-4 ${SEVERITY_STYLES[issue.severity]} ${issue.is_dismissed ? "opacity-65" : ""}`}>
+    <details
+      className={`rounded-lg border p-4 ${SEVERITY_STYLES[issue.severity]} ${issue.is_dismissed ? "opacity-65" : ""}`}
+    >
       <summary className="cursor-pointer list-none">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-current/30 px-2 py-0.5 text-xs font-bold uppercase">{issue.severity}</span>
-              <span className="text-xs font-semibold uppercase opacity-75">{readableLabel(issue.category)}</span>
-              {issue.is_dismissed && <span className="rounded-full bg-gray-700 px-2 py-0.5 text-xs font-bold uppercase text-gray-100">Dismissed</span>}
+              <span className="rounded-full border border-current/30 px-2 py-0.5 text-xs font-bold uppercase">
+                {issue.severity}
+              </span>
+              <span className="text-xs font-semibold uppercase opacity-75">
+                {readableLabel(issue.category)}
+              </span>
+              {issue.is_dismissed && (
+                <span className="rounded-full bg-gray-700 px-2 py-0.5 text-xs font-bold uppercase text-gray-100">
+                  Dismissed
+                </span>
+              )}
             </div>
             <h3 className="mt-2 font-bold">{issue.title}</h3>
             <p className="mt-1 text-sm opacity-85">{issue.detail}</p>
           </div>
-          <span className="rounded-full bg-black/30 px-3 py-1 text-sm font-bold tabular-nums">{issue.count}</span>
+          <span className="rounded-full bg-black/30 px-3 py-1 text-sm font-bold tabular-nums">
+            {issue.count}
+          </span>
         </div>
       </summary>
       {issue.entities.length > 0 && (
         <ul className="mt-4 space-y-1 border-t border-current/15 pt-3 text-sm">
           {issue.entities.map((entity, index) => (
             <li key={`${entity.id ?? "none"}-${index}`} className="break-words">
-              {entity.label}{entity.id !== null ? ` · ID ${entity.id}` : ""}{entity.value !== undefined ? ` · ${entity.value}` : ""}
+              {entity.label}
+              {entity.id !== null ? ` · ID ${entity.id}` : ""}
+              {entity.value !== undefined ? ` · ${entity.value}` : ""}
             </li>
           ))}
-          {issue.count > issue.entities.length && <li className="opacity-70">+ {issue.count - issue.entities.length} more</li>}
+          {issue.count > issue.entities.length && (
+            <li className="opacity-70">+ {issue.count - issue.entities.length} more</li>
+          )}
         </ul>
       )}
       {issue.review && (
         <div className="mt-3 rounded-md border border-current/15 bg-black/20 p-3 text-sm">
-          <p><span className="font-semibold">Review note:</span> {issue.review.note || "No note provided."}</p>
+          <p>
+            <span className="font-semibold">Review note:</span>{" "}
+            {issue.review.note || "No note provided."}
+          </p>
           <p className="mt-1 text-xs opacity-70">
             {issue.review.reviewed_by} · {formatDate(issue.review.reviewed_at)}
           </p>
@@ -566,7 +693,9 @@ function IssueCard({ issue, saving, copied, onReview, onCopy }: {
         )}
       </div>
       {!issue.dismissible && (
-        <p className="mt-3 text-xs font-semibold opacity-70">Fix the underlying source data to clear this finding.</p>
+        <p className="mt-3 text-xs font-semibold opacity-70">
+          Fix the underlying source data to clear this finding.
+        </p>
       )}
     </details>
   );
@@ -584,17 +713,25 @@ function OperationalPanel({ report }: { report: DatabaseHealthReport }) {
         <h2 className="text-xl font-bold">Database integrity</h2>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <Detail label="SQLite integrity" value={report.database.integrity.toUpperCase()} />
-          <Detail label="Foreign-key violations" value={String(report.database.foreign_key_violations)} />
+          <Detail
+            label="Foreign-key violations"
+            value={String(report.database.foreign_key_violations)}
+          />
           <Detail label="Database size" value={formatBytes(report.database.size_bytes)} />
           <Detail label="Latest import" value={formatDate(report.database.latest_import_at)} />
-          <Detail label="Latest logged addition" value={formatDate(report.database.latest_addition_at)} />
+          <Detail
+            label="Latest logged addition"
+            value={formatDate(report.database.latest_addition_at)}
+          />
           <Detail label="Database path" value={report.database.path} breakWords />
         </dl>
       </div>
       <div className="rounded-xl border border-white/15 bg-black/55 p-5 shadow-xl">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xl font-bold">JSON archive</h2>
-          <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${report.archive.status === "ok" ? "bg-emerald-900 text-emerald-100" : report.archive.status === "warning" ? "bg-amber-900 text-amber-100" : "bg-gray-700 text-gray-200"}`}>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${report.archive.status === "ok" ? "bg-emerald-900 text-emerald-100" : report.archive.status === "warning" ? "bg-amber-900 text-amber-100" : "bg-gray-700 text-gray-200"}`}
+          >
             {report.archive.status}
           </span>
         </div>
@@ -611,18 +748,30 @@ function OperationalPanel({ report }: { report: DatabaseHealthReport }) {
   );
 }
 
-function Detail({ label, value, breakWords = false }: { label: string; value: string; breakWords?: boolean }) {
+function Detail({
+  label,
+  value,
+  breakWords = false,
+}: {
+  label: string;
+  value: string;
+  breakWords?: boolean;
+}) {
   return (
     <div>
       <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</dt>
-      <dd className={`mt-1 font-semibold text-gray-100 ${breakWords ? "break-all text-sm" : ""}`}>{value}</dd>
+      <dd className={`mt-1 font-semibold text-gray-100 ${breakWords ? "break-all text-sm" : ""}`}>
+        {value}
+      </dd>
     </div>
   );
 }
 
 function CountPanel({ counts }: { counts: Record<string, number> }) {
   const displayedTables = new Set<string>(COUNT_GROUPS.flatMap((group) => [...group.tables]));
-  const extraTables = Object.keys(counts).filter((table) => !displayedTables.has(table)).sort();
+  const extraTables = Object.keys(counts)
+    .filter((table) => !displayedTables.has(table))
+    .sort();
   return (
     <section className="rounded-xl border border-white/15 bg-black/55 p-5 shadow-xl">
       <h2 className="text-xl font-bold">Record counts</h2>
@@ -630,17 +779,23 @@ function CountPanel({ counts }: { counts: Record<string, number> }) {
       <div className="mt-4 space-y-5">
         {COUNT_GROUPS.map((group) => (
           <div key={group.label}>
-            <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-blue-200">{group.label}</h3>
+            <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-blue-200">
+              {group.label}
+            </h3>
             <div className="grid gap-2 sm:grid-cols-2">
-              {group.tables.filter((table) => table in counts).map((table) => (
-                <CountRow key={table} table={table} count={counts[table]} />
-              ))}
+              {group.tables
+                .filter((table) => table in counts)
+                .map((table) => (
+                  <CountRow key={table} table={table} count={counts[table]} />
+                ))}
             </div>
           </div>
         ))}
         {extraTables.length > 0 && (
           <div className="grid gap-2 sm:grid-cols-2">
-            {extraTables.map((table) => <CountRow key={table} table={table} count={counts[table]} />)}
+            {extraTables.map((table) => (
+              <CountRow key={table} table={table} count={counts[table]} />
+            ))}
           </div>
         )}
       </div>
@@ -657,7 +812,13 @@ function CountRow({ table, count }: { table: string; count: number }) {
   );
 }
 
-function AdditionPanel({ report, additions, additionType, additionTypes, onTypeChange }: {
+function AdditionPanel({
+  report,
+  additions,
+  additionType,
+  additionTypes,
+  onTypeChange,
+}: {
   report: DatabaseHealthReport;
   additions: DatabaseHealthReport["additions"]["recent"];
   additionType: string;
@@ -669,7 +830,9 @@ function AdditionPanel({ report, additions, additionType, additionTypes, onTypeC
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-white/10 p-5">
         <div>
           <h2 className="text-xl font-bold">Recent additions</h2>
-          <p className="mt-1 text-sm text-gray-400">Latest {report.additions.recent.length} durable upload events</p>
+          <p className="mt-1 text-sm text-gray-400">
+            Latest {report.additions.recent.length} durable upload events
+          </p>
         </div>
         <select
           value={additionType}
@@ -679,29 +842,36 @@ function AdditionPanel({ report, additions, additionType, additionTypes, onTypeC
         >
           <option value="all">All entity types</option>
           {additionTypes.map((type) => (
-            <option key={type} value={type}>{readableLabel(type)} ({report.additions.by_entity_type[type]})</option>
+            <option key={type} value={type}>
+              {readableLabel(type)} ({report.additions.by_entity_type[type]})
+            </option>
           ))}
         </select>
       </div>
       <ol className="max-h-[52rem] divide-y divide-white/10 overflow-y-auto">
         {additions.length === 0 ? (
           <li className="p-8 text-center text-gray-300">No additions match this filter.</li>
-        ) : additions.map((addition) => (
-          <li key={addition.id} className="p-4 transition-colors hover:bg-white/5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-semibold text-gray-100">{addition.summary}</p>
-                <p className="mt-1 text-xs text-gray-400">
-                  {readableLabel(addition.entity_type)} · Record {addition.entity_id}
-                  {addition.match_id ? ` · Match ${addition.match_id}` : ""}
-                </p>
+        ) : (
+          additions.map((addition) => (
+            <li key={addition.id} className="p-4 transition-colors hover:bg-white/5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-gray-100">{addition.summary}</p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {readableLabel(addition.entity_type)} · Record {addition.entity_id}
+                    {addition.match_id ? ` · Match ${addition.match_id}` : ""}
+                  </p>
+                </div>
+                <time
+                  className="shrink-0 text-right text-xs text-gray-400"
+                  dateTime={addition.created_at ?? undefined}
+                >
+                  {formatDate(addition.created_at)}
+                </time>
               </div>
-              <time className="shrink-0 text-right text-xs text-gray-400" dateTime={addition.created_at ?? undefined}>
-                {formatDate(addition.created_at)}
-              </time>
-            </div>
-          </li>
-        ))}
+            </li>
+          ))
+        )}
       </ol>
     </section>
   );

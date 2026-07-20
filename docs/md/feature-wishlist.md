@@ -165,7 +165,7 @@ Permanent upload must coordinate the JSON archive and database carefully because
 filesystem and SQL writes cannot share one atomic transaction. The proposed
 staging, duplicate protection, recovery checks, confirmation UI, and ordered
 implementation steps are documented in
-[Match Upload And JSON Archive Implementation Plan](match-upload-implementation-plan.md).
+[Match Upload And JSON Archive Implementation Plan](../archive/implementation-plans/match-upload-implementation-plan.md).
 
 Longer-term goal:
 

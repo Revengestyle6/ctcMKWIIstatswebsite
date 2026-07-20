@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from database import Base
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -12,8 +13,6 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
-
-from database import Base
 
 
 def utc_now():
@@ -48,7 +47,9 @@ class Division(Base):
 
     season = relationship("Season", back_populates="divisions")
 
-    __table_args__ = (UniqueConstraint("season_id", "division_code", name="uq_division_season_code"),)
+    __table_args__ = (
+        UniqueConstraint("season_id", "division_code", name="uq_division_season_code"),
+    )
 
 
 class SourceFile(Base):
@@ -121,7 +122,9 @@ class TeamSeasonEntry(Base):
     hex_color = Column(Text)
 
     __table_args__ = (
-        UniqueConstraint("season_id", "division_id", "clan_tag", name="uq_team_entry_season_division_tag"),
+        UniqueConstraint(
+            "season_id", "division_id", "clan_tag", name="uq_team_entry_season_division_tag"
+        ),
     )
 
 
@@ -166,7 +169,9 @@ class PlayerSeasonEntry(Base):
 
     player_season_entry_id = Column(Integer, primary_key=True)
     player_id = Column(Integer, ForeignKey("players.player_id"), nullable=False)
-    team_season_entry_id = Column(Integer, ForeignKey("team_season_entries.team_season_entry_id"), nullable=False)
+    team_season_entry_id = Column(
+        Integer, ForeignKey("team_season_entries.team_season_entry_id"), nullable=False
+    )
     season_id = Column(Integer, ForeignKey("seasons.season_id"), nullable=False)
     division_id = Column(Integer, ForeignKey("divisions.division_id"), nullable=False)
     primary_lounge_name = Column(Text)
@@ -200,7 +205,9 @@ class Match(Base):
 
     __table_args__ = (
         UniqueConstraint("source_file_id", "match_index_in_source", name="uq_match_source_index"),
-        CheckConstraint("import_status IN ('imported', 'needs_review')", name="ck_match_import_status"),
+        CheckConstraint(
+            "import_status IN ('imported', 'needs_review')", name="ck_match_import_status"
+        ),
     )
 
 
@@ -220,7 +227,9 @@ class MatchTeam(Base):
 
     match_team_id = Column(Integer, primary_key=True)
     match_id = Column(Integer, ForeignKey("matches.match_id"), nullable=False)
-    team_season_entry_id = Column(Integer, ForeignKey("team_season_entries.team_season_entry_id"), nullable=False)
+    team_season_entry_id = Column(
+        Integer, ForeignKey("team_season_entries.team_season_entry_id"), nullable=False
+    )
     raw_team_key = Column(Text, nullable=False)
     table_tag_str = Column(Text)
     hex_color = Column(Text)
@@ -238,7 +247,9 @@ class MatchPlayer(Base):
     match_player_id = Column(Integer, primary_key=True)
     match_team_id = Column(Integer, ForeignKey("match_teams.match_team_id"), nullable=False)
     player_id = Column(Integer, ForeignKey("players.player_id"), nullable=False)
-    player_season_entry_id = Column(Integer, ForeignKey("player_season_entries.player_season_entry_id"))
+    player_season_entry_id = Column(
+        Integer, ForeignKey("player_season_entries.player_season_entry_id")
+    )
     friend_code_raw = Column(Text, nullable=False)
     lounge_name_raw = Column(Text)
     mii_name_raw = Column(Text)
@@ -252,7 +263,9 @@ class MatchPlayer(Base):
     subbed_out = Column(Boolean, nullable=False, default=False)
     gp_scores_json = Column(Text)
 
-    __table_args__ = (UniqueConstraint("match_team_id", "friend_code_raw", name="uq_match_player_friend_code"),)
+    __table_args__ = (
+        UniqueConstraint("match_team_id", "friend_code_raw", name="uq_match_player_friend_code"),
+    )
 
 
 class Track(Base):
@@ -315,7 +328,9 @@ class RacePlayerResult(Base):
     match_player_id = Column(Integer, ForeignKey("match_players.match_player_id"), nullable=False)
     player_id = Column(Integer, ForeignKey("players.player_id"), nullable=False)
     match_team_id = Column(Integer, ForeignKey("match_teams.match_team_id"), nullable=False)
-    team_season_entry_id = Column(Integer, ForeignKey("team_season_entries.team_season_entry_id"), nullable=False)
+    team_season_entry_id = Column(
+        Integer, ForeignKey("team_season_entries.team_season_entry_id"), nullable=False
+    )
     score = Column(Integer)
     position = Column(Integer)
     role = Column(Text, nullable=False, default="unknown")
@@ -325,7 +340,9 @@ class RacePlayerResult(Base):
     __table_args__ = (
         UniqueConstraint("race_id", "match_player_id", name="uq_race_player_result"),
         CheckConstraint("role IN ('runner', 'bagger', 'unknown')", name="ck_result_role"),
-        CheckConstraint("role_source IN ('manual', 'inferred', 'unknown')", name="ck_result_role_source"),
+        CheckConstraint(
+            "role_source IN ('manual', 'inferred', 'unknown')", name="ck_result_role_source"
+        ),
     )
 
 
@@ -343,5 +360,7 @@ class Penalty(Base):
     source_field = Column(Text, nullable=False)
 
     __table_args__ = (
-        CheckConstraint("penalty_scope IN ('team', 'player', 'race', 'unknown')", name="ck_penalty_scope"),
+        CheckConstraint(
+            "penalty_scope IN ('team', 'player', 'race', 'unknown')", name="ck_penalty_scope"
+        ),
     )

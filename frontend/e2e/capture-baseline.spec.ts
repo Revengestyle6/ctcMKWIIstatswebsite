@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import path from "node:path";
+import { expect, test } from "@playwright/test";
 
 const routes = [
   { name: "home", path: "/" },
@@ -14,10 +14,7 @@ const routes = [
   { name: "database-health", path: "/database-health" },
 ];
 
-const outputDirectory = path.resolve(
-  process.cwd(),
-  "../docs/baselines/phase-0-2026-07-19/ui",
-);
+const outputDirectory = path.resolve(process.cwd(), "../docs/baselines/phase-0-2026-07-19/ui");
 
 test("capture representative application routes", async ({ page }, testInfo) => {
   for (const route of routes) {

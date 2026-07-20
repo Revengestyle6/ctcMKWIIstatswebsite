@@ -1,5 +1,4 @@
-export const API_URL =
-  import.meta.env.VITE_API_URL || "https://ctcmkwiistatswebsite.onrender.com";
+export const API_URL = import.meta.env.VITE_API_URL || "https://ctcmkwiistatswebsite.onrender.com";
 
 export interface SeasonOption {
   season: string;
@@ -13,48 +12,49 @@ export interface DivisionOption {
   name: string;
 }
 
-export async function fetchJson<T>(
-  path: string,
-  params?: Record<string, string | number | undefined>
-): Promise<T> {
+type QueryValue = string | number | undefined;
+
+interface RequestOptions extends RequestInit {
+  params?: Record<string, QueryValue>;
+}
+
+function apiUrl(path: string, params?: Record<string, QueryValue>): URL {
   const url = new URL(path, API_URL);
-  Object.entries(params ?? {}).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined && value !== "") {
       url.searchParams.set(key, String(value));
     }
-  });
-
-  const response = await fetch(url.toString(), { cache: "no-store" });
-  if (!response.ok) {
-    let message = "Request failed";
-    try {
-      const body = await response.json();
-      message = body.error ?? message;
-    } catch {
-      message = response.statusText || message;
-    }
-    throw new Error(message);
   }
-  return response.json() as Promise<T>;
+  return url;
+}
+
+async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { params, ...requestOptions } = options;
+  const response = await fetch(apiUrl(path, params), requestOptions);
+  if (response.ok) {
+    return response.json() as Promise<T>;
+  }
+
+  let message = response.statusText || "Request failed";
+  try {
+    const body = (await response.json()) as { error?: string };
+    message = body.error ?? message;
+  } catch {
+    // The status text is the best available error for a non-JSON response.
+  }
+  throw new Error(message);
+}
+
+export async function fetchJson<T>(path: string, params?: Record<string, QueryValue>): Promise<T> {
+  return requestJson<T>(path, { cache: "no-store", params });
 }
 
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(new URL(path, API_URL).toString(), {
+  return requestJson<T>(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!response.ok) {
-    let message = "Request failed";
-    try {
-      const responseBody = await response.json();
-      message = responseBody.error ?? message;
-    } catch {
-      message = response.statusText || message;
-    }
-    throw new Error(message);
-  }
-  return response.json() as Promise<T>;
 }
 
 export function fetchSeasons(): Promise<SeasonOption[]> {
@@ -77,11 +77,15 @@ export interface PlayerIdentity {
   aliases: Array<{ type: string; value: string }>;
 }
 
-export function fetchPlayerIdentity(friendCode: string): Promise<{ reason: string; results: PlayerIdentity[] }> {
+export function fetchPlayerIdentity(
+  friendCode: string
+): Promise<{ reason: string; results: PlayerIdentity[] }> {
   return fetchJson("/api/player-identities", { friend_code: friendCode });
 }
 
-export function searchPlayerIdentities(query: string): Promise<{ reason: string; results: PlayerIdentity[] }> {
+export function searchPlayerIdentities(
+  query: string
+): Promise<{ reason: string; results: PlayerIdentity[] }> {
   return fetchJson("/api/player-identities", { query });
 }
 
@@ -92,7 +96,10 @@ export interface PlayerDirectoryEntry {
   teams: Array<{ team_id: number; tag: string }>;
 }
 
-export function fetchPlayerDirectory(season: string, division: string): Promise<PlayerDirectoryEntry[]> {
+export function fetchPlayerDirectory(
+  season: string,
+  division: string
+): Promise<PlayerDirectoryEntry[]> {
   return fetchJson("/api/player-directory", { season, division });
 }
 
@@ -142,7 +149,7 @@ export function fetchDatabaseAdditions(limit = 100): Promise<DatabaseAddition[]>
 }
 
 export function databaseAdditionStreamUrl(afterId = 0): string {
-  const url = new URL("/api/database-additions/stream", API_URL);
+  const url = apiUrl("/api/database-additions/stream");
   if (afterId > 0) url.searchParams.set("after_id", String(afterId));
   return url.toString();
 }

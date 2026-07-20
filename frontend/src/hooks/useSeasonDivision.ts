@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  DivisionOption,
-  SeasonOption,
-  fetchDivisions,
-  fetchSeasons,
-} from "../api";
+import { type DivisionOption, fetchDivisions, fetchSeasons, type SeasonOption } from "../api";
 
-export function useSeasonDivision(options: { initialSeason?: string; initialDivision?: string } = {}) {
+export function useSeasonDivision(
+  options: { initialSeason?: string; initialDivision?: string } = {}
+) {
   const { initialSeason = "", initialDivision = "" } = options;
   const [seasons, setSeasons] = useState<SeasonOption[]>([]);
   const [divisions, setDivisions] = useState<DivisionOption[]>([]);
@@ -28,7 +25,7 @@ export function useSeasonDivision(options: { initialSeason?: string; initialDivi
         setSeason(
           seasonData.some((entry) => entry.season === initialSeason)
             ? initialSeason
-            : seasonData[0]?.season ?? ""
+            : (seasonData[0]?.season ?? "")
         );
       } catch (error) {
         if (cancelled) return;
@@ -65,7 +62,7 @@ export function useSeasonDivision(options: { initialSeason?: string; initialDivi
         setDivision(
           divisionData.some((entry) => entry.division === initialDivision)
             ? initialDivision
-            : divisionData[0]?.division ?? ""
+            : (divisionData[0]?.division ?? "")
         );
       } catch (error) {
         if (cancelled) return;

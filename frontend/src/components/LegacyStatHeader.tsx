@@ -11,8 +11,16 @@ export function LegacyStatHeader({ title }: { title: string }) {
           <span aria-hidden="true">&larr;</span> Home
         </Link>
         <h1 className="truncate text-center text-xl font-bold sm:text-3xl">{title}</h1>
-        <Link to="/" aria-label="CTC home" className="rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-          <img src="/images/CTC_LOGO/ctclogo.webp" alt="" className="h-11 w-11 rounded-lg sm:h-12 sm:w-12" />
+        <Link
+          to="/"
+          aria-label="CTC home"
+          className="rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+          <img
+            src="/images/CTC_LOGO/ctclogo.webp"
+            alt=""
+            className="h-11 w-11 rounded-lg sm:h-12 sm:w-12"
+          />
         </Link>
       </div>
     </header>

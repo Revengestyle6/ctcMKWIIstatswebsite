@@ -2,12 +2,12 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
+from models import Match, Race, SourceFile
 from sqlalchemy import select
 
-from models import Match, Race, SourceFile
-
-
-DEFAULT_EXCLUSION_PATH = Path(__file__).resolve().parent / "data" / "analytics_excluded_race_blocks.json"
+DEFAULT_EXCLUSION_PATH = (
+    Path(__file__).resolve().parent / "data" / "analytics_excluded_race_blocks.json"
+)
 RACES_PER_BLOCK = 4
 
 
@@ -26,17 +26,23 @@ def _load_exclusions(path):
         if not isinstance(entry, dict) or not isinstance(entry.get("source_path"), str):
             raise ValueError("Each analytics exclusion requires a source_path.")
         blocks = entry.get("blocks")
-        if not isinstance(blocks, list) or not blocks or any(
-            isinstance(block, bool) or not isinstance(block, int) or block < 1
-            for block in blocks
+        if (
+            not isinstance(blocks, list)
+            or not blocks
+            or any(
+                isinstance(block, bool) or not isinstance(block, int) or block < 1
+                for block in blocks
+            )
         ):
             raise ValueError("Each analytics exclusion requires positive integer blocks.")
-        normalized.append({
-            "source_path": entry["source_path"],
-            "match_index": int(entry.get("match_index", 0)),
-            "blocks": frozenset(blocks),
-            "reason": str(entry.get("reason") or "Reviewed legacy source corruption."),
-        })
+        normalized.append(
+            {
+                "source_path": entry["source_path"],
+                "match_index": int(entry.get("match_index", 0)),
+                "blocks": frozenset(blocks),
+                "reason": str(entry.get("reason") or "Reviewed legacy source corruption."),
+            }
+        )
     return tuple(normalized)
 
 

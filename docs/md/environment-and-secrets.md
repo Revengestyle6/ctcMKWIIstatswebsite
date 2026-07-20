@@ -1,120 +1,32 @@
 # Environment And Secrets
 
-This repo does not appear to depend on any private API key for normal operation.
+No secret belongs in Git, a frontend bundle, or a committed environment file.
 
-## Observed Environment Variables
+| Variable | Consumer | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | Backend | SQLAlchemy database URL; defaults to local SQLite |
+| `MATCH_JSON_ROOT` | Backend | Override the local archived-JSON root |
+| `MATCH_UPLOAD_TOKEN` | Backend | Optional transitional bearer token for non-local writes and operational details |
+| `VITE_API_URL` | Frontend build | API base URL embedded by Vite |
+| `PORT` | `start.sh` | Gunicorn bind port; defaults to 5000 |
+| `PYTHON_VERSION` | Render config | Transitional Render Python selection |
+| `PYTHON_BIN` | Playwright config | Backend interpreter used by browser tests |
 
-### `VITE_API_URL`
+## Local Development
 
-Used in:
-
-- `frontend/src/App.tsx`
-- `frontend/src/components/PlayerStats.tsx`
-- `frontend/src/components/TopTeamPlayers.tsx`
-- `frontend/src/components/TopTracks.tsx`
-- `frontend/src/components/BestMatchups.tsx`
-
-Purpose: tells the frontend where the Flask API lives.
-
-Fallback:
-
-```text
-https://ctcmkwiistatswebsite.onrender.com
-```
-
-For a new deployment, this should point to your new API base URL.
-
-Example:
-
-```text
-VITE_API_URL=https://your-api.example.com
-```
-
-Because Vite embeds `VITE_` variables at build time, changing this for a static frontend requires rebuilding the frontend.
-
-### `PORT`
-
-Used in:
-
-- `start.sh`
-
-Purpose: hosting platforms often inject `PORT`; Gunicorn binds to it.
-
-Fallback:
-
-```text
-5000
-```
-
-### `PYTHON_VERSION`
-
-Used in:
-
-- `render.yaml`
-
-Purpose: tells Render to use Python 3.11.
-
-Value:
-
-```text
-3.11
-```
-
-### `GITHUB_TOKEN`
-
-Used in:
-
-- `.github/workflows/deploy.yml`
-
-Purpose: authorizes the GitHub Pages deploy action.
-
-This is automatically provided by GitHub Actions as `${{ secrets.GITHUB_TOKEN }}`. You do not need the original creator's personal token.
-
-## External Service URLs
-
-### Render API fallback
-
-Hardcoded frontend fallback:
-
-```text
-https://ctcmkwiistatswebsite.onrender.com
-```
-
-This is probably the original API deployment. If you deploy your own backend, set `VITE_API_URL` so the frontend stops depending on this.
-
-### Twitch embed
-
-Used in `HomePage`:
-
-```text
-https://player.twitch.tv/?channel=customtrackcupmkwii&parent=${window.location.hostname}
-```
-
-No Twitch API key is used. Twitch requires the `parent` query param to match the embedding hostname.
-
-## Not Found
-
-No references were found for:
-
-- database URLs
-- private API keys
-- OAuth client secrets
-- password variables
-- custom creator-owned deployment tokens
-
-## Recommended `.env` Files
-
-For local frontend development:
+Normal SQLite development requires no backend environment variable. To force the
+frontend to the local API explicitly:
 
 ```text
 VITE_API_URL=http://127.0.0.1:5000
 ```
 
-For production frontend builds:
+Vite variables are public build inputs, never secrets. The current Render fallback
+is transitional and will be replaced by same-origin `/api` paths.
 
-```text
-VITE_API_URL=https://your-production-api-host
-```
+## Production Direction
 
-For backend local development, no `.env` file is currently required.
-
+Cloud Run will receive database and storage configuration through deployment
+settings and Secret Manager. Firebase ID tokens will replace the transitional
+shared upload token. GitHub Actions will use short-lived Workload Identity
+Federation credentials rather than a service-account key.

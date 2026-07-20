@@ -15,7 +15,6 @@ from typing import Any
 
 from sqlalchemy import func, select, text
 
-
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = BACKEND_DIR.parent
 OUTPUT_DIR = REPOSITORY_ROOT / "docs" / "baselines" / "phase-0-2026-07-19"
@@ -32,7 +31,6 @@ from database_health import build_database_health  # noqa: E402
 from models import Base  # noqa: E402
 from stats_db import SessionLocal  # noqa: E402
 
-
 ENDPOINTS = {
     "seasons": "/api/seasons",
     "match-scopes": "/api/match-scopes",
@@ -43,9 +41,7 @@ ENDPOINTS = {
     "tracks-s3-d1": "/api/tracks?season=s3&division=d1",
     "matches-s3-d1": "/api/matches?season=s3&division=d1",
     "match-222": "/api/matches/222",
-    "player-180-overview-runner": (
-        "/api/players/180/overview?season=s3&division=d1&role=runner"
-    ),
+    "player-180-overview-runner": ("/api/players/180/overview?season=s3&division=d1&role=runner"),
     "player-180-performance-runner": (
         "/api/players/180/performance?season=s3&division=d1&role=runner"
     ),
@@ -53,12 +49,8 @@ ENDPOINTS = {
         "/api/players/180/tracks?season=s3&division=d1&role=runner&min_races=2"
     ),
     "team-41-overview": "/api/teams/41/overview?season=s3&division=d1",
-    "team-41-roster-runner": (
-        "/api/teams/41/roster?season=s3&division=d1&role=runner&min_races=2"
-    ),
-    "team-41-tracks": (
-        "/api/teams/41/tracks?season=s3&division=d1&min_races=2"
-    ),
+    "team-41-roster-runner": ("/api/teams/41/roster?season=s3&division=d1&role=runner&min_races=2"),
+    "team-41-tracks": ("/api/teams/41/tracks?season=s3&division=d1&min_races=2"),
     "top-tracks-glimmer-express-trains-runner": (
         "/api/top-tracks?track=Glimmer%20Express%20Trains&season=s3&division=d1"
         "&role=runner&min_races=2"
@@ -143,11 +135,13 @@ def _registry_fingerprints() -> list[dict[str, Any]]:
     results = []
     for path in paths:
         content = path.read_bytes()
-        results.append({
-            "path": path.relative_to(REPOSITORY_ROOT).as_posix(),
-            "bytes": len(content),
-            "sha256": hashlib.sha256(content).hexdigest(),
-        })
+        results.append(
+            {
+                "path": path.relative_to(REPOSITORY_ROOT).as_posix(),
+                "bytes": len(content),
+                "sha256": hashlib.sha256(content).hexdigest(),
+            }
+        )
     return results
 
 
@@ -202,11 +196,13 @@ def main() -> None:
         if name == "database-health-no-archive":
             payload = _sanitize_dynamic_health_fields(payload)
         entry = _write_json(API_OUTPUT_DIR / f"{name}.json", payload)
-        manifest_entries.append({
-            **entry,
-            "endpoint": endpoint,
-            "status": response.status_code,
-        })
+        manifest_entries.append(
+            {
+                **entry,
+                "endpoint": endpoint,
+                "status": response.status_code,
+            }
+        )
 
     database_entry = _write_json(OUTPUT_DIR / "database-summary.json", _database_snapshot())
     manifest_entries.append(database_entry)
@@ -220,8 +216,7 @@ def main() -> None:
     ui_output_dir = OUTPUT_DIR / "ui"
     if ui_output_dir.exists():
         manifest_entries.extend(
-            _existing_file_entry(path)
-            for path in sorted(ui_output_dir.glob("*.jpg"))
+            _existing_file_entry(path) for path in sorted(ui_output_dir.glob("*.jpg"))
         )
 
     manifest = {

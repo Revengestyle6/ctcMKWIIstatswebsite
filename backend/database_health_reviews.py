@@ -3,7 +3,6 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 DEFAULT_REVIEW_PATH = Path(__file__).resolve().parent / "data" / "database_health_reviews.json"
 VALID_REVIEW_STATUSES = {"open", "dismissed"}
 _WRITE_LOCK = threading.Lock()

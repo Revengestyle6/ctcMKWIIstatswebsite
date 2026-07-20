@@ -1,86 +1,53 @@
-# Architecture
+# Current Architecture
 
-## Top-Level Structure
-
-```text
-.
-├── backend/                  Flask API, stats helpers, CSV data, source JSON
-├── frontend/                 React/Vite app
-├── old-website-backup/       Previous static HTML/CSS/JS version
-├── .github/workflows/        GitHub Pages deployment workflow
-├── Dockerfile                Container build for frontend + backend
-├── render.yaml               Render API service config
-├── railway.json              Railway Docker builder config
-└── start.sh                  Container startup script
-```
-
-## Runtime Shape
-
-The frontend and backend are separate pieces:
-
-1. User opens the React app.
-2. React loads public assets such as background images, the CTC logo, and music files.
-3. React calls the backend API using `VITE_API_URL` if set, otherwise the hardcoded fallback `https://ctcmkwiistatswebsite.onrender.com`.
-4. Flask receives `/api/...` requests.
-5. Flask reads the matching CSV file from `backend/CSV`.
-6. Helper functions in `stats.py` and `find.py` calculate averages and rankings.
-7. Flask returns JSON arrays or objects to the frontend.
-
-## Important Entry Points
-
-- Frontend app: `frontend/src/App.tsx`
-- Frontend routes/components:
-  - `frontend/src/pages/HomePage.tsx`
-  - `frontend/src/components/PlayerStats.tsx`
-  - `frontend/src/components/TopTeamPlayers.tsx`
-  - `frontend/src/components/TopTracks.tsx`
-  - `frontend/src/components/BestMatchups.tsx`
-- Backend web app: `backend/app.py`
-- Backend stats helpers: `backend/stats.py`
-- CSV lookup helpers: `backend/find.py`
-- JSON-to-CSV extraction script: `backend/extract.py`
-
-`backend/main.py` is not the web app. It imports modules and calls `stats.findplayeravg("zilla")`, so it appears to be a scratch/test script.
-
-## Data Model
-
-The active API reads flattened CSV rows:
-
-```csv
-team,player,track,score
-6c,brody,Bowser Jr.'s Fort,12
-```
-
-Every race result is one row. A 5v5 match with 12 races can create up to 120 player-race rows.
-
-## Division Selection
-
-The frontend sends a `division` query parameter:
-
-- `1_2`
-- `3`
-- `4`
-
-The backend maps that directly to a CSV path:
+## Repository Boundaries
 
 ```text
-backend/CSV/ctc_d{division}.csv
+frontend/               React 19, TypeScript, Vite, Tailwind, Playwright
+backend/                Flask API, SQLAlchemy analytics, JSON ingestion
+backend/JSON/           authoritative historical match archive
+backend/data/           reviewed registries; generated SQLite is ignored
+backend/scripts/        explicit maintenance and regression commands
+docs/adr/               accepted production architecture decisions
+docs/baselines/         Phase 0 API, database, identity, and UI evidence
+docs/archive/           historical material only
 ```
 
-Examples:
+## Current Local Request Flow
 
-- `division=1_2` -> `backend/CSV/ctc_d1_2.csv`
-- `division=3` -> `backend/CSV/ctc_d3.csv`
-- `division=4` -> `backend/CSV/ctc_d4.csv`
+1. Vite serves the React application and public media.
+2. React calls the shared client in `frontend/src/api.ts`.
+3. During local development, Vite proxies `/api` to Flask on port 5000.
+4. Flask registers separate public and administrative route blueprints.
+5. Shared route helpers validate request parameters and authorization.
+6. Focused catalog, match, player-dashboard, and team-dashboard modules read
+   through SQLAlchemy sessions.
+7. Flask returns structured JSON for the UI.
 
-This means future seasons cannot be added cleanly through the current API unless the data naming and query model are expanded.
+The current frontend retains a temporary Render fallback in `api.ts`. Same-origin
+`/api` requests are the accepted production direction and will replace it before
+Firebase Hosting cutover.
 
-## Current Limitations
+## Data Ownership
 
-- Season is not a first-class parameter.
-- CSV files are the API source of truth.
-- Uploading a new match file does not automatically rebuild analytics.
-- Some API responses are formatted strings instead of structured JSON.
-- Caching is in-memory per Flask process and has no invalidation endpoint.
-- The frontend has repeated `API_URL` constants in several files.
+- Archived JSON is the immutable input and audit record.
+- Reviewed CSV/JSON registries define player identity, team normalization,
+  analytics exclusions, and health-review decisions.
+- SQLite is generated local/test state.
+- PostgreSQL will be the production operational database.
+- Git stores code, migrations, documentation, registries, and the historical JSON
+  archive until durable object storage is implemented.
 
+## Match Upload Flow
+
+The JSON editor compiles and previews a canonical document. Flask revalidates the
+preview, stages the archive file, imports all normalized database rows in one SQL
+transaction, publishes the staged file, and records addition logs. Local writes can
+be protected by `MATCH_UPLOAD_TOKEN`; Firebase administrator authentication and
+Cloud Storage are planned production changes.
+
+## Accepted Production Target
+
+Firebase Hosting will serve the frontend and rewrite `/api/**` to Cloud Run. Cloud
+Run will use Cloud SQL PostgreSQL and Cloud Storage. Firebase Authentication will
+protect administrator actions. See `docs/adr/` for the accepted decisions.

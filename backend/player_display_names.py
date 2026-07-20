@@ -1,6 +1,5 @@
-from sqlalchemy import func, select
-
 from models import PlayerAlias
+from sqlalchemy import func, select
 
 
 def _ranked_alias_values(session, player_ids, alias_type, rank_by):
@@ -29,11 +28,7 @@ def _ranked_alias_values(session, player_ids, alias_type, rank_by):
         last_seen = row.last_seen or 0
         uses = row.uses or 0
         alias_id = row.alias_id or 0
-        key = (
-            (last_seen, uses, alias_id)
-            if rank_by == "recent"
-            else (uses, last_seen, alias_id)
-        )
+        key = (last_seen, uses, alias_id) if rank_by == "recent" else (uses, last_seen, alias_id)
         current = ranked.get(row.player_id)
         if current is None or key > current[0]:
             ranked[row.player_id] = (key, row.alias_value)
@@ -46,15 +41,9 @@ def _display_names_for_players(session, player_ids, canonical_names=None):
     if not player_ids:
         return {}
     canonical_names = canonical_names or {}
-    recent_lounge_names = _ranked_alias_values(
-        session, player_ids, "lounge_name", "recent"
-    )
-    common_table_names = _ranked_alias_values(
-        session, player_ids, "table_name", "common"
-    )
-    common_mii_names = _ranked_alias_values(
-        session, player_ids, "mii_name", "common"
-    )
+    recent_lounge_names = _ranked_alias_values(session, player_ids, "lounge_name", "recent")
+    common_table_names = _ranked_alias_values(session, player_ids, "table_name", "common")
+    common_mii_names = _ranked_alias_values(session, player_ids, "mii_name", "common")
 
     return {
         player_id: (

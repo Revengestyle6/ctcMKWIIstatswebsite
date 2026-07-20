@@ -49,12 +49,8 @@ def _record_summary(record: dict) -> dict:
 def compare(reference_path: Path, candidate_path: Path) -> dict:
     reference = _players(reference_path)
     candidate = _players(candidate_path)
-    reference_by_code = {
-        code: player for player in reference for code in player["friend_codes"]
-    }
-    candidate_by_code = {
-        code: player for player in candidate for code in player["friend_codes"]
-    }
+    reference_by_code = {code: player for player in reference for code in player["friend_codes"]}
+    candidate_by_code = {code: player for player in candidate for code in player["friend_codes"]}
 
     reference_merges = []
     for reference_player in reference:
@@ -64,13 +60,17 @@ def compare(reference_path: Path, candidate_path: Path) -> dict:
             if code in candidate_by_code
         }
         if len(candidate_players) > 1:
-            reference_merges.append({
-                "reference_player": _record_summary(reference_player),
-                "candidate_players": [
-                    _record_summary(player)
-                    for player in sorted(candidate_players.values(), key=lambda item: item["player_id"])
-                ],
-            })
+            reference_merges.append(
+                {
+                    "reference_player": _record_summary(reference_player),
+                    "candidate_players": [
+                        _record_summary(player)
+                        for player in sorted(
+                            candidate_players.values(), key=lambda item: item["player_id"]
+                        )
+                    ],
+                }
+            )
 
     candidate_merges = []
     for candidate_player in candidate:
@@ -80,13 +80,17 @@ def compare(reference_path: Path, candidate_path: Path) -> dict:
             if code in reference_by_code
         }
         if len(reference_players) > 1:
-            candidate_merges.append({
-                "candidate_player": _record_summary(candidate_player),
-                "reference_players": [
-                    _record_summary(player)
-                    for player in sorted(reference_players.values(), key=lambda item: item["player_id"])
-                ],
-            })
+            candidate_merges.append(
+                {
+                    "candidate_player": _record_summary(candidate_player),
+                    "reference_players": [
+                        _record_summary(player)
+                        for player in sorted(
+                            reference_players.values(), key=lambda item: item["player_id"]
+                        )
+                    ],
+                }
+            )
 
     return {
         "reference": {
@@ -114,11 +118,14 @@ def main() -> None:
     parser.add_argument("candidate", type=Path)
     parser.add_argument("--output", type=Path, help="Optional JSON output path.")
     args = parser.parse_args()
-    content = json.dumps(
-        compare(args.reference, args.candidate),
-        indent=2,
-        ensure_ascii=False,
-    ) + "\n"
+    content = (
+        json.dumps(
+            compare(args.reference, args.candidate),
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(content, encoding="utf-8")

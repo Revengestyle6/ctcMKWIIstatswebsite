@@ -7,8 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import event, select
-
 from database import BASE_DIR
 from models import (
     DatabaseAdditionLog,
@@ -26,7 +24,7 @@ from models import (
     Track,
     TrackAlias,
 )
-
+from sqlalchemy import event, select
 
 DEFAULT_JSON_ROOT = BASE_DIR / "JSON"
 ARCHIVE_COMPONENT_RE = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -56,7 +54,9 @@ def json_root() -> Path:
 
 
 def canonical_json_bytes(match_data: dict[str, Any]) -> bytes:
-    return (json.dumps(match_data, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    return (json.dumps(match_data, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode(
+        "utf-8"
+    )
 
 
 def match_fingerprint(match_data: dict[str, Any]) -> str:
@@ -73,7 +73,11 @@ def _archive_component(value: Any, label: str) -> str:
 def _archive_filename(match_data: dict[str, Any], fingerprint: str) -> str:
     label = str(match_data.get("match_label") or "").strip()
     week = match_data.get("week")
-    if isinstance(week, (int, float)) and int(week) > 0 and not re.match(r"^W\d+\b", label, re.IGNORECASE):
+    if (
+        isinstance(week, (int, float))
+        and int(week) > 0
+        and not re.match(r"^W\d+\b", label, re.IGNORECASE)
+    ):
         label = f"W{int(week)} {label}".strip()
     label = label.removesuffix(".json").removesuffix(".txt")
     label = UNSAFE_FILENAME_RE.sub(" ", label).strip(" .")
@@ -114,7 +118,10 @@ def validate_committable_match(match_data: dict[str, Any]) -> None:
         errors.append("Races played must equal the number of tracks.")
 
     teams = match_data.get("teams") or {}
-    if re.fullmatch(r"\d+v\d+", str(match_data.get("format") or ""), re.IGNORECASE) and len(teams) != 2:
+    if (
+        re.fullmatch(r"\d+v\d+", str(match_data.get("format") or ""), re.IGNORECASE)
+        and len(teams) != 2
+    ):
         errors.append("A team-format match must contain exactly two teams.")
     friend_codes = set()
     positions_by_race: list[set[int]] = [set() for _ in tracks]
@@ -130,15 +137,21 @@ def validate_committable_match(match_data: dict[str, Any]) -> None:
             positions = player_data.get("race_positions") or []
             scores = player_data.get("race_scores") or []
             if len(positions) != len(tracks) or len(scores) != len(tracks):
-                errors.append(f"Player {friend_code} must have one position and score value per race.")
+                errors.append(
+                    f"Player {friend_code} must have one position and score value per race."
+                )
                 continue
             for race_index, position in enumerate(positions):
                 if position is None:
                     continue
                 if not isinstance(position, int) or position < 1 or position > 12:
-                    errors.append(f"Player {friend_code} has an invalid position in race {race_index + 1}.")
+                    errors.append(
+                        f"Player {friend_code} has an invalid position in race {race_index + 1}."
+                    )
                 elif position in positions_by_race[race_index]:
-                    errors.append(f"Race {race_index + 1} assigns position {position} more than once.")
+                    errors.append(
+                        f"Race {race_index + 1} assigns position {position} more than once."
+                    )
                 else:
                     positions_by_race[race_index].add(position)
     if not friend_codes:
@@ -178,7 +191,9 @@ def publish_staged_document(staged_path: Path, document: UploadDocument) -> None
         finally:
             os.close(directory_descriptor)
     except FileExistsError as error:
-        raise ArchiveConflictError(f"Archive file already exists: {document.display_path}") from error
+        raise ArchiveConflictError(
+            f"Archive file already exists: {document.display_path}"
+        ) from error
     except Exception:
         if linked:
             document.final_path.unlink(missing_ok=True)
@@ -231,7 +246,12 @@ class AdditionCapture:
 def _addition_data(instance: Any) -> tuple[str, int, str, dict[str, Any]]:
     if isinstance(instance, Season):
         details = {"league": instance.league_code, "season": instance.season_code}
-        return "season", instance.season_id, f"Added {instance.league_code.upper()} season {instance.season_code}", details
+        return (
+            "season",
+            instance.season_id,
+            f"Added {instance.league_code.upper()} season {instance.season_code}",
+            details,
+        )
     if isinstance(instance, Division):
         details = {"season_id": instance.season_id, "division": instance.division_code}
         return "division", instance.division_id, f"Added division {instance.division_code}", details
@@ -239,7 +259,10 @@ def _addition_data(instance: Any) -> tuple[str, int, str, dict[str, Any]]:
         details = {"source_path": instance.source_path, "sha256": instance.file_sha256}
         return "source_file", instance.source_file_id, f"Archived {instance.source_path}", details
     if isinstance(instance, Team):
-        details = {"canonical_tag": instance.canonical_tag, "canonical_name": instance.canonical_name}
+        details = {
+            "canonical_tag": instance.canonical_tag,
+            "canonical_name": instance.canonical_name,
+        }
         return "team", instance.team_id, f"Added team {instance.canonical_tag}", details
     if isinstance(instance, TeamSeasonEntry):
         details = {
@@ -248,16 +271,43 @@ def _addition_data(instance: Any) -> tuple[str, int, str, dict[str, Any]]:
             "division_id": instance.division_id,
             "clan_tag": instance.clan_tag,
         }
-        return "team_season_entry", instance.team_season_entry_id, f"Added {instance.clan_tag} to a season/division", details
+        return (
+            "team_season_entry",
+            instance.team_season_entry_id,
+            f"Added {instance.clan_tag} to a season/division",
+            details,
+        )
     if isinstance(instance, Player):
-        details = {"name": instance.canonical_lounge_name, "primary_friend_code": instance.primary_friend_code}
-        return "player", instance.player_id, f"Added player {instance.canonical_lounge_name or instance.player_id}", details
+        details = {
+            "name": instance.canonical_lounge_name,
+            "primary_friend_code": instance.primary_friend_code,
+        }
+        return (
+            "player",
+            instance.player_id,
+            f"Added player {instance.canonical_lounge_name or instance.player_id}",
+            details,
+        )
     if isinstance(instance, PlayerFriendCode):
         details = {"player_id": instance.player_id, "friend_code": instance.friend_code}
-        return "player_friend_code", instance.player_friend_code_id, f"Added friend code {instance.friend_code}", details
+        return (
+            "player_friend_code",
+            instance.player_friend_code_id,
+            f"Added friend code {instance.friend_code}",
+            details,
+        )
     if isinstance(instance, PlayerAlias):
-        details = {"player_id": instance.player_id, "alias_type": instance.alias_type, "alias": instance.alias_value}
-        return "player_alias", instance.player_alias_id, f"Added {instance.alias_type} alias {instance.alias_value}", details
+        details = {
+            "player_id": instance.player_id,
+            "alias_type": instance.alias_type,
+            "alias": instance.alias_value,
+        }
+        return (
+            "player_alias",
+            instance.player_alias_id,
+            f"Added {instance.alias_type} alias {instance.alias_value}",
+            details,
+        )
     if isinstance(instance, PlayerSeasonEntry):
         details = {
             "player_id": instance.player_id,
@@ -265,14 +315,33 @@ def _addition_data(instance: Any) -> tuple[str, int, str, dict[str, Any]]:
             "season_id": instance.season_id,
             "division_id": instance.division_id,
         }
-        return "player_season_entry", instance.player_season_entry_id, f"Added season entry for player {instance.player_id}", details
+        return (
+            "player_season_entry",
+            instance.player_season_entry_id,
+            f"Added season entry for player {instance.player_id}",
+            details,
+        )
     if isinstance(instance, Track):
-        return "track", instance.track_id, f"Added track {instance.canonical_name}", {"name": instance.canonical_name}
+        return (
+            "track",
+            instance.track_id,
+            f"Added track {instance.canonical_name}",
+            {"name": instance.canonical_name},
+        )
     if isinstance(instance, TrackAlias):
         details = {"track_id": instance.track_id, "alias": instance.alias_value}
-        return "track_alias", instance.track_alias_id, f"Added track alias {instance.alias_value}", details
+        return (
+            "track_alias",
+            instance.track_alias_id,
+            f"Added track alias {instance.alias_value}",
+            details,
+        )
     if isinstance(instance, Match):
-        details = {"label": instance.match_label, "season_id": instance.season_id, "division_id": instance.division_id}
+        details = {
+            "label": instance.match_label,
+            "season_id": instance.season_id,
+            "division_id": instance.division_id,
+        }
         return "match", instance.match_id, f"Committed match {instance.match_label}", details
     raise TypeError(f"Unsupported addition type: {type(instance).__name__}")
 
@@ -325,7 +394,9 @@ def find_match_conflict(session, match_data: dict[str, Any]) -> Match | None:
     if not season:
         return None
     division = session.scalar(
-        select(Division).where(Division.season_id == season.season_id, Division.division_code == division_code)
+        select(Division).where(
+            Division.season_id == season.season_id, Division.division_code == division_code
+        )
     )
     if not division:
         return None
@@ -367,13 +438,22 @@ def reconcile_archive(session, root: Path | None = None) -> dict[str, list[dict[
             continue
         actual_hash = hashlib.sha256(path.read_bytes()).hexdigest()
         if actual_hash != source.file_sha256:
-            hash_mismatches.append({"source_path": source.source_path, "database": source.file_sha256, "actual": actual_hash})
+            hash_mismatches.append(
+                {
+                    "source_path": source.source_path,
+                    "database": source.file_sha256,
+                    "actual": actual_hash,
+                }
+            )
 
     archive_files = [
-        path for path in root.rglob("*")
+        path
+        for path in root.rglob("*")
         if path.is_file() and path.suffix.lower() in {".json", ".txt"}
     ]
-    json_stems = {path.with_suffix("").resolve() for path in archive_files if path.suffix.lower() == ".json"}
+    json_stems = {
+        path.with_suffix("").resolve() for path in archive_files if path.suffix.lower() == ".json"
+    }
     orphan_files = [
         {"path": path.relative_to(root).as_posix()}
         for path in archive_files

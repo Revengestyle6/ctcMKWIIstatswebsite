@@ -2,9 +2,6 @@ import unittest
 from decimal import Decimal
 from types import SimpleNamespace
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from models import RacePlayerResult
 from player_role_analytics import (
     bagger_counterpart_summary,
@@ -16,6 +13,8 @@ from player_role_analytics import (
     valid_placement,
     valid_race_score,
 )
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 
 def result(
@@ -48,9 +47,7 @@ class RoleAnalyticsTests(unittest.TestCase):
 
         for value in ("all", "unknown", 1):
             with self.subTest(value=value):
-                with self.assertRaisesRegex(
-                    ValueError, r"^role must be runner or bagger\.$"
-                ):
+                with self.assertRaisesRegex(ValueError, r"^role must be runner or bagger\.$"):
                     normalize_role(value)
 
     def test_valid_race_score_requires_numeric_value_in_range(self):
@@ -93,12 +90,8 @@ class RoleAnalyticsTests(unittest.TestCase):
                 self.assertFalse(valid_placement(placement))
 
     def test_stored_roles_are_authoritative_and_strictly_separated(self):
-        stored_runner = result(
-            role="runner", role_source="manual", position=10, race_id=1
-        )
-        stored_bagger = result(
-            role="bagger", role_source="inferred", position=1, race_id=1
-        )
+        stored_runner = result(role="runner", role_source="manual", position=10, race_id=1)
+        stored_bagger = result(role="bagger", role_source="inferred", position=1, race_id=1)
 
         self.assertEqual(classify_role(stored_runner, {1}), ("runner", "explicit"))
         self.assertEqual(classify_role(stored_bagger, {1}), ("bagger", "inferred"))
@@ -264,11 +257,7 @@ class DatabaseRoleAnalyticsTests(unittest.TestCase):
             team_id = 100 + team_offset
             for slot in range(team_size):
                 player_id = race_id * 100 + team_offset * 10 + slot
-                if (
-                    team_offset == 0
-                    and slot == team_size - 1
-                    and selected_player_id is not None
-                ):
+                if team_offset == 0 and slot == team_size - 1 and selected_player_id is not None:
                     player_id = selected_player_id
                 if duplicate_player_team == team_offset and slot == team_size - 1:
                     player_id = race_id * 100 + team_offset * 10
@@ -302,10 +291,7 @@ class DatabaseRoleAnalyticsTests(unittest.TestCase):
         self.assertEqual(
             confirmed_5v5_race_ids(
                 self.session,
-                valid_rows
-                + short_rows
-                + duplicate_rows
-                + cross_team_duplicate_rows,
+                valid_rows + short_rows + duplicate_rows + cross_team_duplicate_rows,
             ),
             {1},
         )
@@ -315,30 +301,20 @@ class DatabaseRoleAnalyticsTests(unittest.TestCase):
         self.assertEqual(confirmed_5v5_race_ids(self.session, valid_rows), set())
 
     def counterpart_summary(self, rows, selected_player_id, *, omit_player_id=False):
-        selected_rows = [
-            row for row in rows if row.player_id == selected_player_id
-        ]
+        selected_rows = [row for row in rows if row.player_id == selected_player_id]
         _, classified = role_coverage(selected_rows, set())
         if omit_player_id:
             classified = [
                 (SimpleNamespace(race_id=row.race_id), role, source)
                 for row, role, source in classified
             ]
-        return bagger_counterpart_summary(
-            self.session, selected_player_id, classified
-        )
+        return bagger_counterpart_summary(self.session, selected_player_id, classified)
 
     def test_counterpart_summary_totals_without_input_player_id(self):
         selected_player_id = 999
-        rows = self.add_race(
-            1, bagger_scores=(1, 1), selected_player_id=selected_player_id
-        )
-        rows += self.add_race(
-            2, bagger_scores=(4, 0), selected_player_id=selected_player_id
-        )
-        summary = self.counterpart_summary(
-            rows, selected_player_id, omit_player_id=True
-        )
+        rows = self.add_race(1, bagger_scores=(1, 1), selected_player_id=selected_player_id)
+        rows += self.add_race(2, bagger_scores=(4, 0), selected_player_id=selected_player_id)
+        summary = self.counterpart_summary(rows, selected_player_id, omit_player_id=True)
 
         self.assertEqual(
             summary,
@@ -353,9 +329,7 @@ class DatabaseRoleAnalyticsTests(unittest.TestCase):
 
     def test_counterpart_disqualifies_missing_bagger(self):
         selected_player_id = 999
-        rows = self.add_race(
-            1, bagger_scores=(1, 2), selected_player_id=selected_player_id
-        )
+        rows = self.add_race(1, bagger_scores=(1, 2), selected_player_id=selected_player_id)
         rows[-1].role = "runner"
         self.session.flush()
 
@@ -377,18 +351,14 @@ class DatabaseRoleAnalyticsTests(unittest.TestCase):
 
     def test_counterpart_disqualifies_invalid_selected_score(self):
         selected_player_id = 999
-        rows = self.add_race(
-            1, bagger_scores=(None, 2), selected_player_id=selected_player_id
-        )
+        rows = self.add_race(1, bagger_scores=(None, 2), selected_player_id=selected_player_id)
         summary = self.counterpart_summary(rows, selected_player_id)
 
         self.assertEqual(summary["counterpart_races"], 0)
 
     def test_counterpart_disqualifies_invalid_opponent_score(self):
         selected_player_id = 999
-        rows = self.add_race(
-            1, bagger_scores=(1, 16), selected_player_id=selected_player_id
-        )
+        rows = self.add_race(1, bagger_scores=(1, 16), selected_player_id=selected_player_id)
         summary = self.counterpart_summary(rows, selected_player_id)
 
         self.assertEqual(summary["counterpart_races"], 0)

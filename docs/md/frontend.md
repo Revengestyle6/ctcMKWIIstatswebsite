@@ -1,155 +1,64 @@
 # Frontend
 
-## Technology
+The frontend uses React 19, React Router 7, TypeScript, Vite, Tailwind CSS, and
+Playwright. All Node configuration and dependencies live under `frontend/`; there
+is no root Node package.
 
-The frontend is a React app built with Vite and TypeScript.
-
-Main dependencies:
-
-- `react`
-- `react-dom`
-- `react-router-dom`
-- `axios`
-- `vite`
-- `tailwindcss`
-
-## Build And Dev Commands
-
-From repo root:
-
-```sh
-npm run dev
-npm run build
-```
-
-These delegate into `frontend`.
+## Commands
 
 From `frontend/`:
 
-```sh
+```bash
+npm ci
 npm run dev
+npm run check
+npm run format
 npm run build
 npm run preview
+npm run test:e2e
 ```
 
-Vite dev server is configured for port `3000`.
+Install Chromium once with `npx playwright install chromium`. Set `PYTHON_BIN` for
+browser tests when the backend interpreter is not available as `python`.
 
 ## Routes
 
-Routes are declared in `frontend/src/App.tsx`:
+- `/`: home dashboard
+- `/players` and `/teams`: scoped directories
+- `/players/:playerId` and `/teams/:teamId`: structured dashboards
+- `/matches`: match history and detail
+- `/stats`, `/top-team-players`, `/top-tracks`, `/best-matchups`: legacy analytics views
+- `/json-editor`: match entry, validation, preview, and upload
+- `/database-health`: integrity and review dashboard
 
-- `/`: home page
-- `/stats`: player statistics
-- `/top-team-players`: team/player and team/track rankings
-- `/top-tracks`: top players and teams for a selected track
-- `/best-matchups`: compares two teams by overlapping track averages
+`BackgroundSlideshow` and `MusicPlayer` render globally. Public media remains an
+intentional product asset and is not duplicated in source.
 
-`BackgroundSlideshow` and `MusicPlayer` render globally on every route.
+## API Client
 
-## API Base URL
+`src/api.ts` owns the base URL, JSON request handling, and common API types.
+`src/dashboardApi.ts` defines the structured dashboard contracts. The application
+uses native `fetch`; Axios was removed as unused.
 
-Several components define:
+`VITE_API_URL` is embedded at build time. The current fallback points to the legacy
+Render API. Same-origin `/api` requests are required before the Firebase deployment.
 
-```ts
-const API_URL = import.meta.env.VITE_API_URL || 'https://ctcmkwiistatswebsite.onrender.com';
-```
+## Build And CSS
 
-If `VITE_API_URL` is not supplied at build/dev time, the frontend uses the existing Render API URL.
+`index.html` is the sole Vite HTML entry. Tailwind scans it and `src/`; PostCSS owns
+CSS compilation. Production output is written to `frontend/build`. Vite's built-in
+minifier keeps builds fast and avoids a separate Terser/compression dependency chain.
 
-During Vite local development, `frontend/vite.config.ts` also proxies `/api` to `http://127.0.0.1:5000`, but the current component code uses absolute `API_URL` strings. To benefit from the proxy, `VITE_API_URL` would need to be set to an empty same-origin base or the code would need to use relative `/api/...` URLs.
+Every page-level route is loaded on demand with `React.lazy`. The match-history
+controller and views are separate modules, as are the JSON editor's form, domain
+model, and validation/upload contracts.
 
-## Pages And Components
+## Tests And Baselines
 
-### `HomePage`
+`npm run test:e2e` performs route-loading smoke checks at desktop and Pixel 7
+viewports. `npm run baseline:ui` writes the approved screenshot set and should only
+be run when intentionally capturing reviewed baseline evidence.
 
-Displays:
-
-- CTC logo from `/images/CTC_LOGO/ctclogo.webp`
-- Season 1 title and creator credit
-- Navigation buttons
-- A Twitch embed for `customtrackcupmkwii`
-
-The Twitch embed uses:
-
-```ts
-parent=${window.location.hostname}
-```
-
-No Twitch API key is used.
-
-### `PlayerStats`
-
-Fetches:
-
-- `/api/players?division=...`
-- `/api/player?name=...&division=...`
-- `/api/player-avg?name=...&division=...`
-
-Shows player overall average and best tracks.
-
-### `TopTeamPlayers`
-
-Fetches:
-
-- `/api/teams?division=...`
-- `/api/top-team-players?team=...&min_races=...&division=...`
-- `/api/top-team-tracks?team=...&division=...`
-
-Shows a selected team's top players and tracks.
-
-### `TopTracks`
-
-Fetches:
-
-- `/api/tracks?division=...`
-- `/api/top-tracks?track=...&min_races=...&division=...`
-- `/api/top-teams-on-track?track=...&min_races=...&division=...`
-
-Shows top players and teams for a selected track.
-
-### `BestMatchups`
-
-Fetches team lists and each team's top tracks. It parses strings like:
-
-```text
-Track - 62.5 pts (4 races)
-```
-
-Then compares overlapping tracks between Team 1 and Team 2.
-
-This would be cleaner if the backend returned structured JSON objects.
-
-## Static Assets
-
-Important public assets:
-
-- `frontend/public/images/CTC_LOGO/ctclogo.webp`
-- `frontend/public/images/CT_BGS_WEBP/bg_(1).webp` through `bg_(343).webp`
-- `frontend/public/music/track (1).mp3` through `track (17).mp3`
-
-`BackgroundSlideshow` assumes exactly 343 background images exist.
-
-`MusicPlayer` assumes exactly 17 MP3 files with the current names exist.
-
-## Build Output
-
-`frontend/vite.config.ts` sets:
-
-```ts
-build: {
-  outDir: 'build'
-}
-```
-
-This is why Docker and GitHub Pages both reference `frontend/build`.
-
-## Known Frontend Issues And Risks
-
-- `API_URL` is duplicated in multiple components.
-- The app is labeled Season 1 throughout the UI.
-- Division options are hardcoded as `1_2`, `3`, and `4`.
-- No season selector exists.
-- Some display text contains mojibake, for example corrupted arrows and en dashes.
-- `BestMatchups` depends on parsing backend formatted strings.
-- No upload/admin workflow exists.
-
+Biome provides formatting and linting, and strict TypeScript checking is part of
+`npm run check`. Automatic pixel-diff approval remains future test-hardening work;
+the reviewed Phase 0 images stay immutable.

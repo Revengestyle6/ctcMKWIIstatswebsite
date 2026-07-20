@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchJson, fetchPlayerDirectory, type PlayerDirectoryEntry } from "../api";
-import {
-  type LegacyPlayerAverageResponse,
-  type LegacyPlayerTracksResponse,
-  type PlayerRoleMode,
-  type PlayerTrackRow,
+import type {
+  LegacyPlayerAverageResponse,
+  LegacyPlayerTracksResponse,
+  PlayerRoleMode,
+  PlayerTrackRow,
 } from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
-import { RoleModeToggle } from "./RoleModeToggle";
 import { LegacyStatHeader } from "./LegacyStatHeader";
+import { RoleModeToggle } from "./RoleModeToggle";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
 function value(value: number | null, suffix = ""): string {
@@ -17,9 +17,8 @@ function value(value: number | null, suffix = ""): string {
 }
 
 export default function PlayerStats() {
-  const {
-    seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision,
-  } = useSeasonDivision();
+  const { seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision } =
+    useSeasonDivision();
   const [searchParams, setSearchParams] = useSearchParams();
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
   const [playerDirectory, setPlayerDirectory] = useState<PlayerDirectoryEntry[]>([]);
@@ -61,9 +60,14 @@ export default function PlayerStats() {
         setPlayerDirectory(sorted);
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(requestError instanceof Error ? requestError.message : "Failed to load players.");
+        if (!cancelled)
+          setError(
+            requestError instanceof Error ? requestError.message : "Failed to load players."
+          );
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [season, division]);
 
   useEffect(() => {
@@ -77,20 +81,35 @@ export default function PlayerStats() {
     setError("");
     Promise.all([
       fetchJson<LegacyPlayerTracksResponse>("/api/player", {
-        name: selectedPlayer, season, division, role,
+        name: selectedPlayer,
+        season,
+        division,
+        role,
       }),
       fetchJson<LegacyPlayerAverageResponse>("/api/player-avg", {
-        name: selectedPlayer, season, division, role,
+        name: selectedPlayer,
+        season,
+        division,
+        role,
       }),
     ])
       .then(([tracks, average]) => {
         if (!cancelled) setStats({ key: queryKey, tracks, average });
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(requestError instanceof Error ? requestError.message : "Failed to load player statistics.");
+        if (!cancelled)
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Failed to load player statistics."
+          );
       })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedPlayer, season, division, role, queryKey]);
 
   function updateRole(nextRole: PlayerRoleMode) {
@@ -107,9 +126,12 @@ export default function PlayerStats() {
 
   const normalizedPlayerSearch = playerSearch.trim().toLocaleLowerCase();
   const filteredPlayers = useMemo(
-    () => normalizedPlayerSearch
-      ? playerDirectory.filter((entry) => entry.name.toLocaleLowerCase().includes(normalizedPlayerSearch))
-      : playerDirectory,
+    () =>
+      normalizedPlayerSearch
+        ? playerDirectory.filter((entry) =>
+            entry.name.toLocaleLowerCase().includes(normalizedPlayerSearch)
+          )
+        : playerDirectory,
     [playerDirectory, normalizedPlayerSearch]
   );
   const selectedPlayerId = useMemo(
@@ -125,14 +147,23 @@ export default function PlayerStats() {
 
       <div className="mx-auto max-w-5xl pt-24">
         <div className="mb-6 rounded-xl border border-white/15 bg-black/45 p-5 shadow-lg backdrop-blur-sm">
-          <p className="mb-4 text-sm text-gray-300">Choose a season and division, then search for a player by name.</p>
+          <p className="mb-4 text-sm text-gray-300">
+            Choose a season and division, then search for a player by name.
+          </p>
           <div className="flex flex-col flex-wrap gap-4 md:flex-row md:items-end">
             <SeasonDivisionSelector
-              season={season} division={division} seasons={seasons} divisions={divisions}
-              disabled={loadingScope} onSeasonChange={setSeason} onDivisionChange={setDivision}
+              season={season}
+              division={division}
+              seasons={seasons}
+              divisions={divisions}
+              disabled={loadingScope}
+              onSeasonChange={setSeason}
+              onDivisionChange={setDivision}
             />
             <div className="min-w-64">
-              <label htmlFor="legacy-player-search" className="mb-1 block font-semibold">Search players</label>
+              <label htmlFor="legacy-player-search" className="mb-1 block font-semibold">
+                Search players
+              </label>
               <input
                 id="legacy-player-search"
                 type="search"
@@ -140,10 +171,14 @@ export default function PlayerStats() {
                 value={playerSearch}
                 onChange={(event) => updatePlayerSearch(event.target.value)}
                 disabled={!division || playerDirectory.length === 0}
-                placeholder={playerDirectory.length > 0 ? "Search players..." : "No players available"}
+                placeholder={
+                  playerDirectory.length > 0 ? "Search players..." : "No players available"
+                }
                 autoComplete="off"
               />
-              <label htmlFor="legacy-player-select" className="sr-only">Matching players</label>
+              <label htmlFor="legacy-player-select" className="sr-only">
+                Matching players
+              </label>
               <select
                 id="legacy-player-select"
                 className="w-full rounded-b-md border border-t-0 border-gray-400 bg-white px-4 py-2 text-black focus:relative focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -157,7 +192,9 @@ export default function PlayerStats() {
                     : `Select a player (${filteredPlayers.length})`}
                 </option>
                 {filteredPlayers.map((player) => (
-                  <option key={player.player_id} value={player.name}>{player.name}</option>
+                  <option key={player.player_id} value={player.name}>
+                    {player.name}
+                  </option>
                 ))}
               </select>
               <p className="mt-1 text-xs text-gray-400">
@@ -170,7 +207,9 @@ export default function PlayerStats() {
 
         {role === "bagger" && <BaggerDisclosure />}
 
-        {(scopeError || error) && <p className="mt-4 text-center text-red-400">{scopeError || error}</p>}
+        {(scopeError || error) && (
+          <p className="mt-4 text-center text-red-400">{scopeError || error}</p>
+        )}
         {loading && <p className="mt-6 text-center text-gray-300">Loading player statistics...</p>}
 
         {!loading && currentStats && metrics && (
@@ -178,27 +217,42 @@ export default function PlayerStats() {
             <section className="mt-6 rounded-lg border border-blue-400/50 bg-black/70 p-6 shadow-md backdrop-blur-sm">
               <h2 className="mb-4 text-2xl font-bold text-blue-400">
                 {currentStats.average.player_name}{" "}
-                {currentStats.average.team_name && <span className="text-lg text-gray-400">({currentStats.average.team_name})</span>}
+                {currentStats.average.team_name && (
+                  <span className="text-lg text-gray-400">({currentStats.average.team_name})</span>
+                )}
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {metrics.role === "runner" ? (
                   <>
                     <Metric label="12-race pace" value={value(metrics.twelve_race_pace)} />
                     <Metric label="Points per race" value={value(metrics.points_per_race)} />
-                    <Metric label="Runner races" value={`${metrics.races} (${metrics.scored_races} scored)`} />
+                    <Metric
+                      label="Runner races"
+                      value={`${metrics.races} (${metrics.scored_races} scored)`}
+                    />
                     <Metric label="Wins / podiums" value={`${metrics.wins} / ${metrics.podiums}`} />
                   </>
                 ) : (
                   <>
                     <Metric label="Bagging points" value={String(metrics.total_points)} />
-                    <Metric label="Bagging points per race" value={value(metrics.points_per_race)} />
+                    <Metric
+                      label="Bagging points per race"
+                      value={value(metrics.points_per_race)}
+                    />
                     <Metric label="Bag-point rate" value={value(metrics.bag_point_rate, "%")} />
                     <Metric label="Zero-point rate" value={value(metrics.zero_point_rate, "%")} />
-                    <Metric label="Bagger races" value={`${metrics.races} (${metrics.scored_races} scored)`} />
+                    <Metric
+                      label="Bagger races"
+                      value={`${metrics.races} (${metrics.scored_races} scored)`}
+                    />
                     <Metric label="Average place" value={value(metrics.average_placement)} />
                     <Metric
                       label="Opponent point diff"
-                      value={metrics.counterpart_races > 0 ? value(metrics.opponent_point_differential) : "-"}
+                      value={
+                        metrics.counterpart_races > 0
+                          ? value(metrics.opponent_point_differential)
+                          : "-"
+                      }
                     />
                   </>
                 )}
@@ -207,7 +261,9 @@ export default function PlayerStats() {
                 <Link
                   to={`/players/${selectedPlayerId}?season=${season}&division=${division}&role=${role}`}
                   className="mt-5 inline-block font-semibold text-blue-300 hover:text-blue-200"
-                >Open player dashboard &rarr;</Link>
+                >
+                  Open player dashboard &rarr;
+                </Link>
               )}
             </section>
 
@@ -219,7 +275,9 @@ export default function PlayerStats() {
           <p className="mt-4 text-center text-gray-300">No results found.</p>
         )}
         {!loading && !selectedPlayer && playerDirectory.length > 0 && (
-          <p className="mt-4 text-center text-gray-400">Search for and select a player to view statistics.</p>
+          <p className="mt-4 text-center text-gray-400">
+            Search for and select a player to view statistics.
+          </p>
         )}
       </div>
     </div>
@@ -227,57 +285,103 @@ export default function PlayerStats() {
 }
 
 function Metric({ label, value: metricValue }: { label: string; value: string }) {
-  return <div><p className="text-xs font-semibold uppercase text-gray-400">{label}</p><p className="mt-1 text-lg font-bold text-white">{metricValue}</p></div>;
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase text-gray-400">{label}</p>
+      <p className="mt-1 text-lg font-bold text-white">{metricValue}</p>
+    </div>
+  );
 }
 
 function BaggerDisclosure() {
   return (
     <p className="mb-5 rounded-md border border-amber-300/25 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
-      Bagger statistics report scoring outcomes only. Shock acquisition is not recorded, and points do not measure overall bagging effectiveness.
+      Bagger statistics report scoring outcomes only. Shock acquisition is not recorded, and points
+      do not measure overall bagging effectiveness.
     </p>
   );
 }
 
 function TrackTable({ tracks, role }: { tracks: PlayerTrackRow[]; role: PlayerRoleMode }) {
-  if (tracks.length === 0) return <p className="mt-6 text-center text-gray-300">No qualifying track results.</p>;
+  if (tracks.length === 0)
+    return <p className="mt-6 text-center text-gray-300">No qualifying track results.</p>;
   return (
     <div className="mt-6 overflow-x-auto rounded-lg border border-white/10 shadow-lg">
       <table className="min-w-full bg-black/70 text-sm tabular-nums backdrop-blur-sm">
         <thead className="bg-black/90">
           <tr>
-            <th scope="col" className="px-4 py-3 text-left">Track</th>
-            <th scope="col" className="px-4 py-3 text-right">Races</th>
-            <th scope="col" className="px-4 py-3 text-right">Scored</th>
-            {role === "runner" ? <>
-              <th scope="col" className="px-4 py-3 text-right">12-race pace</th>
-              <th scope="col" className="px-4 py-3 text-right">PPR</th>
-              <th scope="col" className="px-4 py-3 text-right">Wins</th>
-              <th scope="col" className="px-4 py-3 text-right">Podiums</th>
-            </> : <>
-              <th scope="col" className="px-4 py-3 text-right">Bag PPR</th>
-              <th scope="col" className="px-4 py-3 text-right">Bag-point rate</th>
-              <th scope="col" className="px-4 py-3 text-right">Zero-point rate</th>
-              <th scope="col" className="px-4 py-3 text-right">Avg place</th>
-            </>}
+            <th scope="col" className="px-4 py-3 text-left">
+              Track
+            </th>
+            <th scope="col" className="px-4 py-3 text-right">
+              Races
+            </th>
+            <th scope="col" className="px-4 py-3 text-right">
+              Scored
+            </th>
+            {role === "runner" ? (
+              <>
+                <th scope="col" className="px-4 py-3 text-right">
+                  12-race pace
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  PPR
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  Wins
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  Podiums
+                </th>
+              </>
+            ) : (
+              <>
+                <th scope="col" className="px-4 py-3 text-right">
+                  Bag PPR
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  Bag-point rate
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  Zero-point rate
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  Avg place
+                </th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
           {tracks.map((track, index) => (
-            <tr key={track.track_id} className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}>
-              <td className="whitespace-nowrap px-4 py-3 font-semibold text-blue-200">{track.name}</td>
+            <tr
+              key={track.track_id}
+              className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}
+            >
+              <td className="whitespace-nowrap px-4 py-3 font-semibold text-blue-200">
+                {track.name}
+              </td>
               <td className="px-4 py-3 text-right">{track.races}</td>
               <td className="px-4 py-3 text-right">{track.scored_races}</td>
-              {track.role === "runner" ? <>
-                <td className="px-4 py-3 text-right font-semibold">{value(track.twelve_race_pace)}</td>
-                <td className="px-4 py-3 text-right">{value(track.points_per_race)}</td>
-                <td className="px-4 py-3 text-right">{track.wins}</td>
-                <td className="px-4 py-3 text-right">{track.podiums}</td>
-              </> : <>
-                <td className="px-4 py-3 text-right font-semibold">{value(track.points_per_race)}</td>
-                <td className="px-4 py-3 text-right">{value(track.bag_point_rate, "%")}</td>
-                <td className="px-4 py-3 text-right">{value(track.zero_point_rate, "%")}</td>
-                <td className="px-4 py-3 text-right">{value(track.average_placement)}</td>
-              </>}
+              {track.role === "runner" ? (
+                <>
+                  <td className="px-4 py-3 text-right font-semibold">
+                    {value(track.twelve_race_pace)}
+                  </td>
+                  <td className="px-4 py-3 text-right">{value(track.points_per_race)}</td>
+                  <td className="px-4 py-3 text-right">{track.wins}</td>
+                  <td className="px-4 py-3 text-right">{track.podiums}</td>
+                </>
+              ) : (
+                <>
+                  <td className="px-4 py-3 text-right font-semibold">
+                    {value(track.points_per_race)}
+                  </td>
+                  <td className="px-4 py-3 text-right">{value(track.bag_point_rate, "%")}</td>
+                  <td className="px-4 py-3 text-right">{value(track.zero_point_rate, "%")}</td>
+                  <td className="px-4 py-3 text-right">{value(track.average_placement)}</td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>

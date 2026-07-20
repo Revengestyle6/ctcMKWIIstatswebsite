@@ -3,20 +3,14 @@ from collections import defaultdict
 from decimal import Decimal
 from numbers import Real
 
-from sqlalchemy import select
-
 from models import RacePlayerResult
-
+from sqlalchemy import select
 
 VALID_ROLES = frozenset({"runner", "bagger"})
 
 
 def normalize_role(value):
-    role = (
-        "runner"
-        if value is None or str(value).strip() == ""
-        else str(value).strip().lower()
-    )
+    role = "runner" if value is None or str(value).strip() == "" else str(value).strip().lower()
     if role not in VALID_ROLES:
         raise ValueError("role must be runner or bagger.")
     return role
@@ -70,9 +64,7 @@ def confirmed_5v5_race_ids(session, rows):
 
     all_results = list(
         session.execute(
-            select(RacePlayerResult).where(
-                RacePlayerResult.race_id.in_(candidate_ids)
-            )
+            select(RacePlayerResult).where(RacePlayerResult.race_id.in_(candidate_ids))
         ).scalars()
     )
     return _confirmed_5v5_ids_from_results(all_results)
@@ -95,8 +87,7 @@ def _confirmed_5v5_ids_from_results(all_results):
         if len(by_team) != 2:
             continue
         if all(
-            len(team_rows) == 5
-            and len({row.player_id for row in team_rows}) == 5
+            len(team_rows) == 5 and len({row.player_id for row in team_rows}) == 5
             for team_rows in by_team.values()
         ):
             confirmed.add(race_id)
@@ -128,22 +119,12 @@ def role_coverage(rows, confirmed_ids):
 
 def summarize_role_rows(classified_rows, role):
     role = normalize_role(role)
-    selected_rows = [
-        row
-        for row, classified_role, _ in classified_rows
-        if classified_role == role
-    ]
+    selected_rows = [row for row, classified_role, _ in classified_rows if classified_role == role]
     scores = [row.score for row in selected_rows if valid_race_score(row.score)]
-    placements = [
-        int(row.position)
-        for row in selected_rows
-        if valid_placement(row.position)
-    ]
+    placements = [int(row.position) for row in selected_rows if valid_placement(row.position)]
     total_points = sum(scores)
     scored_races = len(scores)
-    points_per_race = (
-        round(total_points / scored_races, 2) if scored_races else None
-    )
+    points_per_race = round(total_points / scored_races, 2) if scored_races else None
 
     summary = {
         "role": role,
@@ -151,13 +132,9 @@ def summarize_role_rows(classified_rows, role):
         "scored_races": scored_races,
         "total_points": total_points,
         "points_per_race": points_per_race,
-        "average_placement": (
-            round(sum(placements) / len(placements), 2) if placements else None
-        ),
+        "average_placement": (round(sum(placements) / len(placements), 2) if placements else None),
         "excluded_score_rows": sum(
-            1
-            for row in selected_rows
-            if row.score is not None and not valid_race_score(row.score)
+            1 for row in selected_rows if row.score is not None and not valid_race_score(row.score)
         ),
     }
 
@@ -167,17 +144,11 @@ def summarize_role_rows(classified_rows, role):
         summary.update(
             {
                 "twelve_race_pace": (
-                    round(total_points / scored_races * 12, 2)
-                    if scored_races
-                    else None
+                    round(total_points / scored_races * 12, 2) if scored_races else None
                 ),
                 "wins": wins,
                 "podiums": podiums,
-                "podium_rate": (
-                    round(podiums / len(placements) * 100, 2)
-                    if placements
-                    else None
-                ),
+                "podium_rate": (round(podiums / len(placements) * 100, 2) if placements else None),
             }
         )
     else:
@@ -187,15 +158,11 @@ def summarize_role_rows(classified_rows, role):
             {
                 "bag_points": bag_points,
                 "bag_point_rate": (
-                    round(bag_points / scored_races * 100, 2)
-                    if scored_races
-                    else None
+                    round(bag_points / scored_races * 100, 2) if scored_races else None
                 ),
                 "zero_points": zero_points,
                 "zero_point_rate": (
-                    round(zero_points / scored_races * 100, 2)
-                    if scored_races
-                    else None
+                    round(zero_points / scored_races * 100, 2) if scored_races else None
                 ),
             }
         )
@@ -203,11 +170,7 @@ def summarize_role_rows(classified_rows, role):
 
 
 def bagger_counterpart_summary(session, selected_player_id, classified_rows):
-    candidate_ids = {
-        row.race_id
-        for row, role, _ in classified_rows
-        if role == "bagger"
-    }
+    candidate_ids = {row.race_id for row, role, _ in classified_rows if role == "bagger"}
     empty_summary = {
         "counterpart_races": 0,
         "opponent_points_for": 0,
@@ -219,9 +182,7 @@ def bagger_counterpart_summary(session, selected_player_id, classified_rows):
 
     all_rows = list(
         session.execute(
-            select(RacePlayerResult).where(
-                RacePlayerResult.race_id.in_(candidate_ids)
-            )
+            select(RacePlayerResult).where(RacePlayerResult.race_id.in_(candidate_ids))
         ).scalars()
     )
     confirmed_ids = _confirmed_5v5_ids_from_results(all_rows)
@@ -247,9 +208,7 @@ def bagger_counterpart_summary(session, selected_player_id, classified_rows):
             continue
 
         baggers = [team_baggers[0] for team_baggers in baggers_by_team.values()]
-        selected_baggers = [
-            row for row in baggers if row.player_id == selected_player_id
-        ]
+        selected_baggers = [row for row in baggers if row.player_id == selected_player_id]
         if len(selected_baggers) != 1:
             continue
         selected = selected_baggers[0]

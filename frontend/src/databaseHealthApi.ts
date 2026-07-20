@@ -1,4 +1,4 @@
-import { fetchJson, postJson, type DatabaseAddition } from "./api";
+import { type DatabaseAddition, fetchJson, postJson } from "./api";
 
 export type HealthSeverity = "critical" | "warning" | "info";
 
@@ -70,9 +70,9 @@ export function reviewDatabaseHealthIssue(
   return postJson<{ issue_key: string; review: NonNullable<DatabaseHealthIssue["review"]> }>(
     "/api/database-health/reviews",
     {
-    issue_key: issueKey,
-    status,
-    note,
+      issue_key: issueKey,
+      status,
+      note,
     }
   );
 }

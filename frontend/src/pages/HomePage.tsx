@@ -1,15 +1,47 @@
-import React from "react";
+import type React from "react";
 import { Link } from "react-router-dom";
 
 const analyticsLinks = [
-  { to: "/matches", title: "Match History", description: "Browse complete war tables, race results, tracks, and score progression." },
-  { to: "/players", title: "Player Dashboards", description: "Browse players and open complete career and season analytics." },
-  { to: "/teams", title: "Team Dashboards", description: "Browse teams, rosters, records, tracks, and match history." },
-  { to: "/stats", title: "Player Statistics", description: "Review player averages, race counts, and track performance." },
-  { to: "/top-team-players", title: "Team Statistics", description: "Compare player production and track results for a selected team." },
-  { to: "/top-tracks", title: "Track Averages", description: "Find the strongest player and team results by track." },
-  { to: "/best-matchups", title: "Team Matchups", description: "Compare head-to-head team and track performance." },
-  { to: "/database-health", title: "Database Health", description: "Monitor additions, record counts, archive integrity, and data-quality findings." },
+  {
+    to: "/matches",
+    title: "Match History",
+    description: "Browse complete war tables, race results, tracks, and score progression.",
+  },
+  {
+    to: "/players",
+    title: "Player Dashboards",
+    description: "Browse players and open complete career and season analytics.",
+  },
+  {
+    to: "/teams",
+    title: "Team Dashboards",
+    description: "Browse teams, rosters, records, tracks, and match history.",
+  },
+  {
+    to: "/stats",
+    title: "Player Statistics",
+    description: "Review player averages, race counts, and track performance.",
+  },
+  {
+    to: "/top-team-players",
+    title: "Team Statistics",
+    description: "Compare player production and track results for a selected team.",
+  },
+  {
+    to: "/top-tracks",
+    title: "Track Averages",
+    description: "Find the strongest player and team results by track.",
+  },
+  {
+    to: "/best-matchups",
+    title: "Team Matchups",
+    description: "Compare head-to-head team and track performance.",
+  },
+  {
+    to: "/database-health",
+    title: "Database Health",
+    description: "Monitor additions, record counts, archive integrity, and data-quality findings.",
+  },
 ];
 
 export default function HomePage(): React.JSX.Element {
@@ -24,10 +56,14 @@ export default function HomePage(): React.JSX.Element {
           />
           <h1 className="text-4xl font-bold sm:text-5xl">Custom Track Cup Statistics</h1>
           <p className="mx-auto mt-4 max-w-3xl text-base leading-7 text-gray-200 sm:text-lg">
-            Multi-season player, team, track, matchup, and race analytics built from the CTC match archive.
+            Multi-season player, team, track, matchup, and race analytics built from the CTC match
+            archive.
           </p>
 
-          <nav className="mx-auto mt-9 grid max-w-5xl gap-3 text-left sm:grid-cols-2 lg:grid-cols-3" aria-label="Statistics pages">
+          <nav
+            className="mx-auto mt-9 grid max-w-5xl gap-3 text-left sm:grid-cols-2 lg:grid-cols-3"
+            aria-label="Statistics pages"
+          >
             {analyticsLinks.map((link, index) => (
               <Link
                 key={link.to}
@@ -35,7 +71,9 @@ export default function HomePage(): React.JSX.Element {
                 className={`rounded-md border px-4 py-4 transition hover:-translate-y-0.5 hover:border-blue-300/70 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-blue-300 ${index === 0 ? "border-blue-300/50 bg-blue-950/80" : "border-white/15 bg-black/65"}`}
               >
                 <span className="block text-lg font-bold text-white">{link.title}</span>
-                <span className="mt-1 block text-sm leading-5 text-gray-300">{link.description}</span>
+                <span className="mt-1 block text-sm leading-5 text-gray-300">
+                  {link.description}
+                </span>
               </Link>
             ))}
             <Link
@@ -43,7 +81,9 @@ export default function HomePage(): React.JSX.Element {
               className="rounded-md border border-emerald-300/40 bg-emerald-950/75 px-4 py-4 transition hover:-translate-y-0.5 hover:border-emerald-200/70 hover:bg-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-300"
             >
               <span className="block text-lg font-bold text-white">Match JSON Editor</span>
-              <span className="mt-1 block text-sm leading-5 text-gray-300">Create, validate, preview, and upload match data.</span>
+              <span className="mt-1 block text-sm leading-5 text-gray-300">
+                Create, validate, preview, and upload match data.
+              </span>
             </Link>
           </nav>
 
@@ -56,19 +96,27 @@ export default function HomePage(): React.JSX.Element {
           <div>
             <h2 className="text-2xl font-bold">About the data</h2>
             <p className="mt-3 max-w-3xl leading-7 text-gray-300">
-              Analytics are calculated from MKW Table Bot JSON, reviewed historical files, and matches submitted through the site&apos;s editor. Available seasons and divisions are read directly from the database.
+              Analytics are calculated from MKW Table Bot JSON, reviewed historical files, and
+              matches submitted through the site&apos;s editor. Available seasons and divisions are
+              read directly from the database.
             </p>
             <p className="mt-3 max-w-3xl leading-7 text-gray-300">
-              Historical source data can be missing or incomplete. Report duplicate player identities, incorrect team assignments, or obvious score errors so the archive can be corrected.
+              Historical source data can be missing or incomplete. Report duplicate player
+              identities, incorrect team assignments, or obvious score errors so the archive can be
+              corrected.
             </p>
           </div>
           <div className="border-l-2 border-blue-400/70 pl-5">
             <p className="text-sm font-semibold uppercase text-blue-200">Start with the source</p>
             <h2 className="mt-1 text-xl font-bold">Every result can be traced to a match.</h2>
             <p className="mt-2 leading-6 text-gray-300">
-              Match History shows full war tables, penalties, tracks, race scores, and the differential over time.
+              Match History shows full war tables, penalties, tracks, race scores, and the
+              differential over time.
             </p>
-            <Link to="/matches" className="mt-4 inline-block font-semibold text-blue-300 hover:text-blue-200">
+            <Link
+              to="/matches"
+              className="mt-4 inline-block font-semibold text-blue-300 hover:text-blue-200"
+            >
               Open Match History →
             </Link>
           </div>

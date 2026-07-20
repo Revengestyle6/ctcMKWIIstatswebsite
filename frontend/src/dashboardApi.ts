@@ -318,7 +318,10 @@ export interface LegacyTrackTeamRow {
   races: number;
 }
 
-export function fetchPlayerOverview(playerId: number, query: DashboardQuery): Promise<PlayerOverview> {
+export function fetchPlayerOverview(
+  playerId: number,
+  query: DashboardQuery
+): Promise<PlayerOverview> {
   return fetchJson(`/api/players/${playerId}/overview`, query);
 }
 
@@ -326,7 +329,10 @@ export function fetchTeamOverview(teamId: number, query: DashboardQuery): Promis
   return fetchJson(`/api/teams/${teamId}/overview`, query);
 }
 
-export function fetchPlayerPerformance(playerId: number, query: DashboardQuery): Promise<PlayerPerformance> {
+export function fetchPlayerPerformance(
+  playerId: number,
+  query: DashboardQuery
+): Promise<PlayerPerformance> {
   return fetchJson(`/api/players/${playerId}/performance`, query);
 }
 

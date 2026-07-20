@@ -1,94 +1,40 @@
 # Deployment
 
-## Render
+## Accepted Target
 
-`render.yaml` defines a Python web service:
+- Firebase Hosting: React build, CDN, TLS, and `/api/**` rewrite.
+- Cloud Run: Flask API with request-based billing and zero minimum instances.
+- Cloud SQL: PostgreSQL 18 on the initial cost-first `db-f1-micro` configuration.
+- Cloud Storage: immutable archived JSON and database exports.
+- Firebase Authentication: Google sign-in for administrator actions.
+- GitHub Actions: Workload Identity Federation for deployment credentials.
 
-```yaml
-services:
-  - type: web
-    name: ctc-mkwii-api
-    env: python
-    buildCommand: cd backend && pip install -r requirements.txt
-    startCommand: cd backend && gunicorn app:app
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11
+See `docs/adr/` for accepted decisions and constraints.
+
+## Transitional Files
+
+`render.yaml`, `railway.json`, `.github/workflows/deploy.yml`, `Dockerfile`, and
+`start.sh` remain temporarily because they describe the currently reproducible or
+rollback deployment paths. They must not be removed until Cloud Run staging and its
+replacement workflow work. They are not the production target.
+
+## Current Docker Artifact
+
+The current image contains only the Python API, installs dependencies in a cacheable
+layer, rebuilds the regression SQLite database, and runs Gunicorn as the unprivileged
+`app` user. Removing unused Node/frontend runtime content reduced the local image
+from 269.2 MB in Phase 1 to 70.7 MB in Phase 2. The final Cloud Run image will not
+build production data into the image.
+
+Build the current regression artifact from the repository root:
+
+```bash
+docker build -t ctc-stats:phase2 .
 ```
-
-This deploys the backend API only. The frontend fallback API URL points at:
-
-```text
-https://ctcmkwiistatswebsite.onrender.com
-```
-
-## Railway
-
-`railway.json` says Railway should build with the Dockerfile:
-
-```json
-{
-  "build": {
-    "builder": "dockerfile"
-  }
-}
-```
-
-The Dockerfile builds the frontend and then runs the backend in a Python runtime image.
-
-## Docker
-
-`Dockerfile`:
-
-1. Uses `node:22` to install frontend dependencies and run `npm run build`.
-2. Uses `python:3.11-slim` for runtime.
-3. Installs Node.js in the runtime image.
-4. Copies `backend` and installs Python requirements.
-5. Copies frontend build output from `/app/frontend/build` to `/app/frontend/build`.
-6. Starts `/app/start.sh`.
-
-Important: the Flask app currently does not serve the frontend build. As written, the Docker image builds frontend assets but `backend/app.py` only defines API routes. Unless another service serves `/app/frontend/build`, the container is effectively an API service with unused built frontend files.
-
-## GitHub Pages
-
-`.github/workflows/deploy.yml`:
-
-1. Runs on pushes to `main`.
-2. Installs Node 18.
-3. Runs `cd frontend && npm install`.
-4. Runs `cd frontend && npm run build`.
-5. Publishes `./frontend/build` to GitHub Pages.
-
-This deploys frontend static assets only. Since no `VITE_API_URL` is set in this workflow, the built frontend uses the hardcoded Render API fallback.
-
-The workflow uses `${{ secrets.GITHUB_TOKEN }}`, which is automatically provided by GitHub Actions. It is not a creator-owned secret you need to recover.
 
 ## Local Development
 
-Backend:
+Use the root `README.md`. Flask listens on port 5000 and Vite on port 3000. The Vite
+proxy forwards `/api` to Flask.
 
-```sh
-cd backend
-pip install -r requirements.txt
-python app.py
-```
-
-Frontend:
-
-```sh
-cd frontend
-npm install
-npm run dev
-```
-
-By default, the frontend code will still call the Render backend unless `VITE_API_URL` is set or the code is changed to use relative `/api` URLs.
-
-## Ports
-
-- Flask debug default: `5000`
-- Vite dev server: `3000`
-- Docker/hosted Gunicorn: `${PORT:-5000}`
-- Dockerfile exposes `8080`, but `start.sh` defaults to `5000` if `PORT` is not set.
-
-That `EXPOSE 8080` vs default `5000` mismatch is worth cleaning up.
-
+No cloud resources are provisioned during repository cleanup.

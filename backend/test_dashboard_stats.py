@@ -2,11 +2,8 @@ import unittest
 from contextlib import nullcontext
 from unittest.mock import patch
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-import dashboard_stats as dashboard_module
 import app as app_module
+import dashboard_stats as dashboard_module
 import stats_db
 from analytics_eligibility import analytics_excluded_race_ids
 from dashboard_stats import (
@@ -14,10 +11,10 @@ from dashboard_stats import (
     get_player_overview,
     get_player_performance,
     get_player_tracks,
-    get_track_player_rankings,
     get_team_overview,
     get_team_roster,
     get_team_tracks,
+    get_track_player_rankings,
 )
 from database import Base
 from import_json_to_db import backfill_inferred_roles
@@ -40,6 +37,8 @@ from models import (
     TeamSeasonEntry,
     Track,
 )
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 
 class DashboardRoleContractTests(unittest.TestCase):
@@ -98,11 +97,15 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.player_id = players[0].player_id
         self.tied_runner_ids = [players[1].player_id, players[2].player_id]
         self.players = players
-        self.session.add_all([
-            PlayerFriendCode(player_id=self.player_id, friend_code="1111-2222-3333"),
-            PlayerFriendCode(player_id=self.player_id, friend_code="4444-5555-6666"),
-            PlayerAlias(player_id=self.player_id, alias_type="mii_name", alias_value="a Switch"),
-        ])
+        self.session.add_all(
+            [
+                PlayerFriendCode(player_id=self.player_id, friend_code="1111-2222-3333"),
+                PlayerFriendCode(player_id=self.player_id, friend_code="4444-5555-6666"),
+                PlayerAlias(
+                    player_id=self.player_id, alias_type="mii_name", alias_value="a Switch"
+                ),
+            ]
+        )
 
         track = Track(canonical_name="Test Track")
         self.session.add(track)
@@ -110,28 +113,60 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.track = track
         # Selected-player rows exercise explicit, inferred, invalid, and unknown cases.
         match_specs = [
-            ("s1", 1, [15, 12, 10, 8], ["runner", "runner", "unknown", "runner"], [1, 3, 5, 4], 40, 5, 35, 30),
-            ("s2", 2, [0, 1, 4, 2], ["bagger", "bagger", "unknown", "bagger"], [10, 9, 9, 10], 22, 0, 22, 40),
-            ("s2", 3, [6, 32, 99, 9], ["runner", "runner", "bagger", "unknown"], [3, 5, 10, None], 45, 2, 43, 40),
+            (
+                "s1",
+                1,
+                [15, 12, 10, 8],
+                ["runner", "runner", "unknown", "runner"],
+                [1, 3, 5, 4],
+                40,
+                5,
+                35,
+                30,
+            ),
+            (
+                "s2",
+                2,
+                [0, 1, 4, 2],
+                ["bagger", "bagger", "unknown", "bagger"],
+                [10, 9, 9, 10],
+                22,
+                0,
+                22,
+                40,
+            ),
+            (
+                "s2",
+                3,
+                [6, 32, 99, 9],
+                ["runner", "runner", "bagger", "unknown"],
+                [3, 5, 10, None],
+                45,
+                2,
+                43,
+                40,
+            ),
         ]
         for spec in match_specs:
             self._add_match(spec, seasons, divisions, entries, players, track)
 
-        self.session.add_all([
-            TeamLogo(
-                team_id=alpha.team_id,
-                asset_path="images/team-logos/1/default.webp",
-                alt_text="Alpha logo",
-                priority=1,
-            ),
-            TeamLogo(
-                team_id=alpha.team_id,
-                season_id=seasons[1].season_id,
-                asset_path="images/team-logos/1/season-2.webp",
-                alt_text="Alpha Season 2 logo",
-                priority=10,
-            ),
-        ])
+        self.session.add_all(
+            [
+                TeamLogo(
+                    team_id=alpha.team_id,
+                    asset_path="images/team-logos/1/default.webp",
+                    alt_text="Alpha logo",
+                    priority=1,
+                ),
+                TeamLogo(
+                    team_id=alpha.team_id,
+                    season_id=seasons[1].season_id,
+                    asset_path="images/team-logos/1/season-2.webp",
+                    alt_text="Alpha Season 2 logo",
+                    priority=10,
+                ),
+            ]
+        )
         self.session.commit()
 
     def _add_match(self, spec, seasons, divisions, entries, players, track):
@@ -179,10 +214,14 @@ class DashboardRoleContractTests(unittest.TestCase):
         for index, player in enumerate(players):
             team_index = 0 if index < 5 else 1
             entry = entries[(code, "a" if team_index == 0 else "b")]
-            player_entry = self.session.query(PlayerSeasonEntry).filter_by(
-                player_id=player.player_id,
-                team_season_entry_id=entry.team_season_entry_id,
-            ).one_or_none()
+            player_entry = (
+                self.session.query(PlayerSeasonEntry)
+                .filter_by(
+                    player_id=player.player_id,
+                    team_season_entry_id=entry.team_season_entry_id,
+                )
+                .one_or_none()
+            )
             if player_entry is None:
                 player_entry = PlayerSeasonEntry(
                     player_id=player.player_id,
@@ -240,34 +279,42 @@ class DashboardRoleContractTests(unittest.TestCase):
                     role = "bagger"
                     score = opponent_bagger_scores[race_index]
                     position = 10
-                self.session.add(RacePlayerResult(
-                    race_id=race.race_id,
-                    match_player_id=match_players[index].match_player_id,
-                    player_id=player.player_id,
-                    match_team_id=match_teams[team_index].match_team_id,
-                    team_season_entry_id=entries[(code, "a" if team_index == 0 else "b")].team_season_entry_id,
-                    score=score,
-                    position=position,
-                    role=role,
-                    role_source=role_source,
-                ))
+                self.session.add(
+                    RacePlayerResult(
+                        race_id=race.race_id,
+                        match_player_id=match_players[index].match_player_id,
+                        player_id=player.player_id,
+                        match_team_id=match_teams[team_index].match_team_id,
+                        team_season_entry_id=entries[
+                            (code, "a" if team_index == 0 else "b")
+                        ].team_season_entry_id,
+                        score=score,
+                        position=position,
+                        role=role,
+                        role_source=role_source,
+                    )
+                )
             if code == "s1" and race_index == 0:
-                self.session.add(RaceTeamResult(
-                    race_id=race.race_id,
-                    match_team_id=match_teams[0].match_team_id,
-                    score=3,
-                    result_type="missing_player",
-                    reason="short_roster",
-                ))
+                self.session.add(
+                    RaceTeamResult(
+                        race_id=race.race_id,
+                        match_team_id=match_teams[0].match_team_id,
+                        score=3,
+                        result_type="missing_player",
+                        reason="short_roster",
+                    )
+                )
 
     def test_reviewed_legacy_block_is_excluded_from_analytics_but_kept_in_raw_detail(self):
         match = self.session.query(Match).filter_by(week_number=3).one()
-        exclusion = ({
-            "source_path": "JSON/ctc/s2/d1/w3.json",
-            "match_index": 0,
-            "blocks": frozenset({1}),
-            "reason": "Test collapsed aggregate block.",
-        },)
+        exclusion = (
+            {
+                "source_path": "JSON/ctc/s2/d1/w3.json",
+                "match_index": 0,
+                "blocks": frozenset({1}),
+                "reason": "Test collapsed aggregate block.",
+            },
+        )
 
         with patch("analytics_eligibility._load_default_exclusions", return_value=exclusion):
             excluded_ids = analytics_excluded_race_ids(self.session)
@@ -295,18 +342,19 @@ class DashboardRoleContractTests(unittest.TestCase):
 
         raw_detail = stats_db.get_match_detail(match.match_id, session=self.session)
         match_race_ids = {
-            race_id for (race_id,) in self.session.query(Race.race_id).filter_by(match_id=match.match_id)
+            race_id
+            for (race_id,) in self.session.query(Race.race_id).filter_by(match_id=match.match_id)
         }
 
         self.assertEqual(excluded_ids, match_race_ids)
         self.assertEqual(overview["metrics"]["races"], 0)
         self.assertEqual(team_tracks["tracks"][0]["races"], 4)
         self.assertEqual(legacy_race_count, 4)
-        self.assertTrue(any(
-            32 in player["scores"]
-            for team in raw_detail["teams"]
-            for player in team["players"]
-        ))
+        self.assertTrue(
+            any(
+                32 in player["scores"] for team in raw_detail["teams"] for player in team["players"]
+            )
+        )
 
     def _selected_result(self, week, race_number):
         return (
@@ -410,17 +458,19 @@ class DashboardRoleContractTests(unittest.TestCase):
             for index, player in enumerate(self.players[1:3]):
                 if index == 0 and race_number == 202:
                     continue
-                self.session.add(RacePlayerResult(
-                    race_id=race.race_id,
-                    match_player_id=match_players[index].match_player_id,
-                    player_id=player.player_id,
-                    match_team_id=match_team.match_team_id,
-                    team_season_entry_id=alpha_entry.team_season_entry_id,
-                    score=1 if race_number == 1 else 0,
-                    position=10,
-                    role="bagger",
-                    role_source="manual",
-                ))
+                self.session.add(
+                    RacePlayerResult(
+                        race_id=race.race_id,
+                        match_player_id=match_players[index].match_player_id,
+                        player_id=player.player_id,
+                        match_team_id=match_team.match_team_id,
+                        team_season_entry_id=alpha_entry.team_season_entry_id,
+                        score=1 if race_number == 1 else 0,
+                        position=10,
+                        role="bagger",
+                        role_source="manual",
+                    )
+                )
         self.session.flush()
 
     def test_overview_strictly_separates_roles_and_keeps_match_context(self):
@@ -493,12 +543,8 @@ class DashboardRoleContractTests(unittest.TestCase):
         manual_zero.role_source = "manual"
         self.session.flush()
 
-        before_runner = get_player_overview(
-            self.player_id, role="runner", session=self.session
-        )
-        before_bagger = get_player_overview(
-            self.player_id, role="bagger", session=self.session
-        )
+        before_runner = get_player_overview(self.player_id, role="runner", session=self.session)
+        before_bagger = get_player_overview(self.player_id, role="bagger", session=self.session)
         self.assertEqual(before_runner["metrics"]["races"], 7)
         self.assertEqual(before_bagger["metrics"]["races"], 4)
 
@@ -530,12 +576,8 @@ class DashboardRoleContractTests(unittest.TestCase):
         )
         self.assertEqual((manual_zero.role, manual_zero.role_source), ("runner", "manual"))
 
-        after_runner = get_player_overview(
-            self.player_id, role="runner", session=self.session
-        )
-        after_bagger = get_player_overview(
-            self.player_id, role="bagger", session=self.session
-        )
+        after_runner = get_player_overview(self.player_id, role="runner", session=self.session)
+        after_bagger = get_player_overview(self.player_id, role="bagger", session=self.session)
         self.assertEqual(after_runner["metrics"]["races"], 6)
         self.assertEqual(after_bagger["metrics"]["races"], 5)
         self.assertEqual(after_bagger["metrics"]["zero_points"], 1)
@@ -544,10 +586,20 @@ class DashboardRoleContractTests(unittest.TestCase):
         runner = get_player_performance(self.player_id, role=" RUNNER ", session=self.session)
         bagger = get_player_performance(self.player_id, role="bagger", session=self.session)
 
-        self.assertEqual(set(runner), {
-            "player_id", "role", "scope", "metrics", "role_coverage",
-            "score_distribution", "placement_distribution", "by_race_number", "by_gp_number",
-        })
+        self.assertEqual(
+            set(runner),
+            {
+                "player_id",
+                "role",
+                "scope",
+                "metrics",
+                "role_coverage",
+                "score_distribution",
+                "placement_distribution",
+                "by_race_number",
+                "by_gp_number",
+            },
+        )
         self.assertEqual(runner["metrics"]["total_points"], 51)
         self.assertEqual(bagger["metrics"]["total_points"], 7)
         self.assertEqual(bagger["metrics"]["bag_points"], 3)
@@ -570,9 +622,12 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.assertNotIn("bag_point_rate", runner["tracks"][0])
         self.assertEqual(bagger["tracks"][0]["total_points"], 7)
         self.assertEqual(bagger["tracks"][0]["bag_points"], 3)
-        self.assertEqual(get_player_tracks(
-            self.player_id, role="bagger", min_races=5, session=self.session
-        )["tracks"], [])
+        self.assertEqual(
+            get_player_tracks(self.player_id, role="bagger", min_races=5, session=self.session)[
+                "tracks"
+            ],
+            [],
+        )
 
     def test_track_player_rankings_keep_roles_separate_and_preserve_bagger_points(self):
         runner = get_track_player_rankings(
@@ -614,35 +669,37 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.assertNotIn(self.player_id, [row["player_id"] for row in thresholded["players"]])
 
     def test_track_rankings_and_roster_use_bulk_display_name_fallbacks(self):
-        self.session.add_all([
-            PlayerAlias(
-                player_id=self.player_id,
-                alias_type="lounge_name",
-                alias_value="Older Lounge",
-                last_seen_match_id=1,
-            ),
-            PlayerAlias(
-                player_id=self.player_id,
-                alias_type="lounge_name",
-                alias_value="Recent Lounge",
-                last_seen_match_id=3,
-            ),
-            PlayerAlias(
-                player_id=self.players[1].player_id,
-                alias_type="table_name",
-                alias_value="Ignored Table",
-            ),
-            PlayerAlias(
-                player_id=self.players[2].player_id,
-                alias_type="table_name",
-                alias_value="Table Fallback",
-            ),
-            PlayerAlias(
-                player_id=self.players[3].player_id,
-                alias_type="mii_name",
-                alias_value="Mii Fallback",
-            ),
-        ])
+        self.session.add_all(
+            [
+                PlayerAlias(
+                    player_id=self.player_id,
+                    alias_type="lounge_name",
+                    alias_value="Older Lounge",
+                    last_seen_match_id=1,
+                ),
+                PlayerAlias(
+                    player_id=self.player_id,
+                    alias_type="lounge_name",
+                    alias_value="Recent Lounge",
+                    last_seen_match_id=3,
+                ),
+                PlayerAlias(
+                    player_id=self.players[1].player_id,
+                    alias_type="table_name",
+                    alias_value="Ignored Table",
+                ),
+                PlayerAlias(
+                    player_id=self.players[2].player_id,
+                    alias_type="table_name",
+                    alias_value="Table Fallback",
+                ),
+                PlayerAlias(
+                    player_id=self.players[3].player_id,
+                    alias_type="mii_name",
+                    alias_value="Mii Fallback",
+                ),
+            ]
+        )
         self.players[2].canonical_lounge_name = None
         self.players[3].canonical_lounge_name = None
         self.session.flush()
@@ -676,20 +733,30 @@ class DashboardRoleContractTests(unittest.TestCase):
             self.assertEqual(roster_names[player_id], name)
 
     def test_top_tracks_route_integrates_flat_schema_aliases_and_role_math(self):
-        self.session.add(PlayerAlias(
-            player_id=self.player_id,
-            alias_type="lounge_name",
-            alias_value="Route Alias",
-            last_seen_match_id=3,
-        ))
+        self.session.add(
+            PlayerAlias(
+                player_id=self.player_id,
+                alias_type="lounge_name",
+                alias_value="Route Alias",
+                last_seen_match_id=3,
+            )
+        )
         self.session.flush()
         app_module.app.config.update(TESTING=True)
         app_module.cache.clear()
         client = app_module.app.test_client()
         required_keys = {
-            "player_id", "name", "role", "races", "scored_races",
-            "points_per_race", "twelve_race_pace", "bag_point_rate",
-            "zero_point_rate", "average_placement", "total_points",
+            "player_id",
+            "name",
+            "role",
+            "races",
+            "scored_races",
+            "points_per_race",
+            "twelve_race_pace",
+            "bag_point_rate",
+            "zero_point_rate",
+            "average_placement",
+            "total_points",
             "excluded_score_rows",
         }
 
@@ -703,8 +770,12 @@ class DashboardRoleContractTests(unittest.TestCase):
 
         self.assertEqual(runner_response.status_code, 200)
         self.assertEqual(bagger_response.status_code, 200)
-        runner = next(row for row in runner_response.get_json() if row["player_id"] == self.player_id)
-        bagger = next(row for row in bagger_response.get_json() if row["player_id"] == self.player_id)
+        runner = next(
+            row for row in runner_response.get_json() if row["player_id"] == self.player_id
+        )
+        bagger = next(
+            row for row in bagger_response.get_json() if row["player_id"] == self.player_id
+        )
         self.assertEqual(set(runner), required_keys | {"role_coverage"})
         self.assertEqual(set(bagger), required_keys | {"role_coverage"})
         self.assertEqual(runner["name"], "Route Alias")
@@ -742,10 +813,20 @@ class DashboardRoleContractTests(unittest.TestCase):
 
     def test_rankings_classify_each_player_and_use_selected_role_eligibility(self):
         runner = get_player_overview(
-            self.player_id, season="s2", division="d1", role="runner", min_races=2, session=self.session
+            self.player_id,
+            season="s2",
+            division="d1",
+            role="runner",
+            min_races=2,
+            session=self.session,
         )
         bagger = get_player_overview(
-            self.player_id, season="s2", division="d1", role="bagger", min_races=4, session=self.session
+            self.player_id,
+            season="s2",
+            division="d1",
+            role="bagger",
+            min_races=4,
+            session=self.session,
         )
         self.assertFalse(runner["ranking"]["eligible"])
         self.assertTrue(bagger["ranking"]["eligible"])
@@ -769,12 +850,24 @@ class DashboardRoleContractTests(unittest.TestCase):
 
     def test_team_roster_uses_selected_role_for_metrics_threshold_and_sorting(self):
         runner = get_team_roster(
-            self.alpha_id, season="s2", division="d1", role="runner", min_races=1, session=self.session
+            self.alpha_id,
+            season="s2",
+            division="d1",
+            role="runner",
+            min_races=1,
+            session=self.session,
         )
         bagger = get_team_roster(
-            self.alpha_id, season="s2", division="d1", role="bagger", min_races=4, session=self.session
+            self.alpha_id,
+            season="s2",
+            division="d1",
+            role="bagger",
+            min_races=4,
+            session=self.session,
         )
-        selected_runner = next(row for row in runner["players"] if row["player_id"] == self.player_id)
+        selected_runner = next(
+            row for row in runner["players"] if row["player_id"] == self.player_id
+        )
         self.assertEqual(selected_runner["metrics"]["total_points"], 6)
         self.assertEqual(selected_runner["metrics"]["scored_races"], 1)
         thresholded_runner = get_team_roster(
@@ -830,24 +923,16 @@ class DashboardRoleContractTests(unittest.TestCase):
         empty.role_source = "manual"
         self.session.flush()
 
-        performance = get_player_performance(
-            self.player_id, role="runner", session=self.session
-        )
+        performance = get_player_performance(self.player_id, role="runner", session=self.session)
         self.assertEqual(performance["metrics"]["races"], 7)
         self.assertEqual(performance["metrics"]["scored_races"], 5)
         self.assertEqual(performance["role_coverage"]["explicit_runner"], 6)
-        overview = get_player_overview(
-            self.player_id, role="runner", session=self.session
-        )
+        overview = get_player_overview(self.player_id, role="runner", session=self.session)
         self.assertEqual(overview["recent_matches"][0]["role_races"], 3)
-        tracks = get_player_tracks(
-            self.player_id, role="runner", min_races=5, session=self.session
-        )
+        tracks = get_player_tracks(self.player_id, role="runner", min_races=5, session=self.session)
         self.assertEqual(tracks["tracks"][0]["races"], 7)
         self.assertEqual(tracks["tracks"][0]["scored_races"], 5)
-        roster = get_team_roster(
-            self.alpha_id, role="runner", min_races=1, session=self.session
-        )
+        roster = get_team_roster(self.alpha_id, role="runner", min_races=1, session=self.session)
         selected = next(row for row in roster["players"] if row["player_id"] == self.player_id)
         self.assertEqual(selected["metrics"]["races"], 7)
         self.assertEqual(selected["last_appearance"]["week"], 3)
@@ -855,9 +940,9 @@ class DashboardRoleContractTests(unittest.TestCase):
         empty.role = "unknown"
         empty.role_source = "unknown"
         self.session.flush()
-        unknown = get_player_performance(
-            self.player_id, role="runner", session=self.session
-        )["role_coverage"]
+        unknown = get_player_performance(self.player_id, role="runner", session=self.session)[
+            "role_coverage"
+        ]
         self.assertEqual(unknown["unknown"], 1)
         self.assertEqual(unknown["total"], 12)
 
@@ -866,9 +951,7 @@ class DashboardRoleContractTests(unittest.TestCase):
         valid.score = 99
         self.session.flush()
 
-        overview = get_player_overview(
-            self.player_id, role="runner", session=self.session
-        )
+        overview = get_player_overview(self.player_id, role="runner", session=self.session)
         recent = overview["recent_matches"][0]
         self.assertIsNone(recent["player_score"])
         self.assertEqual(recent["role_races"], 2)
@@ -900,9 +983,7 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.assertTrue(filtered["eligible"])
 
     def test_roster_rejects_self_opponent_but_allows_empty_existing_opponent(self):
-        with self.assertRaisesRegex(
-            DashboardError, "A team cannot be its own opponent filter"
-        ):
+        with self.assertRaisesRegex(DashboardError, "A team cannot be its own opponent filter"):
             get_team_roster(
                 self.alpha_id,
                 opponent_team_id=self.alpha_id,
@@ -918,13 +999,16 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.assertEqual(empty["role_coverage"]["total"], 0)
 
     def test_roster_reports_aggregate_coverage_and_bulk_counterparts(self):
-        with patch(
-            "dashboard_stats.bagger_counterpart_summary",
-            side_effect=AssertionError("roster must aggregate counterparts in bulk"),
-        ), patch(
-            "dashboard_stats._bulk_bagger_counterpart_summaries",
-            wraps=dashboard_module._bulk_bagger_counterpart_summaries,
-        ) as bulk_counterparts:
+        with (
+            patch(
+                "dashboard_stats.bagger_counterpart_summary",
+                side_effect=AssertionError("roster must aggregate counterparts in bulk"),
+            ),
+            patch(
+                "team_dashboard_stats._bulk_bagger_counterpart_summaries",
+                wraps=dashboard_module._bulk_bagger_counterpart_summaries,
+            ) as bulk_counterparts,
+        ):
             roster = get_team_roster(
                 self.alpha_id,
                 season="s2",
@@ -1000,8 +1084,7 @@ class DashboardRoleContractTests(unittest.TestCase):
         )
 
         extra = (
-            s3_results
-            .filter(RacePlayerResult.player_id == self.tied_runner_ids[1])
+            s3_results.filter(RacePlayerResult.player_id == self.tied_runner_ids[1])
             .order_by(RacePlayerResult.race_player_result_id.desc())
             .first()
         )

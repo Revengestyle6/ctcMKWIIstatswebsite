@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // List of music tracks (add your music files to public/music/)
 const musicTracks = [
@@ -49,7 +49,7 @@ export default function MusicPlayer() {
         }
       }
     }
-  }, [currentTrack, isPlaying]);
+  }, [currentTrack, isPlaying, volume]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -95,12 +95,7 @@ export default function MusicPlayer() {
     <>
       {/* Hidden audio element - lazy load only when needed */}
       {currentTrack && (
-        <audio
-          ref={audioRef}
-          src={currentTrack}
-          onEnded={handleTrackEnd}
-          preload="metadata"
-        />
+        <audio ref={audioRef} src={currentTrack} onEnded={handleTrackEnd} preload="metadata" />
       )}
 
       {/* Start Music Prompt */}
@@ -109,6 +104,7 @@ export default function MusicPlayer() {
           <div className="bg-gray-900 border-2 border-purple-500 rounded-lg p-8 shadow-2xl max-w-sm mx-4">
             <div className="text-center">
               <svg
+                aria-hidden="true"
                 className="w-16 h-16 text-purple-500 mx-auto mb-4"
                 fill="currentColor"
                 viewBox="0 0 20 20"
@@ -123,12 +119,14 @@ export default function MusicPlayer() {
               <p className="text-gray-400 mb-6">Start background music?</p>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={startMusic}
                   className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-all"
                 >
                   Start Music
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowStartPrompt(false)}
                   className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-all"
                 >
@@ -142,7 +140,7 @@ export default function MusicPlayer() {
 
       {/* Floating music control button */}
       <div className="fixed bottom-6 right-6 z-50">
-        <div 
+        <div
           className="relative"
           onMouseEnter={() => setShowControls(true)}
           onMouseLeave={() => setShowControls(false)}
@@ -152,10 +150,11 @@ export default function MusicPlayer() {
             <div className="absolute bottom-full right-0 bg-black/90 backdrop-blur-sm rounded-lg p-4 shadow-xl border border-purple-500/50 w-48 mb-1">
               <div className="space-y-3">
                 <div>
-                  <label className="block text-white text-sm mb-2">
+                  <label htmlFor="music-volume" className="block text-white text-sm mb-2">
                     Volume
                   </label>
                   <input
+                    id="music-volume"
                     type="range"
                     min="0"
                     max="1"
@@ -171,16 +170,16 @@ export default function MusicPlayer() {
 
           {/* Main control button */}
           <button
+            type="button"
             onClick={togglePlay}
             className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
-              isPlaying
-                ? "bg-purple-600 hover:bg-purple-700"
-                : "bg-gray-700 hover:bg-gray-600"
+              isPlaying ? "bg-purple-600 hover:bg-purple-700" : "bg-gray-700 hover:bg-gray-600"
             }`}
             title={isPlaying ? "Pause Music" : "Play Music"}
           >
             {isPlaying ? (
               <svg
+                aria-hidden="true"
                 className="w-6 h-6 text-white"
                 fill="currentColor"
                 viewBox="0 0 20 20"
@@ -193,6 +192,7 @@ export default function MusicPlayer() {
               </svg>
             ) : (
               <svg
+                aria-hidden="true"
                 className="w-6 h-6 text-white ml-1"
                 fill="currentColor"
                 viewBox="0 0 20 20"

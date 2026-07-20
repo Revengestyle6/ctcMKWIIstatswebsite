@@ -9,9 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, or_, select, update
-
-from database import DEFAULT_DB_PATH, BASE_DIR, get_session_factory, init_database
+from database import BASE_DIR, DEFAULT_DB_PATH, get_session_factory, init_database
 from models import (
     Division,
     Match,
@@ -33,6 +31,7 @@ from models import (
     Track,
     TrackAlias,
 )
+from sqlalchemy import func, or_, select, update
 
 JSON_ROOT = BASE_DIR / "JSON"
 TEAM_ALIAS_PATH = BASE_DIR / "data" / "team_aliases.csv"
@@ -74,7 +73,9 @@ def preferred_json_files(root: Path) -> list[Path]:
     candidates = sorted(
         p for p in root.rglob("*") if p.suffix.lower() in {".json", ".txt"} and p.stat().st_size > 0
     )
-    stems_with_json = {p.with_suffix("").as_posix() for p in candidates if p.suffix.lower() == ".json"}
+    stems_with_json = {
+        p.with_suffix("").as_posix() for p in candidates if p.suffix.lower() == ".json"
+    }
     output = []
     for path in candidates:
         if path.suffix.lower() == ".txt" and path.with_suffix("").as_posix() in stems_with_json:
@@ -90,7 +91,9 @@ def is_missing_player_placeholder(player_data: dict[str, Any]) -> bool:
     )
 
 
-def load_team_aliases(path: Path = TEAM_ALIAS_PATH) -> dict[tuple[str, str, str, str, str], dict[str, str]]:
+def load_team_aliases(
+    path: Path = TEAM_ALIAS_PATH,
+) -> dict[tuple[str, str, str, str, str], dict[str, str]]:
     if not path.exists():
         return {}
 
@@ -146,11 +149,15 @@ def resolve_team_alias(
 ) -> dict[str, str]:
     exact_key = (league_code, season_code, division_code, match_label, raw_team_key)
     division_key = (league_code, season_code, division_code, "", raw_team_key)
-    return aliases.get(exact_key) or aliases.get(division_key) or {
-        "canonical_tag": raw_team_key,
-        "display_name": raw_team_key,
-        "note": "",
-    }
+    return (
+        aliases.get(exact_key)
+        or aliases.get(division_key)
+        or {
+            "canonical_tag": raw_team_key,
+            "display_name": raw_team_key,
+            "note": "",
+        }
+    )
 
 
 def get_or_create_season(session, league_code: str, season_code: str) -> Season:
@@ -176,7 +183,9 @@ def get_or_create_season(session, league_code: str, season_code: str) -> Season:
 
 def get_or_create_division(session, season: Season, division_code: str) -> Division:
     division = session.scalar(
-        select(Division).where(Division.season_id == season.season_id, Division.division_code == division_code)
+        select(Division).where(
+            Division.season_id == season.season_id, Division.division_code == division_code
+        )
     )
     if division:
         return division
@@ -272,20 +281,23 @@ def lounge_name_player_ids(session, lounge_name: str | None) -> set[int]:
 
     candidates: set[int] = set()
     for player_id, value in session.execute(
-        select(Player.player_id, Player.canonical_lounge_name)
-        .where(Player.canonical_lounge_name.is_not(None))
+        select(Player.player_id, Player.canonical_lounge_name).where(
+            Player.canonical_lounge_name.is_not(None)
+        )
     ):
         if normalize_lounge_name(value) == normalized_name:
             candidates.add(player_id)
     for player_id, value in session.execute(
-        select(PlayerAlias.player_id, PlayerAlias.alias_value)
-        .where(PlayerAlias.alias_type == "lounge_name")
+        select(PlayerAlias.player_id, PlayerAlias.alias_value).where(
+            PlayerAlias.alias_type == "lounge_name"
+        )
     ):
         if normalize_lounge_name(value) == normalized_name:
             candidates.add(player_id)
     for player_id, value in session.execute(
-        select(PlayerSeasonEntry.player_id, PlayerSeasonEntry.primary_lounge_name)
-        .where(PlayerSeasonEntry.primary_lounge_name.is_not(None))
+        select(PlayerSeasonEntry.player_id, PlayerSeasonEntry.primary_lounge_name).where(
+            PlayerSeasonEntry.primary_lounge_name.is_not(None)
+        )
     ):
         if normalize_lounge_name(value) == normalized_name:
             candidates.add(player_id)
@@ -304,7 +316,9 @@ def get_or_create_player(
         canonical_friend_code,
         {canonical_friend_code, friend_code},
     )
-    friend_code_row = session.scalar(select(PlayerFriendCode).where(PlayerFriendCode.friend_code == friend_code))
+    friend_code_row = session.scalar(
+        select(PlayerFriendCode).where(PlayerFriendCode.friend_code == friend_code)
+    )
     if friend_code_row:
         player = session.get(Player, friend_code_row.player_id)
         if player and not player.primary_friend_code:
@@ -315,7 +329,9 @@ def get_or_create_player(
     if linked_player_id is not None:
         player = session.get(Player, linked_player_id)
         if player is None:
-            raise ValueError(f"Approved player {linked_player_id} no longer exists for friend code {friend_code}.")
+            raise ValueError(
+                f"Approved player {linked_player_id} no longer exists for friend code {friend_code}."
+            )
         session.add(PlayerFriendCode(player_id=player.player_id, friend_code=friend_code))
         if not player.primary_friend_code:
             player.primary_friend_code = friend_code
@@ -338,7 +354,8 @@ def get_or_create_player(
         return player
 
     player = Player(
-        canonical_lounge_name=identities.canonical_names.get(canonical_friend_code) or display_player_name(player_data),
+        canonical_lounge_name=identities.canonical_names.get(canonical_friend_code)
+        or display_player_name(player_data),
         primary_friend_code=canonical_friend_code,
     )
     session.add(player)
@@ -420,7 +437,9 @@ def get_or_create_track(session, track_name: str) -> Track:
         session.flush()
 
     alias = session.scalar(
-        select(TrackAlias).where(TrackAlias.track_id == track.track_id, TrackAlias.alias_value == track_name)
+        select(TrackAlias).where(
+            TrackAlias.track_id == track.track_id, TrackAlias.alias_value == track_name
+        )
     )
     if not alias:
         session.add(TrackAlias(track_id=track.track_id, alias_value=track_name))
@@ -442,9 +461,7 @@ def infer_role(position: int | None) -> tuple[str, str]:
 
 
 def resolve_role(explicit_role: Any, position: int | None) -> tuple[str, str]:
-    normalized_role = (
-        explicit_role.strip().lower() if isinstance(explicit_role, str) else None
-    )
+    normalized_role = explicit_role.strip().lower() if isinstance(explicit_role, str) else None
     if normalized_role in {"runner", "bagger"}:
         return normalized_role, "manual"
     return infer_role(position)
@@ -493,7 +510,9 @@ def normalize_match_objects(data: Any) -> tuple[str, list[dict[str, Any]]]:
     if isinstance(data, dict) and "teams" in data and "tracks" in data:
         return "single_match", [data]
     if isinstance(data, list):
-        matches = [item for item in data if isinstance(item, dict) and "teams" in item and "tracks" in item]
+        matches = [
+            item for item in data if isinstance(item, dict) and "teams" in item and "tracks" in item
+        ]
         return "match_array", matches
     return "unknown", []
 
@@ -517,7 +536,9 @@ def import_match(
 ):
     teams = match_data.get("teams") or {}
     tracks = match_data.get("tracks") or []
-    match_label = match_label_override or (path.stem if match_index == 0 else f"{path.stem} #{match_index + 1}")
+    match_label = match_label_override or (
+        path.stem if match_index == 0 else f"{path.stem} #{match_index + 1}"
+    )
     review_notes = []
     if match_data.get("races_played") != len(tracks):
         review_notes.append(
@@ -526,7 +547,9 @@ def import_match(
 
     resolved_team_keys = []
     for raw_team_key in teams:
-        alias = resolve_team_alias(aliases, league_code, season_code, division_code, match_label, raw_team_key)
+        alias = resolve_team_alias(
+            aliases, league_code, season_code, division_code, match_label, raw_team_key
+        )
         resolved_team_keys.append(alias["canonical_tag"])
         if alias.get("note"):
             review_notes.append(f"Team alias applied: {raw_team_key} -> {alias['canonical_tag']}.")
@@ -540,32 +563,45 @@ def import_match(
         division_id=division.division_id,
         source_file_id=source_file.source_file_id,
         match_index_in_source=match_index,
-        week_number=week_number_override if week_number_override is not None else week_number_from_filename(path),
+        week_number=week_number_override
+        if week_number_override is not None
+        else week_number_from_filename(path),
         match_label=match_label,
         title_str=match_data.get("title_str"),
         format=match_data.get("format"),
         races_played=match_data.get("races_played") or len(tracks),
         raw_json=json.dumps(match_data, ensure_ascii=False, separators=(",", ":")),
-        import_status="needs_review" if len(set(resolved_team_keys)) != 2 or match_data.get("races_played") != len(tracks) else "imported",
+        import_status="needs_review"
+        if len(set(resolved_team_keys)) != 2 or match_data.get("races_played") != len(tracks)
+        else "imported",
         review_notes=" ".join(review_notes) if review_notes else None,
     )
     session.add(match)
     session.flush()
 
     for ref_order, ref_value in enumerate(match_data.get("rxx") or [], start=1):
-        session.add(MatchTableRef(match_id=match.match_id, ref_value=ref_value, ref_order=ref_order))
+        session.add(
+            MatchTableRef(match_id=match.match_id, ref_value=ref_value, ref_order=ref_order)
+        )
 
     race_by_number = {}
     for race_number, track_name in enumerate(tracks, start=1):
         track = get_or_create_track(session, track_name)
-        race = Race(match_id=match.match_id, race_number=race_number, track_id=track.track_id, track_name_raw=track_name)
+        race = Race(
+            match_id=match.match_id,
+            race_number=race_number,
+            track_id=track.track_id,
+            track_name_raw=track_name,
+        )
         session.add(race)
         session.flush()
         race_by_number[race_number] = race
 
     match_team_by_canonical_tag = {}
     for raw_team_key, team_data in teams.items():
-        alias = resolve_team_alias(aliases, league_code, season_code, division_code, match_label, raw_team_key)
+        alias = resolve_team_alias(
+            aliases, league_code, season_code, division_code, match_label, raw_team_key
+        )
         canonical_tag = alias["canonical_tag"]
         display_name = alias["display_name"] or canonical_tag
         team = get_or_create_team(session, canonical_tag, display_name)
@@ -578,7 +614,9 @@ def import_match(
                 match_team.raw_team_key = f"{match_team.raw_team_key}|{raw_team_key}"
             match_team.raw_total_score += team_data.get("total_score") or 0
             match_team.team_penalty_points += team_data.get("penalties") or 0
-            match_team.final_score = (match_team.final_score or 0) + (team_data.get("total_score") or 0)
+            match_team.final_score = (match_team.final_score or 0) + (
+                team_data.get("total_score") or 0
+            )
         else:
             match_team = MatchTeam(
                 match_id=match.match_id,
@@ -731,7 +769,8 @@ def import_match(
                         position=position,
                         role=role,
                         role_source=role_source,
-                        is_subbed_out_result=bool(player_data.get("subbed_out")) and (score is None or position is None),
+                        is_subbed_out_result=bool(player_data.get("subbed_out"))
+                        and (score is None or position is None),
                     )
                 )
 
@@ -873,8 +912,10 @@ def detect_new_entries(session, match_data: dict[str, Any]) -> list[dict[str, An
 
     aliases = load_team_aliases()
     label = str(match_data.get("match_label") or "Match preview").strip() or "Match preview"
-    for raw_team_key in (match_data.get("teams") or {}):
-        alias = resolve_team_alias(aliases, league_code, season_code, division_code, label, raw_team_key)
+    for raw_team_key in match_data.get("teams") or {}:
+        alias = resolve_team_alias(
+            aliases, league_code, season_code, division_code, label, raw_team_key
+        )
         canonical_tag = alias["canonical_tag"]
         team = session.scalar(select(Team).where(Team.canonical_tag == canonical_tag))
         team_entry = None
@@ -919,8 +960,9 @@ def detect_new_entries(session, match_data: dict[str, Any]) -> list[dict[str, An
                         {canonical_friend_code},
                     )
                     mapped_rows = session.scalars(
-                        select(PlayerFriendCode.player_id)
-                        .where(PlayerFriendCode.friend_code.in_(identity_codes))
+                        select(PlayerFriendCode.player_id).where(
+                            PlayerFriendCode.friend_code.in_(identity_codes)
+                        )
                     ).all()
                     if mapped_rows:
                         candidate_ids.update(mapped_rows)
@@ -960,7 +1002,10 @@ def detect_new_entries(session, match_data: dict[str, Any]) -> list[dict[str, An
                         kind="player_identity_conflict",
                         friend_code=friend_code,
                         lounge_name=lounge_name,
-                        candidates=[player_identity_summary(session, player_id) for player_id in sorted(candidate_ids)],
+                        candidates=[
+                            player_identity_summary(session, player_id)
+                            for player_id in sorted(candidate_ids)
+                        ],
                     )
                     entries[entry["key"]] = entry
                     continue
@@ -1009,7 +1054,9 @@ def import_file(
     file_hash = sha256_file(path)
     source_path = path.relative_to(BASE_DIR).as_posix()
 
-    existing_source = session.scalar(select(SourceFile).where(SourceFile.source_path == source_path))
+    existing_source = session.scalar(
+        select(SourceFile).where(SourceFile.source_path == source_path)
+    )
     existing_hash = session.scalar(select(SourceFile).where(SourceFile.file_sha256 == file_hash))
     if existing_source or existing_hash:
         return 0, 1
@@ -1077,7 +1124,10 @@ def print_summary(session, imported_matches: int, skipped_files: int):
 def rebuild_database(db_path: Path, json_root: Path):
     if db_path.exists():
         db_path.unlink()
-    for wal_sidecar in (db_path.with_suffix(db_path.suffix + "-wal"), db_path.with_suffix(db_path.suffix + "-shm")):
+    for wal_sidecar in (
+        db_path.with_suffix(db_path.suffix + "-wal"),
+        db_path.with_suffix(db_path.suffix + "-shm"),
+    ):
         if wal_sidecar.exists():
             wal_sidecar.unlink()
     init_database(db_path)
@@ -1103,11 +1153,17 @@ def import_json_tree(db_path: Path, json_root: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Import archived match JSON files into the analytics SQLite database.")
+    parser = argparse.ArgumentParser(
+        description="Import archived match JSON files into the analytics SQLite database."
+    )
     parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH, help="SQLite database path.")
-    parser.add_argument("--json-root", type=Path, default=JSON_ROOT, help="Root JSON archive directory.")
+    parser.add_argument(
+        "--json-root", type=Path, default=JSON_ROOT, help="Root JSON archive directory."
+    )
     operation = parser.add_mutually_exclusive_group()
-    operation.add_argument("--rebuild", action="store_true", help="Delete and rebuild the SQLite database first.")
+    operation.add_argument(
+        "--rebuild", action="store_true", help="Delete and rebuild the SQLite database first."
+    )
     operation.add_argument(
         "--repair-inferred-roles",
         action="store_true",

@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import type React from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchJson } from "../api";
+import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { LegacyStatHeader } from "./LegacyStatHeader";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
-import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
 type TrackStat = {
   track: string;
@@ -48,20 +49,12 @@ function normalizeTracks(raw: unknown): TrackStat[] {
       }
       return null;
     })
-    .filter((track): track is TrackStat => Boolean(track && track.track));
+    .filter((track): track is TrackStat => Boolean(track?.track));
 }
 
 export default function BestMatchups(): React.JSX.Element {
-  const {
-    seasons,
-    divisions,
-    season,
-    division,
-    loadingScope,
-    scopeError,
-    setSeason,
-    setDivision,
-  } = useSeasonDivision();
+  const { seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision } =
+    useSeasonDivision();
   const [teams, setTeams] = useState<string[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [selectedTeam2, setSelectedTeam2] = useState<string>("");
@@ -85,9 +78,7 @@ export default function BestMatchups(): React.JSX.Element {
       try {
         const data = await fetchJson<string[]>("/api/teams", { season, division });
         if (cancelled) return;
-        const sortedData = [...data].sort((a, b) =>
-          a.toLowerCase().localeCompare(b.toLowerCase())
-        );
+        const sortedData = [...data].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
         setTeams(sortedData);
         setSelectedTeam(sortedData[0] ?? "");
         setSelectedTeam2(sortedData[1] ?? "");
@@ -184,7 +175,9 @@ export default function BestMatchups(): React.JSX.Element {
         {combinedError && <p className="text-red-400 mb-4 text-center">{combinedError}</p>}
 
         <div className="mb-6 rounded-xl border border-white/15 bg-black/45 p-5 shadow-lg backdrop-blur-sm">
-          <p className="mb-4 text-sm text-gray-300">Choose two teams to compare their averages on tracks they have both played.</p>
+          <p className="mb-4 text-sm text-gray-300">
+            Choose two teams to compare their averages on tracks they have both played.
+          </p>
           <div className="flex flex-col flex-wrap gap-4 md:flex-row md:items-end">
             <SeasonDivisionSelector
               season={season}
@@ -197,7 +190,9 @@ export default function BestMatchups(): React.JSX.Element {
             />
 
             <div>
-              <label htmlFor="matchup-team-one" className="mb-1 block font-semibold">Team 1</label>
+              <label htmlFor="matchup-team-one" className="mb-1 block font-semibold">
+                Team 1
+              </label>
               <select
                 id="matchup-team-one"
                 className="min-w-40 rounded-md border border-gray-400 bg-white px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -215,7 +210,9 @@ export default function BestMatchups(): React.JSX.Element {
             </div>
 
             <div>
-              <label htmlFor="matchup-team-two" className="mb-1 block font-semibold">Team 2</label>
+              <label htmlFor="matchup-team-two" className="mb-1 block font-semibold">
+                Team 2
+              </label>
               <select
                 id="matchup-team-two"
                 className="min-w-40 rounded-md border border-gray-400 bg-white px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -233,7 +230,9 @@ export default function BestMatchups(): React.JSX.Element {
             </div>
 
             <div>
-              <label htmlFor="matchup-min-races" className="mb-1 block font-semibold">Min races</label>
+              <label htmlFor="matchup-min-races" className="mb-1 block font-semibold">
+                Min races
+              </label>
               <input
                 id="matchup-min-races"
                 type="number"
@@ -290,9 +289,7 @@ export default function BestMatchups(): React.JSX.Element {
                       <th className="px-4 py-3 text-right font-semibold text-white">
                         {selectedTeam2}
                       </th>
-                      <th className="px-4 py-3 text-right font-semibold text-white">
-                        Difference
-                      </th>
+                      <th className="px-4 py-3 text-right font-semibold text-white">Difference</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -301,23 +298,17 @@ export default function BestMatchups(): React.JSX.Element {
                         key={`${row.track}-${index}`}
                         className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}
                       >
-                        <td className="px-4 py-2 font-semibold text-blue-400">
-                          {index + 1}
-                        </td>
+                        <td className="px-4 py-2 font-semibold text-blue-400">{index + 1}</td>
                         <td className="px-4 py-2 text-white">{row.track}</td>
                         <td className="px-4 py-3 text-right text-white">
-                          {row.opponentAvg === null
-                            ? "-"
-                            : `${row.opponentAvg.toFixed(1)} pts`}
+                          {row.opponentAvg === null ? "-" : `${row.opponentAvg.toFixed(1)} pts`}
                         </td>
                         <td className="px-4 py-3 text-right text-white">
                           {row.teamAvg.toFixed(1)} pts
                         </td>
                         <td
                           className={`px-4 py-3 text-right font-semibold ${
-                            row.diff !== null && row.diff >= 0
-                              ? "text-green-300"
-                              : "text-red-300"
+                            row.diff !== null && row.diff >= 0 ? "text-green-300" : "text-red-300"
                           }`}
                         >
                           {row.diff === null ? "-" : row.diff.toFixed(1)}
