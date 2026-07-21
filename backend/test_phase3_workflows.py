@@ -1,20 +1,25 @@
+# ruff: noqa: E402
+
 import json
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from test_support import configure_test_environment
+
+configure_test_environment()
+
 import acceptance_service
 from admin_auth import AdminActor
 from archive_storage import LocalArchiveStorage
-from database import Base
 from import_json_to_db import detect_new_entries
 from match_upload import prepare_upload_document
 from models import AdminAuditLog, Match, ReviewSubmission, SourceFile
 from phase3_maintenance import repair_accepted_archives
 from review_queue import create_submission
-from sqlalchemy import create_engine, func, select
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import func, select
+from test_support import PostgreSQLTestDatabase
 
 SAMPLE_MATCH_PATH = (
     Path(__file__).resolve().parent
@@ -35,11 +40,9 @@ class Phase3WorkflowTests(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
         root = Path(self.temporary_directory.name)
-        self.engine = create_engine(f"sqlite:///{root / 'phase3.sqlite'}", future=True)
-        Base.metadata.create_all(self.engine)
-        self.SessionLocal = sessionmaker(
-            bind=self.engine, autoflush=False, expire_on_commit=False, future=True
-        )
+        self.database = PostgreSQLTestDatabase()
+        self.engine = self.database.engine
+        self.SessionLocal = self.database.SessionLocal
         self.storage = LocalArchiveStorage(root / "objects")
         self.match_data = json.loads(SAMPLE_MATCH_PATH.read_text(encoding="utf-8"))
         self.actor = AdminActor(1, "test-owner", "owner@example.com", "owner")
@@ -60,7 +63,7 @@ class Phase3WorkflowTests(unittest.TestCase):
             )
 
     def tearDown(self):
-        self.engine.dispose()
+        self.database.close()
         self.temporary_directory.cleanup()
 
     def _approved_keys(self):

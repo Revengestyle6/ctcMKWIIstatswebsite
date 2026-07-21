@@ -6,7 +6,7 @@
 frontend/               React 19, TypeScript, Vite, Tailwind, Playwright
 backend/                Flask API, SQLAlchemy analytics, JSON ingestion
 backend/JSON/           authoritative historical match archive
-backend/data/           reviewed registries; generated SQLite is ignored
+backend/data/           reviewed registries; retained SQLite recovery artifacts are ignored
 backend/scripts/        explicit maintenance and regression commands
 docs/adr/               accepted production architecture decisions
 docs/baselines/         Phase 0 API, database, identity, and UI evidence
@@ -32,8 +32,8 @@ split deployments can override the origin with `VITE_API_URL`.
 - Archived JSON is the immutable input and audit record.
 - Reviewed CSV/JSON registries define player identity, team normalization, and
   analytics exclusions. Health reviews are durable database records.
-- SQLite is generated local/test state.
-- PostgreSQL is the supported production operational database.
+- PostgreSQL is the sole supported operational database in every environment.
+- Retained SQLite files are recovery artifacts and are never opened by active code.
 - Git stores code, migrations, documentation, registries, and the historical JSON
   archive until durable object storage is implemented.
 

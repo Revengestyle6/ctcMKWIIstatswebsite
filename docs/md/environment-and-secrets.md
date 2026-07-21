@@ -4,8 +4,9 @@ No secret belongs in Git, a frontend bundle, or a committed environment file.
 
 | Variable | Consumer | Purpose |
 | --- | --- | --- |
-| `APP_ENV` | Backend | `local`, `test`, `staging`, or `production`; production-like environments require PostgreSQL |
-| `DATABASE_URL` | Backend | SQLAlchemy database URL; defaults to local SQLite |
+| `APP_ENV` | Backend | `local`, `test`, `staging`, or `production` |
+| `DATABASE_URL` | Backend | Required PostgreSQL connection URL |
+| `TEST_DATABASE_URL` | Tests | Optional PostgreSQL override; defaults only to the documented local Compose URL and never inherits `DATABASE_URL` |
 | `DB_POOL_SIZE` | Backend | PostgreSQL persistent connection count per process; defaults to 3 |
 | `DB_MAX_OVERFLOW` | Backend | Temporary PostgreSQL connections per process; defaults to 2 |
 | `DB_POOL_RECYCLE_SECONDS` | Backend | PostgreSQL connection recycle interval; defaults to 1,800 seconds |
@@ -36,8 +37,8 @@ No secret belongs in Git, a frontend bundle, or a committed environment file.
 
 `.env.example` contains non-secret local PostgreSQL defaults. The application does
 not depend on automatic `.env` loading, so export the values in the shell or use
-environment tooling that loads the file. Normal SQLite development requires no
-backend variable.
+environment tooling that loads the file. The backend fails fast when
+`DATABASE_URL` is absent or does not identify PostgreSQL.
 
 To force the frontend to the local API explicitly:
 

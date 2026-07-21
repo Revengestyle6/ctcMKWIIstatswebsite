@@ -37,10 +37,25 @@ export interface DatabaseHealthReport {
   generated_at: string;
   status: "healthy" | "warning" | "critical";
   database: {
-    path: string;
+    backend: string;
+    name: string | null;
+    version: string | null;
     size_bytes: number | null;
-    integrity: "ok" | "failed";
-    foreign_key_violations: number;
+    connection_status: "ok" | "failed";
+    schema_revision: string | null;
+    integrity: {
+      physical: {
+        status: "ok" | "failed" | "not_run";
+        method: string;
+      };
+      foreign_keys: {
+        status: "ok" | "failed" | "not_run";
+        constraints: number | null;
+        validated: number | null;
+        unvalidated: number | null;
+        violations: number | null;
+      };
+    };
     latest_import_at: string | null;
     latest_addition_at: string | null;
   };

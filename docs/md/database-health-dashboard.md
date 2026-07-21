@@ -3,7 +3,7 @@
 ## Purpose
 
 The Database Health dashboard provides one place to monitor the
-SQLite analytics database, its JSON source archive, recent committed additions,
+PostgreSQL analytics database, its JSON source archive, recent committed additions,
 and records that deserve manual review.
 
 The statistics checks are diagnostic. Similar names and alias collisions are
@@ -45,13 +45,22 @@ degrade the overall status.
 
 ### Database Integrity
 
-The backend runs SQLite's read-only diagnostics and reports:
+The card reports the engine, version, connection status,
+database name, schema revision, database size, latest import, and latest durable
+addition. Engine-specific checks are deliberately explicit:
 
-- `PRAGMA integrity_check`;
-- `PRAGMA foreign_key_check`;
-- database path and file size;
-- latest `source_files.imported_at`; and
-- latest `database_addition_logs.created_at`.
+- PostgreSQL obtains its real database size with
+  `pg_database_size(current_database())` and inspects every application-schema
+  foreign-key constraint in `pg_constraint`. Any unvalidated constraint is a
+  critical finding.
+- PostgreSQL physical table/index corruption scanning is shown as `Not Run`.
+  It is not falsely reported as healthy and is not executed during an interactive
+  dashboard refresh.
+
+After Cloud SQL deployment, scheduled maintenance will run `amcheck`/`pg_amcheck`
+with an appropriately privileged maintenance identity. The dashboard should show
+the last completed scan time and result rather than launch that potentially
+expensive operation from a web request.
 
 ### Record Counts
 
@@ -110,10 +119,10 @@ source archive.
 
 Implemented checks include:
 
-#### SQLite And Relations
+#### Database And Relations
 
-- failed SQLite integrity checks;
 - foreign-key violations; and
+- unvalidated PostgreSQL foreign-key constraints; and
 - database/archive synchronization problems.
 
 #### JSON Archive
@@ -172,10 +181,9 @@ Use the following workflow for each active finding:
 2. Decide whether the rule is a hard invariant or a review suggestion.
 3. For match/result findings, locate the match through `source_files` or its
    archived JSON filename and compare the raw table data with the imported row.
-4. Correct the durable source JSON or identity/alias configuration. Avoid
-   patching only SQLite because `import_json_to_db.py --rebuild` will discard
-   that edit.
-5. Rebuild or re-import, run the relevant tests, and refresh the dashboard. A
+4. Correct the durable source JSON or identity/alias configuration rather than
+   patching generated analytics rows directly.
+5. Re-import, run the relevant tests, and refresh the dashboard. A
    hard finding clears automatically when its source is corrected.
 6. If a judgment-based warning is confirmed harmless, dismiss it with a concise
    reason rather than changing the similarity threshold for every record.
@@ -206,8 +214,8 @@ The 30 invalid score rows trace to seven aggregate-bearing race slots:
 - `W3 Cy Mi2`, races 1, 5, and 9; and
 - `W9 vf Mi2`, race 9.
 
-This is present in the archived source JSON, not introduced by the SQLite
-health query. For example, `JSON/ctc/s1/d1_2/W8 6c O.json` stores GP totals such
+This is present in the archived source JSON, not introduced by the health
+query. For example, `JSON/ctc/s1/d1_2/W8 6c O.json` stores GP totals such
 as 34, 32, and 18 in the ninth entries of `race_scores`, followed by zero
 placeholders, while `race_positions` still contains individual placements.
 The importer faithfully copied those invalid per-race values.
@@ -222,7 +230,7 @@ Reviewed exclusions are stored in
 `backend/data/analytics_excluded_race_blocks.json`. The registry identifies a
 source path, match index, one-based four-race block numbers, and a reason. It is
 version-controlled and survives database rebuilds without altering the raw
-JSON or SQLite records.
+JSON or PostgreSQL records.
 
 The current registry excludes 26 races:
 
@@ -251,16 +259,16 @@ so future unrelated corruption cannot be silently excluded.
 
 ## Review Decisions And Dismissals
 
-Only judgment-based catalog checks are dismissible. SQLite corruption,
-foreign-key failures, archive mismatches, and impossible match/result values
+Only judgment-based catalog checks are dismissible. Foreign-key failures,
+archive mismatches, and impossible match/result values
 must be corrected at their source. This prevents a dismissal from hiding future
 data corruption.
 
-Review decisions are stored in
-`backend/data/database_health_reviews.json`, not in SQLite. The registry is:
+Historical review decisions are seeded from
+`backend/data/database_health_reviews.json`; active decisions are stored in PostgreSQL. They are:
 
 - version-controlled and shareable with collaborators;
-- preserved by `import_json_to_db.py --rebuild`;
+- preserved independently from archive re-imports;
 - keyed to a specific normalized pair or scoped collision; and
 - auditable through its reason, reviewer label, and timestamp.
 

@@ -1,24 +1,23 @@
 import os
 import unittest
-from pathlib import Path
 from unittest.mock import patch
 
 from database import app_environment, database_url, get_engine
 
 
 class DatabaseConfigurationTests(unittest.TestCase):
-    def test_local_environment_defaults_to_sqlite(self):
+    def test_database_url_is_required_in_every_environment(self):
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(app_environment(), "local")
-            self.assertTrue(database_url().startswith("sqlite:///"))
+            with self.assertRaisesRegex(RuntimeError, "PostgreSQL DATABASE_URL is required"):
+                database_url()
 
-    def test_explicit_sqlite_path_takes_priority(self):
-        with patch.dict(
-            os.environ,
-            {"APP_ENV": "test", "DATABASE_URL": "postgresql://ignored/example"},
-            clear=True,
-        ):
-            self.assertEqual(database_url(Path("temporary.sqlite")), "sqlite:///temporary.sqlite")
+    def test_sqlite_is_rejected_in_every_environment(self):
+        for environment in ("local", "test", "staging", "production"):
+            with self.subTest(environment=environment):
+                with patch.dict(os.environ, {"APP_ENV": environment}, clear=True):
+                    with self.assertRaisesRegex(RuntimeError, "other database engines are retired"):
+                        database_url("sqlite:///temporary.sqlite")
 
     def test_postgres_urls_use_psycopg_driver(self):
         with patch.dict(os.environ, {"APP_ENV": "local"}, clear=True):
@@ -30,13 +29,6 @@ class DatabaseConfigurationTests(unittest.TestCase):
                 database_url("postgres://user:password@localhost/database"),
                 "postgresql+psycopg://user:password@localhost/database",
             )
-
-    def test_production_environments_reject_sqlite(self):
-        for environment in ("staging", "production"):
-            with self.subTest(environment=environment):
-                with patch.dict(os.environ, {"APP_ENV": environment}, clear=True):
-                    with self.assertRaisesRegex(RuntimeError, "require a PostgreSQL"):
-                        database_url()
 
     def test_unknown_environment_is_rejected(self):
         with patch.dict(os.environ, {"APP_ENV": "prod"}, clear=True):

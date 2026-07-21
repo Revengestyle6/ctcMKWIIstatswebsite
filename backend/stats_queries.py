@@ -550,7 +550,11 @@ def list_matches(season=None, division=None, team=None):
                     TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id,
                 )
                 .where(MatchTeam.match_id.in_(match_ids))
-                .order_by(MatchTeam.match_id, MatchTeam.match_team_id)
+                .order_by(
+                    MatchTeam.match_id,
+                    desc(func.coalesce(MatchTeam.final_score, -1)),
+                    MatchTeam.match_team_id,
+                )
             ).all()
 
         teams_by_match = {match_id: [] for match_id in match_ids}
@@ -639,7 +643,10 @@ def get_match_detail(match_id, session=None):
             )
             .join(Team, Team.team_id == TeamSeasonEntry.team_id)
             .where(MatchTeam.match_id == match.match_id)
-            .order_by(MatchTeam.match_team_id)
+            .order_by(
+                desc(func.coalesce(MatchTeam.final_score, -1)),
+                MatchTeam.match_team_id,
+            )
         ).all()
         team_penalties = _team_penalties(session, match.match_id)
 

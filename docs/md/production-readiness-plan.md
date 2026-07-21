@@ -93,8 +93,8 @@ The production data model should be explicit:
 - **PostgreSQL:** Operational source for application reads and analytics.
 - **Git:** Application code, schema migrations, documentation, normalization
   registries, and optional seed/history data. Git is not the live upload target.
-- **SQLite:** Supported for lightweight local tasks and selected tests, but not as
-  the production database.
+- **Retained SQLite files:** Recovery artifacts only. Active application, test,
+  maintenance, CI, and deployment code does not open them.
 
 Cloud Run cannot safely hold SQLite or archived uploads because its writable
 filesystem is temporary and does not persist when an instance stops.
@@ -170,8 +170,8 @@ duplicate-tooling, and stale-artifact findings. Phase 2 separated application
 boundaries, added checks, and reduced the API image by 73.7%. Remaining intentional
 work is:
 
-- `railway.json`, `render.yaml`, and the GitHub Pages workflow remain only as
-  transitional/rollback deployment definitions until Cloud Run staging works.
+- The SQLite-rebuilding Render definition is archived; the GitHub Pages workflow
+  remains transitional until Cloud Run staging works.
 - The frontend now defaults to same-origin `/api` requests.
 - The JSON ingestion pipeline and editor UI are still substantial cohesive workflows;
   future changes should continue extracting independently testable behavior.

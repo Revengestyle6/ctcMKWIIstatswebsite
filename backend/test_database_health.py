@@ -1,13 +1,18 @@
+# ruff: noqa: E402
+
 import unittest
 from contextlib import nullcontext
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from test_support import configure_test_environment
+
+configure_test_environment()
+
 import admin_auth
 import app as app_module
 import routes.admin as admin_routes
-from database import Base
 from database_health import build_database_health
 from database_health_reviews import set_issue_review
 from models import (
@@ -24,18 +29,17 @@ from models import (
     TeamSeasonEntry,
     Track,
 )
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from test_support import PostgreSQLTestDatabase
 
 
 class DatabaseHealthTests(unittest.TestCase):
     def setUp(self):
-        engine = create_engine("sqlite:///:memory:", future=True)
-        Base.metadata.create_all(engine)
-        self.session = sessionmaker(bind=engine, future=True)()
+        self.database = PostgreSQLTestDatabase()
+        self.session = self.database.SessionLocal()
 
     def tearDown(self):
         self.session.close()
+        self.database.close()
 
     def test_report_counts_records_and_surfaces_duplicate_catalog_names(self):
         self.session.add_all(
@@ -50,8 +54,10 @@ class DatabaseHealthTests(unittest.TestCase):
 
         report = build_database_health(self.session, include_archive=False)
 
-        self.assertEqual(report["database"]["integrity"], "ok")
-        self.assertEqual(report["database"]["foreign_key_violations"], 0)
+        self.assertEqual(report["database"]["backend"], "postgresql")
+        self.assertEqual(report["database"]["connection_status"], "ok")
+        self.assertEqual(report["database"]["integrity"]["physical"]["status"], "not_run")
+        self.assertEqual(report["database"]["integrity"]["foreign_keys"]["unvalidated"], 0)
         self.assertEqual(report["counts"]["tracks"], 2)
         self.assertEqual(report["counts"]["players"], 2)
         self.assertEqual(report["status"], "warning")
@@ -65,6 +71,9 @@ class DatabaseHealthTests(unittest.TestCase):
         self.assertEqual(report["status"], "healthy")
         self.assertEqual(report["summary"]["critical"], 0)
         self.assertEqual(report["summary"]["warnings"], 0)
+        self.assertTrue(report["database"]["name"])
+        self.assertIsNotNone(report["database"]["version"])
+        self.assertIsNone(report["database"]["schema_revision"])
 
     def test_dismissed_catalog_warning_remains_visible_but_does_not_degrade_health(self):
         self.session.add_all(

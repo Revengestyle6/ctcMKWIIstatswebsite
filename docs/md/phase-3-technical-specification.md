@@ -12,7 +12,7 @@ The approved local implementation is documented in
 Phase 3 makes the application safe to deploy without changing the public analytics
 contract unnecessarily. It must:
 
-- run against PostgreSQL 18 while retaining SQLite for selected lightweight tests;
+- run against PostgreSQL 18 in development, tests, and production;
 - create and change schemas only through Alembic;
 - let anonymous users submit valid or warning-bearing JSON to a temporary review
   queue without writing analytics data;

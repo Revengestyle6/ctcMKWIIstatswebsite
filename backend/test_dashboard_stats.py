@@ -1,10 +1,17 @@
+# ruff: noqa: E402
+
 import unittest
 from contextlib import nullcontext
 from unittest.mock import patch
 
+from test_support import configure_test_environment
+
+configure_test_environment()
+
 import app as app_module
 import dashboard_stats as dashboard_module
 import stats_db
+import stats_queries
 from analytics_eligibility import analytics_excluded_race_ids
 from dashboard_stats import (
     DashboardError,
@@ -16,7 +23,6 @@ from dashboard_stats import (
     get_team_tracks,
     get_track_player_rankings,
 )
-from database import Base
 from import_json_to_db import backfill_inferred_roles
 from models import (
     Division,
@@ -37,19 +43,18 @@ from models import (
     TeamSeasonEntry,
     Track,
 )
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from test_support import PostgreSQLTestDatabase
 
 
 class DashboardRoleContractTests(unittest.TestCase):
     def setUp(self):
-        engine = create_engine("sqlite:///:memory:", future=True)
-        Base.metadata.create_all(engine)
-        self.session = sessionmaker(bind=engine, future=True)()
+        self.database = PostgreSQLTestDatabase()
+        self.session = self.database.SessionLocal()
         self._seed()
 
     def tearDown(self):
         self.session.close()
+        self.database.close()
 
     def _seed(self):
         seasons = [
@@ -355,6 +360,32 @@ class DashboardRoleContractTests(unittest.TestCase):
                 32 in player["scores"] for team in raw_detail["teams"] for player in team["players"]
             )
         )
+
+    def test_match_history_orders_winner_first_in_summary_detail_and_differential(self):
+        match = (
+            self.session.query(Match)
+            .join(Season, Season.season_id == Match.season_id)
+            .filter(Season.season_code == "s2", Match.week_number == 2)
+            .one()
+        )
+
+        detail = stats_queries.get_match_detail(match.match_id, session=self.session)
+        self.assertEqual([team["tag"] for team in detail["teams"]], ["b", "a"])
+        self.assertEqual([team["final_score"] for team in detail["teams"]], [40, 22])
+
+        with patch.object(stats_queries, "SessionLocal", return_value=nullcontext(self.session)):
+            summaries = stats_queries.list_matches(season="s2", division="d1")
+        summary = next(row for row in summaries if row["match_id"] == match.match_id)
+        self.assertEqual(summary["teams"], "b vs a")
+        self.assertEqual(summary["scores"], "40 - 22")
+
+        # Differential values use the same winner-first orientation as both tables.
+        first_race_totals = [
+            sum((player["scores"][0] or 0) for player in team["players"])
+            + (team["missing_player"]["scores"][0] or 0)
+            for team in detail["teams"]
+        ]
+        self.assertEqual(detail["differential"][0], first_race_totals[0] - first_race_totals[1])
 
     def _selected_result(self, week, race_number):
         return (

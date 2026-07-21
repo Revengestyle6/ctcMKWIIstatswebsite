@@ -44,12 +44,9 @@ environment has a different path. The credentials above are intentionally local
 development values, not production secrets. Stop the database with
 `docker compose stop postgres`; its ignored named volume preserves local data.
 
-SQLite remains available for lightweight work and the frozen regression suite:
-
-```bash
-cd backend
-../.venv/bin/python import_json_to_db.py --rebuild
-```
+PostgreSQL is required for local development and tests. Historical SQLite files
+remain ignored under `backend/data/` as recovery artifacts only; active code does
+not open them.
 
 ## Run Locally
 
@@ -75,9 +72,6 @@ cd backend
 ../.venv/bin/ruff check .
 ../.venv/bin/ruff format . --check
 ../.venv/bin/python -m unittest discover -v
-../.venv/bin/python scripts/compare_phase0_api.py \
-  --only seasons,match-scopes,divisions-s3,teams-s3-d1,players-s3-d1,tracks-s3-d1
-
 cd ../frontend
 npm run check
 npm run build
@@ -90,9 +84,9 @@ The browser smoke command covers ten representative routes in desktop and mobile
 Chromium. `npm run baseline:ui` is reserved for deliberate baseline capture and
 must not be used to approve visual changes without reviewing the images.
 
-CI also starts a clean PostgreSQL 18 service, applies and drift-checks the Alembic
-schema, imports the accepted archive, and compares all 16 portable API responses
-exactly with an identically rebuilt SQLite database.
+CI starts a clean PostgreSQL 18 service, applies and drift-checks the Alembic
+schema, imports the accepted archive, and runs every backend test against isolated
+PostgreSQL schemas.
 
 ## Common Maintenance Commands
 
@@ -103,7 +97,6 @@ Run commands from `backend/` unless noted otherwise:
 ../.venv/bin/python scripts/reconcile_json_archive.py
 ../.venv/bin/python scripts/run_phase3_maintenance.py
 ../.venv/bin/python scripts/convert_txt_json.py --help
-../.venv/bin/python scripts/merge_player_identities.py --help
 ```
 
 See [backend/scripts/README.md](backend/scripts/README.md) before running commands

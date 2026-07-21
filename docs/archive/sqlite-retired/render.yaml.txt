@@ -1,3 +1,4 @@
+# Retired historical snapshot. Do not deploy this configuration.
 services:
   - type: web
     name: ctc-mkwii-api

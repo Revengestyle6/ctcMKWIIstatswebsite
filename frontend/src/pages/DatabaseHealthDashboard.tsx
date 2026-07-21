@@ -720,6 +720,16 @@ function IssueCard({
 }
 
 function OperationalPanel({ report }: { report: DatabaseHealthReport }) {
+  const database = report.database;
+  const engineName =
+    database.backend === "postgresql" ? "PostgreSQL" : readableLabel(database.backend);
+  const foreignKeys = database.integrity.foreign_keys;
+  const constraintSummary =
+    foreignKeys.constraints === null
+      ? "Not available"
+      : foreignKeys.validated === null
+        ? `${foreignKeys.constraints} configured`
+        : `${foreignKeys.validated} of ${foreignKeys.constraints} validated`;
   const archiveItems = [
     ["Missing files", report.archive.missing_files.length],
     ["Hash mismatches", report.archive.hash_mismatches.length],
@@ -730,18 +740,32 @@ function OperationalPanel({ report }: { report: DatabaseHealthReport }) {
       <div className="rounded-xl border border-white/15 bg-black/55 p-5 shadow-xl">
         <h2 className="text-xl font-bold">Database integrity</h2>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Detail label="SQLite integrity" value={report.database.integrity.toUpperCase()} />
           <Detail
-            label="Foreign-key violations"
-            value={String(report.database.foreign_key_violations)}
+            label="Database engine"
+            value={`${engineName}${database.version ? ` ${database.version}` : ""}`}
           />
-          <Detail label="Database size" value={formatBytes(report.database.size_bytes)} />
-          <Detail label="Latest import" value={formatDate(report.database.latest_import_at)} />
+          <Detail label="Connection status" value={database.connection_status.toUpperCase()} />
+          <Detail label="Database name" value={database.name || "Not available"} breakWords />
           <Detail
-            label="Latest logged addition"
-            value={formatDate(report.database.latest_addition_at)}
+            label="Schema revision"
+            value={database.schema_revision || "Not available"}
+            breakWords
           />
-          <Detail label="Database path" value={report.database.path} breakWords />
+          <Detail label="Database size" value={formatBytes(database.size_bytes)} />
+          <Detail
+            label="Physical integrity scan"
+            value={readableLabel(database.integrity.physical.status)}
+          />
+          <Detail label="Integrity method" value={database.integrity.physical.method} breakWords />
+          <Detail label="Foreign-key constraints" value={constraintSummary} />
+          {foreignKeys.unvalidated !== null ? (
+            <Detail label="Unvalidated constraints" value={String(foreignKeys.unvalidated)} />
+          ) : null}
+          {foreignKeys.violations !== null ? (
+            <Detail label="Foreign-key violations" value={String(foreignKeys.violations)} />
+          ) : null}
+          <Detail label="Latest import" value={formatDate(database.latest_import_at)} />
+          <Detail label="Latest logged addition" value={formatDate(database.latest_addition_at)} />
         </dl>
       </div>
       <div className="rounded-xl border border-white/15 bg-black/55 p-5 shadow-xl">

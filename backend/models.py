@@ -458,7 +458,6 @@ class ReviewSubmission(Base):
             "fingerprint",
             unique=True,
             postgresql_where=text("status IN ('pending', 'in_review')"),
-            sqlite_where=text("status IN ('pending', 'in_review')"),
         ),
     )
 

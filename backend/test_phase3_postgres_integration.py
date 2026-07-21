@@ -1,19 +1,24 @@
+# ruff: noqa: E402
+
 import json
-import os
 import tempfile
 import unittest
 from pathlib import Path
 
+from test_support import configure_test_environment
+
+configure_test_environment()
+
 import acceptance_service
 from admin_auth import AdminActor
 from archive_storage import LocalArchiveStorage
-from database import get_session_factory
+from database_health import build_database_health
 from import_json_to_db import detect_new_entries
 from match_upload import prepare_upload_document
 from models import AdminUser, Match
 from sqlalchemy import func, select
+from test_support import PostgreSQLTestDatabase
 
-POSTGRES_TEST_URL = os.environ.get("PHASE3_POSTGRES_TEST_URL", "")
 SAMPLE_MATCH_PATH = (
     Path(__file__).resolve().parent
     / "JSON"
@@ -24,14 +29,34 @@ SAMPLE_MATCH_PATH = (
 )
 
 
-@unittest.skipUnless(POSTGRES_TEST_URL, "PHASE3_POSTGRES_TEST_URL is not configured")
 class Phase3PostgresIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        self.database = PostgreSQLTestDatabase()
+        self.session_factory = self.database.SessionLocal
+
+    def tearDown(self):
+        self.database.close()
+
+    def test_database_health_queries_are_postgres_compatible(self):
+        with self.session_factory() as session:
+            report = build_database_health(session, include_archive=False)
+
+        self.assertEqual(report["database"]["backend"], "postgresql")
+        self.assertEqual(report["database"]["connection_status"], "ok")
+        self.assertTrue(report["database"]["name"])
+        self.assertTrue(report["database"]["version"].startswith("18"))
+        self.assertGreater(report["database"]["size_bytes"], 0)
+        self.assertIsNone(report["database"]["schema_revision"])
+        self.assertEqual(report["database"]["integrity"]["physical"]["status"], "not_run")
+        self.assertEqual(report["database"]["integrity"]["foreign_keys"]["status"], "ok")
+        self.assertEqual(report["database"]["integrity"]["foreign_keys"]["unvalidated"], 0)
+        self.assertIn(report["status"], {"healthy", "warning", "critical"})
+
     def test_acceptance_is_immediately_queryable_on_postgres(self):
-        session_factory = get_session_factory(POSTGRES_TEST_URL)
         actor = AdminActor(1, "postgres-owner", "owner@example.com", "owner")
         match_data = json.loads(SAMPLE_MATCH_PATH.read_text(encoding="utf-8"))
         document = prepare_upload_document(match_data)
-        with session_factory.begin() as session:
+        with self.session_factory.begin() as session:
             session.add(
                 AdminUser(
                     admin_user_id=1,
@@ -51,7 +76,7 @@ class Phase3PostgresIntegrationTests(unittest.TestCase):
             temporary_key = "queue/admin/postgres.json"
             storage.put_temporary(temporary_key, document.content)
             original_factory = acceptance_service.stats.SessionLocal
-            acceptance_service.stats.SessionLocal = session_factory
+            acceptance_service.stats.SessionLocal = self.session_factory
             try:
                 result = acceptance_service.accept_match(
                     storage,
@@ -65,7 +90,7 @@ class Phase3PostgresIntegrationTests(unittest.TestCase):
                 acceptance_service.stats.SessionLocal = original_factory
 
         self.assertEqual(result.status_code, 200)
-        with session_factory() as session:
+        with self.session_factory() as session:
             self.assertEqual(session.scalar(select(func.count()).select_from(Match)), 1)
             match = session.get(Match, result.payload["match_id"])
             self.assertIsNotNone(match)

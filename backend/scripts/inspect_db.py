@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 
-from database import DEFAULT_DB_PATH, get_session_factory
+from database import get_session_factory
 from models import (
     Division,
     Match,
@@ -46,14 +46,16 @@ def count(session, model) -> int:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Inspect the analytics SQLite database.")
-    parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH, help="SQLite database path.")
+    parser = argparse.ArgumentParser(description="Inspect the analytics PostgreSQL database.")
+    parser.add_argument(
+        "--database-url", help="PostgreSQL URL; defaults to the DATABASE_URL environment variable."
+    )
     parser.add_argument(
         "--review-limit", type=int, default=20, help="Number of review rows to show."
     )
     args = parser.parse_args()
 
-    SessionLocal = get_session_factory(args.db)
+    SessionLocal = get_session_factory(args.database_url)
     with SessionLocal() as session:
         print("Table counts")
         for model in SUMMARY_MODELS:

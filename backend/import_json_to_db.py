@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from database import BASE_DIR, DEFAULT_DB_PATH, get_session_factory, init_database
+from database import BASE_DIR, get_session_factory
 from models import (
     Division,
     Match,
@@ -494,16 +494,6 @@ def backfill_inferred_roles(session) -> int:
         .values(role="runner", role_source="inferred")
     )
     return (bagger_result.rowcount or 0) + (runner_result.rowcount or 0)
-
-
-def repair_inferred_roles(db_path: Path) -> int:
-    init_database(db_path)
-    SessionLocal = get_session_factory(db_path)
-    with SessionLocal.begin() as session:
-        updated_rows = backfill_inferred_roles(session)
-    print(f"Database: {db_path.resolve()}")
-    print(f"Repaired inferred roles: {updated_rows}")
-    return updated_rows
 
 
 def normalize_match_objects(data: Any) -> tuple[str, list[dict[str, Any]]]:
@@ -1128,21 +1118,7 @@ def print_summary(session, imported_matches: int, skipped_files: int):
         print(f"{model.__tablename__}: {table_count(session, model)}")
 
 
-def rebuild_database(db_path: Path, json_root: Path):
-    if db_path.exists():
-        db_path.unlink()
-    for wal_sidecar in (
-        db_path.with_suffix(db_path.suffix + "-wal"),
-        db_path.with_suffix(db_path.suffix + "-shm"),
-    ):
-        if wal_sidecar.exists():
-            wal_sidecar.unlink()
-    init_database(db_path)
-    return import_json_tree(db_path, json_root)
-
-
-def import_json_tree(database_target: Path | str, json_root: Path):
-    init_database(database_target)
+def import_json_tree(database_target: str | None, json_root: Path):
     SessionLocal = get_session_factory(database_target)
     imported_matches = 0
     skipped_files = 0
@@ -1163,42 +1139,15 @@ def main():
     parser = argparse.ArgumentParser(
         description="Import archived match JSON files into the configured analytics database."
     )
-    database_group = parser.add_mutually_exclusive_group()
-    database_group.add_argument("--db", type=Path, help="SQLite database path.")
-    database_group.add_argument(
+    parser.add_argument(
         "--database-url",
-        help="SQLAlchemy database URL. PostgreSQL schemas must already be migrated.",
+        help="PostgreSQL URL. Defaults to DATABASE_URL; the schema must already be migrated.",
     )
     parser.add_argument(
         "--json-root", type=Path, default=JSON_ROOT, help="Root JSON archive directory."
     )
-    operation = parser.add_mutually_exclusive_group()
-    operation.add_argument(
-        "--rebuild", action="store_true", help="Delete and rebuild the SQLite database first."
-    )
-    operation.add_argument(
-        "--repair-inferred-roles",
-        action="store_true",
-        help="Repair all existing non-manual roles from their recorded placements.",
-    )
     args = parser.parse_args()
-
-    database_target = args.database_url or args.db or DEFAULT_DB_PATH
-    if isinstance(database_target, Path):
-        database_target.parent.mkdir(parents=True, exist_ok=True)
-    if args.repair_inferred_roles:
-        if not isinstance(database_target, Path):
-            parser.error("--repair-inferred-roles is currently a SQLite maintenance command.")
-        repair_inferred_roles(database_target)
-    elif args.rebuild:
-        if not isinstance(database_target, Path):
-            parser.error(
-                "--rebuild deletes SQLite files only. Migrate an empty PostgreSQL database, "
-                "then import without --rebuild."
-            )
-        rebuild_database(database_target, args.json_root)
-    else:
-        import_json_tree(database_target, args.json_root)
+    import_json_tree(args.database_url, args.json_root)
 
 
 if __name__ == "__main__":

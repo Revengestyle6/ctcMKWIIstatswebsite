@@ -7,7 +7,7 @@ import uuid
 import dashboard_stats as dashboards
 import database_health as database_health_service
 import stats_db as stats
-from database import app_environment, init_database
+from database import app_environment
 from extensions import cache
 from flask import Flask, g, request
 from flask_compress import Compress
@@ -70,7 +70,6 @@ logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO").upper(),
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
-init_database()
 app = create_app()
 
 

@@ -1,6 +1,12 @@
+# ruff: noqa: E402
+
 import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+
+from test_support import configure_test_environment
+
+configure_test_environment()
 
 import app as app_module
 import stats_db

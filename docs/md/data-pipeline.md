@@ -36,10 +36,10 @@ archived JSON + reviewed registries
  Flask analytics and dashboard APIs
 ```
 
-Run a local rebuild from `backend/`:
+Load the archive into an already migrated PostgreSQL schema from `backend/`:
 
 ```bash
-../.venv/bin/python import_json_to_db.py --rebuild
+../.venv/bin/python import_json_to_db.py
 ```
 
 The importer prefers `.json` over a same-stem legacy `.txt`, fingerprints source
@@ -63,9 +63,10 @@ and results, preserves explicit roles, and records findings that require review.
 ## Regression Checks
 
 The Phase 0 evidence contains table counts, archive and registry fingerprints, 17
-API fixtures, identity comparisons, and UI screenshots. Use
-`scripts/compare_phase0_api.py` after behavior-preserving cleanup. Never replace an
-approved fixture merely to make a changed response pass.
+API fixtures, identity comparisons, and UI screenshots. The retired capture and
+comparison sources are preserved in `docs/archive/sqlite-retired/`; the active CI
+suite verifies behavior directly on PostgreSQL. Never replace approved evidence
+merely to make a changed response pass.
 
 The old flattened `backend/CSV/` analytics pipeline was removed in Phase 1 after
 tests and every API fixture matched the SQL-backed implementation.

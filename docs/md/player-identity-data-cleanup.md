@@ -1,5 +1,10 @@
 # Player Identity Data Cleanup
 
+> Historical Phase 0 investigation. Its SQLite commands are not supported
+> operational workflows; retained source snapshots live in
+> `docs/archive/sqlite-retired/`. Current identity data is rebuilt into PostgreSQL
+> from the reviewed registries.
+
 This note covers two related data quality issues in the analytics database:
 
 - player lookups returning `Ambiguous player alias`

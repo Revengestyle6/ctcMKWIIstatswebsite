@@ -95,7 +95,6 @@ def upgrade() -> None:
         ["fingerprint"],
         unique=True,
         postgresql_where=sa.text("status IN ('pending', 'in_review')"),
-        sqlite_where=sa.text("status IN ('pending', 'in_review')"),
     )
     op.create_table(
         "submission_rate_limits",
@@ -171,16 +170,14 @@ def upgrade() -> None:
             ["submission_id"],
         )
 
-    # ``use_alter`` preserves the SQLite create-table path while breaking the
-    # review_submissions -> matches -> source_files cycle on PostgreSQL.
-    if op.get_bind().dialect.name != "sqlite":
-        op.create_foreign_key(
-            "fk_review_submissions_accepted_match_id",
-            "review_submissions",
-            "matches",
-            ["accepted_match_id"],
-            ["match_id"],
-        )
+    # Break the review_submissions -> matches -> source_files creation cycle.
+    op.create_foreign_key(
+        "fk_review_submissions_accepted_match_id",
+        "review_submissions",
+        "matches",
+        ["accepted_match_id"],
+        ["match_id"],
+    )
 
     op.execute(
         sa.text(

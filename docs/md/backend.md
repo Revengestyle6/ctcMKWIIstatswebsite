@@ -13,7 +13,7 @@ longer part of the repository.
 - `routes/access.py`: authentication session and owner-managed allowlist.
 - `routes/operations.py`: liveness, readiness, and safe aggregate health.
 - `routes/common.py`: shared request parsing, errors, and write authorization.
-- `database.py`: database URL, engine, sessions, and SQLite pragmas.
+- `database.py`: required PostgreSQL URL, engine, and sessions.
 - `models.py`: relational models.
 - `stats_db.py`: legacy-compatible analytics facade.
 - `stats_queries.py`: catalog, identity, match-list, and match-detail queries.
@@ -21,7 +21,7 @@ longer part of the repository.
 - `player_dashboard_stats.py` and `team_dashboard_stats.py`: focused dashboard queries.
 - `player_role_analytics.py`: runner/bagger classification and metrics.
 - `database_health.py`: integrity, catalog, archive, and analytics checks.
-- `import_json_to_db.py`: rebuild and editor-match ingestion.
+- `import_json_to_db.py`: idempotent archive and editor-match ingestion.
 - `match_upload.py`: canonical serialization, staging, publishing, and audit logs.
 - `archive_storage.py`: local and Cloud Storage archive adapters.
 - `acceptance_service.py`: idempotent database/archive acceptance state machine.
@@ -45,10 +45,9 @@ allowlist entry. An explicit local/test override is disabled by default.
 From `backend/`:
 
 ```bash
-../.venv/bin/python import_json_to_db.py --rebuild
+../.venv/bin/python import_json_to_db.py
 ../.venv/bin/python -m flask --app app run
 ../.venv/bin/python -m unittest discover -v
-../.venv/bin/python scripts/compare_phase0_api.py
 ../.venv/bin/ruff check .
 ../.venv/bin/ruff format . --check
 ../.venv/bin/python scripts/inspect_db.py
@@ -65,5 +64,5 @@ are documented in `backend/scripts/README.md`.
   use Firebase Hosting's same-origin API routing.
 - Provider IAM, read-only PostgreSQL grants, Firebase configuration, and managed
   secrets are Phase 4 deployment checkpoints.
-- Historical/local maintenance tools that explicitly accept only SQLite are labeled
-  as such; production schema changes use Alembic.
+- Historical SQLite tools are non-executable snapshots under
+  `docs/archive/sqlite-retired/`; all schema changes use Alembic.

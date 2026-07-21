@@ -11,12 +11,12 @@
 
 See `docs/adr/` for accepted decisions and constraints.
 
-## Transitional Files
+## Deployment Files
 
-`render.yaml`, `railway.json`, `.github/workflows/deploy.yml`, `Dockerfile`, and
-`start.sh` remain temporarily because they describe the currently reproducible or
-rollback deployment paths. They must not be removed until Cloud Run staging and its
-replacement workflow work. They are not the production target.
+`Dockerfile` and `start.sh` define the PostgreSQL-backed API artifact. The old
+SQLite-rebuilding Render definition has been retired to
+`docs/archive/sqlite-retired/`. The GitHub workflow remains a verification and
+frontend-publishing workflow until the Cloud Run deployment job is added.
 
 ## Phase 3 Docker Artifact
 

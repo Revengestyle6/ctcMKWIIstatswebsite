@@ -2,7 +2,8 @@
 
 - Status: implemented and locally verified
 - Scope: application, schema, adapters, local runtime, and CI gates
-- Cloud status: not provisioned; every Phase 4 resource remains an owner checkpoint
+- Cloud status: Firebase project `mkw-stats` registered; all remaining Phase 4
+  resources remain owner checkpoints (see `phase-4-resource-inventory.md`)
 
 ## Delivered Components
 
@@ -31,7 +32,7 @@ be configured on Cloud Run or in Secret Manager only after owner approval.
 
 | Variable | Required where | Notes |
 | --- | --- | --- |
-| `APP_ENV` | All | `staging` and `production` reject SQLite and local archive storage |
+| `APP_ENV` | All | Selects local, test, staging, or production policy; every environment requires PostgreSQL |
 | `DATABASE_URL` | PostgreSQL environments | Runtime database credential; never a frontend variable |
 | `FIREBASE_PROJECT_ID` | Hosted API | Audience used to verify Firebase ID tokens |
 | `VITE_FIREBASE_*` | Hosted frontend build | Public Firebase web identifiers, not secrets |
@@ -101,7 +102,7 @@ Google Cloud IAM or GitHub permissions. The owner performs those provider steps.
 
 - 72 backend tests pass locally; the PostgreSQL-only test is skipped unless its
   dedicated URL is supplied.
-- Clean SQLite upgrade/check/downgrade succeeds.
+- Clean PostgreSQL migration and model-drift checks succeed.
 - Clean PostgreSQL 18 migration and `alembic check` succeed.
 - The accepted archive imports 244 matches and the established Phase 0 counts.
 - A dedicated PostgreSQL integration test accepts one match and queries it
@@ -119,11 +120,13 @@ No item below has been performed. Before each batch, review the exact project,
 region, resource name, access grants, settings, expected monthly cost, and any
 credentials or domain choices needed from the owner:
 
-1. Select/create the Google Cloud and Firebase projects; enable billing and APIs.
+1. [Complete] Create the `mkw-stats` Google Cloud/Firebase project and register
+   its web app. Billing and paid APIs remain unapproved.
 2. Create the cost-first Cloud SQL instance and staging/production databases and
    roles, including `ctc_readonly` and future-table default privileges.
 3. Create the archive/export bucket, retention/lifecycle rules, and service account.
-4. Configure Firebase Google sign-in and provide the public web configuration.
+4. [Complete] Configure Firebase Google sign-in, authorize localhost, provide the
+   public web configuration, and verify the allowlisted owner login.
 5. Create secrets, migrate/import staging data, and bootstrap the owner email.
 6. Deploy Cloud Run staging with zero minimum instances and conservative maxima.
 7. Deploy Firebase Hosting staging and its same-origin `/api/**` rewrite.

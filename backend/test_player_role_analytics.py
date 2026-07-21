@@ -13,8 +13,7 @@ from player_role_analytics import (
     valid_placement,
     valid_race_score,
 )
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from test_support import PostgreSQLTestDatabase
 
 
 def result(
@@ -230,16 +229,15 @@ class RoleAnalyticsTests(unittest.TestCase):
 
 class DatabaseRoleAnalyticsTests(unittest.TestCase):
     def setUp(self):
-        self.engine = create_engine("sqlite:///:memory:", future=True)
-        with self.engine.connect() as connection:
-            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
-        RacePlayerResult.__table__.create(self.engine)
-        self.session = sessionmaker(bind=self.engine, future=True)()
+        self.database = PostgreSQLTestDatabase()
+        self.database.drop_foreign_keys(RacePlayerResult.__tablename__)
+        self.engine = self.database.engine
+        self.session = self.database.SessionLocal()
         self.next_result_id = 1
 
     def tearDown(self):
         self.session.close()
-        self.engine.dispose()
+        self.database.close()
 
     def add_race(
         self,

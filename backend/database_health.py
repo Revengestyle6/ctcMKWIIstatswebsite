@@ -3,14 +3,13 @@ import re
 import unicodedata
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
-from pathlib import Path
 
 from analytics_eligibility import analytics_excluded_race_ids
 from database import Base
 from database_health_reviews import load_reviews
 from match_upload import reconcile_archive, serialize_addition_log
 from models import DatabaseAdditionLog, Match, Player, SourceFile, Track
-from sqlalchemy import func, select, text
+from sqlalchemy import func, inspect, select, text
 
 TRACK_SIMILARITY_THRESHOLD = 0.92
 MAX_ISSUE_ENTITIES = 20
@@ -38,18 +37,66 @@ def _issue(key, severity, category, title, detail, *, count=1, entities=None, di
     }
 
 
-def _database_file_details(session):
+def _database_details(session):
     bind = session.get_bind()
-    database_name = getattr(getattr(bind, "url", None), "database", None)
-    if bind.dialect.name != "sqlite":
-        return {"backend": bind.dialect.name, "database": database_name, "size_bytes": None}
-    if not database_name or database_name == ":memory:":
-        return {"path": database_name or ":memory:", "size_bytes": None}
-    path = Path(database_name)
+    backend = bind.dialect.name
+    schema_revision = None
+    if inspect(session.connection()).has_table("alembic_version"):
+        schema_revision = session.scalar(text("SELECT version_num FROM alembic_version LIMIT 1"))
+
+    if backend != "postgresql":
+        raise RuntimeError(f"Unsupported database backend: {backend}")
     return {
-        "path": str(path.resolve()),
-        "size_bytes": path.stat().st_size if path.exists() else None,
+        "backend": backend,
+        "name": session.scalar(text("SELECT current_database()")),
+        "version": session.scalar(text("SELECT current_setting('server_version')")),
+        "size_bytes": session.scalar(text("SELECT pg_database_size(current_database())")),
+        "connection_status": "ok",
+        "schema_revision": schema_revision,
     }
+
+
+def _database_integrity(session):
+    backend = session.get_bind().dialect.name
+    if backend == "postgresql":
+        constraint_rows = (
+            session.execute(
+                text("""
+                    SELECT c.conname AS constraint_name,
+                           c.convalidated AS is_validated,
+                           c.conrelid::regclass::text AS table_name
+                    FROM pg_constraint c
+                    WHERE c.contype = 'f'
+                      AND c.connamespace = (
+                          SELECT oid FROM pg_namespace WHERE nspname = current_schema()
+                      )
+                    ORDER BY c.conrelid::regclass::text, c.conname
+                """)
+            )
+            .mappings()
+            .all()
+        )
+        unvalidated = [row for row in constraint_rows if not row["is_validated"]]
+        return (
+            {
+                "physical": {
+                    "status": "not_run",
+                    "method": "Scheduled amcheck (pending Cloud SQL deployment)",
+                },
+                "foreign_keys": {
+                    "status": "ok" if not unvalidated else "failed",
+                    "constraints": len(constraint_rows),
+                    "validated": len(constraint_rows) - len(unvalidated),
+                    "unvalidated": len(unvalidated),
+                    "violations": None,
+                },
+            },
+            [],
+            [],
+            unvalidated,
+        )
+
+    raise RuntimeError(f"Unsupported database backend: {backend}")
 
 
 def _table_counts(session):
@@ -275,7 +322,8 @@ def _match_and_result_issues(session):
                 JOIN races r ON r.race_id = rpr.race_id
                 JOIN matches m ON m.match_id = r.match_id
                 WHERE rpr.position IS NOT NULL
-                GROUP BY rpr.race_id, rpr.position HAVING count(*) > 1
+                GROUP BY rpr.race_id, rpr.position, m.match_label, r.race_number
+                HAVING count(*) > 1
             """,
             "A placement is assigned to more than one player in the same race.",
         ),
@@ -288,7 +336,8 @@ def _match_and_result_issues(session):
                 SELECT rpr.race_player_result_id AS id, rpr.race_id,
                        m.match_label || ' · race ' || r.race_number || ' · ' ||
                        coalesce(p.canonical_lounge_name, 'Player ' || rpr.player_id) AS label,
-                       'score=' || coalesce(rpr.score, 'null') || ', position=' || coalesce(rpr.position, 'null') AS value
+                       'score=' || coalesce(CAST(rpr.score AS TEXT), 'null') ||
+                       ', position=' || coalesce(CAST(rpr.position AS TEXT), 'null') AS value
                 FROM race_player_results rpr
                 JOIN races r ON r.race_id = rpr.race_id
                 JOIN matches m ON m.match_id = r.match_id
@@ -401,30 +450,14 @@ def build_database_health(
     review_path=None,
 ):
     generated_at = datetime.now(timezone.utc)
-    database = _database_file_details(session)
-    if session.get_bind().dialect.name == "sqlite":
-        integrity_rows = list(session.execute(text("PRAGMA integrity_check")).scalars())
-        integrity_ok = integrity_rows == ["ok"]
-        foreign_key_rows = list(session.execute(text("PRAGMA foreign_key_check")).all())
-    else:
-        integrity_rows = ["ok"]
-        integrity_ok = True
-        foreign_key_rows = []
+    database = _database_details(session)
+    integrity, integrity_rows, foreign_key_rows, unvalidated_constraints = _database_integrity(
+        session
+    )
     counts = _table_counts(session)
     additions = _addition_data(session, addition_limit)
     issues = []
 
-    if not integrity_ok:
-        issues.append(
-            _issue(
-                "sqlite-integrity",
-                "critical",
-                "database",
-                "SQLite integrity check failed",
-                " ".join(str(value) for value in integrity_rows),
-                count=len(integrity_rows),
-            )
-        )
     if foreign_key_rows:
         issues.append(
             _issue(
@@ -437,6 +470,24 @@ def build_database_health(
                 entities=[
                     {"id": row[1], "label": str(row[0]), "value": row[2]}
                     for row in foreign_key_rows
+                ],
+            )
+        )
+    if unvalidated_constraints:
+        issues.append(
+            _issue(
+                "postgres-unvalidated-foreign-keys",
+                "critical",
+                "database",
+                "PostgreSQL foreign-key constraints are not validated",
+                "Existing rows have not been verified against one or more foreign-key constraints.",
+                count=len(unvalidated_constraints),
+                entities=[
+                    {
+                        "id": None,
+                        "label": f"{row['table_name']}.{row['constraint_name']}",
+                    }
+                    for row in unvalidated_constraints
                 ],
             )
         )
@@ -504,8 +555,7 @@ def build_database_health(
         "status": status,
         "database": {
             **database,
-            "integrity": "ok" if integrity_ok else "failed",
-            "foreign_key_violations": len(foreign_key_rows),
+            "integrity": integrity,
             "latest_import_at": _iso(latest_import),
             "latest_addition_at": _iso(latest_addition),
         },

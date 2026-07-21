@@ -21,7 +21,7 @@ def main() -> None:
     parser.add_argument(
         "--skip-database-health",
         action="store_true",
-        help="Skip the SQLite-specific Phase 0 health fixture during PostgreSQL checks.",
+        help="Skip the historical Phase 0 database-health fixture.",
     )
     parser.add_argument(
         "--fixture-dir",
