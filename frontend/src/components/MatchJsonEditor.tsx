@@ -641,6 +641,40 @@ export default function MatchJsonEditor(): React.JSX.Element {
     };
     reader.readAsText(file);
   }
+  function clearEditor(): void {
+    if (
+      !window.confirm(
+        "Clear all current match content? This will reset the editor and cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    const next = clone(blankMatch);
+    setMatch(next);
+    setRaces(racesFromMatch(next));
+    setFileName("New match JSON");
+    setIdentityStates({});
+    setRaceView("one");
+    setActiveRace(0);
+    setLoadError(null);
+    setDraggedPlayer(null);
+    setTablePreview(null);
+    setPreviewMetadata(null);
+    setPreviewLoading(false);
+    setPreviewError(null);
+    setNewEntries([]);
+    setApprovalDecisions({});
+    setApprovalModalOpen(false);
+    setCommitLoading(false);
+    setCommitError(null);
+    setCommitResult(null);
+    setSubmissionReceipt(null);
+    setWarningsAcknowledged(false);
+    setReviewSubmissionId(null);
+    scrollToPreviewAfterReview.current = false;
+    sessionStorage.removeItem("ctc-review-draft");
+  }
   async function generateTablePreview(entries: NewEntry[]): Promise<void> {
     setPreviewLoading(true);
     setPreviewError(null);
@@ -820,16 +854,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
             </button>
             <button
               type="button"
-              onClick={() => {
-                const next = clone(blankMatch);
-                setMatch(next);
-                setRaces(racesFromMatch(next));
-                setFileName("New match JSON");
-                setIdentityStates({});
-              }}
-              className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold"
+              onClick={clearEditor}
+              className="rounded-md border border-red-400/40 bg-red-950/30 px-4 py-2 font-semibold text-red-100 hover:bg-red-950/50"
             >
-              New Blank
+              Clear
             </button>
             <button
               type="button"
