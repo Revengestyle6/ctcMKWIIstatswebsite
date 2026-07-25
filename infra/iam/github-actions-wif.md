@@ -50,6 +50,7 @@ condition and the service-account binding therefore have to pass.
 | `roles/serviceusage.serviceUsageConsumer` | Project | Call enabled Google APIs during deployment without permission to enable or administer services |
 | `roles/storage.bucketViewer` | Project | Let `gcloud builds submit` verify that the default Cloud Build source bucket belongs to this project; grants bucket metadata only |
 | `roles/storage.objectUser` | Bucket `mkw-stats_cloudbuild` | Upload and inspect the temporary source archive used by `gcloud builds submit` |
+| `roles/iam.serviceAccountUser` | `ctc-cloud-builder` | Start image builds as the dedicated builder rather than the Editor-privileged default Compute identity |
 | `roles/artifactregistry.reader` | Repository `ctc-backend` | Resolve and deploy the image produced by Cloud Build |
 | `roles/run.developer` | Service `ctc-stats-api-staging` | Update only the existing staging API revision |
 | `roles/run.developer` | Job `ctc-staging-migrate` | Update and execute only the existing staging migration job |
@@ -73,7 +74,8 @@ run on `main` can continue to the `staging` deployment job.
 The deployment:
 
 1. Exchanges GitHub OIDC for a short-lived deployer credential.
-2. Uses Cloud Build to create a unique immutable Artifact Registry tag.
+2. Uses Cloud Build with the dedicated `ctc-cloud-builder` identity to create a
+   unique immutable Artifact Registry tag.
 3. Resolves that tag to a content digest.
 4. Updates and executes `ctc-staging-migrate` with the digest.
 5. Updates `ctc-stats-api-staging` with the same digest.

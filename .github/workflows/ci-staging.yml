@@ -144,7 +144,8 @@ jobs:
           IMAGE_TAG="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REPOSITORY}/${IMAGE_NAME}:staging-${SHORT_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           gcloud builds submit . \
             --project="${GCP_PROJECT_ID}" \
-            --tag="${IMAGE_TAG}" \
+            --config=cloudbuild.yaml \
+            --substitutions="_IMAGE_TAG=${IMAGE_TAG}" \
             --quiet
           DIGEST="$(gcloud artifacts docker images describe "${IMAGE_TAG}" \
             --project="${GCP_PROJECT_ID}" \

@@ -328,7 +328,8 @@ migrations, exports, and deployment independently revocable.
 | `ctc-api-prod@mkw-stats.iam.gserviceaccount.com` | Cloud SQL Client; production archive object user; accessor for production database URL and HMAC secrets |
 | `ctc-db-migrator@mkw-stats.iam.gserviceaccount.com` | Cloud SQL Client; accessor for staging and production migrator database URLs |
 | `ctc-db-exporter@mkw-stats.iam.gserviceaccount.com` | No roles until the scheduled export implementation is selected |
-| `ctc-github-deployer@mkw-stats.iam.gserviceaccount.com` | WIF from immutable GitHub repository ID `1138772443`; call enabled APIs; view bucket metadata for Cloud Build's ownership check; submit Cloud Build sources through object access limited to `mkw-stats_cloudbuild`; read `ctc-backend`; update/execute only the staging API and migration job; deploy Hosting; act as only the staging API and migrator identities |
+| `ctc-cloud-builder@mkw-stats.iam.gserviceaccount.com` | Dedicated image builder; read submitted source objects from `mkw-stats_cloudbuild`; write build logs; push only to `ctc-backend` |
+| `ctc-github-deployer@mkw-stats.iam.gserviceaccount.com` | WIF from immutable GitHub repository ID `1138772443`; call enabled APIs; view bucket metadata for Cloud Build's ownership check; submit Cloud Build sources through object access limited to `mkw-stats_cloudbuild`; read `ctc-backend`; update/execute only the staging API and migration job; deploy Hosting; act as only the dedicated builder, staging API, and migrator identities |
 
 The PostgreSQL login users `ctc_runtime_staging`, `ctc_runtime_prod`, and
 `ctc_migration_job` were created with only `ctc_app_staging`, `ctc_app_prod`, and
