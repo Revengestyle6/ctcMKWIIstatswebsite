@@ -1037,8 +1037,9 @@ def import_file(
     path: Path,
     aliases: dict[tuple[str, str, str, str, str], dict[str, str]],
     identities: PlayerIdentities,
+    json_root: Path = JSON_ROOT,
 ) -> tuple[int, int]:
-    relative_parts = path.relative_to(JSON_ROOT).parts
+    relative_parts = path.relative_to(json_root).parts
     if len(relative_parts) < 4:
         return 0, 0
 
@@ -1046,7 +1047,7 @@ def import_file(
     season = get_or_create_season(session, league_code, season_code)
     division = get_or_create_division(session, season, division_code)
     file_hash = sha256_file(path)
-    source_path = path.relative_to(BASE_DIR).as_posix()
+    source_path = (Path("JSON") / Path(*relative_parts)).as_posix()
 
     existing_source = session.scalar(
         select(SourceFile).where(SourceFile.source_path == source_path)
@@ -1127,7 +1128,9 @@ def import_json_tree(database_target: str | None, json_root: Path):
     with SessionLocal() as session:
         for path in preferred_json_files(json_root):
             with session.begin_nested():
-                imported, skipped = import_file(session, path, aliases, identities)
+                imported, skipped = import_file(
+                    session, path, aliases, identities, json_root=json_root
+                )
                 imported_matches += imported
                 skipped_files += skipped
         session.commit()

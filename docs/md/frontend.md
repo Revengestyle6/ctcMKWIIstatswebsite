@@ -40,8 +40,10 @@ intentional product asset and is not duplicated in source.
 `src/dashboardApi.ts` defines the structured dashboard contracts. The application
 uses native `fetch`; Axios was removed as unused.
 
-`VITE_API_URL` is embedded at build time. The current fallback points to the legacy
-Render API. Same-origin `/api` requests are required before the Firebase deployment.
+`VITE_API_URL` is embedded at build time when an intentionally separate API origin
+is needed. Otherwise the client uses `window.location.origin`, so hosted builds are
+ready for Firebase Hosting's same-origin `/api/**` rewrite. Local development may
+set `VITE_API_URL` explicitly or use Vite's proxy.
 
 ## Build And CSS
 

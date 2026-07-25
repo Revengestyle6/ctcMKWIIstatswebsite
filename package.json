@@ -5,5 +5,8 @@
   "allowScripts": {
     "@firebase/util@1.15.1": true,
     "protobufjs@7.6.5": true
+  },
+  "devDependencies": {
+    "firebase-tools": "15.24.0"
   }
 }

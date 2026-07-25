@@ -5,6 +5,7 @@ __pycache__
 **/__pycache__
 .git
 .gitignore
+gha-creds-*.json
 .env
 .DS_Store
 build
@@ -19,8 +20,10 @@ docs
 .codex
 backend/data/*.sqlite
 backend/data/*.sqlite-*
+backend/data/*.sqlite.*
 backend/data/*.db
 backend/data/*.db-*
+backend/data/*.db.*
 backend/data/object_storage
 backend/JSON
 backend/backups

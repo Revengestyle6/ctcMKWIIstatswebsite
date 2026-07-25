@@ -40,6 +40,12 @@ not depend on automatic `.env` loading, so export the values in the shell or use
 environment tooling that loads the file. The backend fails fast when
 `DATABASE_URL` is absent or does not identify PostgreSQL.
 
+Real Firebase Google sign-in also requires the backend token audience:
+
+```text
+FIREBASE_PROJECT_ID=mkw-stats
+```
+
 To force the frontend to the local API explicitly:
 
 ```text
@@ -56,6 +62,13 @@ settings and Secret Manager. Administrator requests carry short-lived Firebase I
 tokens; the backend verifies them and checks `admin_users`. GitHub Actions will use
 short-lived Workload Identity Federation credentials rather than a service-account
 key.
+
+The Phase 4 secret containers and initial versions now exist. Staging and
+production have separate database URL and rate-limit HMAC secrets. Migration jobs
+have separate environment-specific database URLs. Accessor is granted per secret,
+not across the project, and the five user-managed service accounts have no
+downloadable keys. See [`infra/iam/`](../../infra/iam/README.md) and
+[`infra/secrets/`](../../infra/secrets/README.md) for the live resource mapping.
 
 The committed `ctc_local` password is only for the host-local Compose service.
 Never reuse it for staging, production, or any remotely reachable database.

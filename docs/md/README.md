@@ -12,6 +12,7 @@
 - [Dashboard Analytics Methodology](dashboard-analytics-methodology.md): runner/bagger metrics and exclusions.
 - [Environment And Secrets](environment-and-secrets.md): supported local and runtime configuration.
 - [Deployment](deployment.md): current transitional artifacts and accepted target platform.
+- [Cloud SQL Read-Only Access](cloud-sql-read-access.md): grant, verify, use, and revoke human database access.
 
 ## Production Readiness
 
@@ -21,6 +22,7 @@
 - [Phase 2 No-Change Refactor](phase-2-no-change-refactor.md)
 - [Phase 3 Technical Specification](phase-3-technical-specification.md)
 - [Phase 3 Local Implementation](phase-3-local-implementation.md)
+- [Phase 4 Resource Inventory](phase-4-resource-inventory.md)
 - [Architecture Decision Records](../adr/README.md)
 - [Regression Baselines](../baselines/README.md)
 

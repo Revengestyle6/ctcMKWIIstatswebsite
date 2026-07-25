@@ -35,6 +35,7 @@ registries:
 docker compose up -d postgres
 export APP_ENV=local
 export DATABASE_URL=postgresql+psycopg://ctc_local:ctc_local@127.0.0.1:55432/ctc_dev
+export FIREBASE_PROJECT_ID=mkw-stats
 .venv/bin/alembic upgrade head
 .venv/bin/python backend/import_json_to_db.py --database-url "$DATABASE_URL"
 ```
@@ -53,6 +54,9 @@ not open them.
 Start the API from `backend/`:
 
 ```bash
+export APP_ENV=local
+export DATABASE_URL=postgresql+psycopg://ctc_local:ctc_local@127.0.0.1:55432/ctc_dev
+export FIREBASE_PROJECT_ID=mkw-stats
 ../.venv/bin/python -m flask --app app run
 ```
 
@@ -108,6 +112,7 @@ that write archive or database data.
 - [Current architecture](docs/md/architecture.md)
 - [Data pipeline](docs/md/data-pipeline.md)
 - [Production readiness plan](docs/md/production-readiness-plan.md)
+- [Phase 4 resource inventory](docs/md/phase-4-resource-inventory.md)
 - [Architecture decisions](docs/adr/README.md)
 - [Regression baselines](docs/baselines/README.md)
 - [Historical documentation](docs/archive/README.md)

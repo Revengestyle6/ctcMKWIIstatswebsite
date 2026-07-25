@@ -1,5 +1,11 @@
 # Season 2 And Season 3 Vision
 
+> Historical product roadmap. Its numbered milestones predate the canonical
+> production-readiness phases in `production-readiness-plan.md`; “Milestone 4”
+> below is not the current Phase 4 infrastructure-and-staging effort. The
+> application-driven upload direction described here has since been selected and
+> implemented locally in Phase 3.
+
 ## Goal
 
 Turn the current Season 1 static-data analytics site into a maintainable multi-season analytics platform where Season 2 can be imported historically and Season 3 can be updated shortly after each match.
@@ -17,9 +23,9 @@ The ideal workflow:
 
 The person maintaining the season should not need to manually regenerate every CSV, remember deployment quirks, or wait until the season ends.
 
-## Recommended Phases
+## Historical Product Milestones
 
-### Phase 1: Document And Stabilize Current Season 1
+### Milestone 1: Document And Stabilize Current Season 1
 
 - Keep current API behavior working.
 - Centralize frontend API config.
@@ -28,7 +34,7 @@ The person maintaining the season should not need to manually regenerate every C
 - Add basic validation around CSV and JSON input.
 - Add a README command for local backend/frontend startup.
 
-### Phase 2: Make Season A First-Class Concept
+### Milestone 2: Make Season A First-Class Concept
 
 - Add `season` query params to API endpoints.
 - Rename data storage around season and division.
@@ -36,7 +42,7 @@ The person maintaining the season should not need to manually regenerate every C
 - Add Season 2 CSVs and JSON source folders.
 - Update UI copy from "Season 1" to selectable season context.
 
-### Phase 3: Build A Deterministic Rebuild Pipeline
+### Milestone 3: Build A Deterministic Rebuild Pipeline
 
 - Add one command that rebuilds all CSVs from raw JSON.
 - Include duplicate source detection.
@@ -44,7 +50,7 @@ The person maintaining the season should not need to manually regenerate every C
 - Add player/team alias mapping files.
 - Add tests for extraction and core stats calculations.
 
-### Phase 4: Add Live Season 3 Updating
+### Milestone 4: Add Live Season 3 Updating
 
 There are two reasonable approaches:
 
@@ -53,7 +59,11 @@ There are two reasonable approaches:
 
 The git-based approach is simpler and more transparent. The admin-upload approach is smoother long term but needs authentication, persistence, and better operational care.
 
-## Recommended Near-Term Design
+## Superseded Near-Term Design
+
+The repo-based recommendation below is retained as historical context. The
+accepted current design uses PostgreSQL, a public review queue, authenticated
+administrator acceptance, and durable accepted-JSON storage.
 
 For the next implementation step, prefer a repo-based pipeline:
 
@@ -99,9 +109,8 @@ Then update the API to filter by `season` and `division` instead of loading only
 - Cache invalidation after updates.
 - Backups of raw uploaded JSON.
 
-## Biggest Architectural Decision Ahead
+## Resolved Architectural Decision
 
-The main decision is whether Season 3 updates should be file/repo-driven or app-driven.
-
-File/repo-driven is probably best first because the current project is already file-based and static-friendly. App-driven uploads can come later after the data model and validation rules are solid.
-
+The project selected app-driven uploads. Public submissions enter a review queue;
+only an authenticated administrator can accept a match into PostgreSQL and durable
+accepted-JSON storage.

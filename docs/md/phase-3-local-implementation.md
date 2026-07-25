@@ -2,8 +2,10 @@
 
 - Status: implemented and locally verified
 - Scope: application, schema, adapters, local runtime, and CI gates
-- Cloud status: Firebase project `mkw-stats` registered; all remaining Phase 4
-  resources remain owner checkpoints (see `phase-4-resource-inventory.md`)
+- Cloud status: Phase 4 is in progress. The Firebase project, authentication
+  configuration, billing safeguards, and shared Cloud SQL instance exist; the
+  authoritative checkpoint record is
+  [`phase-4-resource-inventory.md`](phase-4-resource-inventory.md).
 
 ## Delivered Components
 
@@ -34,7 +36,7 @@ be configured on Cloud Run or in Secret Manager only after owner approval.
 | --- | --- | --- |
 | `APP_ENV` | All | Selects local, test, staging, or production policy; every environment requires PostgreSQL |
 | `DATABASE_URL` | PostgreSQL environments | Runtime database credential; never a frontend variable |
-| `FIREBASE_PROJECT_ID` | Hosted API | Audience used to verify Firebase ID tokens |
+| `FIREBASE_PROJECT_ID` | API when Firebase sign-in is used | Audience used to verify Firebase ID tokens; local real-Google sign-in uses `mkw-stats` |
 | `VITE_FIREBASE_*` | Hosted frontend build | Public Firebase web identifiers, not secrets |
 | `ARCHIVE_STORAGE_PROVIDER` | Hosted API | Must be `gcs` in staging/production |
 | `ARCHIVE_GCS_BUCKET` | Hosted API and maintenance job | Bucket name selected at the cloud checkpoint |
@@ -55,6 +57,7 @@ Start PostgreSQL and migrate it from the repository root:
 docker compose up -d postgres
 export APP_ENV=local
 export DATABASE_URL=postgresql+psycopg://ctc_local:ctc_local@127.0.0.1:55432/ctc_dev
+export FIREBASE_PROJECT_ID=mkw-stats
 .venv/bin/alembic upgrade head
 .venv/bin/python backend/import_json_to_db.py --database-url "$DATABASE_URL"
 ```
@@ -116,22 +119,29 @@ Google Cloud IAM or GitHub permissions. The owner performs those provider steps.
 
 ## Phase 4 Owner Checkpoints
 
-No item below has been performed. Before each batch, review the exact project,
-region, resource name, access grants, settings, expected monthly cost, and any
-credentials or domain choices needed from the owner:
+This is a summary of the handoff from Phase 3. The Phase 4 resource inventory is
+authoritative for current status. Before each remaining batch, review the exact
+project, region, resource name, access grants, settings, expected monthly cost, and
+any credentials or domain choices needed from the owner:
 
 1. [Complete] Create the `mkw-stats` Google Cloud/Firebase project and register
-   its web app. Billing and paid APIs remain unapproved.
-2. Create the cost-first Cloud SQL instance and staging/production databases and
-   roles, including `ctc_readonly` and future-table default privileges.
-3. Create the archive/export bucket, retention/lifecycle rules, and service account.
+   its web app; link billing and configure project-level budget alerts.
+2. [Complete] Create the cost-first shared Cloud SQL instance, then create
+   `ctc_staging`, `ctc_prod`, their runtime/migration roles, `ctc_readonly`, and
+   future-table default privileges.
+3. [Pending] Create the archive/export bucket, staging/production namespaces,
+   retention/lifecycle rules, and service accounts.
 4. [Complete] Configure Firebase Google sign-in, authorize localhost, provide the
    public web configuration, and verify the allowlisted owner login.
-5. Create secrets, migrate/import staging data, and bootstrap the owner email.
-6. Deploy Cloud Run staging with zero minimum instances and conservative maxima.
-7. Deploy Firebase Hosting staging and its same-origin `/api/**` rewrite.
-8. Validate admin sign-in, queue/acceptance, archive repair, read-only SQL, costs,
-   cold starts, and rollback before approving production.
-9. Configure GitHub Workload Identity Federation and protected deployment workflow.
-10. Repeat reviewed configuration for production, then retire transitional hosting
-    only after the rollback window.
+5. [Pending] Create secrets, migrate/import staging data, and bootstrap the owner
+   email.
+6. [Pending] Deploy Cloud Run staging with zero minimum instances and conservative
+   maxima.
+7. [Pending] Deploy Firebase Hosting staging and its same-origin `/api/**` rewrite.
+8. [Pending] Validate admin sign-in, queue/acceptance, archive repair, read-only SQL,
+   costs, cold starts, and rollback before approving production.
+9. [In verification] GitHub Workload Identity Federation, least-privilege staging
+   grants, and the digest-pinned deployment workflow are configured; record the
+   first successful `main` run before marking complete.
+10. [Pending; Phase 5] Repeat the reviewed configuration for production, then
+    retire transitional hosting only after the rollback window.

@@ -8,6 +8,7 @@ Run these commands from `backend/` with the project Python environment.
 | `inspect_db.py` | Print database counts and review rows | No |
 | `reconcile_json_archive.py` | Compare the JSON archive with imported source rows | No |
 | `bootstrap_owner.py` | Create or restore the first allowlisted application owner | Yes |
+| `bootstrap_gcs_archive.py` | Rebuild a migrated database from a private GCS bootstrap prefix and promote imported sources to `accepted/` | Yes |
 | `run_phase3_maintenance.py` | Expire queue objects and repair accepted archive promotion | Yes |
 
 All database commands require PostgreSQL through `DATABASE_URL` or their explicit

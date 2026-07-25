@@ -2,11 +2,31 @@
 
 ## Authoritative Inputs
 
-Match documents live under:
+The repository's historical bootstrap documents live under:
 
 ```text
 backend/JSON/{league}/{season}/{division}/{match}.json
 ```
+
+For deployed staging and production, newly submitted match documents do not
+create Git commits. PostgreSQL owns normalized/queryable state, and Cloud Storage
+owns the durable original bytes:
+
+```text
+gs://{environment-archive}/accepted/{league}/{season}/{division}/{match}--{sha256-prefix}.json
+```
+
+The 12-character suffix is the beginning of the SHA-256 fingerprint of the exact
+canonical JSON bytes. It makes an accepted object content-addressable enough for
+human-readable storage paths, prevents two different documents with the same
+match label from sharing a key, and lets reconciliation connect the object to the
+full fingerprint stored in PostgreSQL. The complete hash, not only the filename
+prefix, is verified before promotion.
+
+This separation avoids giving the public API a GitHub write credential and keeps
+runtime data durability independent from application deployments. A future
+audited export may copy accepted sources elsewhere for backup, but repository
+synchronization is not part of the acceptance transaction.
 
 Reviewed registries under `backend/data/` preserve decisions that raw match files
 cannot express reliably:

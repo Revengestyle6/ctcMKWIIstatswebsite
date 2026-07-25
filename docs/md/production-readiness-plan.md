@@ -3,7 +3,8 @@
 ## Status
 
 - Created: July 19, 2026
-- Phase: Phase 3 local implementation complete; Phase 4 cloud checkpoints pending
+- Updated: July 25, 2026
+- Phase: Phase 3 local implementation complete; Phase 4 infrastructure and staging in progress
 - Scope: Repository cleanup, documentation, production infrastructure, deployment, and ongoing operations
 - Accepted architecture: Firebase Hosting, Cloud Run, Cloud SQL for PostgreSQL,
   Cloud Storage, and Firebase Authentication
@@ -12,6 +13,13 @@ Phase 0 evidence and open decisions are tracked in
 [`phase-0-production-baseline.md`](phase-0-production-baseline.md). Proposed cleanup
 dispositions are tracked in
 [`repository-cleanup-inventory.md`](repository-cleanup-inventory.md).
+Live Phase 4 resource and checkpoint status is tracked in
+[`phase-4-resource-inventory.md`](phase-4-resource-inventory.md). That inventory is
+authoritative when a status summary in an earlier phase document becomes stale.
+
+The phase numbers in this plan are the canonical production-readiness phase
+numbers. Older product-roadmap milestones in [`vision.md`](vision.md) predate this
+plan and are labeled separately.
 
 ## Goal
 
@@ -330,6 +338,23 @@ Done when:
 - Production no longer depends on persistent container files.
 
 ### Phase 4: Infrastructure And Staging
+
+Status on July 25, 2026: in progress. The Google Cloud/Firebase project,
+administrator authentication, billing safeguards, Cloud SQL databases and roles,
+private archive/export buckets, dedicated workload identities, scoped runtime
+secrets, Artifact Registry image, staging migration/rebuild jobs, and staging
+Cloud Run API exist. The database/archive source counts match the baseline and
+live/readiness/data checks pass. Firebase Hosting serves the React SPA with
+verified deep-link fallback and same-origin Cloud Run API routing. Hosted owner
+Google sign-in and Flask authorization also pass. Workload Identity Federation
+trust, scoped deployment IAM, and the replacement staging workflow are configured;
+the first `main` workflow deployment remains to verify them. Scheduled operations,
+remaining authentication-boundary checks, and restore evidence remain. A controlled staging submission, owner acceptance, PostgreSQL
+visibility check, and accepted-object promotion also pass. See the Phase 4
+resource inventory for the checkpoint-level record. The anonymous review-queue
+path has also been verified end to end: submission remained out of analytics
+until an owner accepted it, after which the queue object was removed and the
+accepted object and match became public.
 
 Tasks:
 

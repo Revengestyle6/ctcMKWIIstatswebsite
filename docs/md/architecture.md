@@ -50,3 +50,18 @@ local/GCS archive storage. Audit and repair state are durable.
 Firebase Hosting will serve the frontend and rewrite `/api/**` to Cloud Run. Cloud
 Run will use Cloud SQL PostgreSQL and Cloud Storage. Firebase Authentication will
 protect administrator actions. See `docs/adr/` for the accepted decisions.
+
+| Service | Why it is used |
+| --- | --- |
+| Firebase Hosting | Serves the compiled React UI and static media through a CDN, manages TLS/custom domains, and forwards `/api/**` without running application code |
+| Firebase Authentication | Gives each administrator an attributable Google identity and ID token; it does not store application data or run Flask |
+| Cloud Run | Runs the existing containerized Flask API only when HTTP requests arrive and can scale to zero between requests |
+| Cloud SQL | Holds relational application state and supports transactional ingestion, migrations, analytics queries, backups, and point-in-time recovery |
+| Cloud Storage | Preserves exact accepted JSON as immutable audit/rebuild input and keeps logical database exports outside the database |
+| Secret Manager | Supplies runtime-only credentials and HMAC material without committing secrets or baking them into the container |
+| Artifact Registry | Stores the immutable backend container images that Cloud Run deploys |
+| GitHub Actions with Workload Identity Federation | Runs verified deployments with short-lived Google credentials instead of service-account keys |
+
+These services are deliberately narrow. Firebase is the browser-facing product
+layer, while the Google Cloud services provide the Python runtime and durable data
+services that static Hosting cannot provide.
