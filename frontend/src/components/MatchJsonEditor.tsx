@@ -625,41 +625,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
       ? `${mii} (${entry.player.lounge_name})`
       : mii;
   }
-  function loadFile(file: File): void {
-    if (previewLoading || commitLoading) return;
-    const requestVersion = ++editorVersion.current;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (editorVersion.current !== requestVersion) return;
-      try {
-        const parsed = JSON.parse(String(reader.result)) as MatchJson;
-        setMatch(parsed);
-        setRaces(racesFromMatch(parsed));
-        setFileName(file.name);
-        setIdentityStates({});
-        setActiveRace(0);
-        setLoadError(null);
-      } catch (error) {
-        setLoadError(error instanceof Error ? error.message : "Could not parse JSON");
-      }
-    };
-    reader.readAsText(file);
-  }
-  function clearEditor(): void {
-    if (previewLoading || commitLoading) return;
-    if (
-      !window.confirm(
-        "Clear all current match content? This will reset the editor and cannot be undone."
-      )
-    ) {
-      return;
-    }
-
-    editorVersion.current += 1;
-    const next = clone(blankMatch);
-    setMatch(next);
-    setRaces(racesFromMatch(next));
-    setFileName("New match JSON");
+  function resetEditor(nextMatch: MatchJson, nextFileName: string): void {
+    setMatch(nextMatch);
+    setRaces(racesFromMatch(nextMatch));
+    setFileName(nextFileName);
     setIdentityStates({});
     setRaceView("one");
     setActiveRace(0);
@@ -680,6 +649,34 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setReviewSubmissionId(null);
     scrollToPreviewAfterReview.current = false;
     sessionStorage.removeItem("ctc-review-draft");
+  }
+  function loadFile(file: File): void {
+    if (previewLoading || commitLoading) return;
+    const requestVersion = ++editorVersion.current;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (editorVersion.current !== requestVersion) return;
+      try {
+        const parsed = JSON.parse(String(reader.result)) as MatchJson;
+        resetEditor(parsed, file.name);
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : "Could not parse JSON");
+      }
+    };
+    reader.readAsText(file);
+  }
+  function clearEditor(): void {
+    if (previewLoading || commitLoading) return;
+    if (
+      !window.confirm(
+        "Clear all current match content? This will reset the editor and cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    editorVersion.current += 1;
+    resetEditor(clone(blankMatch), "New match JSON");
   }
   async function generateTablePreview(
     entries: NewEntry[],
