@@ -6,7 +6,10 @@ as Cloud Run. Digest pinning proves which exact bytes a job or service executes.
 
 Cloud Build is the managed remote builder. It sends the repository's Docker build
 context to Google Cloud, builds without relying on Docker Desktop, and pushes the
-result into Artifact Registry.
+result into Artifact Registry. Automated builds explicitly use
+`ctc-cloud-builder@mkw-stats.iam.gserviceaccount.com`, whose permissions are
+limited to reading the submitted source, writing build logs, and pushing to this
+repository. They do not use the Editor-privileged default Compute service account.
 
 | Setting | Value |
 | --- | --- |
@@ -23,8 +26,8 @@ digest:
 ```bash
 gcloud builds submit \
   --project=mkw-stats \
-  --region=us-central1 \
-  --tag=us-central1-docker.pkg.dev/mkw-stats/ctc-backend/api:UNIQUE_TAG \
+  --config=cloudbuild.yaml \
+  --substitutions=_IMAGE_TAG=us-central1-docker.pkg.dev/mkw-stats/ctc-backend/api:UNIQUE_TAG \
   .
 ```
 
