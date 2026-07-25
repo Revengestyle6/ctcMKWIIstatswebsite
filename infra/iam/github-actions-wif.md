@@ -48,6 +48,7 @@ condition and the service-account binding therefore have to pass.
 | --- | --- | --- |
 | `roles/cloudbuild.builds.editor` | Project | Submit and observe the managed backend build |
 | `roles/serviceusage.serviceUsageConsumer` | Project | Call enabled Google APIs during deployment without permission to enable or administer services |
+| `roles/storage.bucketViewer` | Project | Let `gcloud builds submit` verify that the default Cloud Build source bucket belongs to this project; grants bucket metadata only |
 | `roles/storage.objectUser` | Bucket `mkw-stats_cloudbuild` | Upload and inspect the temporary source archive used by `gcloud builds submit` |
 | `roles/artifactregistry.reader` | Repository `ctc-backend` | Resolve and deploy the image produced by Cloud Build |
 | `roles/run.developer` | Service `ctc-stats-api-staging` | Update only the existing staging API revision |
