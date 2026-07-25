@@ -1,28 +1,28 @@
-# Build stage for frontend
-FROM node:22 AS frontend-build
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci
-COPY frontend ./
-RUN npm run build
-
-# Runtime stage with Python and Node
 FROM python:3.11-slim
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-# Copy backend first to install dependencies
-COPY backend ./backend
+# Keep dependency installation in a cacheable layer.
+COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir -r ./backend/requirements.txt
 
-# Copy frontend build
-COPY --from=frontend-build /app/frontend/build ./frontend/build
-COPY --from=frontend-build /app/frontend/package*.json ./frontend/
+COPY backend ./backend
+COPY alembic.ini ./alembic.ini
+COPY start.sh ./start.sh
 
+# Schema migrations and seed imports are explicit deployment jobs. The API image
+# never mutates a database while it is being built.
+RUN addgroup --system app \
+    && adduser --system --ingroup app app \
+    && chown -R app:app /app \
+    && chmod +x /app/start.sh
+
+USER app
 WORKDIR /app/backend
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+
 EXPOSE 8080
 CMD ["/app/start.sh"]

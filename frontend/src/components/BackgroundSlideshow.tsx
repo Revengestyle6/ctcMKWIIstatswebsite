@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 export default function BackgroundSlideshow(): React.JSX.Element {
   const images = Array.from({ length: 343 }, (_, i) => `/images/CT_BGS_WEBP/bg_(${i + 1}).webp`);
@@ -11,7 +12,7 @@ export default function BackgroundSlideshow(): React.JSX.Element {
       const img = new Image();
       img.src = src;
     };
-    
+
     // Preload only the current image
     preload(images[current]);
   }, [current, images]);

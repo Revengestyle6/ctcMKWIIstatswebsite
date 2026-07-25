@@ -1,0 +1,788 @@
+{
+  "division": "d2",
+  "format": "5v5",
+  "league": "ctc",
+  "match_label": "[M8] CS 364 - 363 Mi",
+  "races_played": 12,
+  "review_notes": "",
+  "rxx": [
+    "r11576730"
+  ],
+  "season": "s3",
+  "teams": {
+    "CS": {
+      "hex_color": "#4F8CFF",
+      "penalties": 0,
+      "players": {
+        "2540-0334-4034": {
+          "flag": "",
+          "gp_scores": [
+            [
+              8,
+              6,
+              2,
+              2
+            ],
+            [
+              10,
+              4,
+              15,
+              3
+            ],
+            [
+              2,
+              15,
+              2,
+              2
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "",
+          "mii_name": "CS F@sglc",
+          "penalties": 0,
+          "race_positions": [
+            4,
+            5,
+            8,
+            8,
+            3,
+            6,
+            1,
+            7,
+            8,
+            1,
+            8,
+            8
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            8,
+            6,
+            2,
+            2,
+            10,
+            4,
+            15,
+            3,
+            2,
+            15,
+            2,
+            2
+          ],
+          "subbed_out": false,
+          "table_name": "",
+          "table_str": "CS F@sglc 18|32|21",
+          "tag": "CS",
+          "total_score": 71
+        },
+        "2969-5491-9022": {
+          "flag": "",
+          "gp_scores": [
+            [
+              1,
+              1,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              1
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "",
+          "mii_name": "CS jεd",
+          "penalties": 0,
+          "race_positions": [
+            9,
+            9,
+            9,
+            10,
+            10,
+            9,
+            10,
+            9,
+            9,
+            10,
+            9,
+            10
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            0
+          ],
+          "subbed_out": false,
+          "table_name": "",
+          "table_str": "CS jεd 3|2|2",
+          "tag": "CS",
+          "total_score": 7
+        },
+        "3098-4042-7390": {
+          "flag": "",
+          "gp_scores": [
+            [
+              3,
+              2,
+              12,
+              4
+            ],
+            [
+              2,
+              12,
+              3,
+              15
+            ],
+            [
+              3,
+              12,
+              6,
+              6
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "",
+          "mii_name": "CS towner",
+          "penalties": 0,
+          "race_positions": [
+            7,
+            8,
+            2,
+            6,
+            8,
+            2,
+            7,
+            1,
+            7,
+            2,
+            5,
+            5
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            3,
+            2,
+            12,
+            4,
+            2,
+            12,
+            3,
+            15,
+            3,
+            12,
+            6,
+            6
+          ],
+          "subbed_out": false,
+          "table_name": "",
+          "table_str": "CS towner 21|32|27",
+          "tag": "CS",
+          "total_score": 80
+        },
+        "3184-2806-6264": {
+          "flag": "",
+          "gp_scores": [
+            [
+              4,
+              15,
+              6,
+              6
+            ],
+            [
+              4,
+              10,
+              2,
+              2
+            ],
+            [
+              15,
+              3,
+              4,
+              12
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "",
+          "mii_name": "CS bran",
+          "penalties": 0,
+          "race_positions": [
+            6,
+            1,
+            5,
+            5,
+            6,
+            3,
+            8,
+            8,
+            1,
+            7,
+            6,
+            2
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            4,
+            15,
+            6,
+            6,
+            4,
+            10,
+            2,
+            2,
+            15,
+            3,
+            4,
+            12
+          ],
+          "subbed_out": false,
+          "table_name": "",
+          "table_str": "CS bran 31|18|34",
+          "tag": "CS",
+          "total_score": 83
+        },
+        "4000-3210-5203": {
+          "flag": "",
+          "gp_scores": [
+            [
+              15,
+              12,
+              10,
+              15
+            ],
+            [
+              15,
+              6,
+              8,
+              12
+            ],
+            [
+              8,
+              2,
+              12,
+              8
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "",
+          "mii_name": "[CS]beulah",
+          "penalties": 0,
+          "race_positions": [
+            1,
+            2,
+            3,
+            1,
+            1,
+            5,
+            4,
+            2,
+            4,
+            8,
+            2,
+            4
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            15,
+            12,
+            10,
+            15,
+            15,
+            6,
+            8,
+            12,
+            8,
+            2,
+            12,
+            8
+          ],
+          "subbed_out": false,
+          "table_name": "",
+          "table_str": "[CS]beulah 52|41|30",
+          "tag": "CS",
+          "total_score": 123
+        }
+      },
+      "table_penalty_str": "",
+      "table_tag_str": "CS #4F8CFF",
+      "total_score": 364
+    },
+    "Mι": {
+      "hex_color": "#F45D8C",
+      "penalties": 5,
+      "players": {
+        "0220-7722-0770": {
+          "flag": "",
+          "gp_scores": [
+            [
+              2,
+              3,
+              3,
+              8
+            ],
+            [
+              6,
+              3,
+              12,
+              10
+            ],
+            [
+              4,
+              4,
+              10,
+              10
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "",
+          "mii_name": "Mι◆『T¢trx』",
+          "penalties": 0,
+          "race_positions": [
+            8,
+            7,
+            7,
+            4,
+            5,
+            7,
+            2,
+            3,
+            6,
+            6,
+            3,
+            3
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            2,
+            3,
+            3,
+            8,
+            6,
+            3,
+            12,
+            10,
+            4,
+            4,
+            10,
+            10
+          ],
+          "subbed_out": false,
+          "table_name": "",
+          "table_str": "Mι◆『T¢trx』 16|31|28",
+          "tag": "Mι",
+          "total_score": 75
+        },
+        "1122-7129-1674": {
+          "flag": "",
+          "gp_scores": [
+            [
+              10,
+              4,
+              4,
+              12
+            ],
+            [
+              3,
+              15,
+              10,
+              4
+            ],
+            [
+              12,
+              6,
+              8,
+              4
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "",
+          "mii_name": "Mι◆『Jα¢κ』",
+          "penalties": 0,
+          "race_positions": [
+            3,
+            6,
+            6,
+            2,
+            7,
+            1,
+            3,
+            6,
+            2,
+            5,
+            4,
+            6
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            10,
+            4,
+            4,
+            12,
+            3,
+            15,
+            10,
+            4,
+            12,
+            6,
+            8,
+            4
+          ],
+          "subbed_out": false,
+          "table_name": "",
+          "table_str": "Mι◆『Jα¢κ』 30|32|30",
+          "tag": "Mι",
+          "total_score": 92
+        },
+        "2711-8319-7990": {
+          "flag": "",
+          "gp_scores": [
+            [
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              1
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "",
+          "mii_name": "Mι『m¡¡w¡¡』",
+          "penalties": 0,
+          "race_positions": [
+            10,
+            10,
+            10,
+            9,
+            9,
+            10,
+            9,
+            10,
+            10,
+            9,
+            10,
+            9
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1
+          ],
+          "subbed_out": false,
+          "table_name": "",
+          "table_str": "Mι『m¡¡w¡¡』 1|2|2",
+          "tag": "Mι",
+          "total_score": 5
+        },
+        "2926-5894-8216": {
+          "flag": "",
+          "gp_scores": [
+            [
+              6,
+              8,
+              8,
+              3
+            ],
+            [
+              12,
+              8,
+              6,
+              8
+            ],
+            [
+              10,
+              8,
+              15,
+              3
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "",
+          "mii_name": "Mι Jαmes",
+          "penalties": 0,
+          "race_positions": [
+            5,
+            4,
+            4,
+            7,
+            2,
+            4,
+            5,
+            4,
+            3,
+            4,
+            1,
+            7
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            6,
+            8,
+            8,
+            3,
+            12,
+            8,
+            6,
+            8,
+            10,
+            8,
+            15,
+            3
+          ],
+          "subbed_out": false,
+          "table_name": "",
+          "table_str": "Mι Jαmes 25|34|36",
+          "tag": "Mι",
+          "total_score": 95
+        },
+        "3270-2043-0527": {
+          "flag": "",
+          "gp_scores": [
+            [
+              12,
+              10,
+              15,
+              10
+            ],
+            [
+              8,
+              2,
+              4,
+              6
+            ],
+            [
+              6,
+              10,
+              3,
+              15
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "",
+          "mii_name": "Mι starter",
+          "penalties": 0,
+          "race_positions": [
+            2,
+            3,
+            1,
+            3,
+            4,
+            8,
+            6,
+            5,
+            5,
+            3,
+            7,
+            1
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            12,
+            10,
+            15,
+            10,
+            8,
+            2,
+            4,
+            6,
+            6,
+            10,
+            3,
+            15
+          ],
+          "subbed_out": false,
+          "table_name": "",
+          "table_str": "Mι starter 47|20|34",
+          "tag": "Mι",
+          "total_score": 101
+        }
+      },
+      "table_penalty_str": "Penalty -5",
+      "table_tag_str": "Mι #F45D8C",
+      "total_score": 363
+    }
+  },
+  "title_str": "#title 12 races\n",
+  "tracks": [
+    "Garden of Dreams",
+    "3DS Neo Bowser City",
+    "N64 Banshee Boardwalk",
+    "N64 Royal Raceway",
+    "GBA Riverside Park",
+    "Bluster Blob Bluff",
+    "Wicked Woods",
+    "Ice Cream Fortress",
+    "Mushlight's Reprise",
+    "Castle of Time",
+    "Six King Labyrinth",
+    "DS Airship Fortress"
+  ],
+  "week": 8
+}

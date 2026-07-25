@@ -1,0 +1,642 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r10866805"
+  ],
+  "tracks": [
+    "Cubing Conundrum",
+    "Pipe Underworld",
+    "Lava Lake",
+    "Sandstone Cliffs",
+    "Castle of Time",
+    "The Great Apple War",
+    "Color Wonderland",
+    "Wooded Way",
+    "Vile Isle",
+    "Haunted Gardens",
+    "Darkness Temple",
+    "Volcanic Valley"
+  ],
+  "teams": {
+    "G25": {
+      "table_tag_str": "G25 #b4ff69",
+      "table_penalty_str": "",
+      "total_score": 394,
+      "penalties": 0,
+      "players": {
+        "0389-3835-0982": {
+          "table_str": "GAMT Eric [ca] 45|31|33",
+          "mii_name": "G25 Eric",
+          "lounge_name": "GAMT Eric",
+          "table_name": "GAMT Eric",
+          "tag": "G25",
+          "total_score": 109,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            12,
+            8,
+            15,
+            15,
+            8,
+            6,
+            2,
+            6,
+            4,
+            8,
+            15
+          ],
+          "race_positions": [
+            3,
+            2,
+            4,
+            1,
+            1,
+            4,
+            5,
+            8,
+            5,
+            6,
+            4,
+            1
+          ],
+          "gp_scores": [
+            [
+              10,
+              12,
+              8,
+              15
+            ],
+            [
+              15,
+              8,
+              6,
+              2
+            ],
+            [
+              6,
+              4,
+              8,
+              15
+            ]
+          ],
+          "flag": "ca"
+        },
+        "3184-2974-9412": {
+          "table_str": "KaneTheSnowman [bb] 33|42|24",
+          "mii_name": "G25☆♪Dog",
+          "lounge_name": "KaneTheSnowman",
+          "table_name": "KaneTheSnowman",
+          "tag": "G25",
+          "total_score": 99,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            15,
+            2,
+            4,
+            12,
+            12,
+            12,
+            6,
+            12,
+            6,
+            3,
+            3
+          ],
+          "race_positions": [
+            2,
+            1,
+            8,
+            6,
+            2,
+            2,
+            2,
+            5,
+            2,
+            5,
+            7,
+            7
+          ],
+          "gp_scores": [
+            [
+              12,
+              15,
+              2,
+              4
+            ],
+            [
+              12,
+              12,
+              12,
+              6
+            ],
+            [
+              12,
+              6,
+              3,
+              3
+            ]
+          ],
+          "flag": "bb"
+        },
+        "3611-2551-5014": {
+          "table_str": "Gaberboo [us_wa] 32|26|37",
+          "mii_name": "G25 Gabe",
+          "lounge_name": "Gaberboo",
+          "table_name": "Gaberboo",
+          "tag": "G25",
+          "total_score": 95,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            3,
+            15,
+            8,
+            2,
+            4,
+            8,
+            12,
+            15,
+            2,
+            12,
+            8
+          ],
+          "race_positions": [
+            5,
+            7,
+            1,
+            4,
+            8,
+            6,
+            4,
+            2,
+            1,
+            8,
+            2,
+            4
+          ],
+          "gp_scores": [
+            [
+              6,
+              3,
+              15,
+              8
+            ],
+            [
+              2,
+              4,
+              8,
+              12
+            ],
+            [
+              15,
+              2,
+              12,
+              8
+            ]
+          ],
+          "flag": "us_wa"
+        },
+        "0907-9688-4690": {
+          "table_str": "CT Inter [ca_sk] 32|17|33",
+          "mii_name": "G25◇J.3:16",
+          "lounge_name": "CT Inter",
+          "table_name": "CT Inter",
+          "tag": "G25",
+          "total_score": 82,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            8,
+            10,
+            6,
+            3,
+            2,
+            4,
+            8,
+            3,
+            10,
+            10,
+            10
+          ],
+          "race_positions": [
+            4,
+            4,
+            3,
+            5,
+            7,
+            8,
+            6,
+            4,
+            7,
+            3,
+            3,
+            3
+          ],
+          "gp_scores": [
+            [
+              8,
+              8,
+              10,
+              6
+            ],
+            [
+              3,
+              2,
+              4,
+              8
+            ],
+            [
+              3,
+              10,
+              10,
+              10
+            ]
+          ],
+          "flag": "ca_sk"
+        },
+        "2368-2586-3226": {
+          "table_str": "Double Gold S15 [bs] 3|4|2",
+          "mii_name": "G25☆Jamo",
+          "lounge_name": "Double Gold S15",
+          "table_name": "Double Gold S15",
+          "tag": "G25",
+          "total_score": 9,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0
+          ],
+          "race_positions": [
+            10,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            10,
+            9,
+            10
+          ],
+          "gp_scores": [
+            [
+              0,
+              1,
+              1,
+              1
+            ],
+            [
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ]
+          ],
+          "flag": "bs"
+        }
+      },
+      "hex_color": "#b4ff69"
+    },
+    "UX": {
+      "table_tag_str": "UX #ff69b4",
+      "table_penalty_str": "",
+      "total_score": 338,
+      "penalties": 0,
+      "players": {
+        "3613-7976-9916": {
+          "table_str": "Phony [jp] 37|48|40",
+          "mii_name": "UX☆#1",
+          "lounge_name": "Phony",
+          "table_name": "Phony",
+          "tag": "UX",
+          "total_score": 125,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            10,
+            12,
+            12,
+            8,
+            10,
+            15,
+            15,
+            4,
+            15,
+            15,
+            6
+          ],
+          "race_positions": [
+            7,
+            3,
+            2,
+            2,
+            4,
+            3,
+            1,
+            1,
+            6,
+            1,
+            1,
+            5
+          ],
+          "gp_scores": [
+            [
+              3,
+              10,
+              12,
+              12
+            ],
+            [
+              8,
+              10,
+              15,
+              15
+            ],
+            [
+              4,
+              15,
+              15,
+              6
+            ]
+          ],
+          "flag": "jp"
+        },
+        "2497-1111-3333": {
+          "table_str": "Kei [us_la] 25|45|32",
+          "mii_name": "UX★Kei",
+          "lounge_name": "Kei",
+          "table_name": "Kei",
+          "tag": "UX",
+          "total_score": 102,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            4,
+            3,
+            3,
+            10,
+            15,
+            10,
+            10,
+            10,
+            12,
+            6,
+            4
+          ],
+          "race_positions": [
+            1,
+            6,
+            7,
+            7,
+            3,
+            1,
+            3,
+            3,
+            3,
+            2,
+            5,
+            6
+          ],
+          "gp_scores": [
+            [
+              15,
+              4,
+              3,
+              3
+            ],
+            [
+              10,
+              15,
+              10,
+              10
+            ],
+            [
+              10,
+              12,
+              6,
+              4
+            ]
+          ],
+          "flag": "us_la"
+        },
+        "1251-5481-6789": {
+          "table_str": "Plan 8 [jp] 24|15|32",
+          "mii_name": "UX★Gamin",
+          "lounge_name": "Plan 8",
+          "table_name": "Plan 8",
+          "tag": "UX",
+          "total_score": 71,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            6,
+            4,
+            10,
+            6,
+            3,
+            3,
+            3,
+            8,
+            8,
+            4,
+            12
+          ],
+          "race_positions": [
+            6,
+            5,
+            6,
+            3,
+            5,
+            7,
+            7,
+            7,
+            4,
+            4,
+            6,
+            2
+          ],
+          "gp_scores": [
+            [
+              4,
+              6,
+              4,
+              10
+            ],
+            [
+              6,
+              3,
+              3,
+              3
+            ],
+            [
+              8,
+              8,
+              4,
+              12
+            ]
+          ],
+          "flag": "jp"
+        },
+        "1423-3704-7159": {
+          "table_str": "Kenty [jp] 12|16|8",
+          "mii_name": "UX Kenty",
+          "lounge_name": "Kenty",
+          "table_name": "Kenty",
+          "tag": "UX",
+          "total_score": 36,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            2,
+            6,
+            2,
+            4,
+            6,
+            2,
+            4,
+            2,
+            3,
+            2,
+            1
+          ],
+          "race_positions": [
+            8,
+            8,
+            5,
+            8,
+            6,
+            5,
+            8,
+            6,
+            8,
+            7,
+            8,
+            9
+          ],
+          "gp_scores": [
+            [
+              2,
+              2,
+              6,
+              2
+            ],
+            [
+              4,
+              6,
+              2,
+              4
+            ],
+            [
+              2,
+              3,
+              2,
+              1
+            ]
+          ],
+          "flag": "jp"
+        },
+        "5245-8888-2222": {
+          "table_str": "Mossan [jp] 1|0|3",
+          "mii_name": "UX☆PRISM",
+          "lounge_name": "Mossan",
+          "table_name": "Mossan",
+          "tag": "UX",
+          "total_score": 4,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            2
+          ],
+          "race_positions": [
+            9,
+            10,
+            10,
+            10,
+            10,
+            10,
+            10,
+            10,
+            10,
+            9,
+            10,
+            8
+          ],
+          "gp_scores": [
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              2
+            ]
+          ],
+          "flag": "jp"
+        }
+      },
+      "hex_color": "#ff69b4"
+    }
+  }
+}

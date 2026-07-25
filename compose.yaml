@@ -1,0 +1,23 @@
+name: ctc-stats-local
+
+services:
+  postgres:
+    image: postgres:18.4-alpine3.23
+    environment:
+      POSTGRES_DB: ctc_dev
+      POSTGRES_USER: ctc_local
+      POSTGRES_PASSWORD: ctc_local
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - ctc-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ctc_local -d ctc_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  ctc-postgres-data:

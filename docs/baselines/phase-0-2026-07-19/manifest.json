@@ -1,0 +1,245 @@
+{
+  "artifacts": [
+    {
+      "bytes": 318,
+      "endpoint": "/api/seasons",
+      "path": "docs/baselines/phase-0-2026-07-19/api/seasons.json",
+      "sha256": "41772231b17999992e813f9dfda10def60fecffff383c9335d00458d72052062",
+      "status": 200
+    },
+    {
+      "bytes": 1417,
+      "endpoint": "/api/match-scopes",
+      "path": "docs/baselines/phase-0-2026-07-19/api/match-scopes.json",
+      "sha256": "516500fdd404eb5380194e553e882094797d9b9c03916f35f49fe19e4ee20767",
+      "status": 200
+    },
+    {
+      "bytes": 13162,
+      "endpoint": "/api/team-scopes",
+      "path": "docs/baselines/phase-0-2026-07-19/api/team-scopes.json",
+      "sha256": "488b8f3643f10dd7978c22373a755bd3f6faac5f15a38e4152f6fdde264ec787",
+      "status": 200
+    },
+    {
+      "bytes": 115,
+      "endpoint": "/api/divisions?season=s3",
+      "path": "docs/baselines/phase-0-2026-07-19/api/divisions-s3.json",
+      "sha256": "24f0d94d090df5ecd79069df018fba57fd95a127692ca2109f93ba4a8619cd38",
+      "status": 200
+    },
+    {
+      "bytes": 58,
+      "endpoint": "/api/teams?season=s3&division=d1",
+      "path": "docs/baselines/phase-0-2026-07-19/api/teams-s3-d1.json",
+      "sha256": "81bfa1074c1935ebf4a37d1a3f25173dfa6551351a56fae01c6ac8119467fb20",
+      "status": 200
+    },
+    {
+      "bytes": 552,
+      "endpoint": "/api/players?season=s3&division=d1",
+      "path": "docs/baselines/phase-0-2026-07-19/api/players-s3-d1.json",
+      "sha256": "aba9a8a73d95047f19e8510f8d89e1f71e0a641bf63f6c2eec5be0fa516ebf10",
+      "status": 200
+    },
+    {
+      "bytes": 2305,
+      "endpoint": "/api/tracks?season=s3&division=d1",
+      "path": "docs/baselines/phase-0-2026-07-19/api/tracks-s3-d1.json",
+      "sha256": "3f6fff7a50c369ef533d9575d1bfa29e60508a5f8b1b0b01bafaad6f90048f7b",
+      "status": 200
+    },
+    {
+      "bytes": 4869,
+      "endpoint": "/api/matches?season=s3&division=d1",
+      "path": "docs/baselines/phase-0-2026-07-19/api/matches-s3-d1.json",
+      "sha256": "7bfb22a1f64138189154284dcdacf68ee1dbab235210782fb8d5c6a7da355bbb",
+      "status": 200
+    },
+    {
+      "bytes": 13011,
+      "endpoint": "/api/matches/222",
+      "path": "docs/baselines/phase-0-2026-07-19/api/match-222.json",
+      "sha256": "c94925ed851c99dfe98186049d6c67945b58104fdf4172a14da23e023a982fab",
+      "status": 200
+    },
+    {
+      "bytes": 4986,
+      "endpoint": "/api/players/180/overview?season=s3&division=d1&role=runner",
+      "path": "docs/baselines/phase-0-2026-07-19/api/player-180-overview-runner.json",
+      "sha256": "c7866d9ea1a8bb4d8482d3d683c3e75379b78757f45c1eb1eda7a4c95c6c2459",
+      "status": 200
+    },
+    {
+      "bytes": 2654,
+      "endpoint": "/api/players/180/performance?season=s3&division=d1&role=runner",
+      "path": "docs/baselines/phase-0-2026-07-19/api/player-180-performance-runner.json",
+      "sha256": "b74e9bfd3bb329390c4d53e41b247d2e0a610ab17817e8b05a98965158d558aa",
+      "status": 200
+    },
+    {
+      "bytes": 3872,
+      "endpoint": "/api/players/180/tracks?season=s3&division=d1&role=runner&min_races=2",
+      "path": "docs/baselines/phase-0-2026-07-19/api/player-180-tracks-runner.json",
+      "sha256": "1bba600e55796340bd341cd423cb9a5e50aa789ae9736e0a51b79fcd299b4f3d",
+      "status": 200
+    },
+    {
+      "bytes": 4141,
+      "endpoint": "/api/teams/41/overview?season=s3&division=d1",
+      "path": "docs/baselines/phase-0-2026-07-19/api/team-41-overview.json",
+      "sha256": "d23448f6160bf9f9ecf11dd75c4dd6561467cf9066679ee27cff6332bed1c61d",
+      "status": 200
+    },
+    {
+      "bytes": 8093,
+      "endpoint": "/api/teams/41/roster?season=s3&division=d1&role=runner&min_races=2",
+      "path": "docs/baselines/phase-0-2026-07-19/api/team-41-roster-runner.json",
+      "sha256": "a7e269d28f98271ebed33b9a5d458c2b3629e4f5eda25477ae15bc0573191e0b",
+      "status": 200
+    },
+    {
+      "bytes": 2755,
+      "endpoint": "/api/teams/41/tracks?season=s3&division=d1&min_races=2",
+      "path": "docs/baselines/phase-0-2026-07-19/api/team-41-tracks.json",
+      "sha256": "733f7fa8a555f30ee01ea4d875f1a608706ca2bb2a3a90a12a3f4e20090eb527",
+      "status": 200
+    },
+    {
+      "bytes": 11435,
+      "endpoint": "/api/top-tracks?track=Glimmer%20Express%20Trains&season=s3&division=d1&role=runner&min_races=2",
+      "path": "docs/baselines/phase-0-2026-07-19/api/top-tracks-glimmer-express-trains-runner.json",
+      "sha256": "008d004f5364ce48c94ef1bc300721d884521d766dacf742a42a0e0f6f0b16aa",
+      "status": 200
+    },
+    {
+      "bytes": 54080,
+      "endpoint": "/api/database-health?include_archive=0",
+      "path": "docs/baselines/phase-0-2026-07-19/api/database-health-no-archive.json",
+      "sha256": "27d06a6e4a8fb18d1b65d1aa70e3725c884f4be2d6acf37359059c7899f53dbc",
+      "status": 200
+    },
+    {
+      "bytes": 2871,
+      "path": "docs/baselines/phase-0-2026-07-19/database-summary.json",
+      "sha256": "3a7db999b1d0542b114ad9ee4c5de6713d616b2d2a11d7504d78ba57468213f9"
+    },
+    {
+      "bytes": 4035,
+      "path": "docs/baselines/phase-0-2026-07-19/identity-rebuild-comparison.json",
+      "sha256": "0393dd9c83fe9dad799f07da7527dfcd995f6bae6d711ecd816f5a7a1e11e5a2"
+    },
+    {
+      "bytes": 572,
+      "path": "docs/baselines/phase-0-2026-07-19/identity-rebuild-resolved.json",
+      "sha256": "ebdfc1f803230529c7c879928a04c688a1d124175900e0516c9454d425012b19"
+    },
+    {
+      "bytes": 299527,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/database-health-desktop-chromium.jpg",
+      "sha256": "8a9c019f74dc51304854eead0b8d4ca876756a11f2c26eb03b36c0bbaa8f14c5"
+    },
+    {
+      "bytes": 834585,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/database-health-mobile-chromium.jpg",
+      "sha256": "5929abe5c69ebe4552622a0a6145969ea20b001da11a10d049c7a506d665f0e2"
+    },
+    {
+      "bytes": 154825,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/home-desktop-chromium.jpg",
+      "sha256": "8527a23575115ba873eb0e101d95f97d91d8e06b39f76a629ce5a9ee7c9db535"
+    },
+    {
+      "bytes": 476327,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/home-mobile-chromium.jpg",
+      "sha256": "fde0822ffc565871987313866bee2cf0aada6642184b566595350dc3550d98b8"
+    },
+    {
+      "bytes": 304369,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/json-editor-desktop-chromium.jpg",
+      "sha256": "e4b04df6105a5851a88323e8d0906cf5aaabe52ee06eeb6cc0a2b71e96b8b35f"
+    },
+    {
+      "bytes": 836494,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/json-editor-mobile-chromium.jpg",
+      "sha256": "0d8e3cdd4f0fa21a9b6884a3564a26cd7b9ebabed9e089a62cdb16bd32f1d5dc"
+    },
+    {
+      "bytes": 148669,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/match-history-desktop-chromium.jpg",
+      "sha256": "b19f26762c02d0ffea19b797496de7d1f34dc282b3c07433e5eba181c584d5b4"
+    },
+    {
+      "bytes": 328207,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/match-history-mobile-chromium.jpg",
+      "sha256": "0e842c6620f5cbd450eca96a3361369fc06b7ed6186db7fb3a6f1f093388248a"
+    },
+    {
+      "bytes": 133530,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/player-dashboard-desktop-chromium.jpg",
+      "sha256": "3bc7ca0a7fa158b12c95bc2f4638bd09b60119b6ea8db41299982f614538fa64"
+    },
+    {
+      "bytes": 269013,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/player-dashboard-mobile-chromium.jpg",
+      "sha256": "b5e7b6ac9af87bcab7b19912200c47ea06cc329208be76379cb6c8f99048cf02"
+    },
+    {
+      "bytes": 106266,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/player-statistics-desktop-chromium.jpg",
+      "sha256": "f79178a6df1988aa18becf7d21afaea778cc3f0fff2e0fd9054af5f5bc3f9c75"
+    },
+    {
+      "bytes": 153227,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/player-statistics-mobile-chromium.jpg",
+      "sha256": "13d6bbadadf8c5ab407a2436539eafc3f58ec4da430fc98167e79f92f1144daa"
+    },
+    {
+      "bytes": 132244,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/team-dashboard-desktop-chromium.jpg",
+      "sha256": "a18db320d1e673d060f4d09dd8ab81db3b37dd76d63478f681f7654cf1e4a6fd"
+    },
+    {
+      "bytes": 261671,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/team-dashboard-mobile-chromium.jpg",
+      "sha256": "8e9388bf28129fc2090ab70b7a541de3a025969f1406e755ba3d4283d8a859ed"
+    },
+    {
+      "bytes": 106900,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/team-matchups-desktop-chromium.jpg",
+      "sha256": "28a7affbd55fbe35b173e5098da94f7cced6fefb02ae78fdf6155920b4ecaa22"
+    },
+    {
+      "bytes": 158231,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/team-matchups-mobile-chromium.jpg",
+      "sha256": "536f0d2ba74f101fd17444c51eedb05af8dd23c1c33c4b70b0c779644892cbf3"
+    },
+    {
+      "bytes": 118389,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/team-statistics-desktop-chromium.jpg",
+      "sha256": "24aa3d106e9b676030b4cbe3505564aa70e9f777f6c8162f19c9a282d07257d6"
+    },
+    {
+      "bytes": 254176,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/team-statistics-mobile-chromium.jpg",
+      "sha256": "d1cd150bd480f9792f3bbae81c83ef8716ba23224a4c6ecba4b217fd4d1cf942"
+    },
+    {
+      "bytes": 111530,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/track-averages-desktop-chromium.jpg",
+      "sha256": "bbd7f57741e9474a667c1ea9bf1326df253ca9f901d4fd73cf9413cfa3250685"
+    },
+    {
+      "bytes": 163329,
+      "path": "docs/baselines/phase-0-2026-07-19/ui/track-averages-mobile-chromium.jpg",
+      "sha256": "fd1915f1e84b76ce94e4c35f80b2551a32af8ce35b79ef1ad8f60b5114445ba7"
+    }
+  ],
+  "baseline": "production-readiness-phase-0",
+  "captured_at": "2026-07-19T15:39:15.202323+00:00",
+  "git": {
+    "branch": "zach-dev",
+    "commit": "03cd3e648ce0e46d9097a327aaf5317ab2fd6a2b"
+  },
+  "local_database": "backend/data/ctc_stats.sqlite"
+}

@@ -1,0 +1,10 @@
+# Retired historical snapshot. Do not deploy this configuration.
+services:
+  - type: web
+    name: ctc-mkwii-api
+    env: python
+    buildCommand: cd backend && pip install -r requirements.txt && python import_json_to_db.py --rebuild
+    startCommand: cd backend && gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11

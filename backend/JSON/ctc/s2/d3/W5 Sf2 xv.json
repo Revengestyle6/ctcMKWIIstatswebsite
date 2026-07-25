@@ -1,0 +1,721 @@
+{
+  "title_str": "#title 10 races\n",
+  "format": "5v5",
+  "races_played": 10,
+  "rxx": [
+    "r10869245",
+    "r10869488"
+  ],
+  "tracks": [
+    "Spooky Swamp",
+    "Garden of Dreams",
+    "Mansion of Madness",
+    "DS Waluigi Pinball",
+    "GBA Bowser Castle 2",
+    "N64 Banshee Boardwalk",
+    "DS Wario Stadium",
+    "Lava Lake",
+    "Yoshi Lagoon",
+    "Windy Whirl"
+  ],
+  "teams": {
+    "6": {
+      "table_tag_str": "6 #96c9ff",
+      "table_penalty_str": "Penalty -20",
+      "total_score": 372,
+      "penalties": 20,
+      "players": {
+        "5417-6635-5769": {
+          "table_str": "Kenny M [de] 49|35|27|4",
+          "mii_name": "ミ★ 67 suii",
+          "lounge_name": "Kenny M",
+          "table_name": "Kenny M",
+          "tag": "6",
+          "total_score": 115,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            15,
+            15,
+            4,
+            6,
+            15,
+            4,
+            10,
+            27,
+            0,
+            0,
+            0,
+            4,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            1,
+            1,
+            1,
+            6,
+            5,
+            1,
+            6,
+            3,
+            1,
+            1
+          ],
+          "gp_scores": [
+            [
+              15,
+              15,
+              15,
+              4
+            ],
+            [
+              6,
+              15,
+              4,
+              10
+            ],
+            [
+              27,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "de"
+        },
+        "1122-7137-9273": {
+          "table_str": "Alexander [us] 24|44|16|15",
+          "mii_name": "ミ★",
+          "lounge_name": "Alexander",
+          "table_name": "Alexander",
+          "tag": "6",
+          "total_score": 99,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            6,
+            6,
+            6,
+            2,
+            12,
+            15,
+            15,
+            16,
+            0,
+            0,
+            0,
+            15,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            5,
+            5,
+            5,
+            5,
+            8,
+            2,
+            1,
+            1,
+            2,
+            6
+          ],
+          "gp_scores": [
+            [
+              6,
+              6,
+              6,
+              6
+            ],
+            [
+              2,
+              12,
+              15,
+              15
+            ],
+            [
+              16,
+              0,
+              0,
+              0
+            ],
+            [
+              15,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "us"
+        },
+        "1337-4410-5658": {
+          "table_str": "Bowser498 [us] 34|21|25|8",
+          "mii_name": "ミ★ B498",
+          "lounge_name": "Bowser498",
+          "table_name": "Bowser498",
+          "tag": "6",
+          "total_score": 88,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            4,
+            10,
+            12,
+            3,
+            3,
+            12,
+            3,
+            25,
+            0,
+            0,
+            0,
+            8,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            4,
+            6,
+            3,
+            2,
+            7,
+            7,
+            2,
+            7,
+            3,
+            4
+          ],
+          "gp_scores": [
+            [
+              8,
+              4,
+              10,
+              12
+            ],
+            [
+              3,
+              3,
+              12,
+              3
+            ],
+            [
+              25,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "us"
+        },
+        "0822-0625-0492": {
+          "table_str": "CC [ca] 47|16|10|12",
+          "mii_name": "ミ★ CC",
+          "lounge_name": "CC",
+          "table_name": "CC",
+          "tag": "6",
+          "total_score": 85,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            10,
+            12,
+            15,
+            4,
+            2,
+            2,
+            8,
+            10,
+            0,
+            0,
+            0,
+            12,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            3,
+            3,
+            2,
+            1,
+            6,
+            8,
+            8,
+            4,
+            6,
+            2
+          ],
+          "gp_scores": [
+            [
+              10,
+              10,
+              12,
+              15
+            ],
+            [
+              4,
+              2,
+              2,
+              8
+            ],
+            [
+              10,
+              0,
+              0,
+              0
+            ],
+            [
+              12,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "ca"
+        },
+        "5074-0806-7470": {
+          "table_str": "trevor [us] 2|2|1|0",
+          "mii_name": "ミ★ trevor",
+          "lounge_name": "trevor",
+          "table_name": "trevor",
+          "tag": "6",
+          "total_score": 5,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            1,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            9,
+            9,
+            10,
+            10,
+            9,
+            9,
+            10,
+            10,
+            10,
+            10
+          ],
+          "gp_scores": [
+            [
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "us"
+        }
+      },
+      "hex_color": "#96c9ff"
+    },
+    "xv": {
+      "table_tag_str": "xv #ffbe96",
+      "table_penalty_str": "",
+      "total_score": 279,
+      "penalties": 0,
+      "players": {
+        "4515-7256-2974": {
+          "table_str": "Linkin Park 31|21|16|10",
+          "mii_name": "xv :..οrd",
+          "lounge_name": "Linkin Park",
+          "table_name": "Linkin Park",
+          "tag": "xv",
+          "total_score": 78,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            8,
+            3,
+            8,
+            10,
+            6,
+            3,
+            2,
+            16,
+            0,
+            0,
+            0,
+            10,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            2,
+            4,
+            7,
+            4,
+            3,
+            5,
+            7,
+            8,
+            5,
+            3
+          ],
+          "gp_scores": [
+            [
+              12,
+              8,
+              3,
+              8
+            ],
+            [
+              10,
+              6,
+              3,
+              2
+            ],
+            [
+              16,
+              0,
+              0,
+              0
+            ],
+            [
+              10,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": ""
+        },
+        "4000-3405-9025": {
+          "table_str": "TigerClamory [nl] 19|38|11|6",
+          "mii_name": "xv Tiger",
+          "lounge_name": "TigerClamory",
+          "table_name": "TigerClamory",
+          "tag": "xv",
+          "total_score": 74,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            12,
+            2,
+            3,
+            12,
+            10,
+            10,
+            6,
+            11,
+            0,
+            0,
+            0,
+            6,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            8,
+            2,
+            8,
+            7,
+            2,
+            3,
+            3,
+            5,
+            7,
+            8
+          ],
+          "gp_scores": [
+            [
+              2,
+              12,
+              2,
+              3
+            ],
+            [
+              12,
+              10,
+              10,
+              6
+            ],
+            [
+              11,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "nl"
+        },
+        "2153-5067-9350": {
+          "table_str": "Star [cx] 20|35|4|3",
+          "mii_name": "st@xv",
+          "lounge_name": "Star",
+          "table_name": "Star",
+          "tag": "xv",
+          "total_score": 62,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            2,
+            4,
+            10,
+            15,
+            8,
+            8,
+            4,
+            4,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            6,
+            8,
+            6,
+            3,
+            1,
+            4,
+            4,
+            6,
+            8,
+            7
+          ],
+          "gp_scores": [
+            [
+              4,
+              2,
+              4,
+              10
+            ],
+            [
+              15,
+              8,
+              8,
+              4
+            ],
+            [
+              4,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "cx"
+        },
+        "1294-5034-2576": {
+          "table_str": "mattw [au] 16|30|11|2",
+          "mii_name": "xv m",
+          "lounge_name": "mattw",
+          "table_name": "mattw",
+          "tag": "xv",
+          "total_score": 59,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            3,
+            8,
+            2,
+            8,
+            4,
+            6,
+            12,
+            11,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            7,
+            7,
+            4,
+            8,
+            4,
+            6,
+            5,
+            2,
+            4,
+            5
+          ],
+          "gp_scores": [
+            [
+              3,
+              3,
+              8,
+              2
+            ],
+            [
+              8,
+              4,
+              6,
+              12
+            ],
+            [
+              11,
+              0,
+              0,
+              0
+            ],
+            [
+              2,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "au"
+        },
+        "4215-0859-2555": {
+          "table_str": "Gwynne005 [gb_wa] 2|2|1|1",
+          "mii_name": "xv Gwyn",
+          "lounge_name": "Gwynne005",
+          "table_name": "Gwynne005",
+          "tag": "xv",
+          "total_score": 6,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            10,
+            10,
+            9,
+            9,
+            10,
+            10,
+            9,
+            9,
+            9,
+            9
+          ],
+          "gp_scores": [
+            [
+              0,
+              0,
+              1,
+              1
+            ],
+            [
+              0,
+              0,
+              1,
+              1
+            ],
+            [
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "gb_wa"
+        }
+      },
+      "hex_color": "#ffbe96"
+    }
+  }
+}

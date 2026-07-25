@@ -1,0 +1,358 @@
+{
+  "minimum_races": 2,
+  "players": [
+    {
+      "first_appearance": {
+        "division": "d1",
+        "match_id": 221,
+        "season": "s3",
+        "week": 1
+      },
+      "friend_codes": [
+        "2711-8376-7744"
+      ],
+      "last_appearance": {
+        "division": "d1",
+        "match_id": 240,
+        "season": "s3",
+        "week": 9
+      },
+      "matches": 3,
+      "metrics": {
+        "average_placement": 3.78,
+        "excluded_score_rows": 0,
+        "podium_rate": 50.0,
+        "podiums": 18,
+        "points_per_race": 8.89,
+        "races": 36,
+        "role": "runner",
+        "scored_races": 36,
+        "total_points": 320,
+        "twelve_race_pace": 106.67,
+        "wins": 8
+      },
+      "name": "Arezu",
+      "player_id": 174,
+      "role_coverage": {
+        "explicit_bagger": 0,
+        "explicit_runner": 36,
+        "inferred_bagger": 0,
+        "inferred_runner": 0,
+        "known_rate": 100.0,
+        "total": 36,
+        "unknown": 0
+      }
+    },
+    {
+      "first_appearance": {
+        "division": "d1",
+        "match_id": 227,
+        "season": "s3",
+        "week": 2
+      },
+      "friend_codes": [
+        "3141-3583-8311",
+        "5031-1476-0709"
+      ],
+      "last_appearance": {
+        "division": "d1",
+        "match_id": 243,
+        "season": "s3",
+        "week": 10
+      },
+      "matches": 5,
+      "metrics": {
+        "average_placement": 4.08,
+        "excluded_score_rows": 0,
+        "podium_rate": 45.0,
+        "podiums": 27,
+        "points_per_race": 8.27,
+        "races": 60,
+        "role": "runner",
+        "scored_races": 60,
+        "total_points": 496,
+        "twelve_race_pace": 99.2,
+        "wins": 8
+      },
+      "name": "Parvati Shallow",
+      "player_id": 175,
+      "role_coverage": {
+        "explicit_bagger": 0,
+        "explicit_runner": 60,
+        "inferred_bagger": 0,
+        "inferred_runner": 0,
+        "known_rate": 100.0,
+        "total": 60,
+        "unknown": 0
+      }
+    },
+    {
+      "first_appearance": {
+        "division": "d1",
+        "match_id": 243,
+        "season": "s3",
+        "week": 10
+      },
+      "friend_codes": [
+        "2411-2017-2995"
+      ],
+      "last_appearance": {
+        "division": "d1",
+        "match_id": 243,
+        "season": "s3",
+        "week": 10
+      },
+      "matches": 1,
+      "metrics": {
+        "average_placement": 4.17,
+        "excluded_score_rows": 0,
+        "podium_rate": 41.67,
+        "podiums": 5,
+        "points_per_race": 8.0,
+        "races": 12,
+        "role": "runner",
+        "scored_races": 12,
+        "total_points": 96,
+        "twelve_race_pace": 96.0,
+        "wins": 2
+      },
+      "name": "MichaelH",
+      "player_id": 208,
+      "role_coverage": {
+        "explicit_bagger": 0,
+        "explicit_runner": 12,
+        "inferred_bagger": 0,
+        "inferred_runner": 0,
+        "known_rate": 100.0,
+        "total": 12,
+        "unknown": 0
+      }
+    },
+    {
+      "first_appearance": {
+        "division": "d1",
+        "match_id": 221,
+        "season": "s3",
+        "week": 1
+      },
+      "friend_codes": [
+        "5074-0644-0576"
+      ],
+      "last_appearance": {
+        "division": "d1",
+        "match_id": 243,
+        "season": "s3",
+        "week": 10
+      },
+      "matches": 4,
+      "metrics": {
+        "average_placement": 4.5,
+        "excluded_score_rows": 0,
+        "podium_rate": 43.48,
+        "podiums": 20,
+        "points_per_race": 7.65,
+        "races": 46,
+        "role": "runner",
+        "scored_races": 46,
+        "total_points": 352,
+        "twelve_race_pace": 91.83,
+        "wins": 8
+      },
+      "name": "Pascal",
+      "player_id": 177,
+      "role_coverage": {
+        "explicit_bagger": 2,
+        "explicit_runner": 46,
+        "inferred_bagger": 0,
+        "inferred_runner": 0,
+        "known_rate": 100.0,
+        "total": 48,
+        "unknown": 0
+      }
+    },
+    {
+      "first_appearance": {
+        "division": "d1",
+        "match_id": 227,
+        "season": "s3",
+        "week": 2
+      },
+      "friend_codes": [
+        "0736-1599-1945"
+      ],
+      "last_appearance": {
+        "division": "d1",
+        "match_id": 243,
+        "season": "s3",
+        "week": 10
+      },
+      "matches": 5,
+      "metrics": {
+        "average_placement": 4.48,
+        "excluded_score_rows": 0,
+        "podium_rate": 35.0,
+        "podiums": 21,
+        "points_per_race": 7.55,
+        "races": 60,
+        "role": "runner",
+        "scored_races": 60,
+        "total_points": 453,
+        "twelve_race_pace": 90.6,
+        "wins": 9
+      },
+      "name": "kato",
+      "player_id": 198,
+      "role_coverage": {
+        "explicit_bagger": 0,
+        "explicit_runner": 60,
+        "inferred_bagger": 0,
+        "inferred_runner": 0,
+        "known_rate": 100.0,
+        "total": 60,
+        "unknown": 0
+      }
+    },
+    {
+      "first_appearance": {
+        "division": "d1",
+        "match_id": 221,
+        "season": "s3",
+        "week": 1
+      },
+      "friend_codes": [
+        "4644-5717-7879"
+      ],
+      "last_appearance": {
+        "division": "d1",
+        "match_id": 240,
+        "season": "s3",
+        "week": 9
+      },
+      "matches": 4,
+      "metrics": {
+        "average_placement": 5.0,
+        "excluded_score_rows": 0,
+        "podium_rate": 31.25,
+        "podiums": 15,
+        "points_per_race": 6.62,
+        "races": 48,
+        "role": "runner",
+        "scored_races": 48,
+        "total_points": 318,
+        "twelve_race_pace": 79.5,
+        "wins": 5
+      },
+      "name": "8610",
+      "player_id": 180,
+      "role_coverage": {
+        "explicit_bagger": 0,
+        "explicit_runner": 48,
+        "inferred_bagger": 0,
+        "inferred_runner": 0,
+        "known_rate": 100.0,
+        "total": 48,
+        "unknown": 0
+      }
+    },
+    {
+      "first_appearance": {
+        "division": "d1",
+        "match_id": 221,
+        "season": "s3",
+        "week": 1
+      },
+      "friend_codes": [
+        "0392-5738-3057"
+      ],
+      "last_appearance": {
+        "division": "d1",
+        "match_id": 240,
+        "season": "s3",
+        "week": 9
+      },
+      "matches": 4,
+      "metrics": {
+        "average_placement": 5.19,
+        "excluded_score_rows": 0,
+        "podium_rate": 22.92,
+        "podiums": 11,
+        "points_per_race": 6.21,
+        "races": 48,
+        "role": "runner",
+        "scored_races": 48,
+        "total_points": 298,
+        "twelve_race_pace": 74.5,
+        "wins": 2
+      },
+      "name": "GAMT British",
+      "player_id": 186,
+      "role_coverage": {
+        "explicit_bagger": 0,
+        "explicit_runner": 48,
+        "inferred_bagger": 0,
+        "inferred_runner": 0,
+        "known_rate": 100.0,
+        "total": 48,
+        "unknown": 0
+      }
+    },
+    {
+      "first_appearance": {
+        "division": "d1",
+        "match_id": 227,
+        "season": "s3",
+        "week": 2
+      },
+      "friend_codes": [
+        "5159-9842-3424"
+      ],
+      "last_appearance": {
+        "division": "d1",
+        "match_id": 237,
+        "season": "s3",
+        "week": 8
+      },
+      "matches": 2,
+      "metrics": {
+        "average_placement": 5.54,
+        "excluded_score_rows": 0,
+        "podium_rate": 20.83,
+        "podiums": 5,
+        "points_per_race": 5.5,
+        "races": 24,
+        "role": "runner",
+        "scored_races": 24,
+        "total_points": 132,
+        "twelve_race_pace": 66.0,
+        "wins": 0
+      },
+      "name": "hazr",
+      "player_id": 118,
+      "role_coverage": {
+        "explicit_bagger": 0,
+        "explicit_runner": 24,
+        "inferred_bagger": 0,
+        "inferred_runner": 0,
+        "known_rate": 100.0,
+        "total": 24,
+        "unknown": 0
+      }
+    }
+  ],
+  "role": "runner",
+  "role_coverage": {
+    "explicit_bagger": 86,
+    "explicit_runner": 334,
+    "inferred_bagger": 0,
+    "inferred_runner": 0,
+    "known_rate": 100.0,
+    "total": 420,
+    "unknown": 0
+  },
+  "scope": {
+    "division": "d1",
+    "opponent_team_id": null,
+    "season": "s3"
+  },
+  "team_id": 41
+}

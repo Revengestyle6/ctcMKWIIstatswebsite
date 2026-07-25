@@ -1,0 +1,662 @@
+[
+  {
+    "canonical_name": "(\")>",
+    "canonical_tag": "(\")>",
+    "clan_tag": "(\")>",
+    "display_name": "(\")>",
+    "division": "d1_2",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 2
+  },
+  {
+    "canonical_name": "6¢",
+    "canonical_tag": "6¢",
+    "clan_tag": "6¢",
+    "display_name": "6¢",
+    "division": "d1_2",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 1
+  },
+  {
+    "canonical_name": "BBB",
+    "canonical_tag": "BBB",
+    "clan_tag": "BBB",
+    "display_name": "BBB",
+    "division": "d1_2",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 9
+  },
+  {
+    "canonical_name": "Flαg",
+    "canonical_tag": "Flαg",
+    "clan_tag": "Flαg",
+    "display_name": "Flαg",
+    "division": "d1_2",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 4
+  },
+  {
+    "canonical_name": "Mι",
+    "canonical_tag": "Mι",
+    "clan_tag": "Mι",
+    "display_name": "Mι",
+    "division": "d1_2",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 5
+  },
+  {
+    "canonical_name": "TMNG",
+    "canonical_tag": "TMNG",
+    "clan_tag": "TMNG",
+    "display_name": "TMNG",
+    "division": "d1_2",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 6
+  },
+  {
+    "canonical_name": "Za",
+    "canonical_tag": "Za",
+    "clan_tag": "Za",
+    "display_name": "Za",
+    "division": "d1_2",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 7
+  },
+  {
+    "canonical_name": "sts",
+    "canonical_tag": "sts",
+    "clan_tag": "sts",
+    "display_name": "sts",
+    "division": "d1_2",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 10
+  },
+  {
+    "canonical_name": "Ω",
+    "canonical_tag": "Ω",
+    "clan_tag": "Ω",
+    "display_name": "Ω",
+    "division": "d1_2",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 3
+  },
+  {
+    "canonical_name": "ψ",
+    "canonical_tag": "ψ",
+    "clan_tag": "ψ",
+    "display_name": "ψ",
+    "division": "d1_2",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 8
+  },
+  {
+    "canonical_name": "CPFG",
+    "canonical_tag": "CPFG",
+    "clan_tag": "CPFG",
+    "display_name": "CPFG",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 17
+  },
+  {
+    "canonical_name": "Eι",
+    "canonical_tag": "Eι",
+    "clan_tag": "Eι",
+    "display_name": "Eι",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 16
+  },
+  {
+    "canonical_name": "FIB",
+    "canonical_tag": "FIB",
+    "clan_tag": "FIB",
+    "display_name": "FIB",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 18
+  },
+  {
+    "canonical_name": "SLAY",
+    "canonical_tag": "SLAY",
+    "clan_tag": "SLAY",
+    "display_name": "SLAY",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 11
+  },
+  {
+    "canonical_name": "SN",
+    "canonical_tag": "SN",
+    "clan_tag": "SN",
+    "display_name": "SN",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 12
+  },
+  {
+    "canonical_name": "[80]",
+    "canonical_tag": "[80]",
+    "clan_tag": "[80]",
+    "display_name": "[80]",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 13
+  },
+  {
+    "canonical_name": "fr",
+    "canonical_tag": "fr",
+    "clan_tag": "fr",
+    "display_name": "fr",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 14
+  },
+  {
+    "canonical_name": "μs",
+    "canonical_tag": "μs",
+    "clan_tag": "μs",
+    "display_name": "μs",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 15
+  },
+  {
+    "canonical_name": "F's",
+    "canonical_tag": "F's",
+    "clan_tag": "F's",
+    "display_name": "F's",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 20
+  },
+  {
+    "canonical_name": "G25",
+    "canonical_tag": "G25",
+    "clan_tag": "G25",
+    "display_name": "G25",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 24
+  },
+  {
+    "canonical_name": "Nω",
+    "canonical_tag": "Nω",
+    "clan_tag": "Nω",
+    "display_name": "Nω",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 22
+  },
+  {
+    "canonical_name": "Zog Zhit",
+    "canonical_tag": "Zog Zhit",
+    "clan_tag": "Zog Zhit",
+    "display_name": "Zog Zhit",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 23
+  },
+  {
+    "canonical_name": "vf",
+    "canonical_tag": "vf",
+    "clan_tag": "vf",
+    "display_name": "vf",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 21
+  },
+  {
+    "canonical_name": "μ",
+    "canonical_tag": "μ",
+    "clan_tag": "μ",
+    "display_name": "μ",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s1",
+    "team_id": 19
+  },
+  {
+    "canonical_name": "6¢",
+    "canonical_tag": "6¢",
+    "clan_tag": "6¢",
+    "display_name": "6¢",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 1
+  },
+  {
+    "canonical_name": "Mι",
+    "canonical_tag": "Mι",
+    "clan_tag": "Mι",
+    "display_name": "Mι",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 5
+  },
+  {
+    "canonical_name": "sσρ",
+    "canonical_tag": "sσρ",
+    "clan_tag": "sσρ",
+    "display_name": "sσρ",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 27
+  },
+  {
+    "canonical_name": "Ω",
+    "canonical_tag": "Ω",
+    "clan_tag": "Ω",
+    "display_name": "Ω",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 3
+  },
+  {
+    "canonical_name": "ミ★",
+    "canonical_tag": "ミ★",
+    "clan_tag": "ミ★",
+    "display_name": "ミ★",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 26
+  },
+  {
+    "canonical_name": "😊😠😔😐",
+    "canonical_tag": "😊😠😔😐",
+    "clan_tag": "😊😠😔😐",
+    "display_name": "😊😠😔😐",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 25
+  },
+  {
+    "canonical_name": "07",
+    "canonical_tag": "07",
+    "clan_tag": "07",
+    "display_name": "07",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 29
+  },
+  {
+    "canonical_name": "><((((º>",
+    "canonical_tag": "><((((º>",
+    "clan_tag": "><((((º>",
+    "display_name": "><((((º>",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 31
+  },
+  {
+    "canonical_name": "CS",
+    "canonical_tag": "CS",
+    "clan_tag": "CS",
+    "display_name": "CS",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 28
+  },
+  {
+    "canonical_name": "Sν",
+    "canonical_tag": "Sν",
+    "clan_tag": "Sν",
+    "display_name": "Sν",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 30
+  },
+  {
+    "canonical_name": "sts",
+    "canonical_tag": "sts",
+    "clan_tag": "sts",
+    "display_name": "sts",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 10
+  },
+  {
+    "canonical_name": "ψ",
+    "canonical_tag": "ψ",
+    "clan_tag": "ψ",
+    "display_name": "ψ",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 8
+  },
+  {
+    "canonical_name": "Eι",
+    "canonical_tag": "Eι",
+    "clan_tag": "Eι",
+    "display_name": "Eι",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 16
+  },
+  {
+    "canonical_name": "Flαg",
+    "canonical_tag": "Flαg",
+    "clan_tag": "Flαg",
+    "display_name": "Flαg",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 4
+  },
+  {
+    "canonical_name": "SLAY",
+    "canonical_tag": "SLAY",
+    "clan_tag": "SLAY",
+    "display_name": "SLAY",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 11
+  },
+  {
+    "canonical_name": "SLOW",
+    "canonical_tag": "SLOW",
+    "clan_tag": "SLOW",
+    "display_name": "SLOW",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 33
+  },
+  {
+    "canonical_name": "xv",
+    "canonical_tag": "xv",
+    "clan_tag": "xv",
+    "display_name": "xv",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 32
+  },
+  {
+    "canonical_name": "ミ★",
+    "canonical_tag": "ミ★",
+    "clan_tag": "ミ★",
+    "display_name": "ミ★",
+    "division": "d3",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 26
+  },
+  {
+    "canonical_name": "Cγ",
+    "canonical_tag": "Cγ",
+    "clan_tag": "Cγ",
+    "display_name": "Cγ",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 34
+  },
+  {
+    "canonical_name": "Mι",
+    "canonical_tag": "Mι",
+    "clan_tag": "Mι",
+    "display_name": "Mι",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 5
+  },
+  {
+    "canonical_name": "SLAY",
+    "canonical_tag": "SLAY",
+    "clan_tag": "SLAY",
+    "display_name": "SLAY",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 11
+  },
+  {
+    "canonical_name": "SN",
+    "canonical_tag": "SN",
+    "clan_tag": "SN",
+    "display_name": "SN",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 12
+  },
+  {
+    "canonical_name": "St",
+    "canonical_tag": "St",
+    "clan_tag": "St",
+    "display_name": "St",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 35
+  },
+  {
+    "canonical_name": "vf",
+    "canonical_tag": "vf",
+    "clan_tag": "vf",
+    "display_name": "vf",
+    "division": "d4",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 21
+  },
+  {
+    "canonical_name": "G25",
+    "canonical_tag": "G25",
+    "clan_tag": "G25",
+    "display_name": "G25",
+    "division": "d5",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 24
+  },
+  {
+    "canonical_name": "IceSpice",
+    "canonical_tag": "IceSpice",
+    "clan_tag": "IceSpice",
+    "display_name": "IceSpice",
+    "division": "d5",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 38
+  },
+  {
+    "canonical_name": "Lu",
+    "canonical_tag": "Lu",
+    "clan_tag": "Lu",
+    "display_name": "Lu",
+    "division": "d5",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 39
+  },
+  {
+    "canonical_name": "Nω",
+    "canonical_tag": "Nω",
+    "clan_tag": "Nω",
+    "display_name": "Nω",
+    "division": "d5",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 22
+  },
+  {
+    "canonical_name": "UX",
+    "canonical_tag": "UX",
+    "clan_tag": "UX",
+    "display_name": "UX",
+    "division": "d5",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 36
+  },
+  {
+    "canonical_name": "chid",
+    "canonical_tag": "chid",
+    "clan_tag": "chid",
+    "display_name": "chid",
+    "division": "d5",
+    "league": "ctc",
+    "season": "s2",
+    "team_id": 37
+  },
+  {
+    "canonical_name": "6¢",
+    "canonical_tag": "6¢",
+    "clan_tag": "6¢",
+    "display_name": "6¢",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 1
+  },
+  {
+    "canonical_name": "e-",
+    "canonical_tag": "e-",
+    "clan_tag": "e-",
+    "display_name": "e-",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 41
+  },
+  {
+    "canonical_name": "holy",
+    "canonical_tag": "holy",
+    "clan_tag": "holy",
+    "display_name": "holy",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 40
+  },
+  {
+    "canonical_name": "Ω",
+    "canonical_tag": "Ω",
+    "clan_tag": "Ω",
+    "display_name": "Ω",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 3
+  },
+  {
+    "canonical_name": "ψ",
+    "canonical_tag": "ψ",
+    "clan_tag": "ψ",
+    "display_name": "ψ",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 8
+  },
+  {
+    "canonical_name": "ミ★",
+    "canonical_tag": "ミ★",
+    "clan_tag": "ミ★",
+    "display_name": "ミ★",
+    "division": "d1",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 26
+  },
+  {
+    "canonical_name": "CS",
+    "canonical_tag": "CS",
+    "clan_tag": "CS",
+    "display_name": "CS",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 28
+  },
+  {
+    "canonical_name": "Mι",
+    "canonical_tag": "Mι",
+    "clan_tag": "Mι",
+    "display_name": "Mι",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 5
+  },
+  {
+    "canonical_name": "SLAY",
+    "canonical_tag": "SLAY",
+    "clan_tag": "SLAY",
+    "display_name": "SLAY",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 11
+  },
+  {
+    "canonical_name": "SLOW",
+    "canonical_tag": "SLOW",
+    "clan_tag": "SLOW",
+    "display_name": "SLOW",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 33
+  },
+  {
+    "canonical_name": "sts",
+    "canonical_tag": "sts",
+    "clan_tag": "sts",
+    "display_name": "sts",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 10
+  },
+  {
+    "canonical_name": "ミ★",
+    "canonical_tag": "ミ★",
+    "clan_tag": "ミ★",
+    "display_name": "ミ★",
+    "division": "d2",
+    "league": "ctc",
+    "season": "s3",
+    "team_id": 26
+  }
+]

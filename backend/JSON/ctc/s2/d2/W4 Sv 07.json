@@ -1,0 +1,642 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r11041653"
+  ],
+  "tracks": [
+    "Starry Cityscape",
+    "Dragon Burying Grounds",
+    "Jiyuu Village",
+    "Halogen Highway",
+    "3DS Piranha Plant Slide",
+    "N64 Yoshi Valley",
+    "Spectral Station",
+    "Thump Bump Forest",
+    "Glimmer Express Trains",
+    "Castle of Time",
+    "GBA Bowser Castle 4",
+    "Lava Road"
+  ],
+  "teams": {
+    "07": {
+      "table_tag_str": "07 #ff8cfd",
+      "table_penalty_str": "Penalty -10",
+      "total_score": 383,
+      "penalties": 10,
+      "players": {
+        "2024-6581-2424": {
+          "table_str": "zharp [bw] 60|34|47",
+          "mii_name": "'07 book",
+          "lounge_name": "zharp",
+          "table_name": "zharp",
+          "tag": "07",
+          "total_score": 141,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            15,
+            15,
+            15,
+            12,
+            15,
+            3,
+            4,
+            10,
+            10,
+            15,
+            12
+          ],
+          "race_positions": [
+            1,
+            1,
+            1,
+            1,
+            2,
+            1,
+            7,
+            6,
+            3,
+            3,
+            1,
+            2
+          ],
+          "gp_scores": [
+            [
+              15,
+              15,
+              15,
+              15
+            ],
+            [
+              12,
+              15,
+              3,
+              4
+            ],
+            [
+              10,
+              10,
+              15,
+              12
+            ]
+          ],
+          "flag": "bw"
+        },
+        "0736-1599-1945": {
+          "table_str": "kato 37|41|38",
+          "mii_name": "'07 mtnn",
+          "lounge_name": "kato",
+          "table_name": "kato",
+          "tag": "07",
+          "total_score": 116,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            10,
+            12,
+            12,
+            8,
+            6,
+            12,
+            15,
+            8,
+            12,
+            3,
+            15
+          ],
+          "race_positions": [
+            7,
+            3,
+            2,
+            2,
+            4,
+            5,
+            2,
+            1,
+            4,
+            2,
+            7,
+            1
+          ],
+          "gp_scores": [
+            [
+              3,
+              10,
+              12,
+              12
+            ],
+            [
+              8,
+              6,
+              12,
+              15
+            ],
+            [
+              8,
+              12,
+              3,
+              15
+            ]
+          ],
+          "flag": ""
+        },
+        "4300-9807-7890": {
+          "table_str": "Hintz [de] 23|18|30",
+          "mii_name": "'07",
+          "lounge_name": "Hintz",
+          "table_name": "Hintz",
+          "tag": "07",
+          "total_score": 71,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            4,
+            10,
+            3,
+            2,
+            2,
+            8,
+            6,
+            12,
+            4,
+            12,
+            2
+          ],
+          "race_positions": [
+            5,
+            6,
+            3,
+            7,
+            8,
+            8,
+            4,
+            5,
+            2,
+            6,
+            2,
+            8
+          ],
+          "gp_scores": [
+            [
+              6,
+              4,
+              10,
+              3
+            ],
+            [
+              2,
+              2,
+              8,
+              6
+            ],
+            [
+              12,
+              4,
+              12,
+              2
+            ]
+          ],
+          "flag": "de"
+        },
+        "5159-9842-3424": {
+          "table_str": "hazr [ug] 15|21|23",
+          "mii_name": "'07 Ineff",
+          "lounge_name": "hazr",
+          "table_name": "hazr",
+          "tag": "07",
+          "total_score": 59,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            3,
+            4,
+            6,
+            6,
+            3,
+            4,
+            8,
+            6,
+            3,
+            4,
+            10
+          ],
+          "race_positions": [
+            8,
+            7,
+            6,
+            5,
+            5,
+            7,
+            6,
+            4,
+            5,
+            7,
+            6,
+            3
+          ],
+          "gp_scores": [
+            [
+              2,
+              3,
+              4,
+              6
+            ],
+            [
+              6,
+              3,
+              4,
+              8
+            ],
+            [
+              6,
+              3,
+              4,
+              10
+            ]
+          ],
+          "flag": "ug"
+        },
+        "4172-1265-3554": {
+          "table_str": "Cyrene [world] 2|2|2",
+          "mii_name": "'07 Masako",
+          "lounge_name": "Cyrene",
+          "table_name": "Cyrene",
+          "tag": "07",
+          "total_score": 6,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            0,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            0
+          ],
+          "race_positions": [
+            10,
+            9,
+            9,
+            10,
+            10,
+            9,
+            10,
+            9,
+            9,
+            10,
+            9,
+            10
+          ],
+          "gp_scores": [
+            [
+              0,
+              1,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              1
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ]
+          ],
+          "flag": "world"
+        }
+      },
+      "hex_color": "#ff8cfd"
+    },
+    "Sν": {
+      "table_tag_str": "Sν #fdff8c",
+      "table_penalty_str": "Penalty -5",
+      "total_score": 334,
+      "penalties": 5,
+      "players": {
+        "0392-5647-5008": {
+          "table_str": "End [gb] 32|36|30",
+          "mii_name": "Sν Σnd",
+          "lounge_name": "End",
+          "table_name": "End",
+          "tag": "Sν",
+          "total_score": 98,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            8,
+            2,
+            10,
+            10,
+            8,
+            15,
+            3,
+            3,
+            15,
+            8,
+            4
+          ],
+          "race_positions": [
+            2,
+            4,
+            8,
+            3,
+            3,
+            4,
+            1,
+            7,
+            7,
+            1,
+            4,
+            6
+          ],
+          "gp_scores": [
+            [
+              12,
+              8,
+              2,
+              10
+            ],
+            [
+              10,
+              8,
+              15,
+              3
+            ],
+            [
+              3,
+              15,
+              8,
+              4
+            ]
+          ],
+          "flag": "gb"
+        },
+        "2239-4126-5685": {
+          "table_str": "kitkatkittycat [pride] 32|31|33",
+          "mii_name": "Sν kitty!",
+          "lounge_name": "kitkatkittycat",
+          "table_name": "kitkatkittycat",
+          "tag": "Sν",
+          "total_score": 96,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            6,
+            8,
+            8,
+            15,
+            4,
+            2,
+            10,
+            15,
+            2,
+            10,
+            6
+          ],
+          "race_positions": [
+            3,
+            5,
+            4,
+            4,
+            1,
+            6,
+            8,
+            3,
+            1,
+            8,
+            3,
+            5
+          ],
+          "gp_scores": [
+            [
+              10,
+              6,
+              8,
+              8
+            ],
+            [
+              15,
+              4,
+              2,
+              10
+            ],
+            [
+              15,
+              2,
+              10,
+              6
+            ]
+          ],
+          "flag": "pride"
+        },
+        "2411-2017-2995": {
+          "table_str": "MichaelH [eg] 25|37|17",
+          "mii_name": "Sν Mιchael",
+          "lounge_name": "MichaelH",
+          "table_name": "MichaelH",
+          "tag": "Sν",
+          "total_score": 79,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            12,
+            3,
+            2,
+            3,
+            12,
+            10,
+            12,
+            2,
+            6,
+            6,
+            3
+          ],
+          "race_positions": [
+            4,
+            2,
+            7,
+            8,
+            7,
+            2,
+            3,
+            2,
+            8,
+            5,
+            5,
+            7
+          ],
+          "gp_scores": [
+            [
+              8,
+              12,
+              3,
+              2
+            ],
+            [
+              3,
+              12,
+              10,
+              12
+            ],
+            [
+              2,
+              6,
+              6,
+              3
+            ]
+          ],
+          "flag": "eg"
+        },
+        "0134-8501-1281": {
+          "table_str": "Rachy [gb] 16|22|22",
+          "mii_name": "Sν◇Rachy",
+          "lounge_name": "Rachy",
+          "table_name": "Rachy",
+          "tag": "Sν",
+          "total_score": 60,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            2,
+            6,
+            4,
+            4,
+            10,
+            6,
+            2,
+            4,
+            8,
+            2,
+            8
+          ],
+          "race_positions": [
+            6,
+            8,
+            5,
+            6,
+            6,
+            3,
+            5,
+            8,
+            6,
+            4,
+            8,
+            4
+          ],
+          "gp_scores": [
+            [
+              4,
+              2,
+              6,
+              4
+            ],
+            [
+              4,
+              10,
+              6,
+              2
+            ],
+            [
+              4,
+              8,
+              2,
+              8
+            ]
+          ],
+          "flag": "gb"
+        },
+        "4215-0859-2555": {
+          "table_str": "Gwynne005 [gb_wa] 2|2|2",
+          "mii_name": "Sν Gwyn",
+          "lounge_name": "Gwynne005",
+          "table_name": "Gwynne005",
+          "tag": "Sν",
+          "total_score": 6,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1
+          ],
+          "race_positions": [
+            9,
+            10,
+            10,
+            9,
+            9,
+            10,
+            9,
+            10,
+            10,
+            9,
+            10,
+            9
+          ],
+          "gp_scores": [
+            [
+              1,
+              0,
+              0,
+              1
+            ],
+            [
+              1,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              0,
+              1
+            ]
+          ],
+          "flag": "gb_wa"
+        }
+      },
+      "hex_color": "#fdff8c"
+    }
+  }
+}

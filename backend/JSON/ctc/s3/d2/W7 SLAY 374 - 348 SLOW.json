@@ -1,0 +1,787 @@
+{
+  "division": "d2",
+  "format": "5v5",
+  "league": "ctc",
+  "match_label": "SLAY 374 - 348 SLOW",
+  "races_played": 12,
+  "rxx": [
+    "r11620305"
+  ],
+  "season": "s3",
+  "teams": {
+    "SLAY": {
+      "hex_color": "#FF0404",
+      "penalties": 0,
+      "players": {
+        "0779-1078-3400": {
+          "flag": "",
+          "gp_scores": [
+            [
+              10,
+              10,
+              8,
+              6
+            ],
+            [
+              12,
+              12,
+              4,
+              3
+            ],
+            [
+              4,
+              10,
+              6,
+              12
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Canton",
+          "mii_name": "SLAY*Quεεn",
+          "penalties": 0,
+          "race_positions": [
+            3,
+            3,
+            4,
+            5,
+            2,
+            2,
+            6,
+            7,
+            6,
+            3,
+            5,
+            2
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            10,
+            10,
+            8,
+            6,
+            12,
+            12,
+            4,
+            3,
+            4,
+            10,
+            6,
+            12
+          ],
+          "subbed_out": false,
+          "table_name": "Canton",
+          "table_str": "Canton 34|31|32",
+          "tag": "SLAY",
+          "total_score": 97
+        },
+        "1809-9044-4020": {
+          "flag": "us_az",
+          "gp_scores": [
+            [
+              3,
+              8,
+              15,
+              4
+            ],
+            [
+              8,
+              6,
+              3,
+              2
+            ],
+            [
+              15,
+              8,
+              4,
+              10
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Dr Ishmael",
+          "mii_name": "SLAYdts.",
+          "penalties": 0,
+          "race_positions": [
+            7,
+            4,
+            1,
+            6,
+            4,
+            5,
+            7,
+            8,
+            1,
+            4,
+            6,
+            3
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            3,
+            8,
+            15,
+            4,
+            8,
+            6,
+            3,
+            2,
+            15,
+            8,
+            4,
+            10
+          ],
+          "subbed_out": false,
+          "table_name": "Dr Ishmael",
+          "table_str": "Dr Ishmael 30|19|37",
+          "tag": "SLAY",
+          "total_score": 86
+        },
+        "2454-1453-4550": {
+          "flag": "",
+          "gp_scores": [
+            [
+              2,
+              6,
+              6,
+              12
+            ],
+            [
+              15,
+              8,
+              8,
+              12
+            ],
+            [
+              12,
+              12,
+              2,
+              15
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "froyo",
+          "mii_name": "SLAY shm.",
+          "penalties": 0,
+          "race_positions": [
+            8,
+            5,
+            5,
+            2,
+            1,
+            4,
+            4,
+            2,
+            2,
+            2,
+            8,
+            1
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            2,
+            6,
+            6,
+            12,
+            15,
+            8,
+            8,
+            12,
+            12,
+            12,
+            2,
+            15
+          ],
+          "subbed_out": false,
+          "table_name": "froyo",
+          "table_str": "froyo 26|43|41",
+          "tag": "SLAY",
+          "total_score": 110
+        },
+        "5288-8372-0638": {
+          "flag": "",
+          "gp_scores": [
+            [
+              4,
+              12,
+              3,
+              3
+            ],
+            [
+              10,
+              3,
+              12,
+              10
+            ],
+            [
+              2,
+              6,
+              8,
+              2
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "noviak",
+          "mii_name": "SLAY◇Nvκ.",
+          "penalties": 0,
+          "race_positions": [
+            6,
+            2,
+            7,
+            7,
+            3,
+            7,
+            2,
+            3,
+            8,
+            5,
+            4,
+            8
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            4,
+            12,
+            3,
+            3,
+            10,
+            3,
+            12,
+            10,
+            2,
+            6,
+            8,
+            2
+          ],
+          "subbed_out": false,
+          "table_name": "noviak",
+          "table_str": "noviak 22|35|18",
+          "tag": "SLAY",
+          "total_score": 75
+        },
+        "5417-6840-3267": {
+          "flag": "",
+          "gp_scores": [
+            [
+              0,
+              0,
+              1,
+              1
+            ],
+            [
+              1,
+              0,
+              0,
+              1
+            ],
+            [
+              1,
+              1,
+              0,
+              0
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Astro",
+          "mii_name": "SLAYA",
+          "penalties": 0,
+          "race_positions": [
+            10,
+            10,
+            9,
+            9,
+            9,
+            10,
+            10,
+            9,
+            9,
+            9,
+            10,
+            10
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            0
+          ],
+          "subbed_out": false,
+          "table_name": "Astro",
+          "table_str": "Astro 2|2|2",
+          "tag": "SLAY",
+          "total_score": 6
+        }
+      },
+      "table_penalty_str": "",
+      "table_tag_str": "SLAY #FF0404",
+      "total_score": 374
+    },
+    "SLOW": {
+      "hex_color": "#2EFF04",
+      "penalties": 10,
+      "players": {
+        "0006-0025-9138": {
+          "flag": "",
+          "gp_scores": [
+            [
+              8,
+              3,
+              2,
+              15
+            ],
+            [
+              3,
+              15,
+              2,
+              8
+            ],
+            [
+              6,
+              2,
+              15,
+              8
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Dermo",
+          "mii_name": "SLOW D",
+          "penalties": 0,
+          "race_positions": [
+            4,
+            7,
+            8,
+            1,
+            7,
+            1,
+            8,
+            4,
+            5,
+            8,
+            1,
+            4
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            8,
+            3,
+            2,
+            15,
+            3,
+            15,
+            2,
+            8,
+            6,
+            2,
+            15,
+            8
+          ],
+          "subbed_out": false,
+          "table_name": "Dermo",
+          "table_str": "Dermo 28|28|31",
+          "tag": "SLOW",
+          "total_score": 87
+        },
+        "0822-0501-6769": {
+          "flag": "",
+          "gp_scores": [
+            [
+              6,
+              4,
+              4,
+              8
+            ],
+            [
+              2,
+              4,
+              15,
+              6
+            ],
+            [
+              3,
+              4,
+              3,
+              4
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Mooray",
+          "mii_name": "SLOW Moo",
+          "penalties": 0,
+          "race_positions": [
+            5,
+            6,
+            6,
+            4,
+            8,
+            6,
+            1,
+            5,
+            7,
+            6,
+            7,
+            6
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            6,
+            4,
+            4,
+            8,
+            2,
+            4,
+            15,
+            6,
+            3,
+            4,
+            3,
+            4
+          ],
+          "subbed_out": false,
+          "table_name": "Mooray",
+          "table_str": "Mooray 22|27|14",
+          "tag": "SLOW",
+          "total_score": 63
+        },
+        "1552-2061-0736": {
+          "flag": "",
+          "gp_scores": [
+            [
+              12,
+              15,
+              12,
+              2
+            ],
+            [
+              6,
+              2,
+              10,
+              15
+            ],
+            [
+              8,
+              15,
+              12,
+              3
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Nisuke Ajima",
+          "mii_name": "SLOW♪Scopd",
+          "penalties": 0,
+          "race_positions": [
+            2,
+            1,
+            2,
+            8,
+            5,
+            8,
+            3,
+            1,
+            4,
+            1,
+            2,
+            7
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            12,
+            15,
+            12,
+            2,
+            6,
+            2,
+            10,
+            15,
+            8,
+            15,
+            12,
+            3
+          ],
+          "subbed_out": false,
+          "table_name": "Nisuke Ajima",
+          "table_str": "Nisuke Ajima 41|33|38",
+          "tag": "SLOW",
+          "total_score": 112
+        },
+        "3098-4111-1001": {
+          "flag": "us_nj",
+          "gp_scores": [
+            [
+              15,
+              2,
+              10,
+              10
+            ],
+            [
+              4,
+              10,
+              6,
+              4
+            ],
+            [
+              10,
+              3,
+              10,
+              6
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Flavian",
+          "mii_name": "SLOWvian",
+          "penalties": 0,
+          "race_positions": [
+            1,
+            8,
+            3,
+            3,
+            6,
+            3,
+            5,
+            6,
+            3,
+            7,
+            3,
+            5
+          ],
+          "race_roles": [
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner",
+            "runner"
+          ],
+          "race_scores": [
+            15,
+            2,
+            10,
+            10,
+            4,
+            10,
+            6,
+            4,
+            10,
+            3,
+            10,
+            6
+          ],
+          "subbed_out": false,
+          "table_name": "Flavian",
+          "table_str": "Flavian 37|24|29",
+          "tag": "SLOW",
+          "total_score": 90
+        },
+        "3570-8255-6316": {
+          "flag": "",
+          "gp_scores": [
+            [
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              1,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              1
+            ]
+          ],
+          "had_penalties": false,
+          "lounge_name": "Rock SaltCAN",
+          "mii_name": "SLOW②",
+          "penalties": 0,
+          "race_positions": [
+            9,
+            9,
+            10,
+            10,
+            10,
+            9,
+            9,
+            10,
+            10,
+            10,
+            9,
+            9
+          ],
+          "race_roles": [
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger",
+            "bagger"
+          ],
+          "race_scores": [
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1
+          ],
+          "subbed_out": false,
+          "table_name": "Rock SaltCAN",
+          "table_str": "Rock SaltCAN 2|2|2",
+          "tag": "SLOW",
+          "total_score": 6
+        }
+      },
+      "table_penalty_str": "Penalty -10",
+      "table_tag_str": "SLOW #2EFF04",
+      "total_score": 348
+    }
+  },
+  "title_str": "#title 12 races\n",
+  "tracks": [
+    "Crystal Dungeon",
+    "Rush City Run",
+    "Starry Cityscape",
+    "Glimmer Express Trains",
+    "Emerald Coast",
+    "Cave Island",
+    "Dark Matter Shrine",
+    "Melting Magma Melee",
+    "Mushlight's Reprise",
+    "Infernal Pipeyard",
+    "Festival Town",
+    "Strobenz Desert Illusion"
+  ],
+  "week": 7
+}

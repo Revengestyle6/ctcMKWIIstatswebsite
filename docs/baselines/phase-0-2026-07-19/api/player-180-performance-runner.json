@@ -1,0 +1,178 @@
+{
+  "by_gp_number": [
+    {
+      "average": 5.88,
+      "gp_number": 1,
+      "races": 16
+    },
+    {
+      "average": 7.88,
+      "gp_number": 2,
+      "races": 16
+    },
+    {
+      "average": 6.12,
+      "gp_number": 3,
+      "races": 16
+    }
+  ],
+  "by_race_number": [
+    {
+      "average": 4.5,
+      "race_number": 1,
+      "races": 4
+    },
+    {
+      "average": 5.75,
+      "race_number": 2,
+      "races": 4
+    },
+    {
+      "average": 7.0,
+      "race_number": 3,
+      "races": 4
+    },
+    {
+      "average": 6.25,
+      "race_number": 4,
+      "races": 4
+    },
+    {
+      "average": 5.5,
+      "race_number": 5,
+      "races": 4
+    },
+    {
+      "average": 9.0,
+      "race_number": 6,
+      "races": 4
+    },
+    {
+      "average": 7.0,
+      "race_number": 7,
+      "races": 4
+    },
+    {
+      "average": 10.0,
+      "race_number": 8,
+      "races": 4
+    },
+    {
+      "average": 6.5,
+      "race_number": 9,
+      "races": 4
+    },
+    {
+      "average": 7.0,
+      "race_number": 10,
+      "races": 4
+    },
+    {
+      "average": 4.0,
+      "race_number": 11,
+      "races": 4
+    },
+    {
+      "average": 7.0,
+      "race_number": 12,
+      "races": 4
+    }
+  ],
+  "metrics": {
+    "average_placement": 5.0,
+    "excluded_score_rows": 0,
+    "podium_rate": 31.25,
+    "podiums": 15,
+    "points_per_race": 6.62,
+    "races": 48,
+    "role": "runner",
+    "scored_races": 48,
+    "total_points": 318,
+    "twelve_race_pace": 79.5,
+    "wins": 5
+  },
+  "placement_distribution": [
+    {
+      "position": 1,
+      "races": 5
+    },
+    {
+      "position": 2,
+      "races": 1
+    },
+    {
+      "position": 3,
+      "races": 9
+    },
+    {
+      "position": 4,
+      "races": 6
+    },
+    {
+      "position": 5,
+      "races": 5
+    },
+    {
+      "position": 6,
+      "races": 5
+    },
+    {
+      "position": 7,
+      "races": 9
+    },
+    {
+      "position": 8,
+      "races": 8
+    }
+  ],
+  "player_id": 180,
+  "role": "runner",
+  "role_coverage": {
+    "explicit_bagger": 0,
+    "explicit_runner": 48,
+    "inferred_bagger": 0,
+    "inferred_runner": 0,
+    "known_rate": 100.0,
+    "total": 48,
+    "unknown": 0
+  },
+  "scope": {
+    "division": "d1",
+    "season": "s3",
+    "team_id": null
+  },
+  "score_distribution": [
+    {
+      "races": 8,
+      "score": 2
+    },
+    {
+      "races": 9,
+      "score": 3
+    },
+    {
+      "races": 5,
+      "score": 4
+    },
+    {
+      "races": 5,
+      "score": 6
+    },
+    {
+      "races": 6,
+      "score": 8
+    },
+    {
+      "races": 9,
+      "score": 10
+    },
+    {
+      "races": 1,
+      "score": 12
+    },
+    {
+      "races": 5,
+      "score": 15
+    }
+  ]
+}

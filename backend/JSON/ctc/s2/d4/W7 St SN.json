@@ -1,0 +1,642 @@
+{
+  "title_str": "#title 12 races\n",
+  "format": "5v5",
+  "races_played": 12,
+  "rxx": [
+    "r10896226"
+  ],
+  "tracks": [
+    "Hell Pyramid",
+    "Fort Francis",
+    "Desert Fort",
+    "Aquadrom Stage",
+    "Color Wonderland",
+    "GBA Snow Land",
+    "Marble Towers",
+    "Starry Cityscape",
+    "Castle of Time",
+    "Wario's Climate Cataclysm",
+    "DS Rainbow Road",
+    "Super Sky Courtyard"
+  ],
+  "teams": {
+    "SN": {
+      "table_tag_str": "SN #ADCFCD",
+      "table_penalty_str": "",
+      "total_score": 423,
+      "penalties": 0,
+      "players": {
+        "5417-6896-6515": {
+          "table_str": "JakeUS [jm] 50|40|48",
+          "mii_name": "SN Jake",
+          "lounge_name": "JakeUS",
+          "table_name": "JakeUS",
+          "tag": "SN",
+          "total_score": 138,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            10,
+            15,
+            15,
+            10,
+            8,
+            2,
+            15,
+            15,
+            6,
+            15,
+            12,
+            15
+          ],
+          "race_positions": [
+            3,
+            1,
+            1,
+            3,
+            4,
+            8,
+            1,
+            1,
+            5,
+            1,
+            2,
+            1
+          ],
+          "gp_scores": [
+            [
+              10,
+              15,
+              15,
+              10
+            ],
+            [
+              8,
+              2,
+              15,
+              15
+            ],
+            [
+              6,
+              15,
+              12,
+              15
+            ]
+          ],
+          "flag": "jm"
+        },
+        "1337-4410-5658": {
+          "table_str": "Bowser498 [us] 29|37|39",
+          "mii_name": "SN★B498",
+          "lounge_name": "Bowser498",
+          "table_name": "Bowser498",
+          "tag": "SN",
+          "total_score": 105,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            12,
+            3,
+            2,
+            12,
+            10,
+            15,
+            2,
+            10,
+            8,
+            6,
+            15,
+            10
+          ],
+          "race_positions": [
+            2,
+            7,
+            8,
+            2,
+            3,
+            1,
+            8,
+            3,
+            4,
+            5,
+            1,
+            3
+          ],
+          "gp_scores": [
+            [
+              12,
+              3,
+              2,
+              12
+            ],
+            [
+              10,
+              15,
+              2,
+              10
+            ],
+            [
+              8,
+              6,
+              15,
+              10
+            ]
+          ],
+          "flag": "us"
+        },
+        "1809-9069-0956": {
+          "table_str": "joshla [us_md] 34|34|29",
+          "mii_name": "SN joshla",
+          "lounge_name": "joshla",
+          "table_name": "joshla",
+          "tag": "SN",
+          "total_score": 97,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            3,
+            4,
+            12,
+            15,
+            15,
+            10,
+            6,
+            3,
+            15,
+            8,
+            4,
+            2
+          ],
+          "race_positions": [
+            7,
+            6,
+            2,
+            1,
+            1,
+            3,
+            5,
+            7,
+            1,
+            4,
+            6,
+            8
+          ],
+          "gp_scores": [
+            [
+              3,
+              4,
+              12,
+              15
+            ],
+            [
+              15,
+              10,
+              6,
+              3
+            ],
+            [
+              15,
+              8,
+              4,
+              2
+            ]
+          ],
+          "flag": "us_md"
+        },
+        "0736-1517-5171": {
+          "table_str": "Clarence Callahan [nr] 20|26|28",
+          "mii_name": "SN Tae",
+          "lounge_name": "Clarence Callahan",
+          "table_name": "Clarence Callahan",
+          "tag": "SN",
+          "total_score": 74,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            4,
+            2,
+            6,
+            8,
+            6,
+            4,
+            10,
+            6,
+            10,
+            4,
+            2,
+            12
+          ],
+          "race_positions": [
+            6,
+            8,
+            5,
+            4,
+            5,
+            6,
+            3,
+            5,
+            3,
+            6,
+            8,
+            2
+          ],
+          "gp_scores": [
+            [
+              4,
+              2,
+              6,
+              8
+            ],
+            [
+              6,
+              4,
+              10,
+              6
+            ],
+            [
+              10,
+              4,
+              2,
+              12
+            ]
+          ],
+          "flag": "nr"
+        },
+        "5031-1216-1890": {
+          "table_str": "zaina [us] 3|2|4",
+          "mii_name": "SN kali",
+          "lounge_name": "zaina",
+          "table_name": "zaina",
+          "tag": "SN",
+          "total_score": 9,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "race_positions": [
+            9,
+            9,
+            9,
+            10,
+            10,
+            10,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9
+          ],
+          "gp_scores": [
+            [
+              1,
+              1,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              1
+            ],
+            [
+              1,
+              1,
+              1,
+              1
+            ]
+          ],
+          "flag": "us"
+        }
+      },
+      "hex_color": "#ADCFCD"
+    },
+    "St": {
+      "table_tag_str": "St #E40CA6",
+      "table_penalty_str": "",
+      "total_score": 309,
+      "penalties": 0,
+      "players": {
+        "3356-0835-9762": {
+          "table_str": "Dazai [us_fl] 30|34|29",
+          "mii_name": "St.Lincoln",
+          "lounge_name": "Dazai",
+          "table_name": "Dazai",
+          "tag": "St",
+          "total_score": 93,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            6,
+            10,
+            10,
+            4,
+            12,
+            8,
+            12,
+            2,
+            3,
+            12,
+            8,
+            6
+          ],
+          "race_positions": [
+            5,
+            3,
+            3,
+            6,
+            2,
+            4,
+            2,
+            8,
+            7,
+            2,
+            4,
+            5
+          ],
+          "gp_scores": [
+            [
+              6,
+              10,
+              10,
+              4
+            ],
+            [
+              12,
+              8,
+              12,
+              2
+            ],
+            [
+              3,
+              12,
+              8,
+              6
+            ]
+          ],
+          "flag": "us_fl"
+        },
+        "4172-1265-3554": {
+          "table_str": "Cyrene [world] 24|31|29",
+          "mii_name": "St. Frost",
+          "lounge_name": "Cyrene",
+          "table_name": "Cyrene",
+          "tag": "St",
+          "total_score": 84,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            2,
+            12,
+            8,
+            2,
+            4,
+            12,
+            3,
+            12,
+            12,
+            3,
+            10,
+            4
+          ],
+          "race_positions": [
+            8,
+            2,
+            4,
+            8,
+            6,
+            2,
+            7,
+            2,
+            2,
+            7,
+            3,
+            6
+          ],
+          "gp_scores": [
+            [
+              2,
+              12,
+              8,
+              2
+            ],
+            [
+              4,
+              12,
+              3,
+              12
+            ],
+            [
+              12,
+              3,
+              10,
+              4
+            ]
+          ],
+          "flag": "world"
+        },
+        "4773-4446-6967": {
+          "table_str": "DEAD OR ALIVE [ye] 28|17|26",
+          "mii_name": "St. Ember",
+          "lounge_name": "DEAD OR ALIVE",
+          "table_name": "DEAD OR ALIVE",
+          "tag": "St",
+          "total_score": 71,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            15,
+            6,
+            4,
+            3,
+            2,
+            3,
+            4,
+            8,
+            2,
+            10,
+            6,
+            8
+          ],
+          "race_positions": [
+            1,
+            5,
+            6,
+            7,
+            8,
+            7,
+            6,
+            4,
+            8,
+            3,
+            5,
+            4
+          ],
+          "gp_scores": [
+            [
+              15,
+              6,
+              4,
+              3
+            ],
+            [
+              2,
+              3,
+              4,
+              8
+            ],
+            [
+              2,
+              10,
+              6,
+              8
+            ]
+          ],
+          "flag": "ye"
+        },
+        "5159-9919-9515": {
+          "table_str": "coop [us_md] 25|21|12",
+          "mii_name": "St. Hail",
+          "lounge_name": "coop",
+          "table_name": "coop",
+          "tag": "St",
+          "total_score": 58,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            8,
+            8,
+            3,
+            6,
+            3,
+            6,
+            8,
+            4,
+            4,
+            2,
+            3,
+            3
+          ],
+          "race_positions": [
+            4,
+            4,
+            7,
+            5,
+            7,
+            5,
+            4,
+            6,
+            6,
+            8,
+            7,
+            7
+          ],
+          "gp_scores": [
+            [
+              8,
+              8,
+              3,
+              6
+            ],
+            [
+              3,
+              6,
+              8,
+              4
+            ],
+            [
+              4,
+              2,
+              3,
+              3
+            ]
+          ],
+          "flag": "us_md"
+        },
+        "5159-9842-3424": {
+          "table_str": "hazr [ug] 1|2|0",
+          "mii_name": "St. Ineff",
+          "lounge_name": "hazr",
+          "table_name": "hazr",
+          "tag": "St",
+          "total_score": 3,
+          "had_penalties": false,
+          "penalties": 0,
+          "subbed_out": false,
+          "race_scores": [
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "race_positions": [
+            10,
+            10,
+            10,
+            9,
+            9,
+            9,
+            10,
+            10,
+            10,
+            10,
+            10,
+            10
+          ],
+          "gp_scores": [
+            [
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "flag": "ug"
+        }
+      },
+      "hex_color": "#E40CA6"
+    }
+  }
+}

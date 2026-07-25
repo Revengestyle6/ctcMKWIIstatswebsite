@@ -1,0 +1,225 @@
+name: CI and staging deployment
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-staging-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  APP_ENV: test
+  DATABASE_URL: postgresql+psycopg://ctc_test:ctc_test@127.0.0.1:5432/ctc_test
+  TEST_DATABASE_URL: postgresql+psycopg://ctc_test:ctc_test@127.0.0.1:5432/ctc_test
+
+jobs:
+  test:
+    name: PostgreSQL and application checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18.4-alpine3.23
+        env:
+          POSTGRES_DB: ctc_test
+          POSTGRES_USER: ctc_test
+          POSTGRES_PASSWORD: ctc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ctc_test -d ctc_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    steps:
+      - name: Check out the tested revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements-dev.txt
+
+      - name: Migrate and load disposable PostgreSQL
+        run: |
+          alembic upgrade head
+          alembic check
+          python backend/import_json_to_db.py
+
+      - name: Check backend behavior and formatting
+        run: |
+          ruff check backend
+          ruff format backend --check
+          cd backend
+          python -m unittest discover -v
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Check and build frontend
+        run: |
+          npm run check --prefix frontend
+          npm run build --prefix frontend
+
+  deploy_staging:
+    name: Deploy the tested revision to staging
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: staging
+      url: https://mkw-stats.web.app
+    concurrency:
+      group: staging-deployment
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GCP_PROJECT_ID: mkw-stats
+      GCP_REGION: us-central1
+      ARTIFACT_REPOSITORY: ctc-backend
+      IMAGE_NAME: api
+      MIGRATION_JOB: ctc-staging-migrate
+      CLOUD_RUN_SERVICE: ctc-stats-api-staging
+      FIREBASE_WEB_APP_ID: 1:1054134490602:web:6e5f37e3beccd7d4b28e93
+      XDG_CONFIG_HOME: ${{ runner.temp }}/config
+      NO_UPDATE_NOTIFIER: "1"
+    steps:
+      - name: Check out the tested revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Authenticate to Google Cloud without a key
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: mkw-stats
+          workload_identity_provider: projects/1054134490602/locations/global/workloadIdentityPools/github-actions/providers/ctc-main
+          service_account: ctc-github-deployer@mkw-stats.iam.gserviceaccount.com
+          create_credentials_file: true
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Install deployment and frontend dependencies
+        run: |
+          npm ci
+          npm ci --prefix frontend
+
+      - name: Build an immutable backend image
+        run: |
+          SHORT_SHA="${GITHUB_SHA:0:12}"
+          IMAGE_TAG="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REPOSITORY}/${IMAGE_NAME}:staging-${SHORT_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gcloud builds submit . \
+            --project="${GCP_PROJECT_ID}" \
+            --tag="${IMAGE_TAG}" \
+            --quiet
+          DIGEST="$(gcloud artifacts docker images describe "${IMAGE_TAG}" \
+            --project="${GCP_PROJECT_ID}" \
+            --format='value(image_summary.digest)')"
+          test -n "${DIGEST}"
+          echo "IMAGE_REF=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REPOSITORY}/${IMAGE_NAME}@${DIGEST}" >> "${GITHUB_ENV}"
+
+      - name: Migrate staging with the new image
+        run: |
+          gcloud run jobs update "${MIGRATION_JOB}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --image="${IMAGE_REF}" \
+            --quiet
+          gcloud run jobs execute "${MIGRATION_JOB}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --wait
+
+      - name: Deploy the same image digest to Cloud Run
+        run: |
+          gcloud run services update "${CLOUD_RUN_SERVICE}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --image="${IMAGE_REF}" \
+            --quiet
+          DEPLOYED_IMAGE="$(gcloud run services describe "${CLOUD_RUN_SERVICE}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --format='value(spec.template.spec.containers[0].image)')"
+          test "${DEPLOYED_IMAGE}" = "${IMAGE_REF}"
+          SERVICE_URL="$(gcloud run services describe "${CLOUD_RUN_SERVICE}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --format='value(status.url)')"
+          curl --fail --silent --show-error \
+            --retry 8 --retry-all-errors --retry-delay 5 \
+            "${SERVICE_URL}/api/health/ready"
+
+      - name: Fetch the registered Firebase web configuration
+        run: |
+          SDK_CONFIG_JSON="$(npx firebase apps:sdkconfig web "${FIREBASE_WEB_APP_ID}" \
+            --project="${GCP_PROJECT_ID}" \
+            --json)"
+          export SDK_CONFIG_JSON
+          node -e '
+            const config = JSON.parse(process.env.SDK_CONFIG_JSON).result.sdkConfig;
+            const fields = {
+              VITE_FIREBASE_API_KEY: config.apiKey,
+              VITE_FIREBASE_AUTH_DOMAIN: config.authDomain,
+              VITE_FIREBASE_PROJECT_ID: config.projectId,
+              VITE_FIREBASE_APP_ID: config.appId,
+            };
+            for (const [name, value] of Object.entries(fields)) {
+              if (!value || String(value).includes("\n")) {
+                throw new Error(`Invalid Firebase configuration field: ${name}`);
+              }
+              console.log(`${name}=${value}`);
+            }
+          ' >> "${GITHUB_ENV}"
+
+      - name: Build and deploy Firebase Hosting
+        run: |
+          npm run build --prefix frontend
+          npx firebase deploy \
+            --only hosting \
+            --project="${GCP_PROJECT_ID}" \
+            --non-interactive
+
+      - name: Verify the same-origin staging release
+        run: |
+          curl --fail --silent --show-error \
+            --retry 8 --retry-all-errors --retry-delay 5 \
+            "https://mkw-stats.web.app/api/health/ready"
+          curl --fail --silent --show-error \
+            --retry 8 --retry-all-errors --retry-delay 5 \
+            "https://mkw-stats.web.app/api/health/data"
+          curl --fail --silent --show-error \
+            --retry 8 --retry-all-errors --retry-delay 5 \
+            "https://mkw-stats.web.app/" > /dev/null

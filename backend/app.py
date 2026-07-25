@@ -1,170 +1,77 @@
-from flask import Flask, request, jsonify
-from flask_caching import Cache
+import logging
+import os
+import time
+import uuid
+
+# These imports remain public for compatibility with existing tests and maintenance tools.
+import dashboard_stats as dashboards
+import database_health as database_health_service
+import stats_db as stats
+from database import app_environment
+from extensions import cache
+from flask import Flask, g, request
 from flask_compress import Compress
-import stats
-import find
-import pandas as pd
-from pathlib import Path
 from flask_cors import CORS
+from routes.access import access_api
+from routes.admin import admin_api
+from routes.operations import operations_api
+from routes.public import public_api
+from routes.reviews import reviews_api
 
-app = Flask(__name__)
-CORS(app)
-Compress(app)
-cache = Cache(app, config={'CACHE_TYPE': 'simple', 'CACHE_DEFAULT_TIMEOUT': 3600})
+__all__ = ["app", "cache", "create_app", "dashboards", "database_health_service", "stats"]
 
-BASE_DIR = Path(__file__).resolve().parent
-csv_directory = BASE_DIR / "CSV"
-json_directory = BASE_DIR / "JSON"
 
-@app.route("/api/player", methods=["GET"])
-def player_stats():
-    player_name = request.args.get("name")
-    division = request.args.get("division", "1_2")
-    if not player_name:
-        return jsonify({"error": "Player name is required"}), 400
-    try:
-        results = stats.findtopplayertracks(player_name, min_races=2, division=division)
-        return jsonify({"player": player_name, "results": results})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+def create_app(config=None):
+    """Create and configure the Flask application."""
+    application = Flask(__name__)
+    application.config.from_mapping(
+        JSON_SORT_KEYS=False,
+        CACHE_TYPE="simple",
+        CACHE_DEFAULT_TIMEOUT=3600,
+    )
+    if config:
+        application.config.update(config)
 
-@app.route("/api/player-avg", methods=["GET"])
-def player_avg():
-    player_name = request.args.get("name")
-    division = request.args.get("division", "1_2")
-    if not player_name:
-        return jsonify({"error": "Player name is required"}), 400
-    try:
-        avg, player_name_formatted, team_name, races = stats.findplayeravg(player_name, division=division)
-        return jsonify({
-            "avg": avg,
-            "player_name": player_name_formatted,
-            "team_name": team_name,
-            "races": races
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-    
-@app.route("/api/players", methods=["GET"])
-@cache.cached(timeout=3600, query_string=True)
-def api_players():
-    division = request.args.get("division", "1_2")
-    try:
-        csv_file = csv_directory / f"ctc_d{division}.csv"
-        print(f"Loading players from: {csv_file}")
-        data = pd.read_csv(csv_file)
-        print(f"CSV columns: {data.columns.tolist()}")
-        
-        players = set()
-        for value in data['player']:
-            # Skip NaN and non-string values
-            if pd.notna(value) and isinstance(value, str):
-                players.add(value)
-        
-        result = sorted(list(players))
-        print(f"Players found: {result}")
-        return jsonify(result)
-    except Exception as e:
-        print(f"Error in api_players: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 400
+    if app_environment() in {"local", "test"}:
+        CORS(application)
+    Compress(application)
+    cache.init_app(application)
+    application.register_blueprint(public_api)
+    application.register_blueprint(admin_api)
+    application.register_blueprint(access_api)
+    application.register_blueprint(reviews_api)
+    application.register_blueprint(operations_api)
 
-@app.route("/api/top-team-players", methods=["GET"])
-def api_top_team_players():
-    team = request.args.get("team")
-    min_races = int(request.args.get("min_races", 12))
-    division = request.args.get("division", "1_2")
-    try:
-        players = stats.findtopteamplayers(team, min_races, division)
-        return jsonify(players)
-    except Exception as e:
-        print(f"Error in api_top_team_players: {e}")
-        return jsonify({"error": str(e)}), 400
+    @application.before_request
+    def start_request():
+        supplied_id = request.headers.get("X-Request-ID", "").strip()
+        g.request_id = supplied_id[:128] if supplied_id else str(uuid.uuid4())
+        g.request_started_at = time.monotonic()
 
-@app.route("/api/teams", methods=["GET"])
-@cache.cached(timeout=3600, query_string=True)
-def api_teams():
-    division = request.args.get("division", "1_2")
-    try:
-        csv_file = csv_directory / f"ctc_d{division}.csv"
-        data = pd.read_csv(csv_file)
-        teams = set()
-        for value in data['team']:
-            if isinstance(value, str):
-                teams.add(value)
-        return jsonify(sorted(list(teams)))
-    except Exception as e:
-        print(f"Error in api_teams: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 400
-    
-@cache.cached(timeout=3600, query_string=True)
-@app.route("/api/top-team-tracks", methods=["GET"])
-def api_top_team_tracks():
-    team = request.args.get("team")
-    division = request.args.get("division", "1_2")
-    try:
-        tracks = stats.findtopteamtracks(team, division=division)
-        return jsonify(tracks)
-    except Exception as e:
-        print(f"Error in api_top_team_tracks: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 400
-    
-@app.route("/api/tracks", methods=["GET"])
-@cache.cached(timeout=3600, query_string=True)
-def api_tracks():
-    division = request.args.get("division", "1_2")
-    try:
-        csv_file = csv_directory / f"ctc_d{division}.csv"
-        data = pd.read_csv(csv_file)
-        tracks = set()
-        for value in data['track']:
-            if isinstance(value, str):
-                tracks.add(value)
-        return jsonify(sorted(list(tracks)))
-    except Exception as e:
-        print(f"Error in api_tracks: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 400
+    @application.after_request
+    def finish_request(response):
+        response.headers["X-Request-ID"] = g.request_id
+        actor = getattr(g, "admin_actor", None)
+        logging.getLogger("request").info(
+            "request_id=%s method=%s path=%s status=%s duration_ms=%.1f actor=%s",
+            g.request_id,
+            request.method,
+            request.path,
+            response.status_code,
+            (time.monotonic() - g.request_started_at) * 1000,
+            actor.email if actor else "anonymous",
+        )
+        return response
 
-@app.route("/api/top-tracks", methods=["GET"])
-@cache.cached(timeout=3600, query_string=True)
-def api_top_tracks():
-    track = request.args.get("track")
-    min_races = int(request.args.get("min_races", 2))
-    division = request.args.get("division", "1_2")
-    if not track:
-        return jsonify({"error": "Track name is required"}), 400
-    try:
-        results = stats.findtoptracks(track, min_races=min_races, division=division)
-        return jsonify(results)
-    except Exception as e:
-        print(f"Error in api_top_tracks: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 400
+    return application
 
-@app.route("/api/top-teams-on-track", methods=["GET"])
-@cache.cached(timeout=3600, query_string=True)
-def api_top_teams_on_track():
-    track = request.args.get("track")
-    min_races = int(request.args.get("min_races", 2))
-    division = request.args.get("division", "1_2")
-    if not track:
-        return jsonify({"error": "Track name is required"}), 400
-    try:
-        results = stats.findtopteamsontrack(track, min_races=min_races, division=division)
-        return jsonify(results)
-    except Exception as e:
-        print(f"Error in api_top_teams_on_track: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 400
+
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+app = create_app()
+
 
 if __name__ == "__main__":
     app.run(debug=True)

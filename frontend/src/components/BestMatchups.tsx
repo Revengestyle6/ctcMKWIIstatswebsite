@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://ctcmkwiistatswebsite.onrender.com';
+import type React from "react";
+import { useEffect, useMemo, useState } from "react";
+import { fetchJson } from "../api";
+import { useSeasonDivision } from "../hooks/useSeasonDivision";
+import { LegacyStatHeader } from "./LegacyStatHeader";
+import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
 type TrackStat = {
   track: string;
@@ -10,127 +12,143 @@ type TrackStat = {
   text?: string;
 };
 
-const divisions = ["1_2", "3", "4"];
+const TRACK_STAT_PATTERN = /^(.*?)\s*-\s*([\d.]+)\s*pts\s*\((\d+)\s*races?\)/i;
+
+function parseTrackString(entry: string): TrackStat | null {
+  const match = entry.match(TRACK_STAT_PATTERN);
+  if (!match) return null;
+  const avg = Number.parseFloat(match[2]);
+  const races = Number.parseInt(match[3], 10);
+  if (!Number.isFinite(avg) || !Number.isFinite(races)) return null;
+  return { track: match[1].trim(), avg, races, text: entry };
+}
+
+function normalizeTracks(raw: unknown): TrackStat[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (typeof item === "string") return parseTrackString(item);
+      if (item && typeof item === "object") {
+        const maybe = item as {
+          track?: unknown;
+          avg?: unknown;
+          average?: unknown;
+          races?: unknown;
+          text?: unknown;
+        };
+        const avgValue = maybe.avg ?? maybe.average;
+        if (typeof maybe.track === "string" && typeof avgValue === "number") {
+          const racesNum = typeof maybe.races === "number" ? maybe.races : Number(maybe.races ?? 0);
+          return {
+            track: maybe.track,
+            avg: avgValue,
+            races: Number.isFinite(racesNum) ? racesNum : 0,
+            text: typeof maybe.text === "string" ? maybe.text : undefined,
+          };
+        }
+      }
+      return null;
+    })
+    .filter((track): track is TrackStat => Boolean(track?.track));
+}
 
 export default function BestMatchups(): React.JSX.Element {
+  const { seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision } =
+    useSeasonDivision();
   const [teams, setTeams] = useState<string[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [selectedTeam2, setSelectedTeam2] = useState<string>("");
   const [team1Tracks, setTeam1Tracks] = useState<TrackStat[]>([]);
   const [team2Tracks, setTeam2Tracks] = useState<TrackStat[]>([]);
-  const [division, setDivision] = useState<string>("1_2");
+  const [minRaces, setMinRaces] = useState(2);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
-  const parseTrackString = (entry: string): TrackStat | null => {
-    const match = entry.match(
-      /^(.*?)\s*-\s*([\d.]+)\s*pts\s*\((\d+)\s*races?\)/i
-    );
-    if (!match) return null;
-    const avg = Number.parseFloat(match[2]);
-    const races = Number.parseInt(match[3], 10);
-    if (!Number.isFinite(avg) || !Number.isFinite(races)) return null;
-    return { track: match[1].trim(), avg, races, text: entry };
-  };
-
-  const normalizeTracks = useCallback((raw: unknown): TrackStat[] => {
-    if (!Array.isArray(raw)) return [];
-    return raw
-      .map((item) => {
-        if (typeof item === "string") return parseTrackString(item);
-        if (item && typeof item === "object") {
-          const maybe = item as {
-            track?: unknown;
-            avg?: unknown;
-            races?: unknown;
-            text?: unknown;
-          };
-          if (typeof maybe.track === "string" && typeof maybe.avg === "number") {
-            const racesNum =
-              typeof maybe.races === "number"
-                ? maybe.races
-                : Number(maybe.races ?? 0);
-            return {
-              track: maybe.track,
-              avg: maybe.avg,
-              races: Number.isFinite(racesNum) ? racesNum : 0,
-              text: typeof maybe.text === "string" ? maybe.text : undefined,
-            };
-          }
-        }
-        return null;
-      })
-      .filter((t): t is TrackStat => Boolean(t && t.track));
-  }, []);
-
   useEffect(() => {
-    async function fetchTeams() {
+    let cancelled = false;
+
+    async function loadTeams() {
+      if (!season || !division) return;
+      setTeams([]);
+      setSelectedTeam("");
+      setSelectedTeam2("");
+      setTeam1Tracks([]);
+      setTeam2Tracks([]);
+      setError("");
       try {
-        const res = await fetch(`${API_URL}/api/teams?division=${division}`);
-        if (!res.ok) throw new Error("Failed to fetch teams");
-        const data: string[] = await res.json();
-        // Sort teams alphabetically (case-insensitive)
-        const sortedData = data.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        const data = await fetchJson<string[]>("/api/teams", { season, division });
+        if (cancelled) return;
+        const sortedData = [...data].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
         setTeams(sortedData);
-        if (sortedData.length > 0) setSelectedTeam(sortedData[0]);
-        setError("");
+        setSelectedTeam(sortedData[0] ?? "");
+        setSelectedTeam2(sortedData[1] ?? "");
       } catch (err) {
+        if (cancelled) return;
         console.error("Error fetching teams:", err);
         setError("Failed to load teams.");
-        setTeams([]);
       }
     }
-    fetchTeams();
-  }, [division]);
+
+    loadTeams();
+    return () => {
+      cancelled = true;
+    };
+  }, [season, division]);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchTeamTracks(team: string): Promise<TrackStat[]> {
-      const tracksRes = await fetch(
-        `${API_URL}/api/top-team-tracks?team=${encodeURIComponent(team)}&division=${division}`
-      );
-      if (!tracksRes.ok) throw new Error("Failed to fetch top tracks");
-      const raw = await tracksRes.json();
+      const raw = await fetchJson<unknown>("/api/top-team-tracks", {
+        team,
+        season,
+        division,
+        min_races: minRaces,
+      });
       return normalizeTracks(raw);
     }
 
     async function fetchBothTeams() {
-      if (!selectedTeam && !selectedTeam2) return;
+      if ((!selectedTeam && !selectedTeam2) || !season || !division) return;
       setLoading(true);
       setError("");
       try {
-        if (selectedTeam) {
-          setTeam1Tracks(await fetchTeamTracks(selectedTeam));
-        } else {
-          setTeam1Tracks([]);
-        }
-        if (selectedTeam2) {
-          setTeam2Tracks(await fetchTeamTracks(selectedTeam2));
-        } else {
-          setTeam2Tracks([]);
-        }
+        const [team1Data, team2Data] = await Promise.all([
+          selectedTeam ? fetchTeamTracks(selectedTeam) : Promise.resolve([]),
+          selectedTeam2 ? fetchTeamTracks(selectedTeam2) : Promise.resolve([]),
+        ]);
+        if (cancelled) return;
+        setTeam1Tracks(team1Data);
+        setTeam2Tracks(team2Data);
       } catch (err) {
+        if (cancelled) return;
         console.error(err);
         setError("Failed to fetch team data.");
+        setTeam1Tracks([]);
+        setTeam2Tracks([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchBothTeams();
-  }, [selectedTeam, selectedTeam2, division, normalizeTracks]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTeam, selectedTeam2, season, division, minRaces]);
 
   const comparisonRows = useMemo(() => {
     if (!selectedTeam || !selectedTeam2) return [];
-    const team1Map = new Map(team1Tracks.map((t) => [t.track.toLowerCase(), t]));
+    const team1Map = new Map(team1Tracks.map((track) => [track.track.toLowerCase(), track]));
     return team2Tracks
-      .map((t) => {
-        const opponent = team1Map.get(t.track.toLowerCase());
-        const diff = opponent ? opponent.avg - t.avg : null;
+      .map((track) => {
+        const opponent = team1Map.get(track.track.toLowerCase());
+        const diff = opponent ? opponent.avg - track.avg : null;
         return {
-          track: t.track,
-          teamAvg: t.avg, // Team 2
-          opponentAvg: opponent?.avg ?? null, // Team 1
-          races: t.races,
+          track: track.track,
+          teamAvg: track.avg,
+          opponentAvg: opponent?.avg ?? null,
+          races: track.races,
           diff,
         };
       })
@@ -142,76 +160,101 @@ export default function BestMatchups(): React.JSX.Element {
       });
   }, [selectedTeam, selectedTeam2, team1Tracks, team2Tracks]);
 
+  const combinedError = scopeError || error;
+
+  function swapTeams() {
+    setSelectedTeam(selectedTeam2);
+    setSelectedTeam2(selectedTeam);
+  }
+
   return (
-    <div className="relative min-h-screen text-white font-sans p-6">
-      {/* Top bar with semi-transparent background */}
-      <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
-        <div className="flex justify-between items-center max-w-7xl mx-auto px-2">
-          <Link to="/" className="text-blue-400 hover:text-blue-300 font-semibold">
-            ← Back
-          </Link>
-          <h1 className="text-3xl font-bold text-center flex-1">Team Matchups</h1>
-          <div className="w-32"></div>
-          <img 
-            src="/images/CTC_LOGO/ctclogo.webp" 
-            alt="Logo" 
-            className="w-12 h-12 rounded-lg"
-            loading="lazy"
-          />
-        </div>
-      </div>
+    <div className="relative min-h-screen p-6 font-sans text-white">
+      <LegacyStatHeader title="Team Matchups" />
 
-      {/* Main content with top padding */}
-      <div className="pt-24 max-w-4xl mx-auto">
+      <div className="mx-auto max-w-5xl pt-24">
+        {combinedError && <p className="text-red-400 mb-4 text-center">{combinedError}</p>}
 
-        {error && <p className="text-red-400 mb-4 text-center">{error}</p>}
+        <div className="mb-6 rounded-xl border border-white/15 bg-black/45 p-5 shadow-lg backdrop-blur-sm">
+          <p className="mb-4 text-sm text-gray-300">
+            Choose two teams to compare their averages on tracks they have both played.
+          </p>
+          <div className="flex flex-col flex-wrap gap-4 md:flex-row md:items-end">
+            <SeasonDivisionSelector
+              season={season}
+              division={division}
+              seasons={seasons}
+              divisions={divisions}
+              disabled={loadingScope}
+              onSeasonChange={setSeason}
+              onDivisionChange={setDivision}
+            />
 
-        <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6 flex-wrap justify-center">
-          <div>
-            <label className="block font-semibold mb-1">Division</label>
-            <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={division}
-              onChange={(e) => setDivision(e.target.value)}
+            <div>
+              <label htmlFor="matchup-team-one" className="mb-1 block font-semibold">
+                Team 1
+              </label>
+              <select
+                id="matchup-team-one"
+                className="min-w-40 rounded-md border border-gray-400 bg-white px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={selectedTeam}
+                onChange={(event) => setSelectedTeam(event.target.value)}
+                disabled={!division || teams.length === 0}
+              >
+                <option value="">Select a team</option>
+                {teams.map((team) => (
+                  <option key={team} value={team} disabled={team === selectedTeam2}>
+                    {team}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="matchup-team-two" className="mb-1 block font-semibold">
+                Team 2
+              </label>
+              <select
+                id="matchup-team-two"
+                className="min-w-40 rounded-md border border-gray-400 bg-white px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={selectedTeam2}
+                onChange={(event) => setSelectedTeam2(event.target.value)}
+                disabled={!division || teams.length === 0}
+              >
+                <option value="">Select a team</option>
+                {teams.map((team) => (
+                  <option key={team} value={team} disabled={team === selectedTeam}>
+                    {team}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="matchup-min-races" className="mb-1 block font-semibold">
+                Min races
+              </label>
+              <input
+                id="matchup-min-races"
+                type="number"
+                min={1}
+                max={500}
+                value={minRaces}
+                onChange={(event) => {
+                  const nextValue = Number(event.target.value) || 1;
+                  setMinRaces(Math.min(500, Math.max(1, nextValue)));
+                }}
+                className="w-28 rounded-md border border-gray-400 bg-white px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={swapTeams}
+              disabled={!selectedTeam || !selectedTeam2}
+              className="rounded-md border border-blue-300/50 bg-blue-950/60 px-4 py-2 font-semibold text-blue-100 transition hover:bg-blue-900/70 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {divisions.map((div) => (
-                <option key={div} value={div}>
-                  Division {div.replace("_", "–")}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-semibold mb-1">Team 1</label>
-            <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={selectedTeam}
-              onChange={(e) => setSelectedTeam(e.target.value)}
-            >
-              <option value="">Select a team</option>
-              {teams.map((team) => (
-                <option key={team} value={team}>
-                  {team}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-semibold mb-1">Team 2</label>
-            <select
-              className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={selectedTeam2}
-              onChange={(e) => setSelectedTeam2(e.target.value)}
-            >
-              <option value="">Select a team</option>
-              {teams.map((team) => (
-                <option key={team} value={team}>
-                  {team}
-                </option>
-              ))}
-            </select>
+              Swap teams
+            </button>
           </div>
         </div>
 
@@ -234,55 +277,41 @@ export default function BestMatchups(): React.JSX.Element {
                 No overlapping track data for these teams.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full bg-black/70 backdrop-blur-sm shadow-md rounded-xl overflow-hidden">
+              <div className="overflow-x-auto rounded-xl border border-white/10 shadow-lg">
+                <table className="min-w-full bg-black/70 text-sm tabular-nums backdrop-blur-sm">
                   <thead className="bg-black/90">
                     <tr>
-                      <th className="text-left px-4 py-2 font-semibold text-white">
-                        #
-                      </th>
-                      <th className="text-left px-4 py-2 font-semibold text-white">
-                        Track
-                      </th>
-                      <th className="text-left px-4 py-2 font-semibold text-white">
+                      <th className="text-left px-4 py-2 font-semibold text-white">#</th>
+                      <th className="text-left px-4 py-2 font-semibold text-white">Track</th>
+                      <th className="px-4 py-3 text-right font-semibold text-white">
                         {selectedTeam}
                       </th>
-                      <th className="text-left px-4 py-2 font-semibold text-white">
+                      <th className="px-4 py-3 text-right font-semibold text-white">
                         {selectedTeam2}
                       </th>
-                      <th className="text-left px-4 py-2 font-semibold text-white">
-                        Diff ({selectedTeam} - {selectedTeam2})
-                      </th>
+                      <th className="px-4 py-3 text-right font-semibold text-white">Difference</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {comparisonRows.map((row, idx) => (
+                    {comparisonRows.map((row, index) => (
                       <tr
-                        key={`${row.track}-${idx}`}
-                        className={
-                          idx % 2 === 0 ? "bg-black/50" : "bg-black/70"
-                        }
+                        key={`${row.track}-${index}`}
+                        className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}
                       >
-                        <td className="px-4 py-2 font-semibold text-blue-400">
-                          {idx + 1}
-                        </td>
+                        <td className="px-4 py-2 font-semibold text-blue-400">{index + 1}</td>
                         <td className="px-4 py-2 text-white">{row.track}</td>
-                        <td className="px-4 py-2 text-white">
-                          {row.opponentAvg === null
-                            ? "—"
-                            : `${row.opponentAvg.toFixed(1)} pts`}
+                        <td className="px-4 py-3 text-right text-white">
+                          {row.opponentAvg === null ? "-" : `${row.opponentAvg.toFixed(1)} pts`}
                         </td>
-                        <td className="px-4 py-2 text-white">
+                        <td className="px-4 py-3 text-right text-white">
                           {row.teamAvg.toFixed(1)} pts
                         </td>
                         <td
-                          className={`px-4 py-2 font-semibold ${
-                            row.diff !== null && row.diff >= 0
-                              ? "text-green-300"
-                              : "text-red-300"
+                          className={`px-4 py-3 text-right font-semibold ${
+                            row.diff !== null && row.diff >= 0 ? "text-green-300" : "text-red-300"
                           }`}
                         >
-                          {row.diff === null ? "—" : row.diff.toFixed(1)}
+                          {row.diff === null ? "-" : row.diff.toFixed(1)}
                         </td>
                       </tr>
                     ))}

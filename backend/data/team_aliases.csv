@@ -1,0 +1,34 @@
+league_code,season_code,division_code,match_label,raw_team_key,canonical_tag,display_name,note
+ctc,s1,d1_2,W1 6c (_)-,C,(")>,(")>,Raw tag parsed as C for symbol team.
+ctc,s1,d1_2,W2 (_)- BBB,R,(")>,(")>,Raw tag parsed as R for symbol team.
+ctc,s1,d1_2,W3 T (_)-,Q,(")>,(")>,Raw tag parsed as Q for symbol team.
+ctc,s1,d1_2,W6 (_)- O,D,(")>,(")>,Raw tag parsed as D for symbol team.
+ctc,s1,d1_2,W8 Za (_)-,Y,(")>,(")>,Raw tag parsed as Y for symbol team.
+ctc,s1,d1_2,W9 sts (_)-,M,(")>,(")>,Raw tag parsed as M for symbol team.
+ctc,s1,d1_2,W2 (_)- BBB,B,BBB,BBB,Raw tag parsed as B for BBB.
+ctc,s1,d1_2,W4 6c Mi,6,6¢,6¢,Raw tag parsed as 6 for 6¢.
+ctc,s1,d1_2,W8 6c O,1,6¢,6¢,Sub/extra raw team parsed as 1; merge into 6¢.
+ctc,s1,d1_2,W4 6c Mi,M,Mι,Mι,Raw tag parsed as M for Mι.
+ctc,s1,d3,W10 [80] Ei,80,[80],[80],Raw tag parsed as 80 for [80].
+ctc,s1,d3,W10 [80] Ei,E,Eι,Eι,Raw tag parsed as E for Eι.
+ctc,s1,d3,W2 [80] fr,frcla,fr,fr,Raw tag parsed as frcla for fr.
+ctc,s1,d3,W6 u_s 80,μ's,μs,μs,Raw tag parsed as μ's for μs.
+ctc,s1,d4,W5 F_s Nw,Fs,F's,F's,Raw tag parsed as Fs for F's.
+ctc,s1,d4,W6 Nw F_s,Fs,F's,F's,Raw tag parsed as Fs for F's.
+ctc,s1,d4,W8 vf F_s,Fs,F's,F's,Raw tag parsed as Fs for F's.
+ctc,s1,d4,W8 Nw G25,G,G25,G25,Raw tag parsed as G for G25.
+ctc,s1,d4,W8 Nw G25,N,Nω,Nω,Raw tag parsed as N for Nω.
+ctc,s1,d4,,ZogZhit,Zog Zhit,Zog Zhit,Normalize Zog Zhit spacing.
+ctc,s2,d1,W6 Sim sop,No Tag,😊😠😔😐,😊😠😔😐,Sim Theory parsed as No Tag.
+ctc,s2,d1,W8 Sim O,A,😊😠😔😐,😊😠😔😐,Sim Theory parsed as A.
+ctc,s2,d1,W7 sop Sf,T,ミ★,ミ★,Starfall parsed as T.
+ctc,s2,d1,W8 Sf sop,T,ミ★,ミ★,Starfall parsed as T.
+ctc,s2,d2,,º,><((((º>,><((((º>,Albatross fish tag parsed as trailing symbol only.
+ctc,s2,d3,W1 Sf2 SLAY,C,ミ★,ミ★,Starfall parsed as C.
+ctc,s2,d3,W5 Sf2 xv,6,ミ★,ミ★,Starfall parsed as 6.
+ctc,s2,d4,,St.,St,St,Normalize St punctuation.
+ctc,s2,d5,W3 G25 Ice,G,G25,G25,Raw tag parsed as G for G25.
+ctc,s2,d5,W6 UX G25,G,G25,G25,Raw tag parsed as G for G25.
+ctc,s2,d5,W3 G25 Ice,I,IceSpice,IceSpice,IceSpice parsed as I.
+ctc,s2,d5,W2 Nw Ice,No Tag,IceSpice,IceSpice,Sub/extra raw team parsed as No Tag; merge into IceSpice.
+ctc,s2,d5,W6 UX G25,U,UX,UX,Raw tag parsed as U for UX.

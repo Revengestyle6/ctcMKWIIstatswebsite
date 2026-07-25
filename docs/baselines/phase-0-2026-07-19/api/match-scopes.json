@@ -1,0 +1,72 @@
+[
+  {
+    "division": "d1_2",
+    "division_name": "Division 1-2",
+    "league": "ctc",
+    "season": "s1",
+    "season_name": "CTC Season 1"
+  },
+  {
+    "division": "d3",
+    "division_name": "Division 3",
+    "league": "ctc",
+    "season": "s1",
+    "season_name": "CTC Season 1"
+  },
+  {
+    "division": "d4",
+    "division_name": "Division 4",
+    "league": "ctc",
+    "season": "s1",
+    "season_name": "CTC Season 1"
+  },
+  {
+    "division": "d1",
+    "division_name": "Division 1",
+    "league": "ctc",
+    "season": "s2",
+    "season_name": "CTC Season 2"
+  },
+  {
+    "division": "d2",
+    "division_name": "Division 2",
+    "league": "ctc",
+    "season": "s2",
+    "season_name": "CTC Season 2"
+  },
+  {
+    "division": "d3",
+    "division_name": "Division 3",
+    "league": "ctc",
+    "season": "s2",
+    "season_name": "CTC Season 2"
+  },
+  {
+    "division": "d4",
+    "division_name": "Division 4",
+    "league": "ctc",
+    "season": "s2",
+    "season_name": "CTC Season 2"
+  },
+  {
+    "division": "d5",
+    "division_name": "Division 5",
+    "league": "ctc",
+    "season": "s2",
+    "season_name": "CTC Season 2"
+  },
+  {
+    "division": "d1",
+    "division_name": "Division 1",
+    "league": "ctc",
+    "season": "s3",
+    "season_name": "CTC Season 3"
+  },
+  {
+    "division": "d2",
+    "division_name": "Division 2",
+    "league": "ctc",
+    "season": "s3",
+    "season_name": "CTC Season 3"
+  }
+]
