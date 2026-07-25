@@ -82,6 +82,12 @@ the Cloud Run runtime identities and never enter the workflow.
 See the [WIF runbook](../../infra/iam/github-actions-wif.md) for exact trust,
 permissions, production separation, and revocation.
 
+The old Vercel and GitHub Pages integrations are external repository settings,
+not part of the accepted deployment. Follow the
+[legacy deployment integration cleanup runbook](legacy-deployment-cleanup.md)
+with the previous-site collaborator before removing their environments or
+deployment metadata.
+
 ## Staging API Checkpoint
 
 Created and verified July 25, 2026:
