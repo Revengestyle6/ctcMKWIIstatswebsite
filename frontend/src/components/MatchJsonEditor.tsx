@@ -103,6 +103,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const previewSection = useRef<HTMLElement>(null);
   const scrollToPreviewAfterReview = useRef(false);
   const queriedTrackNames = useRef(new Set<string>());
+  const editorVersion = useRef(0);
 
   const players = useMemo(() => allPlayers(match), [match]);
   const playerMap = useMemo(
@@ -625,8 +626,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
       : mii;
   }
   function loadFile(file: File): void {
+    if (previewLoading || commitLoading) return;
+    const requestVersion = ++editorVersion.current;
     const reader = new FileReader();
     reader.onload = () => {
+      if (editorVersion.current !== requestVersion) return;
       try {
         const parsed = JSON.parse(String(reader.result)) as MatchJson;
         setMatch(parsed);
@@ -642,6 +646,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     reader.readAsText(file);
   }
   function clearEditor(): void {
+    if (previewLoading || commitLoading) return;
     if (
       !window.confirm(
         "Clear all current match content? This will reset the editor and cannot be undone."
@@ -650,6 +655,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       return;
     }
 
+    editorVersion.current += 1;
     const next = clone(blankMatch);
     setMatch(next);
     setRaces(racesFromMatch(next));
@@ -675,7 +681,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
     scrollToPreviewAfterReview.current = false;
     sessionStorage.removeItem("ctc-review-draft");
   }
-  async function generateTablePreview(entries: NewEntry[]): Promise<void> {
+  async function generateTablePreview(
+    entries: NewEntry[],
+    requestVersion = editorVersion.current
+  ): Promise<void> {
     setPreviewLoading(true);
     setPreviewError(null);
     setCommitError(null);
@@ -686,15 +695,17 @@ export default function MatchJsonEditor(): React.JSX.Element {
           .filter((entry) => approvalDecisions[entry.key] === "approved")
           .map((entry) => entry.key),
       });
+      if (editorVersion.current !== requestVersion) return;
       setTablePreview(response.match);
       setPreviewMetadata(response.preview);
     } catch (error) {
+      if (editorVersion.current !== requestVersion) return;
       scrollToPreviewAfterReview.current = false;
       setTablePreview(null);
       setPreviewMetadata(null);
       setPreviewError(error instanceof Error ? error.message : "Could not generate table preview.");
     } finally {
-      setPreviewLoading(false);
+      if (editorVersion.current === requestVersion) setPreviewLoading(false);
     }
   }
   async function confirmUpload(): Promise<void> {
@@ -702,6 +713,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     const isAdmin = auth.session?.authenticated === true;
     const action = isAdmin ? "upload this match" : "submit this match for administrator review";
     if (!window.confirm(`Confirm that you want to ${action}?`)) return;
+    const requestVersion = editorVersion.current;
     setCommitLoading(true);
     setCommitError(null);
     try {
@@ -711,6 +723,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
           original_filename: fileName,
           warnings_acknowledged: warningsAcknowledged,
         });
+        if (editorVersion.current !== requestVersion) return;
         setSubmissionReceipt(receipt);
         return;
       }
@@ -724,6 +737,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
           .map((entry) => entry.key),
         expected_preview_fingerprint: previewMetadata.fingerprint,
       });
+      if (editorVersion.current !== requestVersion) return;
       setCommitResult(result);
       if (reviewSubmissionId) sessionStorage.removeItem("ctc-review-draft");
       if (result.match) setTablePreview(result.match);
@@ -755,9 +769,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
           .slice(0, 100);
       });
     } catch (error) {
+      if (editorVersion.current !== requestVersion) return;
       setCommitError(error instanceof Error ? error.message : "Could not upload this match.");
     } finally {
-      setCommitLoading(false);
+      if (editorVersion.current === requestVersion) setCommitLoading(false);
     }
   }
   function discardPreview(): void {
@@ -767,6 +782,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setCommitError(null);
   }
   async function requestTablePreview(): Promise<void> {
+    const requestVersion = editorVersion.current;
     scrollToPreviewAfterReview.current = true;
     setPreviewLoading(true);
     setPreviewError(null);
@@ -774,19 +790,21 @@ export default function MatchJsonEditor(): React.JSX.Element {
       const result = await postJson<{ new_entries: NewEntry[] }>("/api/matches/new-entries", {
         match: compiled,
       });
+      if (editorVersion.current !== requestVersion) return;
       setNewEntries(result.new_entries);
       if (result.new_entries.some((entry) => approvalDecisions[entry.key] !== "approved")) {
         setApprovalModalOpen(true);
         return;
       }
-      await generateTablePreview(result.new_entries);
+      await generateTablePreview(result.new_entries, requestVersion);
     } catch (error) {
+      if (editorVersion.current !== requestVersion) return;
       scrollToPreviewAfterReview.current = false;
       setPreviewError(
         error instanceof Error ? error.message : "Could not check new database entries."
       );
     } finally {
-      setPreviewLoading(false);
+      if (editorVersion.current === requestVersion) setPreviewLoading(false);
     }
   }
 
@@ -837,6 +855,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
             <input
               ref={fileInput}
               type="file"
+              disabled={previewLoading || commitLoading}
               accept=".json,.txt,application/json,text/plain"
               className="hidden"
               onChange={(event) => {
@@ -847,15 +866,22 @@ export default function MatchJsonEditor(): React.JSX.Element {
             />
             <button
               type="button"
+              disabled={previewLoading || commitLoading}
               onClick={() => fileInput.current?.click()}
-              className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold"
+              className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-40"
             >
               Upload JSON
             </button>
             <button
               type="button"
+              disabled={previewLoading || commitLoading}
               onClick={clearEditor}
-              className="rounded-md border border-red-400/40 bg-red-950/30 px-4 py-2 font-semibold text-red-100 hover:bg-red-950/50"
+              title={
+                previewLoading || commitLoading
+                  ? "Wait for the current preview or upload to finish before clearing."
+                  : undefined
+              }
+              className="rounded-md border border-red-400/40 bg-red-950/30 px-4 py-2 font-semibold text-red-100 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Clear
             </button>
