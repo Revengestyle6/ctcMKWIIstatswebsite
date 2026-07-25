@@ -47,6 +47,8 @@ condition and the service-account binding therefore have to pass.
 | Grant | Scope | Why |
 | --- | --- | --- |
 | `roles/cloudbuild.builds.editor` | Project | Submit and observe the managed backend build |
+| `roles/serviceusage.serviceUsageConsumer` | Project | Call enabled Google APIs during deployment without permission to enable or administer services |
+| `roles/storage.objectUser` | Bucket `mkw-stats_cloudbuild` | Upload and inspect the temporary source archive used by `gcloud builds submit` |
 | `roles/artifactregistry.reader` | Repository `ctc-backend` | Resolve and deploy the image produced by Cloud Build |
 | `roles/run.developer` | Service `ctc-stats-api-staging` | Update only the existing staging API revision |
 | `roles/run.developer` | Job `ctc-staging-migrate` | Update and execute only the existing staging migration job |
@@ -55,10 +57,11 @@ condition and the service-account binding therefore have to pass.
 | `roles/firebasehosting.admin` | Project | Create and release Firebase Hosting versions |
 | `roles/serviceusage.apiKeysViewer` | Project | Let Firebase CLI read the public registered web-app configuration |
 
-The deployer has no Cloud SQL Client, Secret Manager accessor, archive-bucket
-access, production Cloud Run role, or ability to act as `ctc-api-prod`. Cloud Run
-injects existing secret references into the runtime identities; the deployment
-workflow never reads their values.
+The deployer has no Cloud SQL Client, Secret Manager accessor, application
+archive-bucket access, production Cloud Run role, or ability to act as
+`ctc-api-prod`. Its only object-storage grant is on Cloud Build's temporary source
+bucket. Cloud Run injects existing secret references into the runtime identities;
+the deployment workflow never reads their values.
 
 ## Workflow And Deployment Order
 
