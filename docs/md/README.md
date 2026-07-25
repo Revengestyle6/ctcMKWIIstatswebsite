@@ -12,6 +12,7 @@
 - [Dashboard Analytics Methodology](dashboard-analytics-methodology.md): runner/bagger metrics and exclusions.
 - [Environment And Secrets](environment-and-secrets.md): supported local and runtime configuration.
 - [Deployment](deployment.md): current transitional artifacts and accepted target platform.
+- [Legacy Deployment Integration Cleanup](legacy-deployment-cleanup.md): disconnect obsolete Vercel and GitHub Pages automation and correct GitHub deployment metadata.
 - [Cloud SQL Read-Only Access](cloud-sql-read-access.md): grant, verify, use, and revoke human database access.
 
 ## Production Readiness
