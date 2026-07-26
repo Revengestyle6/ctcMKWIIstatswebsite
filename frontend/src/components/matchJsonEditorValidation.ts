@@ -200,10 +200,23 @@ export function validation(
   if (!match.league) issues.push({ level: "error", message: "League is missing." });
   if (!match.season) issues.push({ level: "error", message: "Season is missing." });
   if (!match.division) issues.push({ level: "error", message: "Division is missing." });
+  if (!match.match_label?.trim())
+    issues.push({ level: "error", message: "Match label is missing." });
   if (!Number.isInteger(match.week) || Number(match.week) < 1)
     issues.push({
       level: "error",
       message: "Week is required and must be a positive whole number.",
+    });
+  if (races.length !== 12)
+    issues.push({
+      level: "warning",
+      message: `This match contains ${races.length} races instead of the usual 12.`,
+    });
+  const teamCount = Object.keys(match.teams ?? {}).length;
+  if (normalized(match.format) === "5v5" && teamCount > 2)
+    issues.push({
+      level: "error",
+      message: `5v5 matches cannot have more than 2 teams (found ${teamCount}).`,
     });
   if (
     scopesLoaded &&
