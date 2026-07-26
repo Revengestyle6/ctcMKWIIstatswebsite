@@ -20,6 +20,9 @@ npm run test:e2e
 
 Install Chromium once with `npx playwright install chromium`. Set `PYTHON_BIN` for
 browser tests when the backend interpreter is not available as `python`.
+For real local Google sign-in, create the ignored
+`frontend/.env.development.local` file and restart Vite. The complete procedure
+is in the [local development startup runbook](local-development-startup.md).
 
 ## Routes
 

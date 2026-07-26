@@ -147,11 +147,21 @@ class TeamSeasonEntry(Base):
     )
 
 
+class TeamAlias(Base):
+    __tablename__ = "team_aliases"
+
+    team_alias_id = Column(Integer, primary_key=True)
+    team_id = Column(Integer, ForeignKey("teams.team_id"), nullable=False)
+    alias_value = Column(Text, nullable=False)
+
+    __table_args__ = (UniqueConstraint("alias_value", name="uq_team_alias_value"),)
+
+
 class Player(Base):
     __tablename__ = "players"
 
     player_id = Column(Integer, primary_key=True)
-    canonical_lounge_name = Column(Text)
+    canonical_name = Column(Text)
     primary_friend_code = Column(Text)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 

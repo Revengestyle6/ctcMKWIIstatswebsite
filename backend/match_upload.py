@@ -279,13 +279,13 @@ def _addition_data(instance: Any) -> tuple[str, int, str, dict[str, Any]]:
         )
     if isinstance(instance, Player):
         details = {
-            "name": instance.canonical_lounge_name,
+            "name": instance.canonical_name,
             "primary_friend_code": instance.primary_friend_code,
         }
         return (
             "player",
             instance.player_id,
-            f"Added player {instance.canonical_lounge_name or instance.player_id}",
+            f"Added player {instance.canonical_name or instance.player_id}",
             details,
         )
     if isinstance(instance, PlayerFriendCode):

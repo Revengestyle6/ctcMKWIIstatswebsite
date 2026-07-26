@@ -143,7 +143,7 @@ threshold. Results are warnings only and must be reviewed manually.
 
 #### Players
 
-- duplicate normalized canonical lounge names; and
+- duplicate normalized canonical names; and
 - aliases of the same type and value that map to multiple player IDs within the
   same season/division. Findings identify whether the collision is a Mii name,
   lounge name, table name, or another stored alias type.

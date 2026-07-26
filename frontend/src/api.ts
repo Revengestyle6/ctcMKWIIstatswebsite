@@ -74,6 +74,10 @@ export async function patchJson<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
+export async function deleteJson<T>(path: string): Promise<T> {
+  return requestJson<T>(path, { method: "DELETE" });
+}
+
 export function fetchSeasons(): Promise<SeasonOption[]> {
   return fetchJson<SeasonOption[]>("/api/seasons");
 }
@@ -88,7 +92,7 @@ export function formatDivisionName(division: DivisionOption): string {
 
 export interface PlayerIdentity {
   player_id: number;
-  canonical_lounge_name: string | null;
+  canonical_name: string | null;
   primary_friend_code: string | null;
   friend_codes: string[];
   aliases: Array<{ type: string; value: string }>;
@@ -149,6 +153,51 @@ export interface TeamScope {
 
 export function fetchTeamScopes(): Promise<TeamScope[]> {
   return fetchJson("/api/team-scopes");
+}
+
+export interface TeamRosterPlayer {
+  player_id: number;
+  player_season_entry_id: number;
+  canonical_name: string | null;
+  friend_code: string | null;
+  friend_codes: string[];
+  lounge_name: string | null;
+  mii_name: string | null;
+  flag: string | null;
+}
+
+export function fetchTeamRosterPool(params: {
+  league: string;
+  season: string;
+  division: string;
+  team_id: number;
+}): Promise<TeamRosterPlayer[]> {
+  return fetchJson("/api/team-roster-pool", params);
+}
+
+export interface PlayerTeamMembership {
+  player_id: number;
+  teams: Array<{
+    team_id: number;
+    canonical_name: string;
+    canonical_tag: string;
+    display_name: string;
+    clan_tag: string;
+  }>;
+}
+
+export function fetchPlayerTeamMemberships(params: {
+  league: string;
+  season: string;
+  division: string;
+  player_ids: number[];
+}): Promise<PlayerTeamMembership[]> {
+  return fetchJson("/api/player-team-memberships", {
+    league: params.league,
+    season: params.season,
+    division: params.division,
+    player_ids: params.player_ids.join(","),
+  });
 }
 
 export interface DatabaseAddition {

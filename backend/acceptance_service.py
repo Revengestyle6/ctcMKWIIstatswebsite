@@ -80,6 +80,7 @@ def accept_match(
     expected_fingerprint: str,
     temporary_key: str,
     review_submission_id: str | None = None,
+    requested_player_identity_links: dict[str, int] | None = None,
 ) -> AcceptanceResult:
     document = prepare_upload_document(match_data)
     validate_committable_match(match_data)
@@ -111,7 +112,10 @@ def accept_match(
             submission.claimed_at = submission.claimed_at or _utc_now()
 
         new_entries, unapproved, player_identity_links = unapproved_entries(
-            session, match_data, approved_keys
+            session,
+            match_data,
+            approved_keys,
+            requested_player_identity_links,
         )
         if unapproved:
             raise ValueError("Every new database entry must be approved before acceptance.")

@@ -68,6 +68,10 @@ npm run dev
 
 Vite serves the UI at `http://127.0.0.1:3000` and proxies `/api` to Flask at
 `http://127.0.0.1:5000`. Hosted builds use same-origin `/api` requests by default.
+Real local Google sign-in additionally requires the ignored
+`frontend/.env.development.local` Firebase web configuration. Follow the
+[local development startup runbook](docs/md/local-development-startup.md) for
+the one-time Firebase setup, complete startup sequence, and error meanings.
 
 ## Verification
 
@@ -110,6 +114,7 @@ that write archive or database data.
 
 - [Documentation map](docs/md/README.md)
 - [Current architecture](docs/md/architecture.md)
+- [Local development startup](docs/md/local-development-startup.md)
 - [Data pipeline](docs/md/data-pipeline.md)
 - [Production readiness plan](docs/md/production-readiness-plan.md)
 - [Phase 4 resource inventory](docs/md/phase-4-resource-inventory.md)

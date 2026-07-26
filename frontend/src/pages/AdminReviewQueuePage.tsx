@@ -82,9 +82,14 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
             <h1 className="text-3xl font-bold">JSON Review Queue</h1>
           </div>
           <nav className="flex gap-3">
-            <Link to="/admin/access" className="text-blue-300">
-              Access
-            </Link>
+            <div className="flex gap-3">
+              <Link to="/admin/aliases" className="text-blue-300">
+                Alias management
+              </Link>
+              <Link to="/admin/access" className="text-blue-300">
+                Access
+              </Link>
+            </div>
             <Link to="/" className="text-blue-300">
               Home
             </Link>

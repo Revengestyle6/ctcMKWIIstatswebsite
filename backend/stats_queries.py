@@ -50,7 +50,7 @@ class Scope:
 @dataclass(frozen=True)
 class PlayerLookupRow:
     player_id: int
-    canonical_lounge_name: str | None
+    canonical_name: str | None
     primary_friend_code: str | None
     primary_lounge_name: str | None
     primary_mii_name: str | None
@@ -77,7 +77,7 @@ def _display_player(row):
     return (
         getattr(row, "display_name", None)
         or row.primary_lounge_name
-        or row.canonical_lounge_name
+        or row.canonical_name
         or row.primary_mii_name
         or ""
     )
@@ -133,7 +133,7 @@ def _valid_players(session, scope):
     rows = session.execute(
         select(
             Player.player_id,
-            Player.canonical_lounge_name,
+            Player.canonical_name,
             Player.primary_friend_code,
             PlayerSeasonEntry.primary_lounge_name,
             PlayerSeasonEntry.primary_mii_name,
@@ -151,12 +151,12 @@ def _valid_players(session, scope):
             PlayerSeasonEntry.division_id == scope.division_id,
         )
     ).all()
-    canonical_names = {row.player_id: row.canonical_lounge_name for row in rows}
+    canonical_names = {row.player_id: row.canonical_name for row in rows}
     display_names = _display_names_for_players(session, canonical_names.keys(), canonical_names)
     return [
         PlayerLookupRow(
             player_id=row.player_id,
-            canonical_lounge_name=row.canonical_lounge_name,
+            canonical_name=row.canonical_name,
             primary_friend_code=row.primary_friend_code,
             primary_lounge_name=row.primary_lounge_name,
             primary_mii_name=row.primary_mii_name,
@@ -190,7 +190,7 @@ def _resolve_player(session, player, scope):
             row.display_name,
             row.primary_lounge_name,
             row.primary_mii_name,
-            row.canonical_lounge_name,
+            row.canonical_name,
         ]
         if any(name and name.lower() == query for name in names):
             direct_matches.append(row)
@@ -315,27 +315,30 @@ def find_player_identities(friend_code=None, query=None, limit=12):
             reason = "exact_friend_code" if player_ids else "none"
         elif query:
             pattern = f"%{query.lower()}%"
+            player_id_match = int(query) if query.isdigit() else None
             player_ids = list(
                 session.scalars(
                     select(Player.player_id)
                     .outerjoin(PlayerAlias, PlayerAlias.player_id == Player.player_id)
                     .where(
-                        func.lower(func.coalesce(Player.canonical_lounge_name, "")).like(pattern)
+                        (Player.player_id == player_id_match)
+                        | func.lower(func.coalesce(Player.canonical_name, "")).like(pattern)
                         | func.lower(func.coalesce(PlayerAlias.alias_value, "")).like(pattern)
                     )
                     .distinct()
+                    .order_by(Player.player_id)
                     .limit(limit)
                 )
             )
-            reason = "alias_suggestion" if player_ids else "none"
+            reason = "player_search" if player_ids else "none"
 
         if not player_ids:
             return {"reason": reason, "results": []}
 
         players = session.execute(
-            select(
-                Player.player_id, Player.canonical_lounge_name, Player.primary_friend_code
-            ).where(Player.player_id.in_(player_ids))
+            select(Player.player_id, Player.canonical_name, Player.primary_friend_code).where(
+                Player.player_id.in_(player_ids)
+            )
         ).all()
         codes = session.execute(
             select(PlayerFriendCode.player_id, PlayerFriendCode.friend_code)
@@ -363,7 +366,7 @@ def find_player_identities(friend_code=None, query=None, limit=12):
             "results": [
                 {
                     "player_id": row.player_id,
-                    "canonical_lounge_name": row.canonical_lounge_name,
+                    "canonical_name": row.canonical_name,
                     "primary_friend_code": row.primary_friend_code,
                     "friend_codes": codes_by_player.get(row.player_id, []),
                     "aliases": aliases_by_player.get(row.player_id, []),
@@ -662,7 +665,7 @@ def get_match_detail(match_id, session=None):
                 MatchPlayer.raw_total_score,
                 MatchPlayer.player_penalty_points,
                 MatchPlayer.subbed_out,
-                Player.canonical_lounge_name,
+                Player.canonical_name,
             )
             .join(Player, Player.player_id == MatchPlayer.player_id)
             .join(MatchTeam, MatchTeam.match_team_id == MatchPlayer.match_team_id)
@@ -676,7 +679,7 @@ def get_match_detail(match_id, session=None):
         display_names = _display_names_for_players(
             session,
             [row.player_id for row in player_rows],
-            {row.player_id: row.canonical_lounge_name for row in player_rows},
+            {row.player_id: row.canonical_name for row in player_rows},
         )
 
         scores_by_match_player = {

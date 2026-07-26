@@ -246,6 +246,7 @@ class Phase3AuthorizationTests(unittest.TestCase):
         for method, path, payload in (
             ("get", "/api/database-health", None),
             ("get", "/api/admin/users", None),
+            ("get", "/api/admin/aliases/tracks", None),
             ("get", "/api/admin/review-submissions", None),
             ("post", "/api/matches/commit", {}),
         ):

@@ -1,12 +1,14 @@
 import logging
 import uuid
 
+import alias_management
 import database_health as database_health_service
 import stats_db as stats
 from acceptance_service import accept_match
 from admin_auth import record_audit, require_admin
 from archive_storage import get_archive_storage
 from database_health_reviews import set_issue_review
+from extensions import cache
 from flask import Blueprint, g, jsonify, request
 from import_json_to_db import detect_new_entries, import_preview_match
 from match_upload import (
@@ -20,6 +22,7 @@ from sqlalchemy import select
 from routes.common import (
     error_response,
     match_request_payload,
+    player_identity_links_from_payload,
     unapproved_entries,
 )
 
@@ -27,9 +30,120 @@ logger = logging.getLogger(__name__)
 admin_api = Blueprint("admin_api", __name__)
 
 
+def _alias_error(error):
+    if isinstance(error, LookupError):
+        return jsonify({"error": str(error)}), 404
+    if isinstance(error, ValueError):
+        return jsonify({"error": str(error)}), 400
+    logger.exception("Alias management failed")
+    return jsonify({"error": "Alias management failed."}), 500
+
+
+@admin_api.get("/api/admin/aliases/<entity_type>")
+@require_admin
+def api_alias_entities(entity_type):
+    try:
+        limit = min(max(request.args.get("limit", type=int) or 200, 1), 500)
+        with stats.SessionLocal() as session:
+            return jsonify(
+                alias_management.list_entities(
+                    session, entity_type, query=request.args.get("query", ""), limit=limit
+                )
+            )
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.get("/api/admin/aliases/<entity_type>/<int:entity_id>")
+@require_admin
+def api_alias_detail(entity_type, entity_id):
+    try:
+        with stats.SessionLocal() as session:
+            return jsonify(alias_management.get_entity(session, entity_type, entity_id))
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.post("/api/admin/aliases/<entity_type>/<int:entity_id>")
+@require_admin
+def api_alias_add(entity_type, entity_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, alias = alias_management.add_alias(
+                session, entity_type, entity_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "alias.created",
+                target_type=f"{entity_type[:-1]}_alias",
+                target_id=alias.player_alias_id
+                if entity_type == "players"
+                else alias.team_alias_id
+                if entity_type == "teams"
+                else alias.track_alias_id,
+                details={
+                    "entity_id": entity_id,
+                    "alias_type": getattr(alias, "alias_type", "alias"),
+                    "value": alias.alias_value,
+                },
+            )
+        cache.clear()
+        return jsonify(detail), 201
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.patch("/api/admin/aliases/players/<int:player_id>/canonical-name")
+@require_admin
+def api_player_canonical_name_update(player_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, previous_name = alias_management.update_player_canonical_name(
+                session, player_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "player.canonical_name_updated",
+                target_type="player",
+                target_id=player_id,
+                details={
+                    "previous_name": previous_name,
+                    "canonical_name": detail["canonical_name"],
+                },
+            )
+        cache.clear()
+        return jsonify(detail)
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.delete("/api/admin/aliases/<entity_type>/<int:entity_id>/<int:alias_id>")
+@require_admin
+def api_alias_delete(entity_type, entity_id, alias_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, deleted = alias_management.delete_alias(
+                session, entity_type, entity_id, alias_id
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "alias.deleted",
+                target_type=f"{entity_type[:-1]}_alias",
+                target_id=alias_id,
+                details={"entity_id": entity_id, **deleted},
+            )
+        cache.clear()
+        return jsonify(detail)
+    except Exception as error:
+        return _alias_error(error)
+
+
 @admin_api.post("/api/matches/preview")
 def api_match_preview():
-    match_data, approved_keys, _payload = match_request_payload()
+    match_data, approved_keys, payload = match_request_payload()
     if not isinstance(match_data, dict):
         return jsonify({"error": "A match JSON object is required."}), 400
     try:
@@ -42,7 +156,10 @@ def api_match_preview():
     transaction = session.begin()
     try:
         new_entries, unapproved, player_identity_links = unapproved_entries(
-            session, match_data, approved_keys
+            session,
+            match_data,
+            approved_keys,
+            player_identity_links_from_payload(payload),
         )
         if unapproved:
             transaction.rollback()
@@ -79,12 +196,20 @@ def api_match_preview():
 
 @admin_api.post("/api/matches/new-entries")
 def api_match_new_entries():
-    match_data, _approved_keys, _payload = match_request_payload()
+    match_data, _approved_keys, payload = match_request_payload()
     if not isinstance(match_data, dict):
         return jsonify({"error": "A match JSON object is required."}), 400
     try:
         with stats.SessionLocal() as session:
-            return jsonify({"new_entries": detect_new_entries(session, match_data)})
+            return jsonify(
+                {
+                    "new_entries": detect_new_entries(
+                        session,
+                        match_data,
+                        player_identity_links=player_identity_links_from_payload(payload),
+                    )
+                }
+            )
     except Exception as error:
         logger.exception("Failed to detect new match entries")
         return error_response(error)
@@ -112,6 +237,7 @@ def api_match_commit():
             approved_keys=approved_keys,
             expected_fingerprint=expected_fingerprint,
             temporary_key=temporary_key,
+            requested_player_identity_links=player_identity_links_from_payload(payload),
         )
         return jsonify(result.payload), result.status_code
     except Exception as error:

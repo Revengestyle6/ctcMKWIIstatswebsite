@@ -43,7 +43,7 @@ export type NewEntry = {
 };
 export type PlayerIdentitySummary = {
   player_id: number;
-  canonical_lounge_name: string | null;
+  canonical_name: string | null;
   friend_codes: string[];
 };
 export type ApprovalDecision = "approved" | "rejected";
@@ -141,7 +141,8 @@ export function newEntryDescription(entry: NewEntry): {
     return {
       heading: `${entry.value} has an unknown friend code`,
       detail: "Approval creates a new player identity and assigns this friend code to it.",
-      caution: "No exact lounge-name match was found. Confirm that this is genuinely a new player.",
+      caution:
+        "Create a player only if this person has never appeared before. Otherwise, map the new name and friend code to an existing player.",
     };
   if (entry.kind === "existing_player_new_friend_code") {
     const proposed = entry.proposed_player;
@@ -149,21 +150,20 @@ export function newEntryDescription(entry: NewEntry): {
       ? proposed.friend_codes.join(", ")
       : "none recorded";
     return {
-      heading: `${proposed?.canonical_lounge_name || entry.lounge_name || entry.value} matches an existing player`,
-      detail: `Approval links ${entry.friend_code} to player ID ${proposed?.player_id ?? entry.proposed_player_id} (${proposed?.canonical_lounge_name || entry.lounge_name}). Existing friend codes: ${knownCodes}.`,
+      heading: `${proposed?.canonical_name || entry.lounge_name || entry.value} matches an existing player`,
+      detail: `Approval links ${entry.friend_code} to player ID ${proposed?.player_id ?? entry.proposed_player_id} (${proposed?.canonical_name || entry.lounge_name}). Existing friend codes: ${knownCodes}.`,
       caution: `Matched by ${entry.match_reason || "exact lounge name"}. This keeps all match analytics under one player identity.`,
     };
   }
   if (entry.kind === "player_identity_conflict") {
     const candidates = (entry.candidates ?? [])
-      .map(
-        (candidate) => `ID ${candidate.player_id} (${candidate.canonical_lounge_name || "unnamed"})`
-      )
+      .map((candidate) => `ID ${candidate.player_id} (${candidate.canonical_name || "unnamed"})`)
       .join(", ");
     return {
       heading: `${entry.lounge_name || entry.value} has conflicting identity matches`,
       detail: `The exact lounge name resolves to multiple historical players: ${candidates || "unknown candidates"}.`,
-      caution: "Upload is blocked until these historical identities are resolved.",
+      caution:
+        "Upload is blocked until you search for and select the correct existing player entity.",
     };
   }
   return {
@@ -188,8 +188,30 @@ export function validation(
 ): Issue[] {
   const issues: Issue[] = [];
   const players = allPlayers(match);
-  const friendCodes = new Set<string>();
+  const playersByKey = new Map(players.map((player) => [player.playerKey, player]));
+  const friendCodes = new Map<string, string>();
   const playerIds = new Map<number, string>();
+  const playerName = (playerKey: string) => {
+    const entry = playersByKey.get(playerKey);
+    return (
+      entry?.player.lounge_name ||
+      entry?.player.table_name ||
+      entry?.player.mii_name ||
+      entry?.friendCode ||
+      "unknown player"
+    );
+  };
+  const duplicateIdentityMessage = (
+    priorPlayerKey: string,
+    currentPlayerKey: string,
+    playerId: number
+  ) => {
+    const prior = playersByKey.get(priorPlayerKey);
+    const current = playersByKey.get(currentPlayerKey);
+    return `Friend codes ${prior?.friendCode} (${playerName(priorPlayerKey)}) and ${
+      current?.friendCode
+    } (${playerName(currentPlayerKey)}) both resolve to player ID ${playerId}.`;
+  };
   const approvedEntry = (type: NewEntry["type"], predicate: (entry: NewEntry) => boolean) =>
     newEntries.some(
       (entry) =>
@@ -328,15 +350,24 @@ export function validation(
   });
   players.forEach(({ playerKey, friendCode, player }) => {
     const name = player.lounge_name || player.mii_name || friendCode;
+    const identity = identities[playerKey];
     if (!validFriendCode(friendCode))
-      issues.push({ level: "error", message: `${name} needs a valid friend code.` });
-    if (friendCodes.has(friendCode))
       issues.push({
         level: "error",
-        message: `Friend code ${friendCode} is configured more than once.`,
+        message:
+          identity?.status === "conflict" && identity.message
+            ? identity.message
+            : `${name} needs a valid friend code.`,
       });
-    friendCodes.add(friendCode);
-    const identity = identities[playerKey];
+    const priorFriendCodePlayer = friendCodes.get(friendCode);
+    if (priorFriendCodePlayer)
+      issues.push({
+        level: "error",
+        message: `Friend code ${friendCode} is duplicated between ${playerName(
+          priorFriendCodePlayer
+        )} and ${name}.`,
+      });
+    friendCodes.set(friendCode, playerKey);
     if (
       validFriendCode(friendCode) &&
       identity?.status !== "confirmed" &&
@@ -352,7 +383,7 @@ export function validation(
       if (prior && prior !== playerKey)
         issues.push({
           level: "error",
-          message: `${name} resolves to a player already configured in this match.`,
+          message: duplicateIdentityMessage(prior, playerKey, identity.identity.player_id),
         });
       playerIds.set(identity.identity.player_id, playerKey);
     }
@@ -369,7 +400,7 @@ export function validation(
         if (prior && prior !== playerKey)
           issues.push({
             level: "error",
-            message: `${name} resolves to a player already configured in this match.`,
+            message: duplicateIdentityMessage(prior, playerKey, proposal.proposed_player_id),
           });
         playerIds.set(proposal.proposed_player_id, playerKey);
       }

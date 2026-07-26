@@ -433,7 +433,7 @@ def get_team_roster(
             Season.season_code,
             Season.season_number,
             Division.division_code,
-            Player.canonical_lounge_name,
+            Player.canonical_name,
         )
         .join(Race, Race.race_id == RacePlayerResult.race_id)
         .join(Match, Match.match_id == Race.match_id)
@@ -467,7 +467,7 @@ def get_team_roster(
     display_names = _display_names_for_players(
         session,
         by_player,
-        {row.player_id: row.canonical_lounge_name for row in rows if row.canonical_lounge_name},
+        {row.player_id: row.canonical_name for row in rows if row.canonical_name},
     )
 
     counterpart_summaries = (

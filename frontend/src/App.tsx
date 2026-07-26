@@ -5,6 +5,7 @@ import BackgroundSlideshow from "./components/BackgroundSlideshow";
 
 const BestMatchups = lazy(() => import("./components/BestMatchups"));
 const AdminAccessPage = lazy(() => import("./pages/AdminAccessPage"));
+const AdminAliasManagementPage = lazy(() => import("./pages/AdminAliasManagementPage"));
 const AdminReviewQueuePage = lazy(() => import("./pages/AdminReviewQueuePage"));
 const DatabaseHealthDashboard = lazy(() => import("./pages/DatabaseHealthDashboard"));
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -59,6 +60,7 @@ export default function App(): JSX.Element {
           <Route path="/json-editor" element={<MatchJsonEditor />} />
           <Route path="/database-health" element={<DatabaseHealthDashboard />} />
           <Route path="/admin/access" element={<AdminAccessPage />} />
+          <Route path="/admin/aliases" element={<AdminAliasManagementPage />} />
           <Route path="/admin/review-queue" element={<AdminReviewQueuePage />} />
         </Routes>
       </Suspense>

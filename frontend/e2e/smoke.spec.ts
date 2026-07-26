@@ -11,6 +11,7 @@ const routes = [
   "/teams/41",
   "/json-editor",
   "/database-health",
+  "/admin/aliases",
 ];
 
 for (const route of routes) {
