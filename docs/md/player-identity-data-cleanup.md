@@ -51,7 +51,7 @@ def get_or_create_player(session, friend_code: str, player_data: dict[str, Any])
     if friend_code_row:
         return session.get(Player, friend_code_row.player_id)
 
-    player = Player(canonical_lounge_name=display_player_name(player_data), primary_friend_code=friend_code)
+    player = Player(canonical_name=display_player_name(player_data), primary_friend_code=friend_code)
     ...
 ```
 
@@ -88,8 +88,8 @@ The app should display one row per player, not one row per friend code. After id
 
 The backend display fallback for each player is:
 
-1. most recent `lounge_name` alias for the player
-2. `players.canonical_lounge_name`
+1. `players.canonical_name`
+2. most recent `lounge_name` alias for the player
 3. most common `table_name` alias
 4. most common `mii_name` alias
 
@@ -113,7 +113,9 @@ Reviewed identity groups live in:
 backend/data/player_identities.csv
 ```
 
-The file maps each seen friend code to a canonical friend code:
+The file maps each seen friend code to a canonical friend code. This historical rebuild input
+retains its original `canonical_lounge_name` header; the importer maps it to
+`players.canonical_name`:
 
 ```csv
 canonical_friend_code,friend_code,canonical_lounge_name,note
@@ -146,7 +148,7 @@ Desired shape:
 
 ```text
 players
-player_id | canonical_lounge_name | primary_friend_code
+player_id | canonical_name | primary_friend_code
 186       | DASEIA                | 3227-2287-3933
 
 player_friend_codes
@@ -187,7 +189,7 @@ The merge script updates:
 - `match_players.player_season_entry_id` when duplicate season entries collapse
 - `race_player_results.player_id`
 - `players.primary_friend_code`
-- `players.canonical_lounge_name`
+- `players.canonical_name`
 
 Then it deletes now-unreferenced duplicate `players` rows.
 
@@ -217,13 +219,15 @@ RacePlayerResult.player_id == player_row.player_id
 The helper `_display_names_for_players()` still computes display names for API output:
 
 ```text
-most recent lounge_name alias
-else canonical_lounge_name
+canonical_name
+else most recent lounge_name alias
 else most common table_name alias
 else most common mii_name alias
 ```
 
-The `most recent lounge_name` is chosen by highest `player_aliases.last_seen_match_id`, with stable tie-breakers from alias usage count and alias row ID. `table_name` and `mii_name` fallbacks use most common value first.
+When a canonical name is missing, the `most recent lounge_name` fallback is chosen by highest
+`player_aliases.last_seen_match_id`, with stable tie-breakers from alias usage count and alias row
+ID. `table_name` and `mii_name` fallbacks use most common value first.
 
 ### Verification
 
@@ -318,7 +322,7 @@ SELECT
   GROUP_CONCAT(DISTINCT pse.player_id) AS player_ids,
   GROUP_CONCAT(DISTINCT COALESCE(
     pse.primary_lounge_name,
-    p.canonical_lounge_name,
+    p.canonical_name,
     pse.primary_mii_name,
     ''
   )) AS names
@@ -400,11 +404,11 @@ WITH names AS (
     pse.player_id,
     pse.season_id,
     pse.division_id,
-    LOWER(p.canonical_lounge_name) AS name_key,
-    p.canonical_lounge_name AS display
+    LOWER(p.canonical_name) AS name_key,
+    p.canonical_name AS display
   FROM player_season_entries pse
   JOIN players p ON p.player_id = pse.player_id
-  WHERE p.canonical_lounge_name IS NOT NULL
+  WHERE p.canonical_name IS NOT NULL
 )
 SELECT
   s.season_code,
@@ -429,7 +433,7 @@ Use this after selecting a suspicious `player_id` group from the previous querie
 ```sql
 SELECT
   p.player_id,
-  p.canonical_lounge_name,
+  p.canonical_name,
   p.primary_friend_code,
   pfc.friend_code,
   s.season_code,

@@ -1,7 +1,7 @@
 from dashboard_stats import DashboardError
 from flask import jsonify, request
 from import_json_to_db import detect_new_entries
-from models import Match
+from models import Match, PlayerFriendCode
 from player_role_analytics import normalize_role
 from sqlalchemy import select
 from stats_db import AmbiguousPlayerError
@@ -68,8 +68,26 @@ def match_request_payload():
     return match_data, approved_keys, payload
 
 
-def unapproved_entries(session, match_data, approved_keys):
-    new_entries = detect_new_entries(session, match_data)
+def player_identity_links_from_payload(payload):
+    if not isinstance(payload, dict):
+        return {}
+    links = payload.get("player_identity_links") or {}
+    if not isinstance(links, dict):
+        raise ValueError("Player identity links must be an object keyed by friend code.")
+    return links
+
+
+def unapproved_entries(
+    session,
+    match_data,
+    approved_keys,
+    requested_player_identity_links=None,
+):
+    new_entries = detect_new_entries(
+        session,
+        match_data,
+        player_identity_links=requested_player_identity_links,
+    )
     unapproved = [
         entry
         for entry in new_entries
@@ -80,6 +98,29 @@ def unapproved_entries(session, match_data, approved_keys):
         for entry in new_entries
         if entry["key"] in approved_keys and entry.get("kind") == "existing_player_new_friend_code"
     }
+    friend_codes = [
+        friend_code
+        for team_data in (match_data.get("teams") or {}).values()
+        for friend_code in (team_data.get("players") or {})
+    ]
+    existing_links = {
+        row.friend_code: row.player_id
+        for row in session.scalars(
+            select(PlayerFriendCode).where(PlayerFriendCode.friend_code.in_(friend_codes))
+        )
+    }
+    configured_players = {}
+    for friend_code in friend_codes:
+        player_id = existing_links.get(friend_code) or player_identity_links.get(friend_code)
+        if player_id is None:
+            continue
+        prior_code = configured_players.get(player_id)
+        if prior_code and prior_code != friend_code:
+            raise ValueError(
+                f"Player ID {player_id} is configured more than once "
+                f"({prior_code} and {friend_code})."
+            )
+        configured_players[player_id] = friend_code
     return new_entries, unapproved, player_identity_links
 
 

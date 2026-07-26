@@ -179,7 +179,7 @@ def _catalog_issues(session):
             )
         )
 
-    players = list(session.execute(select(Player.player_id, Player.canonical_lounge_name)).all())
+    players = list(session.execute(select(Player.player_id, Player.canonical_name)).all())
     player_name_by_id = {player_id: name for player_id, name in players}
     players_by_key = {}
     for player_id, name in players:
@@ -335,7 +335,7 @@ def _match_and_result_issues(session):
             """
                 SELECT rpr.race_player_result_id AS id, rpr.race_id,
                        m.match_label || ' · race ' || r.race_number || ' · ' ||
-                       coalesce(p.canonical_lounge_name, 'Player ' || rpr.player_id) AS label,
+                       coalesce(p.canonical_name, 'Player ' || rpr.player_id) AS label,
                        'score=' || coalesce(CAST(rpr.score AS TEXT), 'null') ||
                        ', position=' || coalesce(CAST(rpr.position AS TEXT), 'null') AS value
                 FROM race_player_results rpr
@@ -355,7 +355,7 @@ def _match_and_result_issues(session):
             """
                 SELECT rpr.race_player_result_id AS id, rpr.race_id,
                        m.match_label || ' · race ' || r.race_number || ' · ' ||
-                       coalesce(p.canonical_lounge_name, 'Player ' || rpr.player_id) AS label,
+                       coalesce(p.canonical_name, 'Player ' || rpr.player_id) AS label,
                        'position=' || rpr.position || ', role=' || rpr.role AS value
                 FROM race_player_results rpr
                 JOIN races r ON r.race_id = rpr.race_id
@@ -385,7 +385,7 @@ def _match_and_result_issues(session):
             """
                 SELECT rpr.race_player_result_id AS id, rpr.race_id,
                        m.match_label || ' · race ' || r.race_number || ' · ' ||
-                       coalesce(p.canonical_lounge_name, 'Player ' || rpr.player_id) AS label,
+                       coalesce(p.canonical_name, 'Player ' || rpr.player_id) AS label,
                        'score=' || rpr.score AS value
                 FROM race_player_results rpr
                 JOIN races r ON r.race_id = rpr.race_id

@@ -94,8 +94,8 @@ class DashboardRoleContractTests(unittest.TestCase):
                 self.session.flush()
                 entries[(season.season_code, team.canonical_tag)] = entry
 
-        players = [Player(canonical_lounge_name=f"Player {index}") for index in range(10)]
-        players[0].canonical_lounge_name = "Role Switcher"
+        players = [Player(canonical_name=f"Player {index}") for index in range(10)]
+        players[0].canonical_name = "Role Switcher"
         players[0].primary_friend_code = "1111-2222-3333"
         self.session.add_all(players)
         self.session.flush()
@@ -233,7 +233,7 @@ class DashboardRoleContractTests(unittest.TestCase):
                     team_season_entry_id=entry.team_season_entry_id,
                     season_id=season.season_id,
                     division_id=divisions[code].division_id,
-                    primary_lounge_name=player.canonical_lounge_name,
+                    primary_lounge_name=player.canonical_name,
                     flag="us",
                     first_seen_match_id=match.match_id,
                     last_seen_match_id=match.match_id,
@@ -247,7 +247,7 @@ class DashboardRoleContractTests(unittest.TestCase):
                 player_id=player.player_id,
                 player_season_entry_id=player_entry.player_season_entry_id,
                 friend_code_raw=f"{player.player_id:04d}-0000-0000",
-                lounge_name_raw=player.canonical_lounge_name,
+                lounge_name_raw=player.canonical_name,
             )
             self.session.add(match_player)
             self.session.flush()
@@ -461,7 +461,7 @@ class DashboardRoleContractTests(unittest.TestCase):
                 team_season_entry_id=alpha_entry.team_season_entry_id,
                 season_id=season.season_id,
                 division_id=division.division_id,
-                primary_lounge_name=player.canonical_lounge_name,
+                primary_lounge_name=player.canonical_name,
                 first_seen_match_id=match.match_id,
                 last_seen_match_id=match.match_id,
             )
@@ -731,8 +731,8 @@ class DashboardRoleContractTests(unittest.TestCase):
                 ),
             ]
         )
-        self.players[2].canonical_lounge_name = None
-        self.players[3].canonical_lounge_name = None
+        self.players[2].canonical_name = None
+        self.players[3].canonical_name = None
         self.session.flush()
 
         rankings = get_track_player_rankings(
@@ -754,7 +754,7 @@ class DashboardRoleContractTests(unittest.TestCase):
         ranking_names = {row["player_id"]: row["name"] for row in rankings["players"]}
         roster_names = {row["player_id"]: row["name"] for row in roster["players"]}
         expected = {
-            self.player_id: "Recent Lounge",
+            self.player_id: "Role Switcher",
             self.players[1].player_id: "Player 1",
             self.players[2].player_id: "Table Fallback",
             self.players[3].player_id: "Mii Fallback",
@@ -809,12 +809,12 @@ class DashboardRoleContractTests(unittest.TestCase):
         )
         self.assertEqual(set(runner), required_keys | {"role_coverage"})
         self.assertEqual(set(bagger), required_keys | {"role_coverage"})
-        self.assertEqual(runner["name"], "Route Alias")
+        self.assertEqual(runner["name"], "Role Switcher")
         self.assertEqual(runner["total_points"], 6)
         self.assertEqual(runner["twelve_race_pace"], 72.0)
         self.assertIsNone(runner["bag_point_rate"])
         self.assertIsNone(runner["zero_point_rate"])
-        self.assertEqual(bagger["name"], "Route Alias")
+        self.assertEqual(bagger["name"], "Role Switcher")
         self.assertEqual(bagger["total_points"], 7)
         self.assertIsNone(bagger["twelve_race_pace"])
         self.assertEqual(bagger["bag_point_rate"], 75.0)
@@ -1120,8 +1120,8 @@ class DashboardRoleContractTests(unittest.TestCase):
             .first()
         )
         self.session.delete(extra)
-        self.players[1].canonical_lounge_name = "Zulu Tie"
-        self.players[2].canonical_lounge_name = "Alpha Tie"
+        self.players[1].canonical_name = "Zulu Tie"
+        self.players[2].canonical_name = "Alpha Tie"
         self.session.flush()
         rankings = get_track_player_rankings(
             self.track.track_id,
@@ -1136,8 +1136,8 @@ class DashboardRoleContractTests(unittest.TestCase):
             list(reversed(self.tied_runner_ids)),
         )
 
-        self.players[1].canonical_lounge_name = "Same Tie"
-        self.players[2].canonical_lounge_name = "Same Tie"
+        self.players[1].canonical_name = "Same Tie"
+        self.players[2].canonical_name = "Same Tie"
         self.session.flush()
         rankings = get_track_player_rankings(
             self.track.track_id,

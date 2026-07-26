@@ -6,13 +6,18 @@ import {
   fetchDatabaseAdditions,
   fetchMatchScopes,
   fetchPlayerIdentity,
+  fetchPlayerTeamMemberships,
   fetchTeamScopes,
   type MatchScope,
+  type PlayerIdentity,
+  type PlayerTeamMembership,
   postJson,
   searchTracks,
+  type TeamRosterPlayer,
   type TeamScope,
 } from "../api";
 import { useAdminSession } from "../hooks/useAdminSession";
+import ExistingPlayerPicker from "./ExistingPlayerPicker";
 import {
   type ChartMode,
   type MatchDetail,
@@ -36,13 +41,13 @@ import {
   teamColor,
   teamTag,
 } from "./matchJsonEditorModel";
-
 import {
   type ApprovalDecision,
   type CommitResult,
   clone,
   download,
   type IdentityState,
+  type Issue,
   isFfa,
   metadataValue,
   type NewEntry,
@@ -55,6 +60,7 @@ import {
   validation,
   validFriendCode,
 } from "./matchJsonEditorValidation";
+import TeamRosterPool from "./TeamRosterPool";
 
 const inputClass =
   "mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300";
@@ -88,6 +94,16 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [previewGroupByGp, setPreviewGroupByGp] = useState(true);
   const [newEntries, setNewEntries] = useState<NewEntry[]>([]);
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
+  const [playerIdentityLinks, setPlayerIdentityLinks] = useState<Record<string, number>>({});
+  const [playerTeamMemberships, setPlayerTeamMemberships] = useState<
+    Record<number, PlayerTeamMembership["teams"]>
+  >({});
+  const [membershipStatus, setMembershipStatus] = useState<"idle" | "loading" | "loaded" | "error">(
+    "idle"
+  );
+  const [identityPickerKey, setIdentityPickerKey] = useState<string | null>(null);
+  const [identityMappingLoading, setIdentityMappingLoading] = useState(false);
+  const [identityMappingError, setIdentityMappingError] = useState<string | null>(null);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [commitLoading, setCommitLoading] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
@@ -104,6 +120,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const scrollToPreviewAfterReview = useRef(false);
   const queriedTrackNames = useRef(new Set<string>());
   const editorVersion = useRef(0);
+  const warningFingerprint = useRef("");
 
   const players = useMemo(() => allPlayers(match), [match]);
   const playerMap = useMemo(
@@ -118,9 +135,96 @@ export default function MatchJsonEditor(): React.JSX.Element {
     });
     return counts;
   }, [players]);
-  const issues = useMemo(
+  const compiled = useMemo(() => compileMatch(match, races), [match, races]);
+  const configuredPlayerIds = useMemo(
     () =>
-      validation(
+      Array.from(
+        new Set(
+          players
+            .map(
+              (player) =>
+                identityStates[player.playerKey]?.identity?.player_id ??
+                playerIdentityLinks[player.friendCode]
+            )
+            .filter((playerId): playerId is number => playerId !== undefined)
+        )
+      ),
+    [players, identityStates, playerIdentityLinks]
+  );
+  const unusualTeamIssues = useMemo<Issue[]>(() => {
+    if (membershipStatus === "error") {
+      return [
+        {
+          level: "error",
+          message:
+            "Player team memberships could not be checked. Reload the editor before reviewing this match.",
+        },
+      ];
+    }
+    if (membershipStatus !== "loaded") return [];
+
+    const selectedTeamScopes = teamScopes.filter(
+      (scope) =>
+        normalized(scope.league) === normalized(match.league) &&
+        normalized(scope.season) === normalized(match.season) &&
+        normalized(scope.division) === normalized(match.division)
+    );
+    const warnedPlayerIds = new Set<number>();
+    return players.flatMap((entry): Issue[] => {
+      const playerId =
+        identityStates[entry.playerKey]?.identity?.player_id ??
+        playerIdentityLinks[entry.friendCode];
+      if (playerId === undefined || warnedPlayerIds.has(playerId)) return [];
+
+      const currentTeam = match.teams?.[entry.teamKey];
+      const currentTag = currentTeam ? teamTag(entry.teamKey, currentTeam) : entry.teamKey;
+      const currentTeamScope = selectedTeamScopes.find(
+        (scope) =>
+          normalized(scope.clan_tag) === normalized(currentTag) ||
+          normalized(scope.canonical_tag) === normalized(currentTag)
+      );
+      const recordedTeams = playerTeamMemberships[playerId] ?? [];
+      if (
+        !currentTeamScope ||
+        recordedTeams.length === 0 ||
+        recordedTeams.some((team) => team.team_id === currentTeamScope.team_id)
+      ) {
+        return [];
+      }
+
+      warnedPlayerIds.add(playerId);
+      const playerName =
+        entry.player.lounge_name ||
+        entry.player.table_name ||
+        entry.player.mii_name ||
+        identityStates[entry.playerKey]?.identity?.canonical_name ||
+        entry.friendCode;
+      const recordedTeamNames = recordedTeams
+        .map((team) => team.clan_tag || team.canonical_tag || team.display_name)
+        .join(", ");
+      const currentTeamName =
+        currentTeamScope.clan_tag ||
+        currentTeamScope.canonical_tag ||
+        currentTeamScope.display_name;
+      return [
+        {
+          level: "warning",
+          message: `${playerName} (player ID ${playerId}) is recorded for ${recordedTeamNames} in ${match.league} ${match.season} ${match.division}, but is assigned to ${currentTeamName} in this match. Review and acknowledge this unusual team assignment.`,
+        },
+      ];
+    });
+  }, [
+    identityStates,
+    match,
+    membershipStatus,
+    playerIdentityLinks,
+    players,
+    playerTeamMemberships,
+    teamScopes,
+  ]);
+  const issues = useMemo(
+    () => [
+      ...validation(
         match,
         races,
         identityStates,
@@ -133,6 +237,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
         newEntries,
         approvalDecisions
       ),
+      ...unusualTeamIssues,
+    ],
     [
       match,
       races,
@@ -145,9 +251,95 @@ export default function MatchJsonEditor(): React.JSX.Element {
       tracksLoaded,
       newEntries,
       approvalDecisions,
+      unusualTeamIssues,
     ]
   );
-  const compiled = useMemo(() => compileMatch(match, races), [match, races]);
+  const configuredFriendCodes = useMemo(
+    () => players.map((player) => player.friendCode),
+    [players]
+  );
+  const duplicatePlayerLabels = useMemo(() => {
+    const playersByIdentity = new Map<number, typeof players>();
+    players.forEach((player) => {
+      const playerId =
+        identityStates[player.playerKey]?.identity?.player_id ??
+        playerIdentityLinks[player.friendCode];
+      if (playerId === undefined) return;
+      const group = playersByIdentity.get(playerId) ?? [];
+      group.push(player);
+      playersByIdentity.set(playerId, group);
+    });
+
+    const labels = new Map<string, string>();
+    playersByIdentity.forEach((group) => {
+      if (group.length < 2) return;
+      group.forEach((player) => {
+        const other = group.find((candidate) => candidate.playerKey !== player.playerKey);
+        if (!other) return;
+        labels.set(
+          player.playerKey,
+          other.player.lounge_name ||
+            other.player.table_name ||
+            other.player.mii_name ||
+            other.friendCode
+        );
+      });
+    });
+    return labels;
+  }, [players, identityStates, playerIdentityLinks]);
+
+  useEffect(() => {
+    const currentFingerprint = issues
+      .filter((issue) => issue.level === "warning")
+      .map((issue) => issue.message)
+      .sort()
+      .join("\n");
+    if (warningFingerprint.current === currentFingerprint) return;
+    warningFingerprint.current = currentFingerprint;
+    setWarningsAcknowledged(false);
+  }, [issues]);
+
+  useEffect(() => {
+    const scopeExists =
+      scopesLoaded &&
+      matchScopes.some(
+        (scope) =>
+          normalized(scope.league) === normalized(match.league) &&
+          normalized(scope.season) === normalized(match.season) &&
+          normalized(scope.division) === normalized(match.division)
+      );
+    if (!scopeExists || configuredPlayerIds.length === 0) {
+      setPlayerTeamMemberships({});
+      setMembershipStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+    setMembershipStatus("loading");
+    fetchPlayerTeamMemberships({
+      league: match.league ?? "",
+      season: match.season ?? "",
+      division: match.division ?? "",
+      player_ids: configuredPlayerIds,
+    })
+      .then((memberships) => {
+        if (cancelled) return;
+        setPlayerTeamMemberships(
+          Object.fromEntries(
+            memberships.map((membership) => [membership.player_id, membership.teams])
+          )
+        );
+        setMembershipStatus("loaded");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPlayerTeamMemberships({});
+        setMembershipStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configuredPlayerIds, match.division, match.league, match.season, matchScopes, scopesLoaded]);
 
   useEffect(() => {
     const storedDraft = sessionStorage.getItem("ctc-review-draft");
@@ -424,6 +616,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
         Object.entries(current).filter(([key]) => !key.startsWith(playerKeyPrefix))
       )
     );
+    const removedCodes = new Set(Object.keys(team.players ?? {}));
+    setPlayerIdentityLinks((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([friendCode]) => !removedCodes.has(friendCode))
+      )
+    );
     setDraggedPlayer((current) => (current?.startsWith(playerKeyPrefix) ? null : current));
   }
   function updatePlayer(
@@ -547,16 +745,86 @@ export default function MatchJsonEditor(): React.JSX.Element {
       },
     }));
   }
+  function addRosterPlayer(teamKey: string, rosterPlayer: TeamRosterPlayer): void {
+    const friendCode = rosterPlayer.friend_code;
+    if (!friendCode) return;
+    const duplicate = players.find(
+      (entry) =>
+        entry.friendCode === friendCode ||
+        identityStates[entry.playerKey]?.identity?.player_id === rosterPlayer.player_id
+    );
+    if (duplicate) {
+      window.alert(
+        `${rosterPlayer.canonical_name || `Player ${rosterPlayer.player_id}`} is already in this match.`
+      );
+      return;
+    }
+    const team = match.teams?.[teamKey];
+    const tag = team ? teamTag(teamKey, team) || teamKey : teamKey;
+    updateTeam(teamKey, (current) => ({
+      ...current,
+      players: {
+        ...current.players,
+        [friendCode]: {
+          lounge_name: rosterPlayer.lounge_name || rosterPlayer.canonical_name || "",
+          table_name: rosterPlayer.lounge_name || rosterPlayer.canonical_name || "",
+          mii_name: rosterPlayer.mii_name || "",
+          flag: rosterPlayer.flag || "",
+          penalties: 0,
+          tag,
+        },
+      },
+    }));
+    setIdentityStates((current) => ({
+      ...current,
+      [`${teamKey}::${friendCode}`]: {
+        status: "confirmed",
+        identity: {
+          player_id: rosterPlayer.player_id,
+          canonical_name: rosterPlayer.canonical_name,
+          primary_friend_code: friendCode,
+          friend_codes: rosterPlayer.friend_codes,
+          aliases: [],
+        },
+      },
+    }));
+  }
   function renamePlayer(teamKey: string, oldCode: string, newCode: string): void {
-    if (!newCode || oldCode === newCode || match.teams?.[teamKey]?.players?.[newCode]) return;
     const oldKey = `${teamKey}::${oldCode}`;
+    if (!newCode || oldCode === newCode) return;
+    const duplicate = players.find(
+      (player) => player.friendCode === newCode && player.playerKey !== oldKey
+    );
+    if (duplicate) {
+      const currentPlayer = playerMap.get(oldKey);
+      const currentName =
+        currentPlayer?.player.lounge_name ||
+        currentPlayer?.player.table_name ||
+        currentPlayer?.player.mii_name ||
+        "this player card";
+      const duplicateName =
+        duplicate.player.lounge_name ||
+        duplicate.player.table_name ||
+        duplicate.player.mii_name ||
+        "another player card";
+      setIdentityStates((current) => ({
+        ...current,
+        [oldKey]: {
+          status: "conflict",
+          message: `Friend code ${newCode} is duplicated between ${currentName} and ${duplicateName}.`,
+        },
+      }));
+      return;
+    }
     const newKey = `${teamKey}::${newCode}`;
     updateTeam(teamKey, (team) => {
-      const next = { ...team.players };
-      const player = next[oldCode];
-      delete next[oldCode];
-      next[newCode] = player;
-      return { ...team, players: next };
+      const renamedPlayers = Object.fromEntries(
+        Object.entries(team.players ?? {}).map(([code, player]) => [
+          code === oldCode ? newCode : code,
+          player,
+        ])
+      );
+      return { ...team, players: renamedPlayers };
     });
     setRaces((current) =>
       current.map((race) => ({
@@ -564,11 +832,20 @@ export default function MatchJsonEditor(): React.JSX.Element {
         placements: race.placements.map((placement) =>
           placement?.playerKey === oldKey ? { ...placement, playerKey: newKey } : placement
         ),
+        unplacedResults: race.unplacedResults.map((result) =>
+          result.playerKey === oldKey ? { ...result, playerKey: newKey } : result
+        ),
       }))
     );
     setIdentityStates((current) => {
       const next = { ...current };
       delete next[oldKey];
+      return next;
+    });
+    setPlayerIdentityLinks((current) => {
+      if (!(oldCode in current)) return current;
+      const next = { ...current, [newCode]: current[oldCode] };
+      delete next[oldCode];
       return next;
     });
   }
@@ -588,36 +865,18 @@ export default function MatchJsonEditor(): React.JSX.Element {
         unplacedResults: race.unplacedResults.filter((result) => result.playerKey !== key),
       }))
     );
-  }
-  async function checkIdentity(playerKey: string, friendCode: string): Promise<void> {
-    if (!validFriendCode(friendCode)) {
-      setIdentityStates((s) => ({
-        ...s,
-        [playerKey]: { status: "conflict", message: "Invalid friend code" },
-      }));
-      return;
-    }
-    setIdentityStates((s) => ({ ...s, [playerKey]: { status: "checking" } }));
-    try {
-      const result = await fetchPlayerIdentity(friendCode);
-      setIdentityStates((s) => ({
-        ...s,
-        [playerKey]:
-          result.results.length === 1
-            ? { status: "confirmed", identity: result.results[0] }
-            : result.results.length === 0
-              ? { status: "new", message: "Not found in database" }
-              : { status: "conflict", message: "Multiple matches" },
-      }));
-    } catch (error) {
-      setIdentityStates((s) => ({
-        ...s,
-        [playerKey]: {
-          status: "conflict",
-          message: error instanceof Error ? error.message : "Lookup failed",
-        },
-      }));
-    }
+    setIdentityStates((current) => {
+      if (!(key in current)) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+    setPlayerIdentityLinks((current) => {
+      if (!(code in current)) return current;
+      const next = { ...current };
+      delete next[code];
+      return next;
+    });
   }
   function assignPlayer(raceIndex: number, positionIndex: number, playerKey: string): void {
     if (!playerKey) return;
@@ -752,6 +1011,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setPreviewError(null);
     setNewEntries([]);
     setApprovalDecisions({});
+    setPlayerIdentityLinks({});
+    setPlayerTeamMemberships({});
+    setMembershipStatus("idle");
+    setIdentityPickerKey(null);
+    setIdentityMappingLoading(false);
+    setIdentityMappingError(null);
     setApprovalModalOpen(false);
     setCommitLoading(false);
     setCommitError(null);
@@ -800,6 +1065,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     try {
       const response = await postJson<PreviewResponse>("/api/matches/preview", {
         match: compiled,
+        player_identity_links: playerIdentityLinks,
         approved_new_entries: entries
           .filter((entry) => approvalDecisions[entry.key] === "approved")
           .map((entry) => entry.key),
@@ -818,7 +1084,13 @@ export default function MatchJsonEditor(): React.JSX.Element {
     }
   }
   async function confirmUpload(): Promise<void> {
-    if (!previewMetadata || commitLoading) return;
+    if (
+      !previewMetadata ||
+      commitLoading ||
+      (issues.some((issue) => issue.level === "warning") && !warningsAcknowledged)
+    ) {
+      return;
+    }
     const isAdmin = auth.session?.authenticated === true;
     const action = isAdmin ? "upload this match" : "submit this match for administrator review";
     if (!window.confirm(`Confirm that you want to ${action}?`)) return;
@@ -841,6 +1113,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
         : "/api/matches/commit";
       const result = await postJson<CommitResult>(endpoint, {
         match: compiled,
+        player_identity_links: playerIdentityLinks,
+        warnings_acknowledged: warningsAcknowledged,
         approved_new_entries: newEntries
           .filter((entry) => approvalDecisions[entry.key] === "approved")
           .map((entry) => entry.key),
@@ -891,6 +1165,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setCommitError(null);
   }
   async function requestTablePreview(): Promise<void> {
+    if (membershipStatus === "loading") return;
     const requestVersion = editorVersion.current;
     scrollToPreviewAfterReview.current = true;
     setPreviewLoading(true);
@@ -898,6 +1173,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     try {
       const result = await postJson<{ new_entries: NewEntry[] }>("/api/matches/new-entries", {
         match: compiled,
+        player_identity_links: playerIdentityLinks,
       });
       if (editorVersion.current !== requestVersion) return;
       setNewEntries(result.new_entries);
@@ -914,6 +1190,47 @@ export default function MatchJsonEditor(): React.JSX.Element {
       );
     } finally {
       if (editorVersion.current === requestVersion) setPreviewLoading(false);
+    }
+  }
+  async function updatePlayerIdentityLink(
+    entry: NewEntry,
+    player: PlayerIdentity | null
+  ): Promise<void> {
+    const friendCode = entry.friend_code;
+    if (!friendCode || identityMappingLoading) return;
+    const nextLinks = { ...playerIdentityLinks };
+    if (player) nextLinks[friendCode] = player.player_id;
+    else delete nextLinks[friendCode];
+
+    setIdentityMappingLoading(true);
+    setIdentityMappingError(null);
+    try {
+      const result = await postJson<{ new_entries: NewEntry[] }>("/api/matches/new-entries", {
+        match: compiled,
+        player_identity_links: nextLinks,
+      });
+      const replacedKeys = new Set(
+        newEntries
+          .filter(
+            (candidate) => candidate.type === "player" && candidate.friend_code === friendCode
+          )
+          .map((candidate) => candidate.key)
+      );
+      setPlayerIdentityLinks(nextLinks);
+      setNewEntries(result.new_entries);
+      setApprovalDecisions(
+        (current) =>
+          Object.fromEntries(
+            Object.entries(current).filter(([key]) => !replacedKeys.has(key))
+          ) as Record<string, ApprovalDecision>
+      );
+      setIdentityPickerKey(null);
+    } catch (caught) {
+      setIdentityMappingError(
+        caught instanceof Error ? caught.message : "Could not update the player mapping."
+      );
+    } finally {
+      setIdentityMappingLoading(false);
     }
   }
 
@@ -1003,7 +1320,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
             </button>
             <button
               type="button"
-              disabled={previewLoading || errorCount > 0 || Boolean(commitResult)}
+              disabled={
+                previewLoading ||
+                membershipStatus === "loading" ||
+                errorCount > 0 ||
+                Boolean(commitResult)
+              }
               onClick={requestTablePreview}
               className="rounded-md bg-emerald-500 px-4 py-2 font-bold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -1323,6 +1645,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       const approvedPlayerEntry =
                         proposedPlayerEntry &&
                         approvalDecisions[proposedPlayerEntry.key] === "approved";
+                      const duplicatePlayerLabel = duplicatePlayerLabels.get(key);
                       return (
                         <div
                           key={key}
@@ -1391,21 +1714,21 @@ export default function MatchJsonEditor(): React.JSX.Element {
                               </details>
                             </div>
                             <div className="flex flex-wrap items-center gap-3 text-sm sm:col-span-2 lg:col-span-5">
-                              <button
-                                type="button"
-                                disabled={!validFriendCode(code) || state?.status === "checking"}
-                                onClick={() => checkIdentity(key, code)}
-                                className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 disabled:opacity-40"
-                              >
-                                {state?.status === "checking" ? "Checking..." : "Check database"}
-                              </button>
-                              {state?.status === "confirmed" && (
+                              {state?.status === "checking" ? (
+                                <span className="text-gray-400">Checking database…</span>
+                              ) : null}
+                              {duplicatePlayerLabel ? (
+                                <span className="text-red-300">
+                                  Duplicate player: this resolves to the same database player as{" "}
+                                  {duplicatePlayerLabel}.
+                                </span>
+                              ) : state?.status === "confirmed" ? (
                                 <span className="text-emerald-300">
                                   Confirmed:{" "}
-                                  {state.identity?.canonical_lounge_name ||
+                                  {state.identity?.canonical_name ||
                                     `Player ${state.identity?.player_id}`}
                                 </span>
-                              )}
+                              ) : null}
                               {state?.status === "new" && (
                                 <span className="text-amber-300">
                                   {approvedPlayerEntry
@@ -1445,6 +1768,18 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       );
                     })}
                   </div>
+                  {resolvedTeam && leagueValid && seasonValid && divisionValid ? (
+                    <TeamRosterPool
+                      key={`${match.league}:${match.season}:${match.division}:${resolvedTeam.team_id}`}
+                      league={match.league ?? ""}
+                      season={match.season ?? ""}
+                      division={match.division ?? ""}
+                      teamId={resolvedTeam.team_id}
+                      currentFriendCodes={configuredFriendCodes}
+                      currentPlayerIds={configuredPlayerIds}
+                      onAdd={(player) => addRosterPlayer(teamKey, player)}
+                    />
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => addPlayer(teamKey)}
@@ -1976,7 +2311,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
               </div>
               <button
                 type="button"
-                disabled={previewLoading || errorCount > 0 || Boolean(commitResult)}
+                disabled={
+                  previewLoading ||
+                  membershipStatus === "loading" ||
+                  errorCount > 0 ||
+                  Boolean(commitResult)
+                }
                 onClick={requestTablePreview}
                 className="rounded-md bg-emerald-500 px-4 py-2 font-bold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -2118,7 +2458,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       : "You can submit this cleaned JSON to the administrator review queue; it will not change analytics yet."}
                   </p>
                 </div>
-                {!auth.session?.authenticated && issues.length > errorCount ? (
+                {issues.length > errorCount ? (
                   <label className="w-full rounded border border-amber-300/25 bg-amber-950/25 p-3 text-sm text-amber-100">
                     <input
                       type="checkbox"
@@ -2142,9 +2482,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                     disabled={
                       commitLoading ||
                       errorCount > 0 ||
-                      (!auth.session?.authenticated &&
-                        issues.length > errorCount &&
-                        !warningsAcknowledged)
+                      (issues.length > errorCount && !warningsAcknowledged)
                     }
                     onClick={confirmUpload}
                     className="rounded bg-emerald-500 px-4 py-2 font-bold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
@@ -2254,11 +2592,20 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 Every new entry must be approved before this match can proceed to database preview
                 or final upload.
               </p>
+              {identityMappingError ? (
+                <p className="mt-3 border border-red-400/30 bg-red-950/30 p-3 text-sm text-red-200">
+                  {identityMappingError}
+                </p>
+              ) : null}
               <div className="mt-4 space-y-3">
                 {newEntries.map((entry) => {
                   const decision = approvalDecisions[entry.key];
                   const description = newEntryDescription(entry);
                   const identityConflict = entry.kind === "player_identity_conflict";
+                  const playerIdentityEntry = entry.type === "player" && Boolean(entry.friend_code);
+                  const explicitlyMapped = Boolean(
+                    entry.friend_code && playerIdentityLinks[entry.friend_code]
+                  );
                   const approveLabel =
                     entry.kind === "existing_player_new_friend_code"
                       ? "Approve link"
@@ -2282,7 +2629,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                           {description.caution}
                         </p>
                       )}
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-3 flex flex-wrap gap-2">
                         {!identityConflict && (
                           <button
                             type="button"
@@ -2297,6 +2644,32 @@ export default function MatchJsonEditor(): React.JSX.Element {
                             {approveLabel}
                           </button>
                         )}
+                        {auth.session?.authenticated && playerIdentityEntry ? (
+                          <button
+                            type="button"
+                            disabled={identityMappingLoading}
+                            onClick={() =>
+                              setIdentityPickerKey((current) =>
+                                current === entry.key ? null : entry.key
+                              )
+                            }
+                            className="rounded border border-blue-400/40 px-3 py-1.5 text-sm font-semibold text-blue-200 hover:bg-blue-950/40 disabled:opacity-40"
+                          >
+                            {explicitlyMapped || entry.kind === "existing_player_new_friend_code"
+                              ? "Map to different player"
+                              : "Map to existing player"}
+                          </button>
+                        ) : null}
+                        {auth.session?.authenticated && explicitlyMapped ? (
+                          <button
+                            type="button"
+                            disabled={identityMappingLoading}
+                            onClick={() => void updatePlayerIdentityLink(entry, null)}
+                            className="rounded border border-amber-400/40 px-3 py-1.5 text-sm font-semibold text-amber-200 hover:bg-amber-950/40 disabled:opacity-40"
+                          >
+                            Create new player instead
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() =>
@@ -2310,6 +2683,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
                           Reject
                         </button>
                       </div>
+                      {identityPickerKey === entry.key ? (
+                        <ExistingPlayerPicker
+                          initialQuery={entry.lounge_name ?? ""}
+                          onSelect={(player) => void updatePlayerIdentityLink(entry, player)}
+                        />
+                      ) : null}
                     </div>
                   );
                 })}
@@ -2329,6 +2708,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   type="button"
                   disabled={
                     previewLoading ||
+                    identityMappingLoading ||
                     newEntries.length === 0 ||
                     newEntries.some(
                       (entry) =>

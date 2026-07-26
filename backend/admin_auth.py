@@ -103,17 +103,25 @@ def authenticate_admin(session) -> AdminActor | None:
     if identity is None:
         return None
     uid, email = identity
+    local_development_identity = (
+        app_environment() in {"local", "test"}
+        and os.environ.get("ALLOW_DEV_AUTH", "false").strip().lower() == "true"
+        and uid == f"local:{email}"
+    )
     user = session.scalar(select(AdminUser).where(AdminUser.normalized_email == email))
     if user is None:
         raise AuthorizationError("This Google account is not an authorized administrator.")
     if user.status == "revoked":
         raise AuthorizationError("Administrator access has been revoked.")
-    if user.firebase_uid and user.firebase_uid != uid:
+    if user.firebase_uid and user.firebase_uid != uid and not local_development_identity:
         raise AuthorizationError("This administrator email is bound to another Firebase identity.")
 
     now = datetime.now(timezone.utc)
-    first_activation = not user.firebase_uid or user.status == "invited"
-    user.firebase_uid = uid
+    first_activation = user.status == "invited" or (
+        not user.firebase_uid and not local_development_identity
+    )
+    if not local_development_identity:
+        user.firebase_uid = uid
     user.email = email
     user.normalized_email = email
     user.status = "active"

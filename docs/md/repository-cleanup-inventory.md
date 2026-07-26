@@ -90,7 +90,7 @@ configuration exists.
 | --- | --- |
 | `backend/JSON/` | Authoritative historical match archive and rebuild input |
 | `backend/data/player_identities.csv` | Durable identity grouping registry; currently incomplete for five historical merges |
-| `backend/data/team_aliases.csv` | Durable team normalization registry |
+| `backend/data/team_aliases.csv` | Historical parser-correction manifest required only for rebuilding older match data; live aliases are database-backed |
 | `backend/data/analytics_excluded_race_blocks.json` | Reviewed analytics exclusion registry |
 | `backend/data/database_health_reviews.json` | Reviewed warning disposition registry until moved to durable production storage |
 | `backend/models.py` and SQL-backed analytics | Active application implementation |

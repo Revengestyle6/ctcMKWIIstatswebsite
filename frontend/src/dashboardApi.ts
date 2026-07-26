@@ -86,7 +86,7 @@ export interface PlayerOverview {
   identity: {
     player_id: number;
     name: string;
-    canonical_lounge_name: string | null;
+    canonical_name: string | null;
     primary_friend_code: string | null;
     friend_codes: string[];
     aliases: Record<string, string[]>;

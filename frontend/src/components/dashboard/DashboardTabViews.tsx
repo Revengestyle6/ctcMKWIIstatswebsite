@@ -600,7 +600,6 @@ export function TeamTracksView({ data }: { data: TeamTracks }) {
                 <th className="px-4 py-3 text-right">Team average</th>
                 <th className="px-4 py-3 text-right">Races</th>
                 <th className="px-4 py-3 text-right">Wins</th>
-                <th className="px-4 py-3 text-right">Ties</th>
                 <th className="px-4 py-3 text-right">Win rate</th>
               </tr>
             </thead>
@@ -611,7 +610,6 @@ export function TeamTracksView({ data }: { data: TeamTracks }) {
                   <td className="px-4 py-3 text-right font-bold">{row.average_score}</td>
                   <td className="px-4 py-3 text-right">{row.races}</td>
                   <td className="px-4 py-3 text-right">{row.wins}</td>
-                  <td className="px-4 py-3 text-right">{row.ties}</td>
                   <td className="px-4 py-3 text-right">{row.win_rate}%</td>
                 </tr>
               ))}

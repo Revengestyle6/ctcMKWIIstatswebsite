@@ -46,8 +46,8 @@ class DatabaseHealthTests(unittest.TestCase):
             [
                 Track(canonical_name="Test Track"),
                 Track(canonical_name="Test-Track"),
-                Player(canonical_lounge_name="Example"),
-                Player(canonical_lounge_name=" example "),
+                Player(canonical_name="Example"),
+                Player(canonical_name=" example "),
             ]
         )
         self.session.commit()
@@ -108,8 +108,8 @@ class DatabaseHealthTests(unittest.TestCase):
                 Season(season_id=1, season_code="s2", name="Season 2", status="active"),
                 Season(season_id=2, season_code="s3", name="Season 3", status="active"),
                 Team(team_id=1, canonical_name="Example Team", canonical_tag="EX"),
-                Player(player_id=1, canonical_lounge_name="Canonical One"),
-                Player(player_id=2, canonical_lounge_name="Canonical Two"),
+                Player(player_id=1, canonical_name="Canonical One"),
+                Player(player_id=2, canonical_name="Canonical Two"),
             ]
         )
         self.session.commit()

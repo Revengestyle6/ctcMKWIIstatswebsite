@@ -258,7 +258,7 @@ Canonical player/person identity.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `player_id` | integer primary key | Internal ID. |
-| `canonical_lounge_name` | text nullable | Best display name. |
+| `canonical_name` | text nullable | Best display name. |
 | `primary_friend_code` | text nullable | Friend codes can change, so keep aliases too. |
 | `created_at` | timestamp | Audit. |
 

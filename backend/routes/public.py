@@ -4,6 +4,7 @@ import dashboard_stats as dashboards
 import stats_db as stats
 from dashboard_stats import DashboardError
 from flask import Blueprint, jsonify, request
+from match_editor_catalog import list_player_team_memberships, list_team_roster_pool
 
 from routes.common import (
     division_arg,
@@ -80,6 +81,44 @@ def api_player_identities():
                 query=request.args.get("query"),
             )
         )
+    except Exception as error:
+        return error_response(error)
+
+
+@public_api.get("/api/team-roster-pool")
+def api_team_roster_pool():
+    try:
+        with stats.SessionLocal() as session:
+            return jsonify(
+                list_team_roster_pool(
+                    session,
+                    request.args.get("league"),
+                    request.args.get("season"),
+                    request.args.get("division"),
+                    request.args.get("team_id", type=int),
+                )
+            )
+    except Exception as error:
+        return error_response(error)
+
+
+@public_api.get("/api/player-team-memberships")
+def api_player_team_memberships():
+    try:
+        raw_player_ids = request.args.get("player_ids", "")
+        player_ids = [int(value.strip()) for value in raw_player_ids.split(",") if value.strip()]
+        if len(player_ids) > 100:
+            raise ValueError("No more than 100 player IDs may be checked at once.")
+        with stats.SessionLocal() as session:
+            return jsonify(
+                list_player_team_memberships(
+                    session,
+                    request.args.get("league"),
+                    request.args.get("season"),
+                    request.args.get("division"),
+                    player_ids,
+                )
+            )
     except Exception as error:
         return error_response(error)
 

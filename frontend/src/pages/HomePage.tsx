@@ -95,8 +95,6 @@ export default function HomePage(): React.JSX.Element {
               </span>
             </Link>
           </nav>
-
-          <p className="mt-7 text-sm text-gray-300">Created by Lawrence</p>
         </div>
       </section>
 

@@ -32,14 +32,17 @@ Reviewed registries under `backend/data/` preserve decisions that raw match file
 cannot express reliably:
 
 - `player_identities.csv`
-- `team_aliases.csv`
+- `team_aliases.csv` (historical parser corrections used only during archive rebuilds)
 - `analytics_excluded_race_blocks.json`
 
 Database-health reviews now live in `health_issue_reviews`; the historical JSON
 file is retained only as legacy evidence until any reviewed entries are explicitly
 migrated.
 
-The archived source and registries must be preserved during every rebuild.
+The archived source and registries must be preserved during every rebuild. Live
+team aliases are stored in the `team_aliases` database table and managed through
+the admin alias page; preview, validation, and editor uploads do not consult the
+historical CSV correction manifest.
 
 ## Rebuild Flow
 
@@ -63,22 +66,35 @@ Load the archive into an already migrated PostgreSQL schema from `backend/`:
 ```
 
 The importer prefers `.json` over a same-stem legacy `.txt`, fingerprints source
-files, resolves identities and team aliases, stores raw audit fields, expands races
-and results, preserves explicit roles, and records findings that require review.
+files, resolves identities, applies historical team parsing corrections plus
+database aliases, stores raw audit fields, expands races and results, preserves
+explicit roles, and records findings that require review.
 
 ## Editor And Review Flow
 
 1. The browser compiles deterministic scores, totals, and canonical JSON.
 2. The preview endpoint validates the document and proposes new catalog entries.
+   For a valid league/season/division/team scope, the editor can load the existing
+   `player_season_entries` roster and prefill a lineup from its stored names, flag,
+   and the player's most recently seen friend code.
 3. An anonymous user can submit the canonical bytes to temporary queue storage;
    this does not call the importer or change analytics.
 4. An authenticated admin claims, edits if necessary, and approves new catalog
-   entries in the existing editor.
+   entries in the existing editor. An unknown friend code can either create a new
+   player or be explicitly mapped to an existing player found by canonical name or
+   player ID. The selected player ID is part of the approval key and is revalidated
+   during acceptance.
 5. The acceptance service repeats validation and duplicate checks, commits all
    normalized rows and audit records in PostgreSQL, then promotes the exact bytes
    into the immutable accepted archive.
 6. Analytics can query the committed match immediately. Interrupted storage
    promotion is marked `repair_required` and maintenance repairs it idempotently.
+
+When a reviewed friend code is mapped to an existing player, the importer adds the
+friend-code and name aliases to that player. It reuses an existing
+`player_season_entries` row for the same team-season entry, or creates one when the
+player has not previously appeared in that scope. It never creates a second player
+or duplicate player-season/team record for an approved link.
 
 ## Regression Checks
 

@@ -47,8 +47,8 @@ def _display_names_for_players(session, player_ids, canonical_names=None):
 
     return {
         player_id: (
-            recent_lounge_names.get(player_id)
-            or canonical_names.get(player_id)
+            canonical_names.get(player_id)
+            or recent_lounge_names.get(player_id)
             or common_table_names.get(player_id)
             or common_mii_names.get(player_id)
             or ""

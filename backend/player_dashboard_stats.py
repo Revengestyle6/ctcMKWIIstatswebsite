@@ -227,7 +227,7 @@ def _player_identity(session, player):
         default=None,
     )
     display_name = (
-        player.canonical_lounge_name
+        player.canonical_name
         or (recent_lounge_alias.alias_value if recent_lounge_alias else None)
         or next((row.alias_value for row in alias_rows if row.alias_type == "table_name"), None)
         or next((row.alias_value for row in alias_rows if row.alias_type == "mii_name"), None)
@@ -237,7 +237,7 @@ def _player_identity(session, player):
     return {
         "player_id": player.player_id,
         "name": display_name,
-        "canonical_lounge_name": player.canonical_lounge_name,
+        "canonical_name": player.canonical_name,
         "primary_friend_code": player.primary_friend_code,
         "friend_codes": codes,
         "aliases": dict(aliases),
@@ -740,7 +740,7 @@ def get_track_player_rankings(
             RacePlayerResult.position,
             RacePlayerResult.role,
             RacePlayerResult.role_source,
-            Player.canonical_lounge_name,
+            Player.canonical_name,
         )
         .join(Race, Race.race_id == RacePlayerResult.race_id)
         .join(Match, Match.match_id == Race.match_id)
@@ -763,7 +763,7 @@ def get_track_player_rankings(
     display_names = _display_names_for_players(
         session,
         by_player,
-        {row.player_id: row.canonical_lounge_name for row in rows if row.canonical_lounge_name},
+        {row.player_id: row.canonical_name for row in rows if row.canonical_name},
     )
 
     players = []

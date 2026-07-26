@@ -46,6 +46,12 @@ Real Firebase Google sign-in also requires the backend token audience:
 FIREBASE_PROJECT_ID=mkw-stats
 ```
 
+The frontend separately requires all four `VITE_FIREBASE_*` values in the
+ignored `frontend/.env.development.local` file. See the
+[local development startup runbook](local-development-startup.md) for the
+Firebase CLI retrieval command and complete startup sequence. Vite must be
+restarted after those values change.
+
 To force the frontend to the local API explicitly:
 
 ```text

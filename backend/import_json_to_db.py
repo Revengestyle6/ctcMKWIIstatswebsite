@@ -27,6 +27,7 @@ from models import (
     Season,
     SourceFile,
     Team,
+    TeamAlias,
     TeamSeasonEntry,
     Track,
     TrackAlias,
@@ -34,7 +35,7 @@ from models import (
 from sqlalchemy import func, or_, select, update
 
 JSON_ROOT = BASE_DIR / "JSON"
-TEAM_ALIAS_PATH = BASE_DIR / "data" / "team_aliases.csv"
+HISTORICAL_TEAM_CORRECTIONS_PATH = BASE_DIR / "data" / "team_aliases.csv"
 PLAYER_IDENTITY_PATH = BASE_DIR / "data" / "player_identities.csv"
 WEEK_RE = re.compile(r"\bW(\d+)\b", re.IGNORECASE)
 
@@ -91,28 +92,57 @@ def is_missing_player_placeholder(player_data: dict[str, Any]) -> bool:
     )
 
 
-def load_team_aliases(
-    path: Path = TEAM_ALIAS_PATH,
+def load_historical_team_corrections(
+    path: Path = HISTORICAL_TEAM_CORRECTIONS_PATH,
 ) -> dict[tuple[str, str, str, str, str], dict[str, str]]:
-    if not path.exists():
-        return {}
-
+    """Load parsing corrections used only when rebuilding the historical archive."""
     aliases = {}
-    with path.open("r", encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            key = (
-                (row.get("league_code") or "").strip(),
-                (row.get("season_code") or "").strip(),
-                (row.get("division_code") or "").strip(),
-                (row.get("match_label") or "").strip(),
-                (row.get("raw_team_key") or "").strip(),
-            )
-            aliases[key] = {
-                "canonical_tag": (row.get("canonical_tag") or "").strip(),
-                "display_name": (row.get("display_name") or row.get("canonical_tag") or "").strip(),
-                "note": (row.get("note") or "").strip(),
-            }
+    if path.exists():
+        with path.open("r", encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                key = (
+                    (row.get("league_code") or "").strip(),
+                    (row.get("season_code") or "").strip(),
+                    (row.get("division_code") or "").strip(),
+                    (row.get("match_label") or "").strip(),
+                    (row.get("raw_team_key") or "").strip(),
+                )
+                aliases[key] = {
+                    "canonical_tag": (row.get("canonical_tag") or "").strip(),
+                    "display_name": (
+                        row.get("display_name") or row.get("canonical_tag") or ""
+                    ).strip(),
+                    "note": (row.get("note") or "").strip(),
+                }
+    return aliases
+
+
+def load_database_team_aliases(
+    session,
+) -> dict[tuple[str, str, str, str, str], dict[str, str]]:
+    """Load live, administrator-managed aliases from the operational database."""
+    aliases = {}
+    database_aliases = session.execute(
+        select(TeamAlias.alias_value, Team.canonical_tag, Team.canonical_name)
+        .join(Team, Team.team_id == TeamAlias.team_id)
+        .order_by(TeamAlias.team_alias_id)
+    )
+    for row in database_aliases:
+        aliases[("", "", "", "", row.alias_value)] = {
+            "canonical_tag": row.canonical_tag,
+            "display_name": row.canonical_name,
+            "note": "Database-managed team alias.",
+        }
+    return aliases
+
+
+def load_archive_team_aliases(
+    session,
+) -> dict[tuple[str, str, str, str, str], dict[str, str]]:
+    """Combine historical parsing corrections with live aliases for a full rebuild."""
+    aliases = load_historical_team_corrections()
+    aliases.update(load_database_team_aliases(session))
     return aliases
 
 
@@ -126,7 +156,9 @@ def load_player_identities(path: Path = PLAYER_IDENTITY_PATH) -> PlayerIdentitie
         for row in reader:
             canonical_friend_code = (row.get("canonical_friend_code") or "").strip()
             friend_code = (row.get("friend_code") or "").strip()
-            canonical_lounge_name = (row.get("canonical_lounge_name") or "").strip()
+            canonical_name = (
+                row.get("canonical_name") or row.get("canonical_lounge_name") or ""
+            ).strip()
             if not canonical_friend_code or not friend_code:
                 continue
 
@@ -134,8 +166,8 @@ def load_player_identities(path: Path = PLAYER_IDENTITY_PATH) -> PlayerIdentitie
             identities.canonical_to_friend_codes.setdefault(canonical_friend_code, set()).update(
                 {canonical_friend_code, friend_code}
             )
-            if canonical_lounge_name:
-                identities.canonical_names[canonical_friend_code] = canonical_lounge_name
+            if canonical_name:
+                identities.canonical_names[canonical_friend_code] = canonical_name
     return identities
 
 
@@ -149,9 +181,11 @@ def resolve_team_alias(
 ) -> dict[str, str]:
     exact_key = (league_code, season_code, division_code, match_label, raw_team_key)
     division_key = (league_code, season_code, division_code, "", raw_team_key)
+    global_key = ("", "", "", "", raw_team_key)
     return (
         aliases.get(exact_key)
         or aliases.get(division_key)
+        or aliases.get(global_key)
         or {
             "canonical_tag": raw_team_key,
             "display_name": raw_team_key,
@@ -269,7 +303,7 @@ def player_identity_summary(session, player_id: int) -> dict[str, Any]:
     ).all()
     return {
         "player_id": player_id,
-        "canonical_lounge_name": player.canonical_lounge_name if player else None,
+        "canonical_name": player.canonical_name if player else None,
         "friend_codes": list(friend_codes),
     }
 
@@ -281,9 +315,7 @@ def lounge_name_player_ids(session, lounge_name: str | None) -> set[int]:
 
     candidates: set[int] = set()
     for player_id, value in session.execute(
-        select(Player.player_id, Player.canonical_lounge_name).where(
-            Player.canonical_lounge_name.is_not(None)
-        )
+        select(Player.player_id, Player.canonical_name).where(Player.canonical_name.is_not(None))
     ):
         if normalize_lounge_name(value) == normalized_name:
             candidates.add(player_id)
@@ -349,12 +381,12 @@ def get_or_create_player(
                 player.primary_friend_code = canonical_friend_code
             canonical_name = identities.canonical_names.get(canonical_friend_code)
             if canonical_name:
-                player.canonical_lounge_name = canonical_name
+                player.canonical_name = canonical_name
             session.flush()
         return player
 
     player = Player(
-        canonical_lounge_name=identities.canonical_names.get(canonical_friend_code)
+        canonical_name=identities.canonical_names.get(canonical_friend_code)
         or display_player_name(player_data),
         primary_friend_code=canonical_friend_code,
     )
@@ -409,6 +441,11 @@ def get_or_create_player_entry(
     )
     if entry:
         entry.last_seen_match_id = match_id
+        lounge_name = player_data.get("lounge_name") or player_data.get("table_name")
+        if lounge_name:
+            entry.primary_lounge_name = lounge_name
+        if player_data.get("mii_name"):
+            entry.primary_mii_name = player_data.get("mii_name")
         if player_data.get("flag"):
             entry.flag = player_data.get("flag")
         return entry
@@ -829,7 +866,7 @@ def import_editor_match(
         match_data,
         Path(f"{label}.json"),
         0,
-        load_team_aliases(),
+        load_database_team_aliases(session),
         load_player_identities(),
         league_code,
         season_code,
@@ -850,13 +887,60 @@ def _new_entry(entry_type: str, value: str, *scope: str, **details: Any) -> dict
     }
 
 
-def detect_new_entries(session, match_data: dict[str, Any]) -> list[dict[str, Any]]:
+def _validated_player_identity_links(
+    session,
+    match_data: dict[str, Any],
+    player_identity_links: dict[str, Any] | None,
+) -> dict[str, int]:
+    if not player_identity_links:
+        return {}
+    if not isinstance(player_identity_links, dict):
+        raise ValueError("Player identity links must be an object keyed by friend code.")
+
+    match_friend_codes = {
+        friend_code
+        for team_data in (match_data.get("teams") or {}).values()
+        for friend_code in (team_data.get("players") or {})
+    }
+    validated = {}
+    for friend_code, raw_player_id in player_identity_links.items():
+        if friend_code not in match_friend_codes:
+            raise ValueError(f"Player identity link {friend_code} is not present in this match.")
+        if isinstance(raw_player_id, bool):
+            raise ValueError(f"Player identity link {friend_code} has an invalid player ID.")
+        try:
+            player_id = int(raw_player_id)
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                f"Player identity link {friend_code} has an invalid player ID."
+            ) from error
+        if player_id < 1 or session.get(Player, player_id) is None:
+            raise ValueError(f"Player ID {player_id} does not exist.")
+        existing = session.scalar(
+            select(PlayerFriendCode).where(PlayerFriendCode.friend_code == friend_code)
+        )
+        if existing is not None and existing.player_id != player_id:
+            raise ValueError(
+                f"Friend code {friend_code} already belongs to player ID {existing.player_id}."
+            )
+        validated[friend_code] = player_id
+    return validated
+
+
+def detect_new_entries(
+    session,
+    match_data: dict[str, Any],
+    player_identity_links: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     league_code = str(match_data.get("league") or "ctc").strip().lower()
     season_code = str(match_data.get("season") or "").strip().lower()
     division_code = str(match_data.get("division") or "").strip().lower()
     if not season_code or not division_code:
         raise ValueError("League, season, and division are required.")
 
+    requested_identity_links = _validated_player_identity_links(
+        session, match_data, player_identity_links
+    )
     entries: dict[str, dict[str, Any]] = {}
     season = session.scalar(
         select(Season).where(
@@ -904,7 +988,7 @@ def detect_new_entries(session, match_data: dict[str, Any]) -> list[dict[str, An
         )
         entries[entry["key"]] = entry
 
-    aliases = load_team_aliases()
+    aliases = load_database_team_aliases(session)
     label = str(match_data.get("match_label") or "Match preview").strip() or "Match preview"
     for raw_team_key in match_data.get("teams") or {}:
         alias = resolve_team_alias(
@@ -947,27 +1031,33 @@ def detect_new_entries(session, match_data: dict[str, Any]) -> list[dict[str, An
             if existing is None:
                 candidate_ids: set[int] = set()
                 match_reasons: list[str] = []
-                canonical_friend_code = identities.friend_code_to_canonical.get(friend_code)
-                if canonical_friend_code:
-                    identity_codes = identities.canonical_to_friend_codes.get(
-                        canonical_friend_code,
-                        {canonical_friend_code},
-                    )
-                    mapped_rows = session.scalars(
-                        select(PlayerFriendCode.player_id).where(
-                            PlayerFriendCode.friend_code.in_(identity_codes)
+                requested_player_id = requested_identity_links.get(friend_code)
+                if requested_player_id is not None:
+                    candidate_ids.add(requested_player_id)
+                    match_reasons.append("administrator selection")
+                else:
+                    canonical_friend_code = identities.friend_code_to_canonical.get(friend_code)
+                    if canonical_friend_code:
+                        identity_codes = identities.canonical_to_friend_codes.get(
+                            canonical_friend_code,
+                            {canonical_friend_code},
                         )
-                    ).all()
-                    if mapped_rows:
-                        candidate_ids.update(mapped_rows)
-                        match_reasons.append("identity mapping")
+                        mapped_rows = session.scalars(
+                            select(PlayerFriendCode.player_id).where(
+                                PlayerFriendCode.friend_code.in_(identity_codes)
+                            )
+                        ).all()
+                        if mapped_rows:
+                            candidate_ids.update(mapped_rows)
+                            match_reasons.append("identity mapping")
+
+                    lounge_name = player_data.get("lounge_name")
+                    lounge_candidates = lounge_name_player_ids(session, lounge_name)
+                    if lounge_candidates:
+                        candidate_ids.update(lounge_candidates)
+                        match_reasons.append("exact lounge name")
 
                 lounge_name = player_data.get("lounge_name")
-                lounge_candidates = lounge_name_player_ids(session, lounge_name)
-                if lounge_candidates:
-                    candidate_ids.update(lounge_candidates)
-                    match_reasons.append("exact lounge name")
-
                 display_name = str(
                     lounge_name
                     or player_data.get("table_name")
@@ -980,6 +1070,7 @@ def detect_new_entries(session, match_data: dict[str, Any]) -> list[dict[str, An
                     entry = _new_entry(
                         "player",
                         f"{display_name} ({friend_code})",
+                        str(player_id),
                         kind="existing_player_new_friend_code",
                         friend_code=friend_code,
                         lounge_name=lounge_name,
@@ -1123,9 +1214,9 @@ def import_json_tree(database_target: str | None, json_root: Path):
     SessionLocal = get_session_factory(database_target)
     imported_matches = 0
     skipped_files = 0
-    aliases = load_team_aliases()
     identities = load_player_identities()
     with SessionLocal() as session:
+        aliases = load_archive_team_aliases(session)
         for path in preferred_json_files(json_root):
             with session.begin_nested():
                 imported, skipped = import_file(

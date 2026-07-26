@@ -79,6 +79,9 @@ export default function AdminAccessPage(): React.JSX.Element {
             <h1 className="text-3xl font-bold">Administrator Access</h1>
           </div>
           <nav className="flex gap-3">
+            <Link to="/admin/aliases" className="text-blue-300 hover:text-blue-200">
+              Alias management
+            </Link>
             <Link to="/admin/review-queue" className="text-blue-300 hover:text-blue-200">
               Review queue
             </Link>
