@@ -314,6 +314,118 @@ export default function MatchJsonEditor(): React.JSX.Element {
       teams: { ...current.teams, [teamKey]: updater(current.teams?.[teamKey] ?? { players: {} }) },
     }));
   }
+  function movePlayer(playerKey: string, targetTeamKey: string): void {
+    const separator = playerKey.lastIndexOf("::");
+    if (separator < 0) return;
+
+    const sourceTeamKey = playerKey.slice(0, separator);
+    const friendCode = playerKey.slice(separator + 2);
+    if (!friendCode || sourceTeamKey === targetTeamKey) return;
+
+    const sourceTeam = match.teams?.[sourceTeamKey];
+    const targetTeam = match.teams?.[targetTeamKey];
+    const player = sourceTeam?.players?.[friendCode];
+    if (!sourceTeam || !targetTeam || !player) return;
+    if (targetTeam.players?.[friendCode]) {
+      window.alert(
+        `${friendCode} is already configured on ${teamTag(targetTeamKey, targetTeam) || targetTeamKey}.`
+      );
+      return;
+    }
+
+    const nextPlayerKey = `${targetTeamKey}::${friendCode}`;
+    setMatch((current) => {
+      const currentSource = current.teams?.[sourceTeamKey];
+      const currentTarget = current.teams?.[targetTeamKey];
+      const currentPlayer = currentSource?.players?.[friendCode];
+      if (!currentSource || !currentTarget || !currentPlayer) return current;
+
+      const sourceEntries = Object.entries(currentSource.players ?? {});
+      const sourceIndex = sourceEntries.findIndex(([code]) => code === friendCode);
+      if (sourceIndex < 0) return current;
+      sourceEntries.splice(sourceIndex, 1);
+
+      const targetEntries = Object.entries(currentTarget.players ?? {});
+      const targetTag = teamTag(targetTeamKey, currentTarget) || targetTeamKey;
+      targetEntries.push([friendCode, { ...currentPlayer, tag: targetTag }]);
+      return {
+        ...current,
+        teams: {
+          ...current.teams,
+          [sourceTeamKey]: {
+            ...currentSource,
+            players: Object.fromEntries(sourceEntries),
+          },
+          [targetTeamKey]: {
+            ...currentTarget,
+            players: Object.fromEntries(targetEntries),
+          },
+        },
+      };
+    });
+    setRaces((current) =>
+      current.map((race) => ({
+        ...race,
+        placements: race.placements.map((placement) =>
+          placement?.playerKey === playerKey
+            ? { ...placement, playerKey: nextPlayerKey }
+            : placement
+        ),
+        unplacedResults: race.unplacedResults.map((result) =>
+          result.playerKey === playerKey ? { ...result, playerKey: nextPlayerKey } : result
+        ),
+      }))
+    );
+    setIdentityStates((current) => {
+      if (!(playerKey in current)) return current;
+      const next = { ...current, [nextPlayerKey]: current[playerKey] };
+      delete next[playerKey];
+      return next;
+    });
+    setDraggedPlayer(null);
+  }
+  function removeTeam(teamKey: string): void {
+    const team = match.teams?.[teamKey];
+    if (!team) return;
+
+    const label = teamTag(teamKey, team) || teamKey;
+    const playerCount = Object.keys(team.players ?? {}).length;
+    const playerSummary = `${playerCount} player${playerCount === 1 ? "" : "s"}`;
+    if (
+      !window.confirm(
+        `Delete team ${label}? The team, its ${playerSummary}, and its race results will be removed.`
+      )
+    ) {
+      return;
+    }
+
+    const playerKeyPrefix = `${teamKey}::`;
+    setMatch((current) => {
+      const teams = { ...current.teams };
+      delete teams[teamKey];
+      return { ...current, teams };
+    });
+    setRaces((current) =>
+      current.map((race) => ({
+        ...race,
+        placements: race.placements.map((placement) =>
+          placement?.playerKey.startsWith(playerKeyPrefix) ? null : placement
+        ),
+        unplacedResults: race.unplacedResults.filter(
+          (result) => !result.playerKey.startsWith(playerKeyPrefix)
+        ),
+        missingPlayerResults: race.missingPlayerResults.filter(
+          (result) => result.teamKey !== teamKey
+        ),
+      }))
+    );
+    setIdentityStates((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([key]) => !key.startsWith(playerKeyPrefix))
+      )
+    );
+    setDraggedPlayer((current) => (current?.startsWith(playerKeyPrefix) ? null : current));
+  }
   function updatePlayer(
     teamKey: string,
     code: string,
@@ -913,6 +1025,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
           <h2 className="mb-3 text-xl font-bold">Additional Metadata</h2>
           <div className="grid gap-3 md:grid-cols-4">
             {(["league", "season", "division", "match_label"] as const).map((field) => {
+              const missing = !String(match[field] ?? "").trim();
               const valid =
                 field === "league"
                   ? leagueValid
@@ -937,11 +1050,26 @@ export default function MatchJsonEditor(): React.JSX.Element {
               return (
                 <label key={field} className="text-sm font-semibold capitalize text-gray-200">
                   {field.replace("_", " ")}
+                  {missing && (
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="ml-1 text-red-400"
+                        data-required-marker="true"
+                      >
+                        *
+                      </span>
+                      <span className="sr-only"> required</span>
+                    </>
+                  )}
                   <input
                     list={listId}
                     value={String(match[field] ?? "")}
                     onChange={(e) => updateMatch({ [field]: metadataValue(field, e.target.value) })}
-                    className={`${inputClass} ${valid === true ? "border-emerald-400/70" : approved ? "border-amber-300/70" : valid === false && scopesLoaded ? "border-red-400/70" : ""}`}
+                    required
+                    aria-required="true"
+                    aria-invalid={missing || undefined}
+                    className={`${inputClass} ${missing ? "border-red-400/70" : valid === true ? "border-emerald-400/70" : approved ? "border-amber-300/70" : valid === false && scopesLoaded ? "border-red-400/70" : ""}`}
                   />
                   {valid !== null && (
                     <span
@@ -992,6 +1120,18 @@ export default function MatchJsonEditor(): React.JSX.Element {
             </datalist>
             <label className="text-sm font-semibold text-gray-200">
               Week
+              {numberValue(match.week) === "" && (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="ml-1 text-red-400"
+                    data-required-marker="true"
+                  >
+                    *
+                  </span>
+                  <span className="sr-only"> required</span>
+                </>
+              )}
               <input
                 type="number"
                 min={1}
@@ -1000,6 +1140,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 onChange={(e) =>
                   updateMatch({ week: e.target.value ? Number(e.target.value) : undefined })
                 }
+                required
+                aria-required="true"
+                aria-invalid={!Number.isInteger(match.week) || Number(match.week) < 1 || undefined}
                 className={`${inputClass} ${!Number.isInteger(match.week) || Number(match.week) < 1 ? "border-red-400/70" : ""}`}
               />
             </label>
@@ -1091,8 +1234,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
               const approvedTeam =
                 proposedTeamEntry && approvalDecisions[proposedTeamEntry.key] === "approved";
               return (
-                <article key={teamKey} className="border border-white/10 bg-black/25 p-4">
-                  <div className="grid gap-3 sm:grid-cols-[1fr_8rem_8rem]">
+                <article
+                  key={teamKey}
+                  data-team-key={teamKey}
+                  className="border border-white/10 bg-black/25 p-4"
+                >
+                  <div className="grid gap-3 sm:grid-cols-[1fr_8rem_8rem_auto]">
                     <label className={smallLabel}>
                       Team tag
                       <input
@@ -1157,6 +1304,14 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         className={inputClass}
                       />
                     </label>
+                    <button
+                      type="button"
+                      title={`Delete team ${currentTag || teamKey}`}
+                      onClick={() => removeTeam(teamKey)}
+                      className="mt-5 h-10 px-3 text-red-300 hover:bg-red-950/40"
+                    >
+                      Delete team
+                    </button>
                   </div>
                   <div className="mt-4 space-y-3">
                     {Object.entries(team.players ?? {}).map(([code, player]) => {
@@ -1169,7 +1324,16 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         proposedPlayerEntry &&
                         approvalDecisions[proposedPlayerEntry.key] === "approved";
                       return (
-                        <div key={key} className="border-t border-white/10 pt-3">
+                        <div
+                          key={key}
+                          data-player-key={key}
+                          className="border-t border-white/10 pt-3"
+                        >
+                          <div className="mb-2">
+                            <span className="text-sm font-semibold text-gray-200">
+                              {player.lounge_name || player.table_name || player.mii_name || code}
+                            </span>
+                          </div>
                           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[11rem_repeat(4,minmax(0,1fr))_auto]">
                             <label className={smallLabel}>
                               Friend code
@@ -1197,64 +1361,85 @@ export default function MatchJsonEditor(): React.JSX.Element {
                                 </label>
                               )
                             )}
-                            <button
-                              type="button"
-                              title="Remove player"
-                              onClick={() => removePlayer(teamKey, code)}
-                              className="mt-5 h-10 px-3 text-red-300 hover:bg-red-950/40"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-                            <button
-                              type="button"
-                              disabled={!validFriendCode(code) || state?.status === "checking"}
-                              onClick={() => checkIdentity(key, code)}
-                              className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 disabled:opacity-40"
-                            >
-                              {state?.status === "checking" ? "Checking..." : "Check database"}
-                            </button>
-                            {state?.status === "confirmed" && (
-                              <span className="text-emerald-300">
-                                Confirmed:{" "}
-                                {state.identity?.canonical_lounge_name ||
-                                  `Player ${state.identity?.player_id}`}
-                              </span>
-                            )}
-                            {state?.status === "new" && (
-                              <span className="text-amber-300">
-                                {approvedPlayerEntry
-                                  ? proposedPlayerEntry.kind === "existing_player_new_friend_code"
-                                    ? `Approved for player ID ${proposedPlayerEntry.proposed_player_id}`
-                                    : "Approved as a new player"
-                                  : "New friend code: approval required"}
-                              </span>
-                            )}
-                            {state?.status === "conflict" && (
-                              <span className="text-red-300">{state.message}</span>
-                            )}
-                            {isFfa(match.format) && (
-                              <label className="flex items-center gap-2">
-                                Player penalty
-                                <input
-                                  type="number"
-                                  value={player.penalties ?? 0}
-                                  onChange={(e) =>
-                                    updatePlayer(teamKey, code, (current) => ({
-                                      ...current,
-                                      penalties: Number(e.target.value) || 0,
-                                    }))
-                                  }
-                                  className="w-20 rounded border border-white/15 bg-black/40 p-1"
-                                />
-                              </label>
-                            )}
-                            {!isFfa(match.format) && (player.penalties ?? 0) !== 0 && (
-                              <span className="text-amber-300">
-                                Legacy player penalty: {player.penalties}
-                              </span>
-                            )}
+                            <div className="mt-5 grid gap-1 lg:row-span-2">
+                              <button
+                                type="button"
+                                title="Remove player"
+                                onClick={() => removePlayer(teamKey, code)}
+                                className="h-10 px-3 text-red-300 hover:bg-red-950/40"
+                              >
+                                Remove
+                              </button>
+                              <details className="relative">
+                                <summary className="flex h-10 cursor-pointer list-none items-center justify-center px-3 text-blue-300 hover:bg-blue-950/40">
+                                  Change Team
+                                </summary>
+                                <div className="absolute right-0 z-20 mt-1 min-w-36 rounded border border-white/15 bg-zinc-950 p-1 shadow-xl">
+                                  {Object.entries(match.teams ?? {})
+                                    .filter(([targetTeamKey]) => targetTeamKey !== teamKey)
+                                    .map(([targetTeamKey, targetTeam]) => (
+                                      <button
+                                        key={targetTeamKey}
+                                        type="button"
+                                        onClick={() => movePlayer(key, targetTeamKey)}
+                                        className="block w-full rounded px-3 py-2 text-left text-sm text-gray-200 hover:bg-white/10"
+                                      >
+                                        {teamTag(targetTeamKey, targetTeam)}
+                                      </button>
+                                    ))}
+                                </div>
+                              </details>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 text-sm sm:col-span-2 lg:col-span-5">
+                              <button
+                                type="button"
+                                disabled={!validFriendCode(code) || state?.status === "checking"}
+                                onClick={() => checkIdentity(key, code)}
+                                className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 disabled:opacity-40"
+                              >
+                                {state?.status === "checking" ? "Checking..." : "Check database"}
+                              </button>
+                              {state?.status === "confirmed" && (
+                                <span className="text-emerald-300">
+                                  Confirmed:{" "}
+                                  {state.identity?.canonical_lounge_name ||
+                                    `Player ${state.identity?.player_id}`}
+                                </span>
+                              )}
+                              {state?.status === "new" && (
+                                <span className="text-amber-300">
+                                  {approvedPlayerEntry
+                                    ? proposedPlayerEntry.kind === "existing_player_new_friend_code"
+                                      ? `Approved for player ID ${proposedPlayerEntry.proposed_player_id}`
+                                      : "Approved as a new player"
+                                    : "New friend code: approval required"}
+                                </span>
+                              )}
+                              {state?.status === "conflict" && (
+                                <span className="text-red-300">{state.message}</span>
+                              )}
+                              {isFfa(match.format) && (
+                                <label className="flex items-center gap-2">
+                                  Player penalty
+                                  <input
+                                    type="number"
+                                    value={player.penalties ?? 0}
+                                    onChange={(e) =>
+                                      updatePlayer(teamKey, code, (current) => ({
+                                        ...current,
+                                        penalties: Number(e.target.value) || 0,
+                                      }))
+                                    }
+                                    className="w-20 rounded border border-white/15 bg-black/40 p-1"
+                                  />
+                                </label>
+                              )}
+                              {!isFfa(match.format) && (player.penalties ?? 0) !== 0 && (
+                                <span className="text-amber-300">
+                                  Legacy player penalty: {player.penalties}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
