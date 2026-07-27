@@ -1646,6 +1646,15 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         proposedPlayerEntry &&
                         approvalDecisions[proposedPlayerEntry.key] === "approved";
                       const duplicatePlayerLabel = duplicatePlayerLabels.get(key);
+                      const cardDisplayName =
+                        state?.identity?.canonical_name ||
+                        (proposedPlayerEntry?.kind === "existing_player_new_friend_code"
+                          ? proposedPlayerEntry.proposed_player?.canonical_name
+                          : null) ||
+                        player.lounge_name ||
+                        player.table_name ||
+                        player.mii_name ||
+                        code;
                       return (
                         <div
                           key={key}
@@ -1654,7 +1663,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         >
                           <div className="mb-2">
                             <span className="text-sm font-semibold text-gray-200">
-                              {player.lounge_name || player.table_name || player.mii_name || code}
+                              {cardDisplayName}
                             </span>
                           </div>
                           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[11rem_repeat(4,minmax(0,1fr))_auto]">
