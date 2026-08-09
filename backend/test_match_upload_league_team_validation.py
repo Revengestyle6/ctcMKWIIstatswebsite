@@ -96,9 +96,7 @@ class MatchUploadLeagueTeamValidationTests(unittest.TestCase):
                 requested_team_identity_resolutions=resolutions,
             )
             resolved = next(
-                entry
-                for entry in resolved_entries
-                if entry["kind"] == "cross_league_team_match"
+                entry for entry in resolved_entries if entry["kind"] == "cross_league_team_match"
             )
             self.assertEqual(resolved["resolution"], resolutions[cross_entry["key"]])
             self.assertEqual(unapproved, [])

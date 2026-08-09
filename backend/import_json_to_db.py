@@ -694,7 +694,8 @@ def import_match(
             league_code,
             canonical_tag,
             display_name,
-            linked_team_id=alias.get("team_id") or team_identity_links.get(canonical_tag.casefold()),
+            linked_team_id=alias.get("team_id")
+            or team_identity_links.get(canonical_tag.casefold()),
         )
         team_entry = get_or_create_team_entry(
             session,
@@ -1183,15 +1184,19 @@ def detect_new_entries(
             existing_team_ids.append(team.team_id)
         cross_league_candidates = []
         if team is None:
-            candidate_teams = session.scalars(
-                select(Team)
-                .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
-                .where(
-                    func.lower(TeamLeagueIdentity.tag) == canonical_tag.casefold(),
-                    func.lower(TeamLeagueIdentity.league_code) != league_code.casefold(),
+            candidate_teams = (
+                session.scalars(
+                    select(Team)
+                    .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
+                    .where(
+                        func.lower(TeamLeagueIdentity.tag) == canonical_tag.casefold(),
+                        func.lower(TeamLeagueIdentity.league_code) != league_code.casefold(),
+                    )
+                    .order_by(Team.team_id)
                 )
-                .order_by(Team.team_id)
-            ).unique().all()
+                .unique()
+                .all()
+            )
             for candidate in candidate_teams:
                 identities = session.scalars(
                     select(TeamLeagueIdentity)

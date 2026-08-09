@@ -174,12 +174,8 @@ class AliasManagementTests(unittest.TestCase):
             session.add(gsc_track)
             session.flush()
 
-            ctc_results = alias_management.list_entities(
-                session, "tracks", league_code="ctc"
-            )
-            gsc_results = alias_management.list_entities(
-                session, "tracks", league_code="gsc"
-            )
+            ctc_results = alias_management.list_entities(session, "tracks", league_code="ctc")
+            gsc_results = alias_management.list_entities(session, "tracks", league_code="gsc")
 
             self.assertEqual([row["id"] for row in ctc_results], [self.track_id])
             self.assertEqual([row["id"] for row in gsc_results], [gsc_track.track_id])

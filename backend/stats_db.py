@@ -347,9 +347,7 @@ def findtopplayertracks(
     match_set="regular",
     league="ctc",
 ):
-    return top_player_tracks(
-        player, min_races, division, season, role, match_set, league=league
-    )
+    return top_player_tracks(player, min_races, division, season, role, match_set, league=league)
 
 
 def findtopteamtracks(
@@ -367,9 +365,7 @@ def findtopteamplayers(
     match_set="regular",
     league="ctc",
 ):
-    return top_team_players(
-        team, min_races, division, season, role, match_set, league=league
-    )
+    return top_team_players(team, min_races, division, season, role, match_set, league=league)
 
 
 def findtoptracks(
@@ -381,9 +377,7 @@ def findtoptracks(
     match_set="regular",
     league="ctc",
 ):
-    return top_track_players(
-        track, min_races, division, season, role, match_set, league=league
-    )
+    return top_track_players(track, min_races, division, season, role, match_set, league=league)
 
 
 def findtopteamsontrack(
