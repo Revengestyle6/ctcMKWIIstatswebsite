@@ -1,8 +1,10 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { fetchJson } from "../api";
+import { useSearchParams } from "react-router-dom";
+import { fetchCachedJson, fetchJson, prefetchMatchSetVariants } from "../api";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { LegacyStatHeader } from "./LegacyStatHeader";
+import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
 type TrackStat = {
@@ -55,6 +57,13 @@ function normalizeTracks(raw: unknown): TrackStat[] {
 export default function BestMatchups(): React.JSX.Element {
   const { seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision } =
     useSeasonDivision();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const matchSet: MatchSet =
+    searchParams.get("match_set") === "playoffs"
+      ? "playoffs"
+      : searchParams.get("match_set") === "all"
+        ? "all"
+        : "regular";
   const [teams, setTeams] = useState<string[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [selectedTeam2, setSelectedTeam2] = useState<string>("");
@@ -99,11 +108,12 @@ export default function BestMatchups(): React.JSX.Element {
     let cancelled = false;
 
     async function fetchTeamTracks(team: string): Promise<TrackStat[]> {
-      const raw = await fetchJson<unknown>("/api/top-team-tracks", {
+      const raw = await fetchCachedJson<unknown>("/api/top-team-tracks", {
         team,
         season,
         division,
         min_races: minRaces,
+        match_set: matchSet,
       });
       return normalizeTracks(raw);
     }
@@ -120,6 +130,15 @@ export default function BestMatchups(): React.JSX.Element {
         if (cancelled) return;
         setTeam1Tracks(team1Data);
         setTeam2Tracks(team2Data);
+        for (const team of [selectedTeam, selectedTeam2]) {
+          if (team) {
+            prefetchMatchSetVariants(
+              "/api/top-team-tracks",
+              { team, season, division, min_races: minRaces },
+              matchSet
+            );
+          }
+        }
       } catch (err) {
         if (cancelled) return;
         console.error(err);
@@ -135,7 +154,7 @@ export default function BestMatchups(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTeam, selectedTeam2, season, division, minRaces]);
+  }, [selectedTeam, selectedTeam2, season, division, minRaces, matchSet]);
 
   const comparisonRows = useMemo(() => {
     if (!selectedTeam || !selectedTeam2) return [];
@@ -165,6 +184,13 @@ export default function BestMatchups(): React.JSX.Element {
   function swapTeams() {
     setSelectedTeam(selectedTeam2);
     setSelectedTeam2(selectedTeam);
+  }
+
+  function updateMatchSet(value: MatchSet) {
+    const next = new URLSearchParams(searchParams);
+    if (value === "regular") next.delete("match_set");
+    else next.set("match_set", value);
+    setSearchParams(next, { replace: true });
   }
 
   return (
@@ -255,6 +281,7 @@ export default function BestMatchups(): React.JSX.Element {
             >
               Swap teams
             </button>
+            <MatchSetToggle value={matchSet} onChange={updateMatchSet} disabled={loading} />
           </div>
         </div>
 

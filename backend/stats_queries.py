@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 
 from database import get_session_factory
+from match_sets import apply_match_set, normalize_match_set
 from models import (
     Division,
+    DivisionPlayoffConfig,
     Match,
     MatchPlayer,
     MatchTeam,
@@ -11,6 +13,8 @@ from models import (
     PlayerAlias,
     PlayerFriendCode,
     PlayerSeasonEntry,
+    PlayoffSeries,
+    PlayoffSeriesParticipant,
     Race,
     RacePlayerResult,
     RaceTeamResult,
@@ -244,11 +248,11 @@ def _resolve_team(session, team, scope):
     return row
 
 
-def _resolve_track(session, track, scope):
+def _resolve_track(session, track, scope, match_set="regular"):
     if not track or not track.strip():
         raise AnalyticsError("Track name is required")
     query = track.strip().lower()
-    row = session.execute(
+    statement = (
         select(Track.track_id, Track.canonical_name)
         .join(Race, Race.track_id == Track.track_id)
         .join(Match, Match.match_id == Race.match_id)
@@ -258,9 +262,14 @@ def _resolve_track(session, track, scope):
             func.lower(Track.canonical_name) == query,
         )
         .group_by(Track.track_id)
-    ).first()
+    )
+    row = session.execute(apply_match_set(statement, match_set)).first()
     if row is None:
-        valid_tracks = list_tracks(season=scope.season_code, division=scope.division_code)
+        valid_tracks = list_tracks(
+            season=scope.season_code,
+            division=scope.division_code,
+            match_set=match_set,
+        )
         raise AnalyticsError(f"Invalid Track Name, Valid Tracks: {valid_tracks}")
     return row
 
@@ -503,10 +512,10 @@ def list_teams(season=None, division=None):
         return list(rows)
 
 
-def list_tracks(season=None, division=None):
+def list_tracks(season=None, division=None, match_set="regular"):
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
-        rows = session.execute(
+        statement = (
             select(Track.canonical_name)
             .join(Race, Race.track_id == Track.track_id)
             .join(Match, Match.match_id == Race.match_id)
@@ -516,17 +525,48 @@ def list_tracks(season=None, division=None):
             )
             .group_by(Track.track_id)
             .order_by(Track.canonical_name)
-        ).scalars()
+        )
+        rows = session.execute(apply_match_set(statement, match_set)).scalars()
         return list(rows)
 
 
-def list_matches(season=None, division=None, team=None):
+def _playoff_series_display_label(stage, series_number, config):
+    if stage == "semifinals":
+        if config is not None and config.semifinal_series_count == 1:
+            return "Semifinals"
+        return f"Semifinals Series {series_number}"
+    if stage == "finals":
+        return "Finals"
+    return ""
+
+
+def _playoff_match_display_label(
+    stored_label,
+    stage,
+    series_number,
+    series_match_number,
+    config,
+):
+    series_label = _playoff_series_display_label(stage, series_number, config)
+    if series_label and series_match_number:
+        return f"{series_label} — Match {series_match_number}"
+    return stored_label
+
+
+def list_matches(season=None, division=None, team=None, match_set="regular"):
     with SessionLocal() as session:
         scope = _get_scope(session, season=season, division=division)
-        match_rows = session.execute(
+        match_set = normalize_match_set(match_set)
+        playoff_config = session.get(DivisionPlayoffConfig, scope.division_id)
+        statement = (
             select(
                 Match.match_id,
+                Match.match_type,
                 Match.week_number,
+                Match.playoff_series_id,
+                Match.series_match_number,
+                PlayoffSeries.stage.label("playoff_stage"),
+                PlayoffSeries.series_number.label("playoff_series_number"),
                 Match.match_label,
                 Match.races_played,
                 Match.import_status,
@@ -536,8 +576,21 @@ def list_matches(season=None, division=None, team=None):
                 Match.season_id == scope.season_id,
                 Match.division_id == scope.division_id,
             )
-            .order_by(Match.week_number, Match.match_label, Match.match_id)
-        ).all()
+            .outerjoin(
+                PlayoffSeries,
+                PlayoffSeries.playoff_series_id == Match.playoff_series_id,
+            )
+            .order_by(
+                Match.match_type,
+                Match.week_number,
+                PlayoffSeries.stage,
+                PlayoffSeries.series_number,
+                Match.series_match_number,
+                Match.match_label,
+                Match.match_id,
+            )
+        )
+        match_rows = session.execute(apply_match_set(statement, match_set)).all()
         match_ids = [row.match_id for row in match_rows]
 
         team_rows = []
@@ -570,8 +623,24 @@ def list_matches(season=None, division=None, team=None):
         matches = [
             {
                 "match_id": row.match_id,
+                "match_type": row.match_type,
                 "week": row.week_number,
-                "label": row.match_label,
+                "playoff_series_id": row.playoff_series_id,
+                "series_match_number": row.series_match_number,
+                "playoff_stage": row.playoff_stage,
+                "playoff_series_number": row.playoff_series_number,
+                "label": _playoff_match_display_label(
+                    row.match_label,
+                    row.playoff_stage,
+                    row.playoff_series_number,
+                    row.series_match_number,
+                    playoff_config,
+                ),
+                "playoff_semifinal_series_count": (
+                    playoff_config.semifinal_series_count
+                    if row.match_type == "playoff" and playoff_config
+                    else None
+                ),
                 "races": row.races_played,
                 "teams": " vs ".join(teams_by_match.get(row.match_id, [])),
                 "scores": " - ".join(scores_by_match.get(row.match_id, [])),
@@ -583,6 +652,126 @@ def list_matches(season=None, division=None, team=None):
             or team_query in [tag.lower() for tag in teams_by_match.get(row.match_id, [])]
         ]
         return matches
+
+
+def list_playoff_series(season=None, division=None, team=None):
+    with SessionLocal() as session:
+        scope = _get_scope(session, season=season, division=division)
+        config = session.get(DivisionPlayoffConfig, scope.division_id)
+        series_rows = session.scalars(
+            select(PlayoffSeries)
+            .where(
+                PlayoffSeries.season_id == scope.season_id,
+                PlayoffSeries.division_id == scope.division_id,
+            )
+            .order_by(PlayoffSeries.stage.desc(), PlayoffSeries.series_number)
+        ).all()
+        output = []
+        team_query = (team or "").strip().lower()
+        for series in series_rows:
+            participants = session.execute(
+                select(
+                    Team.team_id,
+                    Team.canonical_name,
+                    TeamSeasonEntry.clan_tag,
+                    PlayoffSeriesParticipant.participant_slot,
+                )
+                .join(Team, Team.team_id == PlayoffSeriesParticipant.team_id)
+                .join(
+                    TeamSeasonEntry,
+                    and_(
+                        TeamSeasonEntry.team_id == Team.team_id,
+                        TeamSeasonEntry.division_id == scope.division_id,
+                    ),
+                )
+                .where(PlayoffSeriesParticipant.playoff_series_id == series.playoff_series_id)
+                .order_by(PlayoffSeriesParticipant.participant_slot)
+            ).all()
+            if team_query and team_query not in {row.clan_tag.lower() for row in participants}:
+                continue
+            matches = session.execute(
+                select(Match.match_id, Match.series_match_number, Match.match_label)
+                .where(Match.playoff_series_id == series.playoff_series_id)
+                .order_by(Match.series_match_number)
+            ).all()
+            score_rows = session.execute(
+                select(Match.match_id, Team.team_id, MatchTeam.final_score)
+                .join(MatchTeam, MatchTeam.match_id == Match.match_id)
+                .join(
+                    TeamSeasonEntry,
+                    TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id,
+                )
+                .join(Team, Team.team_id == TeamSeasonEntry.team_id)
+                .where(Match.playoff_series_id == series.playoff_series_id)
+            ).all()
+            scores_by_match = {}
+            wins = {row.team_id: 0 for row in participants}
+            for row in score_rows:
+                scores_by_match.setdefault(row.match_id, []).append(row)
+            for scores in scores_by_match.values():
+                if len(scores) == 2 and scores[0].final_score != scores[1].final_score:
+                    winner = max(scores, key=lambda row: row.final_score).team_id
+                    wins[winner] += 1
+            needed = series.best_of // 2 + 1
+            winner_id = next(
+                (participant_id for participant_id, count in wins.items() if count >= needed),
+                None,
+            )
+            output.append(
+                {
+                    "playoff_series_id": series.playoff_series_id,
+                    "stage": series.stage,
+                    "series_number": series.series_number,
+                    "label": _playoff_series_display_label(
+                        series.stage,
+                        series.series_number,
+                        config,
+                    ),
+                    "best_of": series.best_of,
+                    "wins_needed": needed,
+                    "winner_team_id": winner_id,
+                    "status": "complete" if winner_id is not None else "in_progress",
+                    "participants": [
+                        {
+                            "team_id": row.team_id,
+                            "name": row.canonical_name,
+                            "tag": row.clan_tag,
+                            "slot": row.participant_slot,
+                            "wins": wins[row.team_id],
+                        }
+                        for row in participants
+                    ],
+                    "matches": [
+                        {
+                            "match_id": row.match_id,
+                            "series_match_number": row.series_match_number,
+                            "label": _playoff_match_display_label(
+                                row.match_label,
+                                series.stage,
+                                series.series_number,
+                                row.series_match_number,
+                                config,
+                            ),
+                        }
+                        for row in matches
+                    ],
+                }
+            )
+        return {
+            "season": scope.season_code,
+            "division": scope.division_code,
+            "format": (
+                {
+                    "code": config.format_code,
+                    "playoff_team_count": config.playoff_team_count,
+                    "semifinal_series_count": config.semifinal_series_count,
+                    "finals_bye_count": config.finals_bye_count,
+                }
+                if config
+                else None
+            ),
+            "series": output,
+        }
 
 
 def _team_penalties(session, match_id):
@@ -618,6 +807,16 @@ def get_match_detail(match_id, session=None):
 
         season = session.get(Season, match.season_id)
         division = session.get(Division, match.division_id)
+        playoff_series = (
+            session.get(PlayoffSeries, match.playoff_series_id)
+            if match.playoff_series_id is not None
+            else None
+        )
+        playoff_config = (
+            session.get(DivisionPlayoffConfig, match.division_id)
+            if playoff_series is not None
+            else None
+        )
         race_rows = session.execute(
             select(Race.race_id, Race.race_number, Race.track_name_raw, Track.canonical_name)
             .join(Track, Track.track_id == Race.track_id)
@@ -807,10 +1006,24 @@ def get_match_detail(match_id, session=None):
 
         return {
             "match_id": match.match_id,
+            "match_type": match.match_type,
             "season": season.season_code if season else "",
             "division": division.division_code if division else "",
             "week": match.week_number,
-            "label": match.match_label,
+            "playoff_series_id": match.playoff_series_id,
+            "series_match_number": match.series_match_number,
+            "playoff_stage": playoff_series.stage if playoff_series else None,
+            "playoff_series_number": playoff_series.series_number if playoff_series else None,
+            "label": _playoff_match_display_label(
+                match.match_label,
+                playoff_series.stage if playoff_series else None,
+                playoff_series.series_number if playoff_series else None,
+                match.series_match_number,
+                playoff_config,
+            ),
+            "playoff_semifinal_series_count": (
+                playoff_config.semifinal_series_count if playoff_config else None
+            ),
             "format": match.format,
             "races_played": match.races_played,
             "import_status": match.import_status,

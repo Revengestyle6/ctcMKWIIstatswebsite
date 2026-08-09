@@ -55,6 +55,66 @@ class Division(Base):
     )
 
 
+class DivisionPlayoffConfig(Base):
+    __tablename__ = "division_playoff_configs"
+
+    division_id = Column(Integer, ForeignKey("divisions.division_id"), primary_key=True)
+    format_code = Column(Text, nullable=False)
+    playoff_team_count = Column(Integer, nullable=False)
+    semifinal_series_count = Column(Integer, nullable=False)
+    finals_bye_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("playoff_team_count >= 2", name="ck_playoff_config_team_count"),
+        CheckConstraint("semifinal_series_count >= 0", name="ck_playoff_config_semifinal_count"),
+        CheckConstraint("finals_bye_count >= 0", name="ck_playoff_config_bye_count"),
+    )
+
+
+class PlayoffSeries(Base):
+    __tablename__ = "playoff_series"
+
+    playoff_series_id = Column(Integer, primary_key=True)
+    season_id = Column(Integer, ForeignKey("seasons.season_id"), nullable=False)
+    division_id = Column(Integer, ForeignKey("divisions.division_id"), nullable=False)
+    stage = Column(Text, nullable=False)
+    series_number = Column(Integer, nullable=False, default=1)
+    best_of = Column(Integer, nullable=False, default=3)
+    display_label = Column(Text)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "division_id", "stage", "series_number", name="uq_playoff_series_division_stage"
+        ),
+        CheckConstraint("stage IN ('semifinals', 'finals')", name="ck_playoff_series_stage"),
+        CheckConstraint("series_number >= 1", name="ck_playoff_series_number"),
+        CheckConstraint("best_of >= 1 AND best_of % 2 = 1", name="ck_playoff_series_best_of"),
+        Index("ix_playoff_series_scope", "season_id", "division_id"),
+    )
+
+
+class PlayoffSeriesParticipant(Base):
+    __tablename__ = "playoff_series_participants"
+
+    playoff_series_participant_id = Column(Integer, primary_key=True)
+    playoff_series_id = Column(
+        Integer, ForeignKey("playoff_series.playoff_series_id"), nullable=False
+    )
+    team_id = Column(Integer, ForeignKey("teams.team_id"), nullable=False)
+    participant_slot = Column(Integer, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("playoff_series_id", "team_id", name="uq_playoff_series_participant_team"),
+        UniqueConstraint(
+            "playoff_series_id", "participant_slot", name="uq_playoff_series_participant_slot"
+        ),
+        CheckConstraint("participant_slot IN (1, 2)", name="ck_playoff_series_participant_slot"),
+    )
+
+
 class SourceFile(Base):
     __tablename__ = "source_files"
 
@@ -222,7 +282,10 @@ class Match(Base):
     division_id = Column(Integer, ForeignKey("divisions.division_id"), nullable=False)
     source_file_id = Column(Integer, ForeignKey("source_files.source_file_id"), nullable=False)
     match_index_in_source = Column(Integer, nullable=False, default=0)
+    match_type = Column(Text, nullable=False, default="regular")
     week_number = Column(Integer)
+    playoff_series_id = Column(Integer, ForeignKey("playoff_series.playoff_series_id"))
+    series_match_number = Column(Integer)
     match_label = Column(Text, nullable=False)
     title_str = Column(Text)
     format = Column(Text)
@@ -237,6 +300,18 @@ class Match(Base):
         CheckConstraint(
             "import_status IN ('imported', 'needs_review')", name="ck_match_import_status"
         ),
+        CheckConstraint("match_type IN ('regular', 'playoff')", name="ck_match_type"),
+        CheckConstraint(
+            "(match_type = 'regular' AND playoff_series_id IS NULL "
+            "AND series_match_number IS NULL) OR "
+            "(match_type = 'playoff' AND week_number IS NULL "
+            "AND playoff_series_id IS NOT NULL AND series_match_number >= 1)",
+            name="ck_match_competition_metadata",
+        ),
+        UniqueConstraint(
+            "playoff_series_id", "series_match_number", name="uq_match_playoff_series_number"
+        ),
+        Index("ix_matches_match_type", "match_type"),
     )
 
 

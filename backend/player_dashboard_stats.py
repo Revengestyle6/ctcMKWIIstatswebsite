@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from analytics_eligibility import apply_analytics_race_filter
 from database import get_session_factory
+from match_sets import apply_match_set, normalize_match_set
 from models import (
     Division,
     Match,
@@ -269,7 +270,7 @@ def _player_identity(session, player):
     }
 
 
-def _player_race_rows(session, player_id, scope, team_id=None):
+def _player_race_rows(session, player_id, scope, team_id=None, match_set="regular"):
     statement = (
         select(
             RacePlayerResult.race_id,
@@ -313,6 +314,7 @@ def _player_race_rows(session, player_id, scope, team_id=None):
         statement = statement.where(Match.division_id == scope.division_id)
     if team_id is not None:
         statement = statement.where(Team.team_id == team_id)
+    statement = apply_match_set(statement, match_set)
     statement = apply_analytics_race_filter(statement, session)
     return session.execute(statement.order_by(Match.match_id, Race.race_number)).all()
 
@@ -348,7 +350,7 @@ def _final_score(row):
     return int(row.raw_total_score or 0) - int(row.team_penalty_points or 0)
 
 
-def _player_ranking(session, player_id, scope, min_races, role, team_id=None):
+def _player_ranking(session, player_id, scope, min_races, role, team_id=None, match_set="regular"):
     if scope.season_id is None or scope.division_id is None:
         return None
     statement = (
@@ -375,6 +377,7 @@ def _player_ranking(session, player_id, scope, min_races, role, team_id=None):
     )
     if team_id is not None:
         statement = statement.where(TeamSeasonEntry.team_id == team_id)
+    statement = apply_match_set(statement, match_set)
     statement = apply_analytics_race_filter(statement, session)
     rows = list(session.execute(statement).all())
     confirmed = confirmed_5v5_race_ids(session, rows)
@@ -411,9 +414,11 @@ def get_player_overview(
     team_id=None,
     min_races=12,
     role="runner",
+    match_set="regular",
     session=None,
 ):
     role = normalize_role(role)
+    match_set = normalize_match_set(match_set)
     if session is None:
         with SessionLocal() as owned_session:
             return get_player_overview(
@@ -423,6 +428,7 @@ def get_player_overview(
                 team_id=team_id,
                 min_races=min_races,
                 role=role,
+                match_set=match_set,
                 session=owned_session,
             )
 
@@ -433,7 +439,7 @@ def get_player_overview(
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
 
-    rows = _player_race_rows(session, player_id, scope, team_id=team_id)
+    rows = _player_race_rows(session, player_id, scope, team_id=team_id, match_set=match_set)
     confirmed = confirmed_5v5_race_ids(session, rows)
     coverage, classified = role_coverage(rows, confirmed)
     selected = [item for item in classified if item[1] == role]
@@ -544,11 +550,19 @@ def get_player_overview(
     return {
         "identity": identity,
         "role": role,
-        "scope": {**_scope_payload(scope), "team_id": team_id},
+        "scope": {**_scope_payload(scope), "team_id": team_id, "match_set": match_set},
         "metrics": metrics,
         "role_coverage": coverage,
         "record": record,
-        "ranking": _player_ranking(session, player_id, scope, min_races, role, team_id=team_id),
+        "ranking": _player_ranking(
+            session,
+            player_id,
+            scope,
+            min_races,
+            role,
+            team_id=team_id,
+            match_set=match_set,
+        ),
         "recent_matches": recent_matches[:5],
         "score_trend": [
             {
@@ -565,9 +579,16 @@ def get_player_overview(
 
 
 def get_player_performance(
-    player_id, season=None, division=None, team_id=None, role="runner", session=None
+    player_id,
+    season=None,
+    division=None,
+    team_id=None,
+    role="runner",
+    match_set="regular",
+    session=None,
 ):
     role = normalize_role(role)
+    match_set = normalize_match_set(match_set)
     if session is None:
         with SessionLocal() as owned_session:
             return get_player_performance(
@@ -576,6 +597,7 @@ def get_player_performance(
                 division=division,
                 team_id=team_id,
                 role=role,
+                match_set=match_set,
                 session=owned_session,
             )
     if not session.get(Player, player_id):
@@ -583,7 +605,7 @@ def get_player_performance(
     scope = _resolve_scope(session, season=season, division=division)
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
-    rows = _player_race_rows(session, player_id, scope, team_id=team_id)
+    rows = _player_race_rows(session, player_id, scope, team_id=team_id, match_set=match_set)
     confirmed = confirmed_5v5_race_ids(session, rows)
     coverage, classified = role_coverage(rows, confirmed)
     selected_rows = [row for row, classified_role, _source in classified if classified_role == role]
@@ -606,7 +628,7 @@ def get_player_performance(
     return {
         "player_id": player_id,
         "role": role,
-        "scope": {**_scope_payload(scope), "team_id": team_id},
+        "scope": {**_scope_payload(scope), "team_id": team_id, "match_set": match_set},
         "metrics": metrics,
         "role_coverage": coverage,
         "score_distribution": [
@@ -642,9 +664,11 @@ def get_player_tracks(
     team_id=None,
     min_races=12,
     role="runner",
+    match_set="regular",
     session=None,
 ):
     role = normalize_role(role)
+    match_set = normalize_match_set(match_set)
     if session is None:
         with SessionLocal() as owned_session:
             return get_player_tracks(
@@ -654,6 +678,7 @@ def get_player_tracks(
                 team_id=team_id,
                 min_races=min_races,
                 role=role,
+                match_set=match_set,
                 session=owned_session,
             )
     if not session.get(Player, player_id):
@@ -661,7 +686,7 @@ def get_player_tracks(
     scope = _resolve_scope(session, season=season, division=division)
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
-    rows = _player_race_rows(session, player_id, scope, team_id=team_id)
+    rows = _player_race_rows(session, player_id, scope, team_id=team_id, match_set=match_set)
     confirmed = confirmed_5v5_race_ids(session, rows)
     coverage, classified = role_coverage(rows, confirmed)
     tracks = defaultdict(list)
@@ -698,7 +723,7 @@ def get_player_tracks(
     return {
         "player_id": player_id,
         "role": role,
-        "scope": {**_scope_payload(scope), "team_id": team_id},
+        "scope": {**_scope_payload(scope), "team_id": team_id, "match_set": match_set},
         "minimum_races": min_races,
         "role_coverage": coverage,
         "tracks": results,
@@ -711,9 +736,11 @@ def get_track_player_rankings(
     division,
     role="runner",
     min_races=2,
+    match_set="regular",
     session=None,
 ):
     role = normalize_role(role)
+    match_set = normalize_match_set(match_set)
     if session is None:
         with SessionLocal() as owned_session:
             return get_track_player_rankings(
@@ -722,6 +749,7 @@ def get_track_player_rankings(
                 division=division,
                 role=role,
                 min_races=min_races,
+                match_set=match_set,
                 session=owned_session,
             )
 
@@ -752,6 +780,7 @@ def get_track_player_rankings(
         )
         .order_by(RacePlayerResult.player_id, Race.race_id)
     )
+    statement = apply_match_set(statement, match_set)
     statement = apply_analytics_race_filter(statement, session)
     rows = list(session.execute(statement).all())
     confirmed = confirmed_5v5_race_ids(session, rows)

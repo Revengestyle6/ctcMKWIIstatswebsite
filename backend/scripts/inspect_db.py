@@ -10,11 +10,14 @@ sys.path.insert(0, str(BACKEND_DIR))
 from database import get_session_factory
 from models import (
     Division,
+    DivisionPlayoffConfig,
     Match,
     MatchPlayer,
     MatchTeam,
     Penalty,
     Player,
+    PlayoffSeries,
+    PlayoffSeriesParticipant,
     Race,
     RacePlayerResult,
     Season,
@@ -27,6 +30,9 @@ from models import (
 SUMMARY_MODELS = (
     Season,
     Division,
+    DivisionPlayoffConfig,
+    PlayoffSeries,
+    PlayoffSeriesParticipant,
     SourceFile,
     Team,
     TeamSeasonEntry,

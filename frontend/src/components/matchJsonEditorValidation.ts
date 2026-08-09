@@ -1,4 +1,10 @@
-import type { DatabaseAddition, MatchScope, PlayerIdentity, TeamScope } from "../api";
+import type {
+  DatabaseAddition,
+  MatchScope,
+  PlayerIdentity,
+  PlayoffSeriesResponse,
+  TeamScope,
+} from "../api";
 import type { MatchDetail } from "./MatchHistory";
 import {
   allPlayers,
@@ -13,10 +19,20 @@ export type IdentityState = {
   identity?: PlayerIdentity;
   message?: string;
 };
-export type Issue = { level: "error" | "warning"; message: string };
+export type IssueField =
+  | "playoff_format"
+  | "playoff_stage"
+  | "playoff_series_number"
+  | "series_match_number"
+  | "best_of";
+export type Issue = {
+  level: "error" | "warning";
+  message: string;
+  field?: IssueField;
+};
 export type NewEntry = {
   key: string;
-  type: "season" | "division" | "team" | "player" | "track";
+  type: "season" | "division" | "team" | "player" | "track" | "playoff_format";
   value: string;
   kind:
     | "new_season"
@@ -26,7 +42,8 @@ export type NewEntry = {
     | "new_player_identity"
     | "existing_player_new_friend_code"
     | "player_identity_conflict"
-    | "new_track";
+    | "new_track"
+    | "new_playoff_format";
   league?: string;
   season?: string;
   division?: string;
@@ -40,6 +57,11 @@ export type NewEntry = {
   candidates?: PlayerIdentitySummary[];
   match_reason?: string;
   existing_seasons?: string[];
+  format_code?: "three_team" | "four_team";
+  format_label?: string;
+  playoff_team_count?: number;
+  semifinal_series_count?: number;
+  finals_bye_count?: number;
 };
 export type PlayerIdentitySummary = {
   player_id: number;
@@ -82,6 +104,101 @@ export function numberValue(value: number | undefined): string {
 }
 export function isFfa(format = ""): boolean {
   return format.trim().toLowerCase() === "ffa";
+}
+
+export function playoffConsistencyIssues(
+  match: MatchJson,
+  teamScopes: TeamScope[],
+  context: PlayoffSeriesResponse | null,
+  contextLoaded: boolean
+): Issue[] {
+  if (match.match_type !== "playoff" || !match.season || !match.division) return [];
+  if (!contextLoaded) {
+    return [
+      {
+        level: "error",
+        message: "Existing playoff series could not be checked for this division.",
+      },
+    ];
+  }
+  if (!context) return [];
+
+  const issues: Issue[] = [];
+  if (context.format && match.playoff_format !== context.format.code) {
+    issues.push({
+      level: "error",
+      field: "playoff_format",
+      message: `This division's playoff format is locked as ${context.format.code === "three_team" ? "3 teams" : "4 teams"}.`,
+    });
+  }
+
+  const series = context.series.find(
+    (candidate) =>
+      candidate.stage === match.playoff_stage &&
+      candidate.series_number === match.playoff_series_number
+  );
+  if (!series) return issues;
+
+  if (match.best_of !== series.best_of) {
+    issues.push({
+      level: "error",
+      field: "best_of",
+      message: `${series.label} is locked as best of ${series.best_of}.`,
+    });
+  }
+  const existingNumbers = new Set(series.matches.map((entry) => entry.series_match_number));
+  if (existingNumbers.has(Number(match.series_match_number))) {
+    issues.push({
+      level: "error",
+      field: "series_match_number",
+      message: `Match ${match.series_match_number} already exists in ${series.label}.`,
+    });
+  } else {
+    const expectedNumber = existingNumbers.size + 1;
+    if (match.series_match_number !== expectedNumber) {
+      issues.push({
+        level: "error",
+        field: "series_match_number",
+        message: `The next match in ${series.label} must be Match ${expectedNumber}.`,
+      });
+    }
+  }
+  if (series.status === "complete") {
+    issues.push({
+      level: "error",
+      field: "series_match_number",
+      message: `${series.label} has already been clinched.`,
+    });
+  }
+
+  const scopedTeams = teamScopes.filter(
+    (scope) =>
+      normalized(scope.league) === normalized(match.league) &&
+      normalized(scope.season) === normalized(match.season) &&
+      normalized(scope.division) === normalized(match.division)
+  );
+  const submittedIds = Object.entries(match.teams ?? {}).flatMap(([teamKey, team]) => {
+    const tag = teamTag(teamKey, team);
+    const resolved = scopedTeams.find(
+      (scope) =>
+        normalized(scope.clan_tag) === normalized(tag) ||
+        normalized(scope.canonical_tag) === normalized(tag)
+    );
+    return resolved ? [resolved.team_id] : [];
+  });
+  const establishedIds = new Set(series.participants.map((participant) => participant.team_id));
+  if (
+    submittedIds.length === 2 &&
+    (submittedIds.some((teamId) => !establishedIds.has(teamId)) ||
+      new Set(submittedIds).size !== establishedIds.size)
+  ) {
+    const pairing = series.participants.map((participant) => participant.tag).join(" vs ");
+    issues.push({
+      level: "error",
+      message: `${series.label} is locked to ${pairing}; every match in the series must use those teams.`,
+    });
+  }
+  return issues;
 }
 export function metadataValue(
   field: "league" | "season" | "division" | "match_label",
@@ -137,6 +254,12 @@ export function newEntryDescription(entry: NewEntry): {
       detail:
         "Approval creates the season record. Its divisions and team memberships are reviewed separately below.",
     };
+  if (entry.kind === "new_playoff_format")
+    return {
+      heading: `${entry.format_label ?? entry.value} is new for this division`,
+      detail: `Approval locks ${entry.season} ${entry.division} to this playoff format: ${entry.semifinal_series_count} semifinal series and ${entry.finals_bye_count} finals bye.`,
+      caution: "The playoff format is division-specific and cannot be changed by a later upload.",
+    };
   if (entry.kind === "new_player_identity")
     return {
       heading: `${entry.value} has an unknown friend code`,
@@ -184,7 +307,9 @@ export function validation(
   trackOptions: Array<{ track_id: number; name: string }>,
   tracksLoaded: boolean,
   newEntries: NewEntry[],
-  approvalDecisions: Record<string, ApprovalDecision>
+  approvalDecisions: Record<string, ApprovalDecision>,
+  playoffContext: PlayoffSeriesResponse | null = null,
+  playoffContextLoaded = true
 ): Issue[] {
   const issues: Issue[] = [];
   const players = allPlayers(match);
@@ -224,17 +349,101 @@ export function validation(
   if (!match.division) issues.push({ level: "error", message: "Division is missing." });
   if (!match.match_label?.trim())
     issues.push({ level: "error", message: "Match label is missing." });
-  if (!Number.isInteger(match.week) || Number(match.week) < 1)
+  const isPlayoff = match.match_type === "playoff";
+  const teamCount = Object.keys(match.teams ?? {}).length;
+  if (!isPlayoff && (!Number.isInteger(match.week) || Number(match.week) < 1))
     issues.push({
       level: "error",
       message: "Week is required and must be a positive whole number.",
     });
+  if (isPlayoff) {
+    if (teamCount !== 2)
+      issues.push({ level: "error", message: "A playoff match must contain exactly two teams." });
+    if (match.week !== undefined)
+      issues.push({ level: "error", message: "Playoff matches do not have a match week." });
+    if (!match.playoff_format)
+      issues.push({
+        level: "error",
+        field: "playoff_format",
+        message: "Playoff format is required.",
+      });
+    if (!match.playoff_stage)
+      issues.push({
+        level: "error",
+        field: "playoff_stage",
+        message: "Playoff stage is required.",
+      });
+    if (!Number.isInteger(match.playoff_series_number) || Number(match.playoff_series_number) < 1)
+      issues.push({
+        level: "error",
+        field: "playoff_series_number",
+        message: "Series number must be a positive whole number.",
+      });
+    else if (match.playoff_stage === "finals" && match.playoff_series_number !== 1)
+      issues.push({
+        level: "error",
+        field: "playoff_series_number",
+        message: "Finals must use Series 1.",
+      });
+    else if (
+      match.playoff_stage === "semifinals" &&
+      match.playoff_format === "three_team" &&
+      match.playoff_series_number !== 1
+    )
+      issues.push({
+        level: "error",
+        field: "playoff_series_number",
+        message: "A 3-team playoff has only Semifinals Series 1.",
+      });
+    else if (
+      match.playoff_stage === "semifinals" &&
+      match.playoff_format === "four_team" &&
+      Number(match.playoff_series_number) > 2
+    )
+      issues.push({
+        level: "error",
+        field: "playoff_series_number",
+        message: "A 4-team playoff supports only Semifinals Series 1 or 2.",
+      });
+    if (!Number.isInteger(match.series_match_number) || Number(match.series_match_number) < 1)
+      issues.push({
+        level: "error",
+        field: "series_match_number",
+        message: "Series match number must be a positive whole number.",
+      });
+    const bestOf = match.best_of ?? 3;
+    if (!Number.isInteger(bestOf) || bestOf < 1 || bestOf % 2 === 0)
+      issues.push({
+        level: "error",
+        field: "best_of",
+        message: "Best of must be a positive odd number.",
+      });
+    if (Number(match.series_match_number) > bestOf)
+      issues.push({
+        level: "error",
+        field: "series_match_number",
+        message: "Series match number cannot exceed best of.",
+      });
+    const teamScores = Object.values(match.teams ?? {}).map((team) => team.total_score);
+    if (
+      teamScores.length === 2 &&
+      teamScores.some((score) => typeof score !== "number" || !Number.isFinite(score))
+    )
+      issues.push({
+        level: "error",
+        message: "Each playoff team must have a numeric total score.",
+      });
+    else if (teamScores.length === 2 && teamScores[0] === teamScores[1])
+      issues.push({ level: "error", message: "Playoff matches cannot end in a tie." });
+    issues.push(
+      ...playoffConsistencyIssues(match, teamScopes, playoffContext, playoffContextLoaded)
+    );
+  }
   if (races.length !== 12)
     issues.push({
       level: "warning",
       message: `This match contains ${races.length} races instead of the usual 12.`,
     });
-  const teamCount = Object.keys(match.teams ?? {}).length;
   if (normalized(match.format) === "5v5" && teamCount > 2)
     issues.push({
       level: "error",

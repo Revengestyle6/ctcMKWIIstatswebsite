@@ -3,7 +3,13 @@ import { Link } from "react-router-dom";
 
 export type MatchSummary = {
   match_id: number;
+  match_type: "regular" | "playoff";
   week: number | null;
+  playoff_series_id: number | null;
+  series_match_number: number | null;
+  playoff_stage: "semifinals" | "finals" | null;
+  playoff_series_number: number | null;
+  playoff_semifinal_series_count: number | null;
   label: string;
   races: number;
   teams: string;
@@ -54,9 +60,15 @@ export type MatchTeam = {
 
 export type MatchDetail = {
   match_id: number;
+  match_type: "regular" | "playoff";
   season: string;
   division: string;
   week: number | null;
+  playoff_series_id: number | null;
+  series_match_number: number | null;
+  playoff_stage: "semifinals" | "finals" | null;
+  playoff_series_number: number | null;
+  playoff_semifinal_series_count: number | null;
   label: string;
   format: string | null;
   races_played: number;
@@ -75,6 +87,37 @@ export type ScoreColumn = {
   label: string;
   indexes: number[];
 };
+
+export function playoffSeriesAbbreviation(
+  stage: "semifinals" | "finals" | null,
+  seriesNumber: number | null,
+  semifinalSeriesCount: number | null
+): string {
+  if (stage === "finals") return "GF";
+  if (stage === "semifinals" && semifinalSeriesCount === 1) return "SF";
+  if (stage === "semifinals" && seriesNumber) return `SF${seriesNumber}`;
+  return "";
+}
+
+export function matchRoundLabel(
+  match: Pick<
+    MatchSummary,
+    | "match_type"
+    | "week"
+    | "playoff_stage"
+    | "playoff_series_number"
+    | "playoff_semifinal_series_count"
+    | "series_match_number"
+  >
+): string {
+  if (match.match_type === "regular") return match.week ? `W${match.week}` : "";
+  const series = playoffSeriesAbbreviation(
+    match.playoff_stage,
+    match.playoff_series_number,
+    match.playoff_semifinal_series_count
+  );
+  return series && match.series_match_number ? `${series} M${match.series_match_number}` : series;
+}
 
 function scoreValue(score: number | null): string {
   return score === null || score === undefined ? "-" : String(score);

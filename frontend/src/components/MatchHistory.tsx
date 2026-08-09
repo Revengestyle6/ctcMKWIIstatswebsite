@@ -1,13 +1,16 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { fetchJson } from "../api";
+import { fetchCachedJson, fetchJson, fetchPlayoffSeries, type PlayoffSeriesSummary } from "../api";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
+import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
 import {
   type ChartMode,
   type MatchDetail,
   type MatchSummary,
+  matchRoundLabel,
   normalizeHexColor,
+  playoffSeriesAbbreviation,
   type TableMode,
   type TeamColors,
   TrackList,
@@ -26,14 +29,21 @@ export {
 } from "./matchHistoryViews";
 
 export default function MatchHistory(): React.JSX.Element {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requestedSeason = searchParams.get("season") ?? "";
   const requestedDivision = searchParams.get("division") ?? "";
   const requestedMatchId = Number(searchParams.get("match")) || null;
+  const matchSet: MatchSet =
+    searchParams.get("match_set") === "playoffs"
+      ? "playoffs"
+      : searchParams.get("match_set") === "all"
+        ? "all"
+        : "regular";
   const { seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision } =
     useSeasonDivision({ initialSeason: requestedSeason, initialDivision: requestedDivision });
   const [teams, setTeams] = useState<string[]>([]);
   const [matches, setMatches] = useState<MatchSummary[]>([]);
+  const [playoffSeries, setPlayoffSeries] = useState<PlayoffSeriesSummary[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [matchDetail, setMatchDetail] = useState<MatchDetail | null>(null);
@@ -76,13 +86,20 @@ export default function MatchHistory(): React.JSX.Element {
       setSelectedMatchId(null);
       setMatchDetail(null);
       try {
-        const data = await fetchJson<MatchSummary[]>("/api/matches", {
-          season,
-          division,
-          team: selectedTeam || undefined,
-        });
+        const [data, seriesData] = await Promise.all([
+          fetchCachedJson<MatchSummary[]>("/api/matches", {
+            season,
+            division,
+            team: selectedTeam || undefined,
+            match_set: matchSet,
+          }),
+          matchSet === "regular"
+            ? Promise.resolve(null)
+            : fetchPlayoffSeries(season, division, selectedTeam || undefined),
+        ]);
         if (cancelled) return;
         setMatches(data);
+        setPlayoffSeries(seriesData?.series ?? []);
         setSelectedMatchId(
           requestedMatchId && data.some((match) => match.match_id === requestedMatchId)
             ? requestedMatchId
@@ -98,7 +115,20 @@ export default function MatchHistory(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [season, division, selectedTeam, requestedMatchId]);
+  }, [season, division, selectedTeam, requestedMatchId, matchSet]);
+
+  useEffect(() => {
+    if (!season || !division) return;
+    for (const candidate of ["regular", "playoffs", "all"] as MatchSet[]) {
+      if (candidate === matchSet) continue;
+      void fetchCachedJson<MatchSummary[]>("/api/matches", {
+        season,
+        division,
+        team: selectedTeam || undefined,
+        match_set: candidate,
+      });
+    }
+  }, [season, division, selectedTeam, matchSet]);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,6 +155,13 @@ export default function MatchHistory(): React.JSX.Element {
     () => matches.find((match) => match.match_id === selectedMatchId) ?? null,
     [matches, selectedMatchId]
   );
+  const detailPlayoffSeriesLabel = matchDetail
+    ? playoffSeriesAbbreviation(
+        matchDetail.playoff_stage,
+        matchDetail.playoff_series_number,
+        matchDetail.playoff_semifinal_series_count
+      )
+    : "";
   const combinedError = scopeError || error;
 
   return (
@@ -179,6 +216,18 @@ export default function MatchHistory(): React.JSX.Element {
             </select>
           </div>
 
+          <MatchSetToggle
+            value={matchSet}
+            disabled={loadingMatches}
+            onChange={(value) => {
+              const next = new URLSearchParams(searchParams);
+              if (value === "regular") next.delete("match_set");
+              else next.set("match_set", value);
+              next.delete("match");
+              setSearchParams(next, { replace: true });
+            }}
+          />
+
           <div className="min-w-72 flex-1">
             <label htmlFor="match-selection" className="block font-semibold mb-1">
               Match
@@ -190,99 +239,62 @@ export default function MatchHistory(): React.JSX.Element {
               onChange={(event) => setSelectedMatchId(Number(event.target.value))}
               disabled={loadingMatches || matches.length === 0}
             >
-              {matches.map((match) => (
-                <option key={match.match_id} value={match.match_id}>
-                  {match.week ? `W${match.week} - ` : ""}
-                  {match.teams} ({match.scores})
-                </option>
-              ))}
+              {matches.map((match) => {
+                const roundLabel = matchRoundLabel(match);
+                return (
+                  <option key={match.match_id} value={match.match_id}>
+                    {roundLabel ? `${roundLabel} - ` : ""}
+                    {match.teams} ({match.scores})
+                  </option>
+                );
+              })}
             </select>
           </div>
-
-          <div>
-            <span className="block font-semibold mb-1">Format</span>
-            <div className="inline-flex overflow-hidden rounded-md border border-white/20 bg-black/40">
-              <button
-                type="button"
-                className={`px-4 py-2 text-sm font-semibold ${tableMode === "traditional" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
-                onClick={() => setTableMode("traditional")}
-              >
-                Traditional
-              </button>
-              <button
-                type="button"
-                className={`px-4 py-2 text-sm font-semibold ${tableMode === "vertical" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
-                onClick={() => setTableMode("vertical")}
-              >
-                Vertical
-              </button>
-            </div>
-          </div>
-
-          {matchDetail && (
-            <details className="min-w-[10.25rem] w-max max-w-full rounded-md border border-white/15 bg-black/35 px-3 py-2">
-              <summary className="cursor-pointer text-sm font-semibold text-gray-100">
-                Colors
-              </summary>
-              <div className="mt-3 grid grid-cols-[max-content_2.5rem_5.5rem] items-center gap-x-2 gap-y-2">
-                {matchDetail.teams.map((team, teamIndex) => {
-                  const fallback = teamIndex === 0 ? "#1d4ed8" : "#be185d";
-                  const color = teamColor(team, teamColors, fallback);
-                  const colorInput = teamColorInputs[team.match_team_id] ?? color;
-                  return (
-                    <label key={team.match_team_id} className="contents text-sm text-gray-200">
-                      <span className="max-w-48 justify-self-end whitespace-normal break-words text-right text-sm text-gray-200">
-                        {team.tag}
-                      </span>
-                      <input
-                        type="color"
-                        className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
-                        value={color}
-                        onChange={(event) => {
-                          const nextColor = event.target.value.toUpperCase();
-                          setTeamColorInputs((current) => ({
-                            ...current,
-                            [team.match_team_id]: nextColor,
-                          }));
-                          setTeamColors((current) => ({
-                            ...current,
-                            [team.match_team_id]: nextColor,
-                          }));
-                        }}
-                      />
-                      <input
-                        type="text"
-                        className="w-full rounded border border-white/20 bg-black/45 px-2 py-1 text-center font-mono text-xs text-white outline-none focus:border-blue-300"
-                        value={colorInput}
-                        onChange={(event) => {
-                          const nextValue = event.target.value.toUpperCase();
-                          setTeamColorInputs((current) => ({
-                            ...current,
-                            [team.match_team_id]: nextValue,
-                          }));
-                          const normalized = normalizeHexColor(nextValue);
-                          if (!normalized) return;
-                          setTeamColors((current) => ({
-                            ...current,
-                            [team.match_team_id]: normalized,
-                          }));
-                        }}
-                        onBlur={() => {
-                          const normalized = normalizeHexColor(colorInput) ?? color;
-                          setTeamColorInputs((current) => ({
-                            ...current,
-                            [team.match_team_id]: normalized,
-                          }));
-                        }}
-                        aria-label={`${team.tag} hex color`}
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-            </details>
-          )}
         </div>
+
+        {selectedSummary?.match_type === "playoff" && playoffSeries.length > 0 && (
+          <section className="mb-6 rounded-md border border-white/10 bg-black/65 p-4">
+            <h2 className="text-lg font-bold">Playoff series</h2>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              {playoffSeries.map((series) => (
+                <article
+                  key={series.playoff_series_id}
+                  className="rounded-md border border-white/10 bg-white/5 p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="font-semibold">{series.label}</h3>
+                    <span className="text-xs uppercase tracking-wide text-gray-400">
+                      Best of {series.best_of} · {series.status.replace("_", " ")}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-200">
+                    {series.participants.map((participant) => (
+                      <span key={participant.team_id}>
+                        {participant.tag}: {participant.wins}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {series.matches.map((match) => (
+                      <button
+                        key={match.match_id}
+                        type="button"
+                        className={`rounded px-3 py-1 text-sm ${
+                          selectedMatchId === match.match_id
+                            ? "bg-blue-500 text-white"
+                            : "bg-white/10 text-gray-200 hover:bg-white/20"
+                        }`}
+                        onClick={() => setSelectedMatchId(match.match_id)}
+                      >
+                        Match {match.series_match_number}
+                      </button>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         {loadingDetail && (
           <div className="text-center">
@@ -300,7 +312,18 @@ export default function MatchHistory(): React.JSX.Element {
                 <div>
                   <p className="text-sm uppercase tracking-wide text-blue-200">
                     {matchDetail.season.toUpperCase()} / {matchDetail.division.toUpperCase()}
-                    {matchDetail.week ? ` / Week ${matchDetail.week}` : ""}
+                    {matchDetail.match_type === "playoff" ? (
+                      <>
+                        {detailPlayoffSeriesLabel ? ` / ${detailPlayoffSeriesLabel}` : ""}
+                        {matchDetail.series_match_number
+                          ? ` / M${matchDetail.series_match_number}`
+                          : ""}
+                      </>
+                    ) : matchDetail.week ? (
+                      ` / Week ${matchDetail.week}`
+                    ) : (
+                      ""
+                    )}
                   </p>
                   <h2 className="mt-1 text-3xl font-bold">
                     {selectedSummary?.teams || matchDetail.label}
@@ -311,38 +334,128 @@ export default function MatchHistory(): React.JSX.Element {
                     {selectedSummary?.scores ? ` / ${selectedSummary.scores}` : ""}
                   </p>
                 </div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div>
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-300">
-                      Diff chart
-                    </span>
-                    <div className="inline-flex overflow-hidden rounded-md border border-white/20 bg-black/40">
-                      <button
-                        type="button"
-                        className={`px-3 py-1.5 text-sm font-semibold ${chartMode === "cumulative" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
-                        onClick={() => setChartMode("cumulative")}
-                      >
-                        Cumulative
-                      </button>
-                      <button
-                        type="button"
-                        className={`px-3 py-1.5 text-sm font-semibold ${chartMode === "perRace" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
-                        onClick={() => setChartMode("perRace")}
-                      >
-                        Per race
-                      </button>
+                <div className="rounded-md border border-white/15 bg-black/35 p-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-blue-200">
+                    Display configuration
+                  </h3>
+                  <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div>
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-300">
+                        Table format
+                      </span>
+                      <div className="inline-flex overflow-hidden rounded-md border border-white/20 bg-black/40">
+                        <button
+                          type="button"
+                          className={`px-3 py-1.5 text-sm font-semibold ${tableMode === "traditional" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
+                          onClick={() => setTableMode("traditional")}
+                        >
+                          Traditional
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-3 py-1.5 text-sm font-semibold ${tableMode === "vertical" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
+                          onClick={() => setTableMode("vertical")}
+                        >
+                          Vertical
+                        </button>
+                      </div>
                     </div>
+                    <div>
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-300">
+                        Diff chart
+                      </span>
+                      <div className="inline-flex overflow-hidden rounded-md border border-white/20 bg-black/40">
+                        <button
+                          type="button"
+                          className={`px-3 py-1.5 text-sm font-semibold ${chartMode === "cumulative" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
+                          onClick={() => setChartMode("cumulative")}
+                        >
+                          Cumulative
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-3 py-1.5 text-sm font-semibold ${chartMode === "perRace" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
+                          onClick={() => setChartMode("perRace")}
+                        >
+                          Per race
+                        </button>
+                      </div>
+                    </div>
+                    {tableMode === "traditional" && (
+                      <label className="inline-flex min-h-9 items-center gap-2 text-sm text-gray-200">
+                        <input
+                          type="checkbox"
+                          checked={groupByGp}
+                          onChange={(event) => setGroupByGp(event.target.checked)}
+                        />
+                        GP grouping
+                      </label>
+                    )}
+                    <details className="min-w-[10.25rem] w-max max-w-full rounded-md border border-white/15 bg-black/35 px-3 py-2">
+                      <summary className="cursor-pointer text-sm font-semibold text-gray-100">
+                        Team colors
+                      </summary>
+                      <div className="mt-3 grid grid-cols-[max-content_2.5rem_5.5rem] items-center gap-x-2 gap-y-2">
+                        {matchDetail.teams.map((team, teamIndex) => {
+                          const fallback = teamIndex === 0 ? "#1d4ed8" : "#be185d";
+                          const color = teamColor(team, teamColors, fallback);
+                          const colorInput = teamColorInputs[team.match_team_id] ?? color;
+                          return (
+                            <label
+                              key={team.match_team_id}
+                              className="contents text-sm text-gray-200"
+                            >
+                              <span className="max-w-48 justify-self-end whitespace-normal break-words text-right text-sm text-gray-200">
+                                {team.tag}
+                              </span>
+                              <input
+                                type="color"
+                                className="h-8 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+                                value={color}
+                                onChange={(event) => {
+                                  const nextColor = event.target.value.toUpperCase();
+                                  setTeamColorInputs((current) => ({
+                                    ...current,
+                                    [team.match_team_id]: nextColor,
+                                  }));
+                                  setTeamColors((current) => ({
+                                    ...current,
+                                    [team.match_team_id]: nextColor,
+                                  }));
+                                }}
+                              />
+                              <input
+                                type="text"
+                                className="w-full rounded border border-white/20 bg-black/45 px-2 py-1 text-center font-mono text-xs text-white outline-none focus:border-blue-300"
+                                value={colorInput}
+                                onChange={(event) => {
+                                  const nextValue = event.target.value.toUpperCase();
+                                  setTeamColorInputs((current) => ({
+                                    ...current,
+                                    [team.match_team_id]: nextValue,
+                                  }));
+                                  const normalized = normalizeHexColor(nextValue);
+                                  if (!normalized) return;
+                                  setTeamColors((current) => ({
+                                    ...current,
+                                    [team.match_team_id]: normalized,
+                                  }));
+                                }}
+                                onBlur={() => {
+                                  const normalized = normalizeHexColor(colorInput) ?? color;
+                                  setTeamColorInputs((current) => ({
+                                    ...current,
+                                    [team.match_team_id]: normalized,
+                                  }));
+                                }}
+                                aria-label={`${team.tag} hex color`}
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </details>
                   </div>
-                  {tableMode === "traditional" && (
-                    <label className="inline-flex items-center gap-2 text-sm text-gray-200 sm:mt-5">
-                      <input
-                        type="checkbox"
-                        checked={groupByGp}
-                        onChange={(event) => setGroupByGp(event.target.checked)}
-                      />
-                      GP grouping
-                    </label>
-                  )}
                 </div>
               </div>
             </section>

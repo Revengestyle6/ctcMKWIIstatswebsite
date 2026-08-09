@@ -1,6 +1,7 @@
 from dashboard_stats import DashboardError
 from flask import jsonify, request
 from import_json_to_db import detect_new_entries
+from match_sets import normalize_match_set
 from models import Match, PlayerFriendCode
 from player_role_analytics import normalize_role
 from sqlalchemy import select
@@ -13,6 +14,10 @@ def season_arg():
 
 def division_arg():
     return request.args.get("division")
+
+
+def match_set_arg():
+    return normalize_match_set(request.args.get("match_set"))
 
 
 def role_arg():

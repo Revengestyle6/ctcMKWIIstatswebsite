@@ -1,4 +1,5 @@
-import { fetchJson } from "./api";
+import { fetchCachedJson } from "./api";
+import type { MatchSet } from "./components/MatchSetToggle";
 
 export type PlayerRoleMode = "runner" | "bagger";
 
@@ -102,7 +103,12 @@ export interface PlayerOverview {
     appearances: PlayerAppearance[];
   };
   role: PlayerRoleMode;
-  scope: { season: string | null; division: string | null; team_id: number | null };
+  scope: {
+    season: string | null;
+    division: string | null;
+    team_id: number | null;
+    match_set: MatchSet;
+  };
   metrics: PlayerOverviewMetrics;
   role_coverage: RoleCoverage;
   record: DashboardRecord;
@@ -182,7 +188,12 @@ export interface TeamOverview {
     } | null;
     appearances: TeamAppearance[];
   };
-  scope: { season: string | null; division: string | null; opponent_team_id: number | null };
+  scope: {
+    season: string | null;
+    division: string | null;
+    opponent_team_id: number | null;
+    match_set: MatchSet;
+  };
   metrics: {
     matches: number;
     races: number;
@@ -208,12 +219,18 @@ export interface DashboardQuery extends Record<string, string | number | undefin
   opponent_team_id?: number;
   min_races?: number;
   role?: PlayerRoleMode;
+  match_set?: MatchSet;
 }
 
 export interface PlayerPerformance {
   player_id: number;
   role: PlayerRoleMode;
-  scope: { season: string | null; division: string | null; team_id: number | null };
+  scope: {
+    season: string | null;
+    division: string | null;
+    team_id: number | null;
+    match_set: MatchSet;
+  };
   metrics: PlayerRoleMetrics;
   role_coverage: RoleCoverage;
   score_distribution: Array<{ score: number; races: number }>;
@@ -230,7 +247,12 @@ export type PlayerTrackRow = PlayerTrackMetrics & {
 export interface PlayerTracks {
   player_id: number;
   role: PlayerRoleMode;
-  scope: { season: string | null; division: string | null; team_id: number | null };
+  scope: {
+    season: string | null;
+    division: string | null;
+    team_id: number | null;
+    match_set: MatchSet;
+  };
   minimum_races: number;
   role_coverage: RoleCoverage;
   tracks: PlayerTrackRow[];
@@ -250,7 +272,12 @@ export interface TeamRosterPlayer {
 export interface TeamRoster {
   team_id: number;
   role: PlayerRoleMode;
-  scope: { season: string | null; division: string | null; opponent_team_id: number | null };
+  scope: {
+    season: string | null;
+    division: string | null;
+    opponent_team_id: number | null;
+    match_set: MatchSet;
+  };
   minimum_races: number;
   role_coverage: RoleCoverage;
   players: TeamRosterPlayer[];
@@ -268,6 +295,12 @@ export interface TeamTrackRow {
 
 export interface TeamTracks {
   team_id: number;
+  scope: {
+    season: string | null;
+    division: string | null;
+    opponent_team_id: number | null;
+    match_set: MatchSet;
+  };
   minimum_races: number;
   tracks: TeamTrackRow[];
 }
@@ -322,28 +355,54 @@ export function fetchPlayerOverview(
   playerId: number,
   query: DashboardQuery
 ): Promise<PlayerOverview> {
-  return fetchJson(`/api/players/${playerId}/overview`, query);
+  return fetchCachedJson(`/api/players/${playerId}/overview`, query);
 }
 
 export function fetchTeamOverview(teamId: number, query: DashboardQuery): Promise<TeamOverview> {
-  return fetchJson(`/api/teams/${teamId}/overview`, query);
+  return fetchCachedJson(`/api/teams/${teamId}/overview`, query);
 }
 
 export function fetchPlayerPerformance(
   playerId: number,
   query: DashboardQuery
 ): Promise<PlayerPerformance> {
-  return fetchJson(`/api/players/${playerId}/performance`, query);
+  return fetchCachedJson(`/api/players/${playerId}/performance`, query);
 }
 
 export function fetchPlayerTracks(playerId: number, query: DashboardQuery): Promise<PlayerTracks> {
-  return fetchJson(`/api/players/${playerId}/tracks`, query);
+  return fetchCachedJson(`/api/players/${playerId}/tracks`, query);
 }
 
 export function fetchTeamRoster(teamId: number, query: DashboardQuery): Promise<TeamRoster> {
-  return fetchJson(`/api/teams/${teamId}/roster`, query);
+  return fetchCachedJson(`/api/teams/${teamId}/roster`, query);
 }
 
 export function fetchTeamTracks(teamId: number, query: DashboardQuery): Promise<TeamTracks> {
-  return fetchJson(`/api/teams/${teamId}/tracks`, query);
+  return fetchCachedJson(`/api/teams/${teamId}/tracks`, query);
+}
+
+const MATCH_SETS: MatchSet[] = ["regular", "playoffs", "all"];
+
+export function prefetchPlayerDashboardMatchSets(playerId: number, query: DashboardQuery): void {
+  for (const matchSet of MATCH_SETS) {
+    if (matchSet === query.match_set) continue;
+    const scopedQuery = { ...query, match_set: matchSet };
+    void Promise.allSettled([
+      fetchPlayerOverview(playerId, scopedQuery),
+      fetchPlayerPerformance(playerId, scopedQuery),
+      fetchPlayerTracks(playerId, scopedQuery),
+    ]);
+  }
+}
+
+export function prefetchTeamDashboardMatchSets(teamId: number, query: DashboardQuery): void {
+  for (const matchSet of MATCH_SETS) {
+    if (matchSet === query.match_set) continue;
+    const scopedQuery = { ...query, match_set: matchSet };
+    void Promise.allSettled([
+      fetchTeamOverview(teamId, scopedQuery),
+      fetchTeamRoster(teamId, scopedQuery),
+      fetchTeamTracks(teamId, scopedQuery),
+    ]);
+  }
 }

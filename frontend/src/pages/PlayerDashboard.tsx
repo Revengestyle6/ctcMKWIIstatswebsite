@@ -16,6 +16,7 @@ import {
   PlayerTracksView,
   TabState,
 } from "../components/dashboard/DashboardTabViews";
+import { type MatchSet, MatchSetToggle } from "../components/MatchSetToggle";
 import { RoleModeToggle } from "../components/RoleModeToggle";
 import {
   fetchPlayerOverview,
@@ -25,6 +26,7 @@ import {
   type PlayerPerformance,
   type PlayerRoleMode,
   type PlayerTracks,
+  prefetchPlayerDashboardMatchSets,
 } from "../dashboardApi";
 
 function numberValue(value: number | null, suffix = ""): string {
@@ -50,12 +52,26 @@ export default function PlayerDashboard() {
   const division = searchParams.get("division") ?? "";
   const teamId = searchParams.get("team_id") ?? "";
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
+  const matchSet: MatchSet =
+    searchParams.get("match_set") === "playoffs"
+      ? "playoffs"
+      : searchParams.get("match_set") === "all"
+        ? "all"
+        : "regular";
   const minRaces = Math.min(500, Math.max(1, Number(searchParams.get("min_races")) || 2));
   const requestedTab = searchParams.get("tab") ?? "overview";
   const activeTab = ["overview", "performance", "tracks"].includes(requestedTab)
     ? requestedTab
     : "overview";
-  const overviewQueryKey = JSON.stringify([playerId, season, division, teamId, minRaces, role]);
+  const overviewQueryKey = JSON.stringify([
+    playerId,
+    season,
+    division,
+    teamId,
+    minRaces,
+    role,
+    matchSet,
+  ]);
   const data = overview?.key === overviewQueryKey ? overview.value : null;
   const error = overviewError?.key === overviewQueryKey ? overviewError.message : "";
 
@@ -74,9 +90,18 @@ export default function PlayerDashboard() {
       team_id: teamId ? Number(teamId) : undefined,
       min_races: minRaces,
       role,
+      match_set: matchSet,
     })
       .then((response) => {
         if (!cancelled) setOverview({ key: overviewQueryKey, value: response });
+        prefetchPlayerDashboardMatchSets(numericPlayerId, {
+          season: season || undefined,
+          division: division || undefined,
+          team_id: teamId ? Number(teamId) : undefined,
+          min_races: minRaces,
+          role,
+          match_set: matchSet,
+        });
       })
       .catch((requestError: unknown) => {
         if (!cancelled) {
@@ -95,7 +120,7 @@ export default function PlayerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [numericPlayerId, season, division, teamId, minRaces, role, overviewQueryKey]);
+  }, [numericPlayerId, season, division, teamId, minRaces, role, matchSet, overviewQueryKey]);
 
   useEffect(() => {
     if (activeTab === "overview" || !Number.isInteger(numericPlayerId) || numericPlayerId < 1)
@@ -109,6 +134,7 @@ export default function PlayerDashboard() {
       team_id: teamId ? Number(teamId) : undefined,
       min_races: minRaces,
       role,
+      match_set: matchSet,
     };
     const request =
       activeTab === "performance"
@@ -132,7 +158,7 @@ export default function PlayerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, numericPlayerId, season, division, teamId, minRaces, role]);
+  }, [activeTab, numericPlayerId, season, division, teamId, minRaces, role, matchSet]);
 
   function updateQuery(name: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -304,13 +330,20 @@ export default function PlayerDashboard() {
           minRaces={minRaces}
           disabled={loading}
           extraControl={
-            <RoleModeToggle
-              value={role}
-              disabled={loading}
-              onChange={(value: PlayerRoleMode) =>
-                updateQuery("role", value === "runner" ? "" : value)
-              }
-            />
+            <div className="flex flex-wrap items-end gap-3">
+              <MatchSetToggle
+                value={matchSet}
+                disabled={loading}
+                onChange={(value) => updateQuery("match_set", value === "regular" ? "" : value)}
+              />
+              <RoleModeToggle
+                value={role}
+                disabled={loading}
+                onChange={(value: PlayerRoleMode) =>
+                  updateQuery("role", value === "runner" ? "" : value)
+                }
+              />
+            </div>
           }
           onSeasonChange={(value) => updateQuery("season", value)}
           onDivisionChange={(value) => updateQuery("division", value)}
@@ -420,7 +453,7 @@ export default function PlayerDashboard() {
                         </td>
                         <td className="px-4 py-3">
                           <Link
-                            to={`/matches?season=${match.season}&division=${match.division}&match=${match.match_id}`}
+                            to={`/matches?season=${match.season}&division=${match.division}&match=${match.match_id}&match_set=${matchSet}`}
                             className="font-semibold text-blue-300 hover:text-blue-200"
                           >
                             {match.label}

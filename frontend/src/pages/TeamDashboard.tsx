@@ -17,12 +17,14 @@ import {
   TeamRosterView,
   TeamTracksView,
 } from "../components/dashboard/DashboardTabViews";
+import { type MatchSet, MatchSetToggle } from "../components/MatchSetToggle";
 import { RoleModeToggle } from "../components/RoleModeToggle";
 import {
   fetchTeamOverview,
   fetchTeamRoster,
   fetchTeamTracks,
   type PlayerRoleMode,
+  prefetchTeamDashboardMatchSets,
   type TeamOverview,
   type TeamRoster,
   type TeamTracks,
@@ -43,7 +45,6 @@ export default function TeamDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<TeamOverview | null>(null);
   const [opponentOptions, setOpponentOptions] = useState<ScopeEntityOption[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rosterResult, setRosterResult] = useState<{ key: string; value: TeamRoster } | null>(null);
   const [tracksResult, setTracksResult] = useState<{ key: string; value: TeamTracks } | null>(null);
@@ -53,6 +54,12 @@ export default function TeamDashboard() {
   const division = searchParams.get("division") ?? "";
   const opponentId = searchParams.get("opponent_team_id") ?? "";
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
+  const matchSet: MatchSet =
+    searchParams.get("match_set") === "playoffs"
+      ? "playoffs"
+      : searchParams.get("match_set") === "all"
+        ? "all"
+        : "regular";
   const minRaces = Math.min(500, Math.max(1, Number(searchParams.get("min_races")) || 2));
   const requestedTab = searchParams.get("tab") ?? "overview";
   const activeTab = ["overview", "roster", "tracks"].includes(requestedTab)
@@ -65,8 +72,16 @@ export default function TeamDashboard() {
     opponentId,
     minRaces,
     role,
+    matchSet,
   ]);
-  const tracksQueryKey = JSON.stringify([numericTeamId, season, division, opponentId, minRaces]);
+  const tracksQueryKey = JSON.stringify([
+    numericTeamId,
+    season,
+    division,
+    opponentId,
+    minRaces,
+    matchSet,
+  ]);
   const activeTabQueryKey = activeTab === "roster" ? rosterQueryKey : tracksQueryKey;
   const roster = rosterResult?.key === rosterQueryKey ? rosterResult.value : null;
   const tracks = tracksResult?.key === tracksQueryKey ? tracksResult.value : null;
@@ -96,34 +111,39 @@ export default function TeamDashboard() {
   useEffect(() => {
     if (!Number.isInteger(numericTeamId) || numericTeamId < 1) {
       setError("Team not found.");
-      setLoading(false);
       return;
     }
     let cancelled = false;
-    setLoading(true);
     setError("");
     fetchTeamOverview(numericTeamId, {
       season: season || undefined,
       division: division || undefined,
       opponent_team_id: opponentId ? Number(opponentId) : undefined,
       min_races: minRaces,
+      role,
+      match_set: matchSet,
     })
       .then((response) => {
         if (!cancelled) setData(response);
+        prefetchTeamDashboardMatchSets(numericTeamId, {
+          season: season || undefined,
+          division: division || undefined,
+          opponent_team_id: opponentId ? Number(opponentId) : undefined,
+          min_races: minRaces,
+          role,
+          match_set: matchSet,
+        });
       })
       .catch((requestError: unknown) => {
         if (!cancelled)
           setError(
             requestError instanceof Error ? requestError.message : "Failed to load team dashboard."
           );
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [numericTeamId, season, division, opponentId, minRaces]);
+  }, [numericTeamId, season, division, opponentId, minRaces, role, matchSet]);
 
   useEffect(() => {
     if (activeTab !== "roster" || !Number.isInteger(numericTeamId) || numericTeamId < 1) return;
@@ -137,6 +157,7 @@ export default function TeamDashboard() {
       opponent_team_id: opponentId ? Number(opponentId) : undefined,
       min_races: minRaces,
       role,
+      match_set: matchSet,
     })
       .then((response) => {
         if (!cancelled) setRosterResult({ key: requestKey, value: response });
@@ -158,7 +179,17 @@ export default function TeamDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, numericTeamId, season, division, opponentId, minRaces, role, rosterQueryKey]);
+  }, [
+    activeTab,
+    numericTeamId,
+    season,
+    division,
+    opponentId,
+    minRaces,
+    role,
+    matchSet,
+    rosterQueryKey,
+  ]);
 
   useEffect(() => {
     if (activeTab !== "tracks" || !Number.isInteger(numericTeamId) || numericTeamId < 1) return;
@@ -171,6 +202,7 @@ export default function TeamDashboard() {
       division: division || undefined,
       opponent_team_id: opponentId ? Number(opponentId) : undefined,
       min_races: minRaces,
+      match_set: matchSet,
     })
       .then((response) => {
         if (!cancelled) setTracksResult({ key: requestKey, value: response });
@@ -192,7 +224,7 @@ export default function TeamDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, numericTeamId, season, division, opponentId, minRaces, tracksQueryKey]);
+  }, [activeTab, numericTeamId, season, division, opponentId, minRaces, matchSet, tracksQueryKey]);
 
   function updateQuery(name: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -295,15 +327,21 @@ export default function TeamDashboard() {
           entityId={opponentId}
           entityOptions={opponentOptions}
           minRaces={minRaces}
-          disabled={loading}
           extraControl={
-            activeTab === "roster" ? (
-              <RoleModeToggle
-                value={role}
+            <div className="flex flex-wrap items-end gap-3">
+              <MatchSetToggle
+                value={matchSet}
                 disabled={tabLoading}
-                onChange={(value) => updateQuery("role", value === "runner" ? "" : value)}
+                onChange={(value) => updateQuery("match_set", value === "regular" ? "" : value)}
               />
-            ) : undefined
+              {activeTab === "roster" ? (
+                <RoleModeToggle
+                  value={role}
+                  disabled={tabLoading}
+                  onChange={(value) => updateQuery("role", value === "runner" ? "" : value)}
+                />
+              ) : null}
+            </div>
           }
           onSeasonChange={(value) => updateQuery("season", value)}
           onDivisionChange={(value) => updateQuery("division", value)}
@@ -400,7 +438,7 @@ export default function TeamDashboard() {
                         </td>
                         <td className="px-4 py-3">
                           <Link
-                            to={`/matches?season=${match.season}&division=${match.division}&match=${match.match_id}`}
+                            to={`/matches?season=${match.season}&division=${match.division}&match=${match.match_id}&match_set=${matchSet}`}
                             className="font-semibold text-blue-300 hover:text-blue-200"
                           >
                             {match.label}

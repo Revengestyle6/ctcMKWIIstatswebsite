@@ -9,6 +9,7 @@ from match_editor_catalog import list_player_team_memberships, list_team_roster_
 from routes.common import (
     division_arg,
     error_response,
+    match_set_arg,
     minimum_races_arg,
     optional_int_arg,
     role_arg,
@@ -32,6 +33,7 @@ def player_stats():
             division=division_arg(),
             season=season_arg(),
             role=role,
+            match_set=match_set_arg(),
         )
         return jsonify({"player": player_name, "role": role, "results": results})
     except Exception as error:
@@ -49,6 +51,7 @@ def player_avg():
             division=division_arg(),
             season=season_arg(),
             role=role_arg(),
+            match_set=match_set_arg(),
         )
         return jsonify(result)
     except Exception as error:
@@ -134,6 +137,7 @@ def api_player_dashboard_overview(player_id):
                 team_id=optional_int_arg("team_id"),
                 min_races=minimum_races_arg(),
                 role=role_arg(),
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:
@@ -150,6 +154,7 @@ def api_player_dashboard_performance(player_id):
                 division=division_arg(),
                 team_id=optional_int_arg("team_id"),
                 role=role_arg(),
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:
@@ -167,6 +172,7 @@ def api_player_dashboard_tracks(player_id):
                 team_id=optional_int_arg("team_id"),
                 min_races=minimum_races_arg(),
                 role=role_arg(),
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:
@@ -183,6 +189,7 @@ def api_team_dashboard_overview(team_id):
                 division=division_arg(),
                 opponent_team_id=optional_int_arg("opponent_team_id"),
                 min_races=minimum_races_arg(),
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:
@@ -200,6 +207,7 @@ def api_team_dashboard_roster(team_id):
                 opponent_team_id=optional_int_arg("opponent_team_id"),
                 min_races=minimum_races_arg(),
                 role=role_arg(),
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:
@@ -216,6 +224,7 @@ def api_team_dashboard_tracks(team_id):
                 division=division_arg(),
                 opponent_team_id=optional_int_arg("opponent_team_id"),
                 min_races=minimum_races_arg(),
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:
@@ -279,6 +288,7 @@ def api_top_team_players():
                 division=division_arg(),
                 season=season_arg(),
                 role=role,
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:
@@ -303,10 +313,26 @@ def api_matches():
                 season=season_arg(),
                 division=division_arg(),
                 team=request.args.get("team"),
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:
         logger.exception("Failed to list matches")
+        return error_response(error)
+
+
+@public_api.get("/api/playoff-series")
+def api_playoff_series():
+    try:
+        return jsonify(
+            stats.list_playoff_series(
+                season=season_arg(),
+                division=division_arg(),
+                team=request.args.get("team"),
+            )
+        )
+    except Exception as error:
+        logger.exception("Failed to list playoff series")
         return error_response(error)
 
 
@@ -332,6 +358,7 @@ def api_top_team_tracks():
                 min_races=min_races,
                 division=division_arg(),
                 season=season_arg(),
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:
@@ -342,7 +369,13 @@ def api_top_team_tracks():
 @public_api.get("/api/tracks")
 def api_tracks():
     try:
-        return jsonify(stats.list_tracks(season=season_arg(), division=division_arg()))
+        return jsonify(
+            stats.list_tracks(
+                season=season_arg(),
+                division=division_arg(),
+                match_set=match_set_arg(),
+            )
+        )
     except Exception as error:
         logger.exception("Failed to list tracks")
         return error_response(error)
@@ -366,6 +399,7 @@ def api_top_tracks():
                 division=division_arg(),
                 season=season_arg(),
                 role=role,
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:
@@ -386,6 +420,7 @@ def api_top_teams_on_track():
                 min_races=min_races,
                 division=division_arg(),
                 season=season_arg(),
+                match_set=match_set_arg(),
             )
         )
     except Exception as error:

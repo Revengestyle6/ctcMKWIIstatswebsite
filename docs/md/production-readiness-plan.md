@@ -3,8 +3,9 @@
 ## Status
 
 - Created: July 19, 2026
-- Updated: July 25, 2026
-- Phase: Phase 3 local implementation complete; Phase 4 infrastructure and staging in progress
+- Updated: August 8, 2026
+- Phase: Phases 0-3 complete; Phase 4 staging is deployed and healthy, with
+  operations and recovery gates still open
 - Scope: Repository cleanup, documentation, production infrastructure, deployment, and ongoing operations
 - Accepted architecture: Firebase Hosting, Cloud Run, Cloud SQL for PostgreSQL,
   Cloud Storage, and Firebase Authentication
@@ -16,6 +17,73 @@ dispositions are tracked in
 Live Phase 4 resource and checkpoint status is tracked in
 [`phase-4-resource-inventory.md`](phase-4-resource-inventory.md). That inventory is
 authoritative when a status summary in an earlier phase document becomes stale.
+
+## Status Review: August 8, 2026
+
+The production-capable application and staging topology are working. This is no
+longer an infrastructure-provisioning project: the remaining Phase 4 work is to
+prove that the deployed system can be monitored, maintained, restored, and rolled
+back safely before production cutover.
+
+| Area | Current status | Evidence or remaining gate |
+| --- | --- | --- |
+| Phases 0-2: baseline, cleanup, refactor | Complete | Regression fixtures, repository cleanup, modularization, and reproducible checks are in place |
+| Phase 3: production-capable application | Complete | PostgreSQL, Alembic, Firebase admin authorization, review queue, durable GCS archive, reconciliation, health endpoints, and safe acceptance flow are implemented |
+| Phase 4: managed staging topology | Complete | Cloud SQL, Cloud Run, Firebase Hosting, Cloud Storage, Secret Manager, dedicated identities, budgets, and same-origin routing are deployed |
+| Phase 4: CI/CD | Complete | Keyless WIF deployment from `main` has succeeded repeatedly; GitHub Actions run 17 successfully deployed the July 27 `main` merge |
+| Phase 4: functional staging proof | Substantially complete | Owner sign-in, direct acceptance, anonymous queue/owner acceptance, SQL visibility, immutable archive promotion, and health checks have passed |
+| Functionality stabilization: playoff support | Implemented locally; staging proof pending | Migration `20260808_0006`, transactional series validation, scoped analytics, editor controls, and grouped match navigation are complete; representative Season 3 uploads and staging deployment remain |
+| Phase 4: operations and recovery | Open | Monitoring/alerts, scheduled reconciliation and integrity work, logical exports, a restore drill, rollback proof, and remaining authorization-boundary checks are not complete |
+| Phase 5: production cutover | Not started | Begin only after the Phase 4 exit gates below pass and the planned functionality changes have stabilized in staging |
+
+This review revalidated the current code and deployed staging system:
+
+- The working tree was clean before this documentation update.
+- Ruff lint and format checks pass, and all 88 PostgreSQL-backed backend tests pass.
+- Frontend Biome/type checks and the Vite production build pass.
+- The latest recorded GitHub Actions runs for both the feature branch and `main`
+  completed successfully.
+- On August 8, the hosted liveness, readiness, data-health, and SPA deep-link checks
+  returned HTTP 200. Readiness reported schema `20260726_0005`; data health reported
+  277 matches and zero pending archive repairs.
+- The editor/identity work added after the July 25 checkpoint is deployed: team
+  aliases, player canonical names, roster identity workflows, and stricter editor
+  metadata validation are represented by migrations `20260726_0004` and
+  `20260726_0005` and the healthy deployed schema.
+- Playoff support is implemented in the local branch and documented in
+  [`playoff-support-implementation.md`](playoff-support-implementation.md). It adds
+  the local schema revision `20260808_0006`; staging correctly remains on
+  `20260726_0005` until real Season 3 playoff JSON passes local acceptance testing.
+
+### Next Readiness Steps
+
+The owner has intentionally paused these operational steps while another batch of
+functionality changes is made. Those changes should keep the existing PostgreSQL,
+archive, authentication, and migration boundaries intact and should pass the local
+and staging gates above before this sequence resumes.
+
+Before resuming the operational sequence, exercise the playoff implementation with
+representative Season 3 semifinal/finals JSON, verify all three statistics scopes,
+then deploy the migration and application to staging and repeat that acceptance
+matrix there.
+
+1. Configure monitoring and actionable alerts for public availability, Cloud Run
+   errors/latency, Cloud SQL capacity/backups, archive repair state, and cost.
+2. Deploy scheduled maintenance for review expiry, archive reconciliation, and
+   database integrity checks; record job identities, cadence, failure handling, and
+   successful-run evidence.
+3. Implement scheduled logical PostgreSQL exports into the isolated export bucket
+   with the documented daily/monthly/annual retention policy.
+4. Perform and document a staging restore into a separate target. Verify migrations,
+   counts, representative APIs, authentication, and archive consistency without
+   overwriting the only staging database.
+5. Complete the remaining staging acceptance matrix, including negative
+   authorization cases and application/database rollback rehearsal.
+6. Add the still-planned dependency and secret scanning plus scheduled dependency
+   updates to CI, and confirm required branch/environment protections.
+7. Resolve the pre-cutover owner items: permanent billing ownership/alert recipients,
+   custom domain choice, cutover/rollback checklist, upload freeze, and incident
+   contacts. Then begin Phase 5.
 
 The phase numbers in this plan are the canonical production-readiness phase
 numbers. Older product-roadmap milestones in [`vision.md`](vision.md) predate this
@@ -339,18 +407,20 @@ Done when:
 
 ### Phase 4: Infrastructure And Staging
 
-Status on July 25, 2026: in progress. The Google Cloud/Firebase project,
-administrator authentication, billing safeguards, Cloud SQL databases and roles,
+Status on August 8, 2026: deployed and healthy; operational exit gates remain. The
+Google Cloud/Firebase project, administrator authentication, billing safeguards,
+Cloud SQL databases and roles,
 private archive/export buckets, dedicated workload identities, scoped runtime
 secrets, Artifact Registry image, staging migration/rebuild jobs, and staging
 Cloud Run API exist. The database/archive source counts match the baseline and
 live/readiness/data checks pass. Firebase Hosting serves the React SPA with
 verified deep-link fallback and same-origin Cloud Run API routing. Hosted owner
 Google sign-in and Flask authorization also pass. Workload Identity Federation
-trust, scoped deployment IAM, and the replacement staging workflow are configured;
-the first `main` workflow deployment remains to verify them. Scheduled operations,
-remaining authentication-boundary checks, and restore evidence remain. A controlled staging submission, owner acceptance, PostgreSQL
-visibility check, and accepted-object promotion also pass. See the Phase 4
+trust, scoped deployment IAM, and the replacement staging workflow are configured
+and have completed multiple successful `main` deployments. Scheduled operations,
+remaining authentication-boundary checks, and restore evidence remain. A controlled
+staging submission, owner acceptance, PostgreSQL visibility check, and accepted-object
+promotion also pass. See the Phase 4
 resource inventory for the checkpoint-level record. The anonymous review-queue
 path has also been verified end to end: submission remained out of analytics
 until an owner accepted it, after which the queue object was removed and the

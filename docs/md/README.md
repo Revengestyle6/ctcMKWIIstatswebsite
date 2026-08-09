@@ -7,6 +7,7 @@
 - [Frontend](frontend.md): React routes, assets, API client, build, and browser tests.
 - [Data Pipeline](data-pipeline.md): archived JSON, registries, ingestion, and analytics flow.
 - [Analytics Database](database.md): PostgreSQL, SQLAlchemy, Alembic, and ingestion workflow.
+- [Playoff Support](playoff-support-implementation.md): series model, editor metadata, validation, filters, and extension points.
 - [JSON Database Schema](json-database-schema.md): source JSON and relational schema.
 - [Database Health Dashboard](database-health-dashboard.md): integrity and review checks.
 - [Dashboard Analytics Methodology](dashboard-analytics-methodology.md): runner/bagger metrics and exclusions.

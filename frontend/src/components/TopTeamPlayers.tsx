@@ -1,10 +1,11 @@
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { fetchJson, fetchTeamScopes } from "../api";
+import { fetchCachedJson, fetchJson, fetchTeamScopes, prefetchMatchSetVariants } from "../api";
 import type { LegacyTeamRosterPlayer, LegacyTeamTrackRow, PlayerRoleMode } from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { LegacyStatHeader } from "./LegacyStatHeader";
+import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
 import { RoleModeToggle } from "./RoleModeToggle";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
@@ -17,6 +18,12 @@ export default function TopTeamPlayers(): React.JSX.Element {
     useSeasonDivision();
   const [searchParams, setSearchParams] = useSearchParams();
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
+  const matchSet: MatchSet =
+    searchParams.get("match_set") === "playoffs"
+      ? "playoffs"
+      : searchParams.get("match_set") === "all"
+        ? "all"
+        : "regular";
   const [teams, setTeams] = useState<string[]>([]);
   const [selectedTeam, setSelectedTeam] = useState("");
   const [teamIds, setTeamIds] = useState<Record<string, number>>({});
@@ -33,8 +40,8 @@ export default function TopTeamPlayers(): React.JSX.Element {
   const [tracksLoading, setTracksLoading] = useState(false);
   const [playersError, setPlayersError] = useState("");
   const [tracksError, setTracksError] = useState("");
-  const playerKey = JSON.stringify([selectedTeam, season, division, minRaces, role]);
-  const trackKey = JSON.stringify([selectedTeam, season, division]);
+  const playerKey = JSON.stringify([selectedTeam, season, division, minRaces, role, matchSet]);
+  const trackKey = JSON.stringify([selectedTeam, season, division, matchSet]);
   const topPlayers = playerResult?.key === playerKey ? playerResult.rows : [];
   const topTracks = trackResult?.key === trackKey ? trackResult.rows : [];
 
@@ -95,15 +102,21 @@ export default function TopTeamPlayers(): React.JSX.Element {
     }
     setPlayersLoading(true);
     setPlayersError("");
-    fetchJson<LegacyTeamRosterPlayer[]>("/api/top-team-players", {
+    fetchCachedJson<LegacyTeamRosterPlayer[]>("/api/top-team-players", {
       team: selectedTeam,
       min_races: minRaces,
       season,
       division,
       role,
+      match_set: matchSet,
     })
       .then((rows) => {
         if (!cancelled) setPlayerResult({ key: playerKey, rows });
+        prefetchMatchSetVariants(
+          "/api/top-team-players",
+          { team: selectedTeam, min_races: minRaces, season, division, role },
+          matchSet
+        );
       })
       .catch((requestError: unknown) => {
         if (!cancelled)
@@ -117,7 +130,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTeam, season, division, minRaces, role, playerKey]);
+  }, [selectedTeam, season, division, minRaces, role, matchSet, playerKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -128,13 +141,19 @@ export default function TopTeamPlayers(): React.JSX.Element {
     }
     setTracksLoading(true);
     setTracksError("");
-    fetchJson<LegacyTeamTrackRow[]>("/api/top-team-tracks", {
+    fetchCachedJson<LegacyTeamTrackRow[]>("/api/top-team-tracks", {
       team: selectedTeam,
       season,
       division,
+      match_set: matchSet,
     })
       .then((rows) => {
         if (!cancelled) setTrackResult({ key: trackKey, rows });
+        prefetchMatchSetVariants(
+          "/api/top-team-tracks",
+          { team: selectedTeam, season, division },
+          matchSet
+        );
       })
       .catch((requestError: unknown) => {
         if (!cancelled)
@@ -148,12 +167,19 @@ export default function TopTeamPlayers(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTeam, season, division, trackKey]);
+  }, [selectedTeam, season, division, matchSet, trackKey]);
 
   function updateRole(nextRole: PlayerRoleMode) {
     const next = new URLSearchParams(searchParams);
     if (nextRole === "runner") next.delete("role");
     else next.set("role", nextRole);
+    setSearchParams(next, { replace: true });
+  }
+
+  function updateMatchSet(value: MatchSet) {
+    const next = new URLSearchParams(searchParams);
+    if (value === "regular") next.delete("match_set");
+    else next.set("match_set", value);
     setSearchParams(next, { replace: true });
   }
 
@@ -215,6 +241,11 @@ export default function TopTeamPlayers(): React.JSX.Element {
               />
             </div>
             <RoleModeToggle value={role} onChange={updateRole} disabled={playersLoading} />
+            <MatchSetToggle
+              value={matchSet}
+              onChange={updateMatchSet}
+              disabled={playersLoading || tracksLoading}
+            />
           </div>
         </div>
 
@@ -223,7 +254,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
         {selectedTeam && teamIds[selectedTeam] && (
           <div className="mb-6 text-center">
             <Link
-              to={`/teams/${teamIds[selectedTeam]}?season=${season}&division=${division}&tab=roster&role=${role}`}
+              to={`/teams/${teamIds[selectedTeam]}?season=${season}&division=${division}&tab=roster&role=${role}&match_set=${matchSet}`}
               className="font-semibold text-blue-300 hover:text-blue-200"
             >
               Open team roster dashboard &rarr;
@@ -240,6 +271,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
             role={role}
             season={season}
             division={division}
+            matchSet={matchSet}
             teamId={teamIds[selectedTeam]}
           />
         )}
@@ -264,12 +296,14 @@ function PlayerTable({
   role,
   season,
   division,
+  matchSet,
   teamId,
 }: {
   rows: LegacyTeamRosterPlayer[];
   role: PlayerRoleMode;
   season: string;
   division: string;
+  matchSet: MatchSet;
   teamId?: number;
 }) {
   return (
@@ -330,6 +364,7 @@ function PlayerTable({
             {rows.map((row, index) => {
               const metrics = row.metrics;
               const query = new URLSearchParams({ season, division, role });
+              query.set("match_set", matchSet);
               if (teamId) query.set("team_id", String(teamId));
               return (
                 <tr

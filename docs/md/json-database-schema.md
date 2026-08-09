@@ -1,6 +1,9 @@
 # JSON Structure And Analytics Database Schema
 
-This document describes the raw MKW Table Bot JSON files currently in `backend/JSON` and proposes a normalized database schema for analytics across multiple CTC seasons and divisions.
+This document describes raw MKW Table Bot JSON and its import mapping. The fresh,
+authoritative documentation for every implemented relational table is
+[`database.md`](database.md); where older design discussion below differs from that
+reference or `backend/models.py`, the database reference and models win.
 
 Raw files are organized by league, season, and division:
 
@@ -42,8 +45,12 @@ Observed match-shaped file facts:
 
 Season and division are not present inside the JSON. They need to come from folder naming, filename metadata, an upload form, or a manual import manifest.
 
-Editor-generated JSON includes `league`, `season`, `division`, `week`, and
-`match_label` metadata. On confirmed upload, the backend archives the exact
+Editor-generated regular-season JSON includes `league`, `season`, `division`,
+`match_type`, `week`, and `match_label`. Playoff JSON replaces `week` with
+`playoff_format`, `playoff_stage`, `playoff_series_number`,
+`series_match_number`, and odd `best_of` metadata. See
+[`playoff-support-implementation.md`](playoff-support-implementation.md). On
+confirmed upload, the backend archives the exact
 validated JSON under `backend/JSON/{league}/{season}/{division}/` and stores its
 path and SHA-256 in `source_files`.
 
@@ -101,6 +108,13 @@ Representative structure:
 | `rxx` | Ordered Table Bot room references | Add a new value when the room resets or changes host. It is not one code per GP; array length is independent of race and GP count. |
 | `tracks` | Ordered list of tracks | The array index maps to race number. |
 | `teams` | Team result object | Keys are raw team tags/names. |
+| `match_type` | Competition category | Optional; omitted means `regular`, or use `playoff`. |
+| `week` | Regular-season week | Required for new regular uploads; omitted for playoffs. |
+| `playoff_format` | Division bracket format | `three_team` or `four_team`; playoff only. |
+| `playoff_stage` | Series stage | `semifinals` or `finals`; playoff only. |
+| `playoff_series_number` | Series within the stage | Semifinals use 1 or 2 as allowed; finals use 1. |
+| `series_match_number` | Match within the best-of series | Positive, sequential, and no greater than `best_of`. |
+| `best_of` | Series length | Positive odd number; defaults to 3. |
 
 ### Team-Level Fields
 
@@ -320,7 +334,10 @@ One imported match/table.
 | `season_id` | foreign key to `seasons` | Manual/import metadata. |
 | `division_id` | foreign key to `divisions` | Manual/import metadata. |
 | `source_file_id` | foreign key to `source_files` | Audit. |
+| `match_type` | text | `regular` or `playoff`; defaults to regular. |
 | `week_number` | integer nullable | Historical imports may omit it; editor uploads require a positive whole number. Multiple matches may share a week. |
+| `playoff_series_id` | foreign key nullable | Required for playoff matches and absent for regular matches. |
+| `series_match_number` | integer nullable | Positive and unique within a playoff series. |
 | `match_label` | text | Filename or friendly label. |
 | `title_str` | text nullable | Raw JSON title. |
 | `format` | text | Example `5v5`. |
@@ -492,20 +509,22 @@ For each match object:
 
 1. Create or find `season` and `division` from provided import metadata.
 2. Create `source_files` row using file path and hash.
-3. Create `matches` row.
-4. Insert each `rxx` value into `match_table_refs`.
-5. Insert or resolve each raw team into `teams` and `team_season_entries`.
-6. Insert `match_teams`, but require the match to resolve to exactly two real teams.
-7. Insert team penalties into `penalties`.
-8. Insert or resolve each player by friend code into `players`.
-9. Store lounge, Mii, and table names in `player_aliases`.
-10. Connect player to team/season/division in `player_season_entries`.
-11. Insert `match_players`.
-12. Insert player penalties into `penalties`.
-13. Insert tracks into `tracks` and `track_aliases`.
-14. Insert one `races` row per track index.
-15. Expand `race_scores` and `race_positions` into `race_player_results`.
-16. Expand team `missing_player_results` into `race_team_results`.
+3. For a playoff, validate/lock the division format and resolve or create the series
+   and immutable participants.
+4. Create `matches` row with exclusive regular-week or playoff-series metadata.
+5. Insert each `rxx` value into `match_table_refs`.
+6. Insert or resolve each raw team into `teams` and `team_season_entries`.
+7. Insert `match_teams`, but require the match to resolve to exactly two real teams.
+8. Insert team penalties into `penalties`.
+9. Insert or resolve each player by friend code into `players`.
+10. Store lounge, Mii, and table names in `player_aliases`.
+11. Connect player to team/season/division in `player_season_entries`.
+12. Insert `match_players`.
+13. Insert player penalties into `penalties`.
+14. Insert tracks into `tracks` and `track_aliases`.
+15. Insert one `races` row per track index.
+16. Expand `race_scores` and `race_positions` into `race_player_results`.
+17. Expand team `missing_player_results` into `race_team_results`.
 
 ## Suggested Minimum Viable Schema
 
