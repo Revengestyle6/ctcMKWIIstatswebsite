@@ -26,11 +26,27 @@ test("GSC receives the correct favicon before React boots", async ({ page }) => 
   await expect(favicon).toHaveAttribute("href", /\/media\/leagues\/gsc\/branding\/favicon\.png$/);
 });
 
+test("a new visit defaults to GSC", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\?league=gsc$/);
+  const selector = page.getByRole("group", { name: "Select league" });
+  await expect(selector.locator("button").first()).toHaveAttribute("aria-label", "GSC");
+  await expect(page.getByRole("button", { name: "GSC", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
+});
+
 test("league switch replaces the browser-tab icon", async ({ page }) => {
   await page.goto("/?league=ctc");
   await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   const ctcSelector = page.getByRole("button", { name: "CTC", exact: true });
   const gscSelector = page.getByRole("button", { name: "GSC", exact: true });
+  await expect(
+    page.getByRole("group", { name: "Select league" }).locator("button").first()
+  ).toHaveAttribute("aria-label", "GSC");
   await expect(ctcSelector.getByRole("img")).toHaveAttribute(
     "src",
     "/media/leagues/ctc/branding/logo.webp"

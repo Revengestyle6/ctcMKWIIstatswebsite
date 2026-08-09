@@ -5,13 +5,13 @@
     <script>
       (() => {
         const queryLeague = new URLSearchParams(window.location.search).get("league");
-        let league = queryLeague === "ctc" || queryLeague === "gsc" ? queryLeague : "ctc";
+        let league = queryLeague === "ctc" || queryLeague === "gsc" ? queryLeague : "gsc";
         if (queryLeague !== "ctc" && queryLeague !== "gsc") {
           try {
             const storedLeague = window.localStorage.getItem("mkw-stats:league:v1");
             if (storedLeague === "ctc" || storedLeague === "gsc") league = storedLeague;
           } catch {
-            // CTC remains the default when browser storage is unavailable.
+            // GSC remains the default when browser storage is unavailable.
           }
         }
 
@@ -33,7 +33,7 @@
       name="description"
       content="Multi-season player, team, track, matchup, and race analytics for Mario Kart Wii leagues."
     />
-    <title>Custom Track Cup Statistics</title>
+    <title>Grand Star Cup Statistics</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

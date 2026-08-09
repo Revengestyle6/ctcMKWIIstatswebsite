@@ -82,7 +82,7 @@ export const LEAGUES: Record<LeagueCode, LeagueConfig> = Object.freeze({
   },
 });
 
-export const LEAGUE_CODES = Object.freeze(Object.keys(LEAGUES) as LeagueCode[]);
+export const LEAGUE_CODES: readonly LeagueCode[] = Object.freeze(["gsc", "ctc"]);
 
 export function isLeagueCode(value: string | null | undefined): value is LeagueCode {
   return value === "ctc" || value === "gsc";
