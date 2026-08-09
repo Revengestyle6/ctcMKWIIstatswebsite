@@ -80,6 +80,30 @@ test("team track minimum-races control stays interactive while results refresh",
   await expect(minimumRaces).toBeEnabled();
 });
 
+test("match history loads regular-season data directly after all matches", async ({ page }) => {
+  await page.goto("/matches?league=ctc&season=s3&division=d1&match_set=all");
+  const dismissWelcome = page.getByRole("button", { name: "No Thanks", exact: true });
+  await dismissWelcome.click();
+
+  const matchSelection = page.getByLabel("Match", { exact: true });
+  await expect(matchSelection).toBeEnabled();
+  const firstRegularMatch = matchSelection
+    .locator("option")
+    .filter({ hasText: /^W\d+ - / })
+    .first();
+  const firstRegularMatchId = await firstRegularMatch.getAttribute("value");
+  expect(firstRegularMatchId).not.toBeNull();
+  await matchSelection.selectOption(firstRegularMatchId ?? "");
+  await expect(page.getByText(/S3 \/ D1 \/ Week \d+/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Regular season", exact: true }).click();
+
+  await expect(page).not.toHaveURL(/match_set=/);
+  await expect(matchSelection).toBeEnabled();
+  await expect(matchSelection.locator("option:checked")).toHaveText(/^W\d+ - /);
+  await expect(page.getByText(/S3 \/ D1 \/ Week \d+/)).toBeVisible();
+});
+
 test("json editor changes a misplaced player's team and deletes the accidental team", async ({
   page,
 }) => {
