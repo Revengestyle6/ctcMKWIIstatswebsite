@@ -51,6 +51,7 @@ backend/data/*.sqlite.bak-*
 backend/data/*.db
 backend/data/*.db-*
 backend/data/object_storage/
+backend/data/media/
 backend/JSON/1459942488293769382.json
 backend/JSON/ctc_s1_d1_2/W1 6c (_)-.json
 backend/JSON/ctc_s1_d1_2/W1 Flag O.json

@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 
 import { deleteJson, fetchJson, patchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
+import TeamIdentityManager from "../components/admin/TeamIdentityManager";
+import TeamLogoManager from "../components/admin/TeamLogoManager";
 import { useAdminSession } from "../hooks/useAdminSession";
 
 type EntityType = "players" | "teams" | "tracks";
@@ -133,7 +135,9 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     setQuery("");
     setSelected(null);
     setCanonicalName("");
-    setAliasType(nextType === "players" ? "lounge_name" : "alias");
+    setAliasType(
+      nextType === "players" ? "lounge_name" : nextType === "teams" ? "identity" : "alias"
+    );
     setNewAlias("");
     setError("");
   };
@@ -145,7 +149,7 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       const detail = await fetchJson<AliasDetail>(`/api/admin/aliases/${entityType}/${entity.id}`);
       setSelected(detail);
       setCanonicalName(detail.canonical_name ?? "");
-      setAliasType(detail.alias_types[0] ?? "alias");
+      setAliasType(entityType === "teams" ? "identity" : (detail.alias_types[0] ?? "alias"));
       setNewAlias("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load aliases.");
@@ -405,11 +409,39 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                           );
                         })}
                       </div>
+                    ) : entityType === "teams" ? (
+                      <div
+                        className="mt-5 flex flex-wrap gap-2"
+                        role="tablist"
+                        aria-label="Team management section"
+                      >
+                        {[
+                          ["identity", "Identity"],
+                          ["alias", `Aliases (${selected.aliases.length})`],
+                          ["logos", "Logos"],
+                        ].map(([type, label]) => (
+                          <button
+                            key={type}
+                            type="button"
+                            role="tab"
+                            aria-selected={aliasType === type}
+                            onClick={() => {
+                              setAliasType(type);
+                              setNewAlias("");
+                            }}
+                            className={`rounded px-3 py-2 text-sm font-bold ${
+                              aliasType === type
+                                ? "bg-emerald-500 text-black"
+                                : "border border-white/20 bg-black/40"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
                     ) : (
                       <p className="mt-4 text-sm text-gray-400">
-                        {entityType === "teams"
-                          ? "Team aliases map alternate raw team tags to this canonical team."
-                          : "Track aliases map alternate track names to this canonical track."}
+                        Track aliases map alternate track names to this canonical track.
                       </p>
                     )}
 
@@ -550,6 +582,30 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                           </p>
                         )}
                       </div>
+                    ) : null}
+
+                    {entityType === "teams" && aliasType === "logos" ? (
+                      <TeamLogoManager key={selected.id} teamId={selected.id} />
+                    ) : null}
+
+                    {entityType === "teams" && aliasType === "identity" ? (
+                      <TeamIdentityManager
+                        key={selected.id}
+                        teamId={selected.id}
+                        onCanonicalSaved={(team) => {
+                          const label = `${team.canonical_tag} — ${team.canonical_name}`;
+                          setSelected((current) =>
+                            current ? { ...current, label, secondary: team.canonical_tag } : current
+                          );
+                          setEntities((current) =>
+                            current.map((entity) =>
+                              entity.id === team.id
+                                ? { ...entity, label, secondary: team.canonical_tag }
+                                : entity
+                            )
+                          );
+                        }}
+                      />
                     ) : null}
                   </>
                 ) : (

@@ -178,13 +178,19 @@ reason. Result type is `missing_player`; reason is `short_roster`,
 `teams` is the global identity (`team_id`, unique canonical tag, canonical name,
 created time). `team_aliases` maps a globally unique alternate tag to a team.
 `team_logos` stores prioritized, active assets that may be global or season-specific;
-`(team_id, season_id, asset_path)` is unique.
+`(team_id, season_id, asset_path)` is unique. Repository-managed records use paths
+under `images/team-logos/`. Admin uploads use content-addressed object keys under
+`team-logos/{team_id}/` and are served through the public team-logo content API.
+Uploading a replacement deactivates the previous logo only in the same team/season
+scope, preserving inactive history and every other season.
 
 ### `team_season_entries`
 
 A global team's season/division membership with display name, clan tag, and color.
 `(season_id, division_id, clan_tag)` is unique. Match facts link this scoped entry,
-not just the global team.
+not just the global team. Administrators may edit the display name and clan tag;
+imports therefore reuse entries by stable team, season, and division identity
+before comparing mutable tags.
 
 ### `players`, `player_friend_codes`, and `player_aliases`
 

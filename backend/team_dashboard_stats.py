@@ -27,6 +27,7 @@ from player_dashboard_stats import (
     _result,
     _round,
     _scope_payload,
+    _team_display_name,
     _team_logo_url,
 )
 from player_display_names import _display_names_for_players
@@ -65,20 +66,41 @@ def _team_identity(session, team, scope):
         reverse=True,
     )
     latest = entries[0] if entries else None
+    scoped_entry = (
+        next(
+            (
+                row
+                for row in entries
+                if row.season_id == scope.season_id
+                and (scope.division_code is None or row.division_code == scope.division_code)
+            ),
+            None,
+        )
+        if scope.season_id is not None
+        else latest
+    )
     return {
         "team_id": team.team_id,
         "name": team.canonical_name,
         "tag": team.canonical_tag,
-        "display_name": latest.display_name if latest else team.canonical_name,
+        "display_name": (
+            _team_display_name(
+                scoped_entry.display_name, scoped_entry.clan_tag, team.canonical_name
+            )
+            if scoped_entry
+            else team.canonical_name
+        ),
         "current_entry": (
             {
-                "season": latest.season_code,
-                "division": latest.division_code,
-                "name": latest.display_name,
-                "tag": latest.clan_tag,
-                "hex_color": latest.hex_color,
+                "season": scoped_entry.season_code,
+                "division": scoped_entry.division_code,
+                "name": _team_display_name(
+                    scoped_entry.display_name, scoped_entry.clan_tag, team.canonical_name
+                ),
+                "tag": scoped_entry.clan_tag,
+                "hex_color": scoped_entry.hex_color,
             }
-            if latest
+            if scoped_entry
             else None
         ),
         "logo_url": _team_logo_url(session, team.team_id, scope.season_id),
@@ -86,7 +108,7 @@ def _team_identity(session, team, scope):
             {
                 "season": row.season_code,
                 "division": row.division_code,
-                "name": row.display_name,
+                "name": _team_display_name(row.display_name, row.clan_tag, team.canonical_name),
                 "tag": row.clan_tag,
                 "hex_color": row.hex_color,
                 "logo_url": _team_logo_url(session, team.team_id, row.season_id),
@@ -251,7 +273,11 @@ def get_team_overview(
                 "opponents": [
                     {
                         "team_id": candidate.team_id,
-                        "name": candidate.display_name or candidate.canonical_name,
+                        "name": _team_display_name(
+                            candidate.display_name,
+                            candidate.clan_tag,
+                            candidate.canonical_name,
+                        ),
                         "tag": candidate.clan_tag,
                         "score": _final_score(candidate),
                     }

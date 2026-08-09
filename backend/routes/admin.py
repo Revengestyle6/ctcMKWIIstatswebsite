@@ -4,6 +4,8 @@ import uuid
 import alias_management
 import database_health as database_health_service
 import stats_db as stats
+import team_identity_management
+import team_logo_management
 from acceptance_service import accept_match
 from admin_auth import record_audit, require_admin
 from archive_storage import get_archive_storage
@@ -37,6 +39,24 @@ def _alias_error(error):
         return jsonify({"error": str(error)}), 400
     logger.exception("Alias management failed")
     return jsonify({"error": "Alias management failed."}), 500
+
+
+def _team_logo_error(error):
+    if isinstance(error, LookupError):
+        return jsonify({"error": str(error)}), 404
+    if isinstance(error, ValueError):
+        return jsonify({"error": str(error)}), 400
+    logger.exception("Team logo management failed")
+    return jsonify({"error": "Team logo management failed."}), 500
+
+
+def _team_identity_error(error):
+    if isinstance(error, LookupError):
+        return jsonify({"error": str(error)}), 404
+    if isinstance(error, ValueError):
+        return jsonify({"error": str(error)}), 400
+    logger.exception("Team identity management failed")
+    return jsonify({"error": "Team identity management failed."}), 500
 
 
 @admin_api.get("/api/admin/aliases/<entity_type>")
@@ -139,6 +159,139 @@ def api_alias_delete(entity_type, entity_id, alias_id):
         return jsonify(detail)
     except Exception as error:
         return _alias_error(error)
+
+
+@admin_api.get("/api/admin/teams/<int:team_id>/identity")
+@require_admin
+def api_team_identity(team_id):
+    try:
+        with stats.SessionLocal() as session:
+            return jsonify(team_identity_management.get_team_identity(session, team_id))
+    except Exception as error:
+        return _team_identity_error(error)
+
+
+@admin_api.patch("/api/admin/teams/<int:team_id>/identity")
+@require_admin
+def api_team_identity_update(team_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, previous = team_identity_management.update_canonical_identity(
+                session, team_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team.identity_updated",
+                target_type="team",
+                target_id=team_id,
+                details={"previous": previous, "current": detail["team"]},
+            )
+        cache.clear()
+        return jsonify(detail)
+    except Exception as error:
+        return _team_identity_error(error)
+
+
+@admin_api.patch("/api/admin/teams/<int:team_id>/season-entries/<int:team_season_entry_id>")
+@require_admin
+def api_team_season_identity_update(team_id, team_season_entry_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, previous = team_identity_management.update_season_identity(
+                session,
+                team_id,
+                team_season_entry_id,
+                request.get_json(silent=True) or {},
+            )
+            updated = next(
+                entry for entry in detail["season_entries"] if entry["id"] == team_season_entry_id
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team.season_identity_updated",
+                target_type="team_season_entry",
+                target_id=team_season_entry_id,
+                details={"team_id": team_id, "previous": previous, "current": updated},
+            )
+        cache.clear()
+        return jsonify(detail)
+    except Exception as error:
+        return _team_identity_error(error)
+
+
+@admin_api.get("/api/admin/teams/<int:team_id>/logos")
+@require_admin
+def api_team_logos(team_id):
+    try:
+        with stats.SessionLocal() as session:
+            return jsonify(team_logo_management.get_team_logo_detail(session, team_id))
+    except Exception as error:
+        return _team_logo_error(error)
+
+
+@admin_api.post("/api/admin/teams/<int:team_id>/logos")
+@require_admin
+def api_team_logo_upload(team_id):
+    try:
+        image = request.files.get("image")
+        if image is None:
+            raise ValueError("Choose an image to upload.")
+        raw_season_id = str(request.form.get("season_id") or "").strip()
+        try:
+            season_id = int(raw_season_id) if raw_season_id else None
+        except ValueError as error:
+            raise ValueError("The selected season is invalid.") from error
+        with stats.SessionLocal.begin() as session:
+            detail, logo = team_logo_management.create_team_logo(
+                session,
+                team_id,
+                image.read(team_logo_management.MAX_UPLOAD_BYTES + 1),
+                season_id=season_id,
+                alt_text=request.form.get("alt_text", ""),
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team_logo.created",
+                target_type="team_logo",
+                target_id=logo.team_logo_id,
+                details={
+                    "team_id": team_id,
+                    "season_id": season_id,
+                    "asset_path": logo.asset_path,
+                },
+            )
+        cache.clear()
+        return jsonify(detail), 201
+    except Exception as error:
+        return _team_logo_error(error)
+
+
+@admin_api.patch("/api/admin/teams/<int:team_id>/logos/<int:logo_id>")
+@require_admin
+def api_team_logo_update(team_id, logo_id):
+    try:
+        payload = request.get_json(silent=True) or {}
+        with stats.SessionLocal.begin() as session:
+            detail, logo = team_logo_management.update_team_logo(session, team_id, logo_id, payload)
+            record_audit(
+                session,
+                g.admin_actor,
+                "team_logo.updated",
+                target_type="team_logo",
+                target_id=logo_id,
+                details={
+                    "team_id": team_id,
+                    "is_active": logo.is_active,
+                    "alt_text": logo.alt_text,
+                },
+            )
+        cache.clear()
+        return jsonify(detail)
+    except Exception as error:
+        return _team_logo_error(error)
 
 
 @admin_api.post("/api/matches/preview")

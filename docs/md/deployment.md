@@ -6,6 +6,7 @@
 - Cloud Run: Flask API with request-based billing and zero minimum instances.
 - Cloud SQL: PostgreSQL 18 on the initial cost-first `db-f1-micro` configuration.
 - Cloud Storage: immutable archived JSON and database exports.
+- Cloud Storage media bucket: normalized team-logo uploads served by the API.
 - Firebase Authentication: Google sign-in for administrator actions.
 - GitHub Actions: Workload Identity Federation for deployment credentials.
 

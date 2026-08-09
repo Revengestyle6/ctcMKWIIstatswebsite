@@ -1,10 +1,13 @@
 import logging
+from io import BytesIO
 
 import dashboard_stats as dashboards
 import stats_db as stats
 from dashboard_stats import DashboardError
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from match_editor_catalog import list_player_team_memberships, list_team_roster_pool
+from media_storage import get_media_storage
+from models import TeamLogo
 
 from routes.common import (
     division_arg,
@@ -18,6 +21,28 @@ from routes.common import (
 
 logger = logging.getLogger(__name__)
 public_api = Blueprint("public_api", __name__)
+
+
+@public_api.get("/api/team-logos/<int:logo_id>/content")
+def api_team_logo_content(logo_id):
+    try:
+        with stats.SessionLocal() as session:
+            logo = session.get(TeamLogo, logo_id)
+            if logo is None or not logo.asset_path.startswith("team-logos/"):
+                return jsonify({"error": "Team logo not found."}), 404
+            media = get_media_storage().read(logo.asset_path)
+        response = send_file(
+            BytesIO(media.content),
+            mimetype=media.content_type,
+            download_name=f"team-logo-{logo_id}.webp",
+            conditional=True,
+            etag=True,
+            max_age=31536000,
+        )
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+    except FileNotFoundError:
+        return jsonify({"error": "Team logo content not found."}), 404
 
 
 @public_api.get("/api/player")

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { resolveAssetUrl } from "../api";
 import {
   DashboardScopeControls,
   DashboardShell,
@@ -268,7 +269,10 @@ export default function PlayerDashboard() {
       identity={
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
           {currentTeam ? (
-            <TeamLogo src={currentTeam.logo_url} alt={`${currentTeam.name} logo`} />
+            <TeamLogo
+              src={resolveAssetUrl(currentTeam.logo_url)}
+              alt={`${currentTeam.name} logo`}
+            />
           ) : (
             <TeamLogo src="/images/team-logos/placeholder.webp" alt="Team logo unavailable" />
           )}

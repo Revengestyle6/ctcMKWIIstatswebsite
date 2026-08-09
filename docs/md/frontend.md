@@ -48,6 +48,16 @@ is needed. Otherwise the client uses `window.location.origin`, so hosted builds 
 ready for Firebase Hosting's same-origin `/api/**` rewrite. Local development may
 set `VITE_API_URL` explicitly or use Vite's proxy.
 
+The Teams section of the restricted alias manager includes a separate Logos tab.
+It uploads default or season-specific images, previews active and inactive history,
+and can reactivate an earlier logo without deleting the newer asset. API-backed
+image URLs are resolved against `VITE_API_URL`, while compiled static assets remain
+relative to the frontend origin.
+
+The same Teams section includes an Identity tab for the conventional team name/tag
+and every existing season/division name/tag. Each season entry saves independently,
+so editing historical presentation does not reset another season's form.
+
 ## Build And CSS
 
 `index.html` is the sole Vite HTML entry. Tailwind scans it and `src/`; PostCSS owns

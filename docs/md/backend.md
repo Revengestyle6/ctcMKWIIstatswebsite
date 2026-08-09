@@ -24,6 +24,11 @@ longer part of the repository.
 - `import_json_to_db.py`: idempotent archive and editor-match ingestion.
 - `match_upload.py`: canonical serialization, staging, publishing, and audit logs.
 - `archive_storage.py`: local and Cloud Storage archive adapters.
+- `media_storage.py`: local and Cloud Storage adapters for public uploaded media.
+- `team_logo_management.py`: validated image normalization, season-scoped logo
+  activation, and admin serialization.
+- `team_identity_management.py`: conventional and season-level team name/tag
+  editing, uniqueness validation, and canonical-tag alias preservation.
 - `acceptance_service.py`: idempotent database/archive acceptance state machine.
 - `phase3_maintenance.py`: queue expiry and archive repair.
 - `scripts/`: explicit maintenance and regression commands.

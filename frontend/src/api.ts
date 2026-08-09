@@ -2,6 +2,10 @@ import { getAdminAuthHeaders } from "./authClient";
 
 export const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
+export function resolveAssetUrl(path: string): string {
+  return path.startsWith("/api/") ? new URL(path, API_URL).toString() : path;
+}
+
 export interface SeasonOption {
   season: string;
   season_number: number | null;
@@ -95,6 +99,10 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+export async function postFormData<T>(path: string, body: FormData): Promise<T> {
+  return requestJson<T>(path, { method: "POST", body });
 }
 
 export async function patchJson<T>(path: string, body: unknown): Promise<T> {

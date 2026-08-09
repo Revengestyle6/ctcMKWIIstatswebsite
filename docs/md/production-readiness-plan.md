@@ -225,6 +225,9 @@ Expected starting costs:
 - Cloud SQL: approximately $8 per month for shared-core compute, plus storage and
   backups. Region and current pricing must be confirmed before provisioning.
 - Cloud Storage: likely within the applicable free allowance at the current size.
+- Uploaded team logos require a dedicated media bucket and Cloud Run runtime
+  object create/read permissions before the admin workflow is enabled in staging
+  or production. The application implementation and local storage path are complete.
 - Domain registration: commonly $10-$20 per year, depending on the registrar and
   selected domain.
 
