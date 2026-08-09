@@ -213,6 +213,7 @@ export interface TeamOverview {
 }
 
 export interface DashboardQuery extends Record<string, string | number | undefined> {
+  league?: string;
   season?: string;
   division?: string;
   team_id?: number;

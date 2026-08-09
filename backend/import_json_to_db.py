@@ -29,6 +29,7 @@ from models import (
     SourceFile,
     Team,
     TeamAlias,
+    TeamLeagueIdentity,
     TeamSeasonEntry,
     Track,
     TrackAlias,
@@ -102,7 +103,7 @@ def is_missing_player_placeholder(player_data: dict[str, Any]) -> bool:
 
 def load_historical_team_corrections(
     path: Path = HISTORICAL_TEAM_CORRECTIONS_PATH,
-) -> dict[tuple[str, str, str, str, str], dict[str, str]]:
+) -> dict[tuple[str, str, str, str, str], dict[str, Any]]:
     """Load parsing corrections used only when rebuilding the historical archive."""
     aliases = {}
     if path.exists():
@@ -128,16 +129,35 @@ def load_historical_team_corrections(
 
 def load_database_team_aliases(
     session,
-) -> dict[tuple[str, str, str, str, str], dict[str, str]]:
+) -> dict[tuple[str, str, str, str, str], dict[str, Any]]:
     """Load live, administrator-managed aliases from the operational database."""
     aliases = {}
+    league_identities = session.execute(
+        select(
+            TeamLeagueIdentity.league_code,
+            TeamLeagueIdentity.tag,
+            Team.team_id,
+            Team.canonical_tag,
+            Team.canonical_name,
+        )
+        .join(Team, Team.team_id == TeamLeagueIdentity.team_id)
+        .order_by(TeamLeagueIdentity.team_league_identity_id)
+    )
+    for row in league_identities:
+        aliases[(row.league_code, "", "", "", row.tag)] = {
+            "team_id": row.team_id,
+            "canonical_tag": row.canonical_tag,
+            "display_name": row.canonical_name,
+            "note": "League-scoped team identity.",
+        }
     database_aliases = session.execute(
-        select(TeamAlias.alias_value, Team.canonical_tag, Team.canonical_name)
+        select(TeamAlias.alias_value, Team.team_id, Team.canonical_tag, Team.canonical_name)
         .join(Team, Team.team_id == TeamAlias.team_id)
         .order_by(TeamAlias.team_alias_id)
     )
     for row in database_aliases:
         aliases[("", "", "", "", row.alias_value)] = {
+            "team_id": row.team_id,
             "canonical_tag": row.canonical_tag,
             "display_name": row.canonical_name,
             "note": "Database-managed team alias.",
@@ -186,13 +206,15 @@ def resolve_team_alias(
     division_code: str,
     match_label: str,
     raw_team_key: str,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     exact_key = (league_code, season_code, division_code, match_label, raw_team_key)
     division_key = (league_code, season_code, division_code, "", raw_team_key)
+    league_key = (league_code, "", "", "", raw_team_key)
     global_key = ("", "", "", "", raw_team_key)
     return (
         aliases.get(exact_key)
         or aliases.get(division_key)
+        or aliases.get(league_key)
         or aliases.get(global_key)
         or {
             "canonical_tag": raw_team_key,
@@ -242,15 +264,50 @@ def get_or_create_division(session, season: Season, division_code: str) -> Divis
     return division
 
 
-def get_or_create_team(session, canonical_tag: str, display_name: str | None = None) -> Team:
-    team = session.scalar(select(Team).where(Team.canonical_tag == canonical_tag))
+def get_or_create_team(
+    session,
+    league_code: str,
+    canonical_tag: str,
+    display_name: str | None = None,
+    linked_team_id: int | None = None,
+) -> Team:
+    team = session.get(Team, linked_team_id) if linked_team_id is not None else None
+    if team is None:
+        team = session.scalar(
+            select(Team)
+            .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
+            .where(
+                func.lower(TeamLeagueIdentity.league_code) == league_code.casefold(),
+                func.lower(TeamLeagueIdentity.tag) == canonical_tag.casefold(),
+            )
+        )
     if team:
+        league_identity = session.scalar(
+            select(TeamLeagueIdentity).where(
+                TeamLeagueIdentity.team_id == team.team_id,
+                func.lower(TeamLeagueIdentity.league_code) == league_code.casefold(),
+                func.lower(TeamLeagueIdentity.tag) == canonical_tag.casefold(),
+            )
+        )
+        if league_identity is None:
+            session.add(
+                TeamLeagueIdentity(
+                    team_id=team.team_id,
+                    league_code=league_code,
+                    tag=canonical_tag,
+                )
+            )
         if display_name and team.canonical_name == team.canonical_tag:
             team.canonical_name = display_name
+        session.flush()
         return team
 
     team = Team(canonical_name=display_name or canonical_tag, canonical_tag=canonical_tag)
     session.add(team)
+    session.flush()
+    session.add(
+        TeamLeagueIdentity(team_id=team.team_id, league_code=league_code, tag=canonical_tag)
+    )
     session.flush()
     return team
 
@@ -489,16 +546,40 @@ def get_or_create_player_entry(
     return entry
 
 
-def get_or_create_track(session, track_name: str) -> Track:
-    track = session.scalar(select(Track).where(Track.canonical_name == track_name))
+def find_track_by_name(session, track_name: str, league_code: str | None = None) -> Track | None:
+    normalized_name = track_name.strip().casefold()
+    statement = (
+        select(Track)
+        .outerjoin(TrackAlias, TrackAlias.track_id == Track.track_id)
+        .where(
+            (func.lower(Track.canonical_name) == normalized_name)
+            | (func.lower(TrackAlias.alias_value) == normalized_name)
+        )
+        .order_by(Track.track_id)
+        .limit(1)
+    )
+    if league_code is not None:
+        statement = statement.where(func.lower(Track.league_code) == league_code.casefold())
+    return session.scalar(statement)
+
+
+def get_or_create_track(session, league_code: str, track_name: str) -> Track:
+    track = find_track_by_name(session, track_name, league_code)
     if not track:
-        track = Track(canonical_name=track_name)
+        conflicting_track = find_track_by_name(session, track_name)
+        if conflicting_track is not None:
+            raise ValueError(
+                f"Track {track_name} is registered for {conflicting_track.league_code.upper()} "
+                f"and cannot be used in a {league_code.upper()} match."
+            )
+        track = Track(league_code=league_code, canonical_name=track_name)
         session.add(track)
         session.flush()
 
     alias = session.scalar(
         select(TrackAlias).where(
-            TrackAlias.track_id == track.track_id, TrackAlias.alias_value == track_name
+            TrackAlias.track_id == track.track_id,
+            func.lower(TrackAlias.alias_value) == track_name.casefold(),
         )
     )
     if not alias:
@@ -583,6 +664,7 @@ def import_match(
     match_label_override: str | None = None,
     week_number_override: int | None = None,
     player_identity_links: dict[str, int] | None = None,
+    team_identity_links: dict[str, int] | None = None,
 ):
     teams = match_data.get("teams") or {}
     tracks = match_data.get("tracks") or []
@@ -599,6 +681,7 @@ def import_match(
 
     resolved_team_keys = []
     resolved_teams = {}
+    team_identity_links = team_identity_links or {}
     for raw_team_key, team_data in teams.items():
         alias = resolve_team_alias(
             aliases, league_code, season_code, division_code, match_label, raw_team_key
@@ -606,7 +689,13 @@ def import_match(
         canonical_tag = alias["canonical_tag"]
         display_name = alias["display_name"] or canonical_tag
         resolved_team_keys.append(canonical_tag)
-        team = get_or_create_team(session, canonical_tag, display_name)
+        team = get_or_create_team(
+            session,
+            league_code,
+            canonical_tag,
+            display_name,
+            linked_team_id=alias.get("team_id") or team_identity_links.get(canonical_tag.casefold()),
+        )
         team_entry = get_or_create_team_entry(
             session,
             team,
@@ -677,7 +766,7 @@ def import_match(
 
     race_by_number = {}
     for race_number, track_name in enumerate(tracks, start=1):
-        track = get_or_create_track(session, track_name)
+        track = get_or_create_track(session, league_code, track_name)
         race = Race(
             match_id=match.match_id,
             race_number=race_number,
@@ -865,6 +954,7 @@ def import_preview_match(
     session,
     match_data: dict[str, Any],
     player_identity_links: dict[str, int] | None = None,
+    team_identity_links: dict[str, int] | None = None,
 ) -> Match:
     token = uuid.uuid4().hex
     return import_editor_match(
@@ -875,6 +965,7 @@ def import_preview_match(
         file_sha256=hashlib.sha256(f"preview:{token}".encode("utf-8")).hexdigest(),
         json_shape="preview",
         player_identity_links=player_identity_links,
+        team_identity_links=team_identity_links,
     )
 
 
@@ -887,6 +978,7 @@ def import_editor_match(
     file_sha256: str,
     json_shape: str = "single_match",
     player_identity_links: dict[str, int] | None = None,
+    team_identity_links: dict[str, int] | None = None,
     source_metadata: dict[str, Any] | None = None,
 ) -> Match:
     validate_competition_metadata(match_data)
@@ -930,6 +1022,7 @@ def import_editor_match(
         match_label_override=label,
         week_number_override=week_number,
         player_identity_links=player_identity_links,
+        team_identity_links=team_identity_links,
     )
 
 
@@ -987,6 +1080,7 @@ def detect_new_entries(
     session,
     match_data: dict[str, Any],
     player_identity_links: dict[str, Any] | None = None,
+    team_identity_resolutions: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     competition_metadata = (
         validate_competition_metadata(match_data)
@@ -1002,7 +1096,24 @@ def detect_new_entries(
     requested_identity_links = _validated_player_identity_links(
         session, match_data, player_identity_links
     )
+    if team_identity_resolutions is None:
+        team_identity_resolutions = {}
+    if not isinstance(team_identity_resolutions, dict):
+        raise ValueError("Team identity resolutions must be an object keyed by review entry.")
     entries: dict[str, dict[str, Any]] = {}
+    league_exists = session.scalar(
+        select(Season.season_id)
+        .where(func.lower(Season.league_code) == league_code.casefold())
+        .limit(1)
+    )
+    if league_exists is None:
+        entry = _new_entry(
+            "league",
+            league_code,
+            kind="new_league",
+            league=league_code,
+        )
+        entries[entry["key"]] = entry
     season = session.scalar(
         select(Season).where(
             Season.league_code == league_code,
@@ -1057,9 +1168,50 @@ def detect_new_entries(
             aliases, league_code, season_code, division_code, label, raw_team_key
         )
         canonical_tag = alias["canonical_tag"]
-        team = session.scalar(select(Team).where(Team.canonical_tag == canonical_tag))
+        linked_team_id = alias.get("team_id")
+        team = session.get(Team, linked_team_id) if linked_team_id is not None else None
+        if team is None:
+            team = session.scalar(
+                select(Team)
+                .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
+                .where(
+                    func.lower(TeamLeagueIdentity.league_code) == league_code.casefold(),
+                    func.lower(TeamLeagueIdentity.tag) == canonical_tag.casefold(),
+                )
+            )
         if team is not None:
             existing_team_ids.append(team.team_id)
+        cross_league_candidates = []
+        if team is None:
+            candidate_teams = session.scalars(
+                select(Team)
+                .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
+                .where(
+                    func.lower(TeamLeagueIdentity.tag) == canonical_tag.casefold(),
+                    func.lower(TeamLeagueIdentity.league_code) != league_code.casefold(),
+                )
+                .order_by(Team.team_id)
+            ).unique().all()
+            for candidate in candidate_teams:
+                identities = session.scalars(
+                    select(TeamLeagueIdentity)
+                    .where(TeamLeagueIdentity.team_id == candidate.team_id)
+                    .order_by(
+                        TeamLeagueIdentity.league_code,
+                        TeamLeagueIdentity.team_league_identity_id,
+                    )
+                ).all()
+                cross_league_candidates.append(
+                    {
+                        "team_id": candidate.team_id,
+                        "canonical_tag": candidate.canonical_tag,
+                        "canonical_name": candidate.canonical_name,
+                        "league_identities": [
+                            {"league": identity.league_code, "tag": identity.tag}
+                            for identity in identities
+                        ],
+                    }
+                )
         team_entry = None
         if team is not None and season is not None and division is not None:
             team_entry = session.scalar(
@@ -1076,14 +1228,47 @@ def detect_new_entries(
                 league_code,
                 season_code,
                 division_code,
-                kind="existing_team_new_scope" if team is not None else "new_team",
+                kind=(
+                    "existing_team_new_scope"
+                    if team is not None
+                    else "cross_league_team_match"
+                    if cross_league_candidates
+                    else "new_team"
+                ),
                 league=league_code,
                 season=season_code,
                 division=division_code,
                 input_tag=raw_team_key,
                 team_id=team.team_id if team is not None else None,
                 canonical_name=team.canonical_name if team is not None else None,
+                team_candidates=cross_league_candidates or None,
             )
+            if cross_league_candidates:
+                resolution = team_identity_resolutions.get(entry["key"])
+                if resolution is not None:
+                    if not isinstance(resolution, dict) or resolution.get("action") not in {
+                        "link",
+                        "create",
+                    }:
+                        raise ValueError(
+                            f"Team identity resolution for {canonical_tag} must choose link or create."
+                        )
+                    entry["resolution"] = {"action": resolution["action"]}
+                    if resolution["action"] == "link":
+                        try:
+                            selected_team_id = int(resolution.get("team_id"))
+                        except (TypeError, ValueError) as error:
+                            raise ValueError(
+                                f"Team identity resolution for {canonical_tag} needs a valid team ID."
+                            ) from error
+                        candidate_ids = {
+                            candidate["team_id"] for candidate in cross_league_candidates
+                        }
+                        if selected_team_id not in candidate_ids:
+                            raise ValueError(
+                                f"Team ID {selected_team_id} is not a valid cross-league match for {canonical_tag}."
+                            )
+                        entry["resolution"]["team_id"] = selected_team_id
             entries[entry["key"]] = entry
 
     if competition_metadata["match_type"] == "playoff":
@@ -1194,18 +1379,22 @@ def detect_new_entries(
     for track_name in match_data.get("tracks") or []:
         if not isinstance(track_name, str) or not track_name.strip():
             continue
-        normalized_track = track_name.strip().casefold()
-        existing = session.scalar(
-            select(Track.track_id)
-            .outerjoin(TrackAlias, TrackAlias.track_id == Track.track_id)
-            .where(
-                (func.lower(Track.canonical_name) == normalized_track)
-                | (func.lower(TrackAlias.alias_value) == normalized_track)
-            )
-            .limit(1)
-        )
+        existing = find_track_by_name(session, track_name, league_code)
         if existing is None:
-            entry = _new_entry("track", track_name.strip(), kind="new_track")
+            conflicting_track = find_track_by_name(session, track_name)
+            if conflicting_track is not None:
+                raise ValueError(
+                    f"Track {track_name.strip()} is registered for "
+                    f"{conflicting_track.league_code.upper()} and cannot be used in a "
+                    f"{league_code.upper()} match."
+                )
+            entry = _new_entry(
+                "track",
+                track_name.strip(),
+                league_code,
+                kind="new_track",
+                league=league_code,
+            )
             entries[entry["key"]] = entry
 
     return sorted(entries.values(), key=lambda entry: (entry["type"], entry["value"].casefold()))

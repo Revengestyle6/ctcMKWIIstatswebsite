@@ -16,6 +16,7 @@ UPLOADED_LOGO_PREFIX = "team-logos/"
 def _season_payload(season):
     return {
         "id": season.season_id,
+        "league": season.league_code,
         "season": season.season_code,
         "name": season.name,
         "season_number": season.season_number,

@@ -20,6 +20,7 @@ from models import (  # noqa: E402
     PlayerSeasonEntry,
     Season,
     Team,
+    TeamLeagueIdentity,
     TeamSeasonEntry,
 )
 from routes.common import unapproved_entries  # noqa: E402
@@ -72,6 +73,12 @@ class MatchEditorPlayerTests(unittest.TestCase):
                 clan_tag="SLAY",
             )
             session.add_all((team_entry, other_team_entry))
+            session.add_all(
+                (
+                    TeamLeagueIdentity(team_id=team.team_id, league_code="ctc", tag="CS"),
+                    TeamLeagueIdentity(team_id=other_team.team_id, league_code="ctc", tag="SLAY"),
+                )
+            )
             session.flush()
             season_entry = PlayerSeasonEntry(
                 player_id=player.player_id,
@@ -167,7 +174,7 @@ class MatchEditorPlayerTests(unittest.TestCase):
             self.assertEqual(player_entry["proposed_player_id"], player.player_id)
             self.assertIn(f":{player.player_id}:", player_entry["key"])
 
-            _entries, unapproved, approved_links = unapproved_entries(
+            _entries, unapproved, approved_links, _team_links = unapproved_entries(
                 session,
                 match_data,
                 {player_entry["key"]},

@@ -120,13 +120,17 @@ Validation should catch:
 - unresolved team aliases
 - unresolved player identity issues
 
-Unknown seasons, divisions, season/division team entries, player friend codes,
-and tracks enter an explicit approval workflow instead of failing immediately.
+Unknown leagues, seasons, divisions, season/division team entries, player friend
+codes, and tracks enter an explicit approval workflow instead of failing
+immediately.
 The editor lists each proposed database addition with Approve and Reject
 controls, and every item must be approved before preview or final ingestion.
 Team proposals explicitly distinguish reusing an existing global team for a
 new season/division from creating a completely new team, including a warning
 when an unknown tag could be an unregistered alias.
+When the exact tag exists only in another league, review requires an explicit
+choice between linking that league identity to the existing global team and
+creating a separate global team entity.
 The backend repeats this check against the submitted match so client-side state
 cannot bypass it. Preview approvals create records only inside the rollback-only
 preview transaction; final ingestion will reuse the same contract and persist

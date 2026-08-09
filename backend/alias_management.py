@@ -50,10 +50,12 @@ def _secondary(entity_type, entity):
         return entity.primary_friend_code
     if entity_type == "teams":
         return entity.canonical_tag
+    if entity_type == "tracks":
+        return entity.league_code.upper()
     return None
 
 
-def list_entities(session, entity_type, query="", limit=200):
+def list_entities(session, entity_type, query="", limit=200, league_code=None):
     model = _entity_model(entity_type)
     alias_model = _alias_model(entity_type)
     if model is None:
@@ -65,6 +67,11 @@ def list_entities(session, entity_type, query="", limit=200):
         .outerjoin(alias_model, alias_identity == identity)
         .group_by(identity)
     )
+    normalized_league = str(league_code or "").strip().casefold()
+    if normalized_league:
+        if entity_type != "tracks":
+            raise ValueError("League filtering is available only for tracks.")
+        statement = statement.where(func.lower(Track.league_code) == normalized_league)
     normalized_query = str(query or "").strip().casefold()
     if normalized_query:
         pattern = f"%{normalized_query}%"
@@ -189,6 +196,7 @@ def get_entity(session, entity_type, entity_id):
         season_entries = session.execute(
             select(
                 PlayerSeasonEntry,
+                Season.league_code,
                 Season.season_code,
                 Division.division_code,
                 Team.team_id,
@@ -205,6 +213,7 @@ def get_entity(session, entity_type, entity_id):
             .join(Team, Team.team_id == TeamSeasonEntry.team_id)
             .where(PlayerSeasonEntry.player_id == entity_id)
             .order_by(
+                Season.league_code,
                 Season.season_number,
                 Season.season_code,
                 Division.division_code,
@@ -214,6 +223,7 @@ def get_entity(session, entity_type, entity_id):
         detail["season_entries"] = [
             {
                 "id": entry.player_season_entry_id,
+                "league": league_code,
                 "season": season_code,
                 "division": division_code,
                 "team": {
@@ -230,6 +240,7 @@ def get_entity(session, entity_type, entity_id):
             }
             for (
                 entry,
+                league_code,
                 season_code,
                 division_code,
                 team_id,
@@ -274,12 +285,34 @@ def add_alias(session, entity_type, entity_id, payload):
     existing = session.scalar(select(alias_model).where(*conditions))
     if existing is not None:
         raise ValueError("That alias is already assigned to this object.")
-    if entity_type != "players":
+    if entity_type == "teams":
         conflicting = session.scalar(
             select(alias_model).where(func.lower(alias_model.alias_value) == value.casefold())
         )
         if conflicting is not None:
             raise ValueError("That alias is already assigned to another object.")
+    elif entity_type == "tracks":
+        track = session.get(Track, entity_id)
+        conflicting = session.scalar(
+            select(TrackAlias)
+            .join(Track, Track.track_id == TrackAlias.track_id)
+            .where(
+                func.lower(Track.league_code) == track.league_code.casefold(),
+                func.lower(TrackAlias.alias_value) == value.casefold(),
+            )
+        )
+        if conflicting is not None:
+            raise ValueError("That alias is already assigned to another track in this league.")
+        canonical_track = session.scalar(
+            select(Track).where(
+                func.lower(Track.league_code) == track.league_code.casefold(),
+                func.lower(Track.canonical_name) == value.casefold(),
+            )
+        )
+        if canonical_track is not None:
+            if canonical_track.track_id == entity_id:
+                raise ValueError("That value is already this track's canonical name.")
+            raise ValueError("That value is another track's canonical name in this league.")
     if entity_type == "teams":
         canonical_team = session.scalar(
             select(Team).where(func.lower(Team.canonical_tag) == value.casefold())

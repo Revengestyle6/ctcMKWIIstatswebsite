@@ -5,6 +5,7 @@
 - [Architecture](architecture.md): application boundaries and request/data flow.
 - [Backend](backend.md): Flask modules, API groups, and supported commands.
 - [Frontend](frontend.md): React routes, assets, API client, build, and browser tests.
+- [League And Media Management](league-and-media-management.md): league switching, themed assets, media layout, and cross-league team links.
 - [Data Pipeline](data-pipeline.md): archived JSON, registries, ingestion, and analytics flow.
 - [Analytics Database](database.md): PostgreSQL, SQLAlchemy, Alembic, and ingestion workflow.
 - [Playoff Support](playoff-support-implementation.md): series model, editor metadata, validation, filters, and extension points.

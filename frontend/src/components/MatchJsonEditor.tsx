@@ -17,7 +17,9 @@ import {
   searchTracks,
   type TeamRosterPlayer,
   type TeamScope,
+  type TrackOption,
 } from "../api";
+import { useLeague } from "../context/LeagueContext";
 import { useAdminSession } from "../hooks/useAdminSession";
 import ExistingPlayerPicker from "./ExistingPlayerPicker";
 import {
@@ -60,6 +62,8 @@ import {
   type PreviewMetadata,
   type PreviewResponse,
   type ReviewSubmissionReceipt,
+  type TeamIdentityResolution,
+  trackOptionMatches,
   validation,
   validFriendCode,
 } from "./matchJsonEditorValidation";
@@ -144,12 +148,14 @@ function FieldIssues({
 
 export default function MatchJsonEditor(): React.JSX.Element {
   const auth = useAdminSession();
-  const initial = clone(blankMatch);
-  const [match, setMatch] = useState<MatchJson>(initial);
-  const [races, setRaces] = useState<RaceDraft[]>(() => racesFromMatch(initial));
+  const { league } = useLeague();
+  const [match, setMatch] = useState<MatchJson>(() => ({ ...clone(blankMatch), league }));
+  const [races, setRaces] = useState<RaceDraft[]>(() =>
+    racesFromMatch({ ...clone(blankMatch), league })
+  );
   const [fileName, setFileName] = useState("New match JSON");
   const [identityStates, setIdentityStates] = useState<Record<string, IdentityState>>({});
-  const [trackOptions, setTrackOptions] = useState<Array<{ track_id: number; name: string }>>([]);
+  const [trackOptions, setTrackOptions] = useState<TrackOption[]>([]);
   const [tracksLoaded, setTracksLoaded] = useState(false);
   const [matchScopes, setMatchScopes] = useState<MatchScope[]>([]);
   const [scopesLoaded, setScopesLoaded] = useState(false);
@@ -175,6 +181,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [newEntries, setNewEntries] = useState<NewEntry[]>([]);
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
   const [playerIdentityLinks, setPlayerIdentityLinks] = useState<Record<string, number>>({});
+  const [teamIdentityResolutions, setTeamIdentityResolutions] = useState<
+    Record<string, TeamIdentityResolution>
+  >({});
   const [playerTeamMemberships, setPlayerTeamMemberships] = useState<
     Record<number, PlayerTeamMembership["teams"]>
   >({});
@@ -466,6 +475,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
   }, []);
 
   useEffect(() => {
+    setMatch((current) =>
+      normalized(current.league) === league ? current : { ...current, league }
+    );
+  }, [league]);
+
+  useEffect(() => {
     if (!tablePreview || !scrollToPreviewAfterReview.current) return;
     scrollToPreviewAfterReview.current = false;
     requestAnimationFrame(() =>
@@ -508,23 +523,34 @@ export default function MatchJsonEditor(): React.JSX.Element {
   }, [auth.session?.authenticated]);
 
   useEffect(() => {
-    searchTracks()
+    let cancelled = false;
+    setTracksLoaded(false);
+    setTrackOptions([]);
+    queriedTrackNames.current.clear();
+    searchTracks(league, "", true)
       .then((tracks) => {
+        if (cancelled) return;
         setTrackOptions(tracks);
         setTracksLoaded(true);
       })
       .catch(() => {
+        if (cancelled) return;
         setTrackOptions([]);
         setTracksLoaded(false);
       });
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [league]);
   useEffect(() => {
-    const knownNames = new Set(trackOptions.map((track) => normalized(track.name)));
+    const knownNames = new Set(
+      trackOptions.flatMap((track) => [track.name, ...track.aliases].map(normalized))
+    );
     races.forEach((race) => {
       const key = normalized(race.trackName);
       if (!key || knownNames.has(key) || queriedTrackNames.current.has(key)) return;
       queriedTrackNames.current.add(key);
-      searchTracks(race.trackName)
+      searchTracks(league, race.trackName, true)
         .then((matches) => {
           setTrackOptions((current) => {
             const ids = new Set(current.map((track) => track.track_id));
@@ -533,7 +559,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
         })
         .catch(() => undefined);
     });
-  }, [races, trackOptions]);
+  }, [league, races, trackOptions]);
   useEffect(() => {
     fetchMatchScopes()
       .then((scopes) => {
@@ -554,7 +580,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     let cancelled = false;
     setPlayoffContext(null);
     setPlayoffContextStatus("loading");
-    fetchPlayoffSeries(match.season, match.division)
+    fetchPlayoffSeries(match.league ?? "ctc", match.season, match.division)
       .then((context) => {
         if (cancelled) return;
         setPlayoffContext(context);
@@ -576,7 +602,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [match.division, match.season]);
+  }, [match.division, match.league, match.season]);
 
   useEffect(() => {
     if (match.match_type !== "playoff" || playoffContextStatus !== "loaded") return;
@@ -1176,6 +1202,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setNewEntries([]);
     setApprovalDecisions({});
     setPlayerIdentityLinks({});
+    setTeamIdentityResolutions({});
     setPlayerTeamMemberships({});
     setMembershipStatus("idle");
     setIdentityPickerKey(null);
@@ -1199,7 +1226,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       if (editorVersion.current !== requestVersion) return;
       try {
         const parsed = JSON.parse(String(reader.result)) as MatchJson;
-        resetEditor(parsed, file.name);
+        resetEditor({ ...parsed, league }, file.name);
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : "Could not parse JSON");
       }
@@ -1217,7 +1244,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     }
 
     editorVersion.current += 1;
-    resetEditor(clone(blankMatch), "New match JSON");
+    resetEditor({ ...clone(blankMatch), league }, "New match JSON");
   }
   async function generateTablePreview(
     entries: NewEntry[],
@@ -1230,6 +1257,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       const response = await postJson<PreviewResponse>("/api/matches/preview", {
         match: compiled,
         player_identity_links: playerIdentityLinks,
+        team_identity_resolutions: teamIdentityResolutions,
         approved_new_entries: entries
           .filter((entry) => approvalDecisions[entry.key] === "approved")
           .map((entry) => entry.key),
@@ -1278,6 +1306,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       const result = await postJson<CommitResult>(endpoint, {
         match: compiled,
         player_identity_links: playerIdentityLinks,
+        team_identity_resolutions: teamIdentityResolutions,
         warnings_acknowledged: warningsAcknowledged,
         approved_new_entries: newEntries
           .filter((entry) => approvalDecisions[entry.key] === "approved")
@@ -1300,7 +1329,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
           setTeamsLoaded(true);
         })
         .catch(() => undefined);
-      searchTracks()
+      searchTracks(league, "", true)
         .then((tracks) => {
           setTrackOptions(tracks);
           setTracksLoaded(true);
@@ -1338,10 +1367,17 @@ export default function MatchJsonEditor(): React.JSX.Element {
       const result = await postJson<{ new_entries: NewEntry[] }>("/api/matches/new-entries", {
         match: compiled,
         player_identity_links: playerIdentityLinks,
+        team_identity_resolutions: teamIdentityResolutions,
       });
       if (editorVersion.current !== requestVersion) return;
       setNewEntries(result.new_entries);
-      if (result.new_entries.some((entry) => approvalDecisions[entry.key] !== "approved")) {
+      if (
+        result.new_entries.some(
+          (entry) =>
+            approvalDecisions[entry.key] !== "approved" ||
+            (entry.kind === "cross_league_team_match" && !teamIdentityResolutions[entry.key])
+        )
+      ) {
         setApprovalModalOpen(true);
         return;
       }
@@ -1372,6 +1408,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       const result = await postJson<{ new_entries: NewEntry[] }>("/api/matches/new-entries", {
         match: compiled,
         player_identity_links: nextLinks,
+        team_identity_resolutions: teamIdentityResolutions,
       });
       const replacedKeys = new Set(
         newEntries
@@ -1396,6 +1433,16 @@ export default function MatchJsonEditor(): React.JSX.Element {
     } finally {
       setIdentityMappingLoading(false);
     }
+  }
+
+  function chooseTeamIdentityResolution(entry: NewEntry, resolution: TeamIdentityResolution): void {
+    setTeamIdentityResolutions((current) => ({ ...current, [entry.key]: resolution }));
+    setNewEntries((current) =>
+      current.map((candidate) =>
+        candidate.key === entry.key ? { ...candidate, resolution } : candidate
+      )
+    );
+    setApprovalDecisions((current) => ({ ...current, [entry.key]: "approved" }));
   }
 
   const raceIndexes = raceView === "all" ? races.map((_, index) => index) : [activeRace];
@@ -1510,18 +1557,27 @@ export default function MatchJsonEditor(): React.JSX.Element {
         <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
           <h2 className="mb-3 text-xl font-bold">Additional Metadata</h2>
           <div className="grid gap-3 md:grid-cols-4">
-            {(["league", "season", "division", "match_label"] as const).map((field) => {
+            <div className="text-sm font-semibold text-gray-200">
+              <span>League</span>
+              <ReadOnlyControl label="League" locked value={league} />
+              <span
+                className={`mt-1 block text-xs ${leagueValid ? "text-emerald-300" : isApprovedNewEntry("league", (entry) => normalized(entry.value) === league) ? "text-amber-300" : scopesLoaded ? "text-red-300" : "text-gray-400"}`}
+              >
+                {leagueValid
+                  ? "Confirmed in database"
+                  : isApprovedNewEntry("league", (entry) => normalized(entry.value) === league)
+                    ? "Approved as a new league"
+                    : scopesLoaded
+                      ? `New ${league.toUpperCase()} league requires approval`
+                      : "Checking database..."}
+              </span>
+            </div>
+            {(["season", "division", "match_label"] as const).map((field) => {
               const missing = !String(match[field] ?? "").trim();
               const valid =
-                field === "league"
-                  ? leagueValid
-                  : field === "season"
-                    ? seasonValid
-                    : field === "division"
-                      ? divisionValid
-                      : null;
+                field === "season" ? seasonValid : field === "division" ? divisionValid : null;
               const approved =
-                field === "league" || field === "season"
+                field === "season"
                   ? isApprovedNewEntry(
                       "season",
                       (entry) => normalized(entry.value) === normalized(match.season)
@@ -1573,11 +1629,6 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 </label>
               );
             })}
-            <datalist id="league-options">
-              {Array.from(new Set(matchScopes.map((scope) => scope.league))).map((value) => (
-                <option key={value} value={value} />
-              ))}
-            </datalist>
             <datalist id="season-options">
               {Array.from(
                 new Set(
@@ -2182,9 +2233,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
             </div>
           )}
           <datalist id="track-options">
-            {trackOptions.map((track) => (
-              <option key={track.track_id} value={track.name} />
-            ))}
+            {trackOptions
+              .filter((track) => normalized(track.league) === league)
+              .map((track) => (
+                <option key={track.track_id} value={track.name} />
+              ))}
           </datalist>
           <div className="space-y-5">
             {raceIndexes.map((raceIndex) => {
@@ -2193,9 +2246,17 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 ...race.placements.flatMap((placement) => (placement ? [placement.playerKey] : [])),
                 ...race.unplacedResults.map((result) => result.playerKey),
               ]);
-              const resolvedTrack = trackOptions.find(
-                (track) => normalized(track.name) === normalized(race.trackName)
+              const matchingTrack = trackOptions.find((track) =>
+                trackOptionMatches(track, race.trackName)
               );
+              const resolvedTrack =
+                matchingTrack && normalized(matchingTrack.league) === league
+                  ? matchingTrack
+                  : undefined;
+              const conflictingTrack =
+                matchingTrack && normalized(matchingTrack.league) !== league
+                  ? matchingTrack
+                  : undefined;
               const approvedTrack = isApprovedNewEntry(
                 "track",
                 (entry) => normalized(entry.value) === normalized(race.trackName)
@@ -2230,18 +2291,20 @@ export default function MatchJsonEditor(): React.JSX.Element {
                             trackName: e.target.value,
                           }))
                         }
-                        className={`${inputClass} ${resolvedTrack ? "border-emerald-400/70" : approvedTrack ? "border-amber-300/70" : tracksLoaded ? "border-red-400/70" : ""}`}
+                        className={`${inputClass} ${resolvedTrack ? "border-emerald-400/70" : conflictingTrack ? "border-red-400/70" : approvedTrack ? "border-amber-300/70" : tracksLoaded ? "border-red-400/70" : ""}`}
                       />
                       <span
-                        className={`mt-1 block text-xs normal-case ${resolvedTrack ? "text-emerald-300" : approvedTrack ? "text-amber-300" : tracksLoaded ? "text-red-300" : "text-gray-400"}`}
+                        className={`mt-1 block text-xs normal-case ${resolvedTrack ? "text-emerald-300" : conflictingTrack ? "text-red-300" : approvedTrack ? "text-amber-300" : tracksLoaded ? "text-red-300" : "text-gray-400"}`}
                       >
                         {resolvedTrack
-                          ? "Confirmed in database"
-                          : approvedTrack
-                            ? "Approved as a new track"
-                            : tracksLoaded
-                              ? "No matching database track"
-                              : "Checking database..."}
+                          ? `Confirmed as a ${league.toUpperCase()} track`
+                          : conflictingTrack
+                            ? `Registered for ${conflictingTrack.league.toUpperCase()}; not allowed in ${league.toUpperCase()}`
+                            : approvedTrack
+                              ? "Approved as a new track"
+                              : tracksLoaded
+                                ? "No matching database track"
+                                : "Checking database..."}
                       </span>
                     </label>
                     <label className={smallLabel}>
@@ -2933,16 +2996,20 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   const decision = approvalDecisions[entry.key];
                   const description = newEntryDescription(entry);
                   const identityConflict = entry.kind === "player_identity_conflict";
+                  const crossLeagueTeam = entry.kind === "cross_league_team_match";
+                  const teamResolution = teamIdentityResolutions[entry.key];
                   const playerIdentityEntry = entry.type === "player" && Boolean(entry.friend_code);
                   const explicitlyMapped = Boolean(
                     entry.friend_code && playerIdentityLinks[entry.friend_code]
                   );
                   const approveLabel =
-                    entry.kind === "existing_player_new_friend_code"
-                      ? "Approve link"
-                      : entry.kind === "new_player_identity"
-                        ? "Create player"
-                        : "Approve";
+                    entry.kind === "new_league"
+                      ? "Create league"
+                      : entry.kind === "existing_player_new_friend_code"
+                        ? "Approve link"
+                        : entry.kind === "new_player_identity"
+                          ? "Create player"
+                          : "Approve";
                   return (
                     <div
                       key={entry.key}
@@ -2961,7 +3028,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         </p>
                       )}
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {!identityConflict && (
+                        {!identityConflict && !crossLeagueTeam && (
                           <button
                             type="button"
                             onClick={() =>
@@ -2975,6 +3042,39 @@ export default function MatchJsonEditor(): React.JSX.Element {
                             {approveLabel}
                           </button>
                         )}
+                        {crossLeagueTeam
+                          ? (entry.team_candidates ?? []).map((candidate) => {
+                              const selected =
+                                teamResolution?.action === "link" &&
+                                teamResolution.team_id === candidate.team_id;
+                              return (
+                                <button
+                                  key={candidate.team_id}
+                                  type="button"
+                                  onClick={() =>
+                                    chooseTeamIdentityResolution(entry, {
+                                      action: "link",
+                                      team_id: candidate.team_id,
+                                    })
+                                  }
+                                  className={`rounded px-3 py-1.5 text-sm font-semibold ${selected ? "bg-emerald-500 text-black" : "border border-emerald-400/40 text-emerald-200 hover:bg-emerald-950/40"}`}
+                                >
+                                  Merge with {candidate.canonical_name} (ID {candidate.team_id})
+                                </button>
+                              );
+                            })
+                          : null}
+                        {crossLeagueTeam ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              chooseTeamIdentityResolution(entry, { action: "create" })
+                            }
+                            className={`rounded px-3 py-1.5 text-sm font-semibold ${teamResolution?.action === "create" ? "bg-amber-400 text-black" : "border border-amber-400/40 text-amber-200 hover:bg-amber-950/40"}`}
+                          >
+                            Create entirely new team
+                          </button>
+                        ) : null}
                         {auth.session?.authenticated && playerIdentityEntry ? (
                           <button
                             type="button"
@@ -3044,7 +3144,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
                     newEntries.some(
                       (entry) =>
                         entry.kind === "player_identity_conflict" ||
-                        approvalDecisions[entry.key] !== "approved"
+                        approvalDecisions[entry.key] !== "approved" ||
+                        (entry.kind === "cross_league_team_match" &&
+                          !teamIdentityResolutions[entry.key])
                     )
                   }
                   onClick={async () => {

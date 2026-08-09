@@ -12,6 +12,7 @@ from models import TeamLogo
 from routes.common import (
     division_arg,
     error_response,
+    league_arg,
     match_set_arg,
     minimum_races_arg,
     optional_int_arg,
@@ -59,6 +60,7 @@ def player_stats():
             season=season_arg(),
             role=role,
             match_set=match_set_arg(),
+            league=league_arg(),
         )
         return jsonify({"player": player_name, "role": role, "results": results})
     except Exception as error:
@@ -77,6 +79,7 @@ def player_avg():
             season=season_arg(),
             role=role_arg(),
             match_set=match_set_arg(),
+            league=league_arg(),
         )
         return jsonify(result)
     except Exception as error:
@@ -86,7 +89,11 @@ def player_avg():
 @public_api.get("/api/players")
 def api_players():
     try:
-        return jsonify(stats.list_players(season=season_arg(), division=division_arg()))
+        return jsonify(
+            stats.list_players(
+                season=season_arg(), division=division_arg(), league_code=league_arg()
+            )
+        )
     except Exception as error:
         logger.exception("Failed to list players")
         return error_response(error)
@@ -95,7 +102,11 @@ def api_players():
 @public_api.get("/api/player-directory")
 def api_player_directory():
     try:
-        return jsonify(stats.list_player_directory(season=season_arg(), division=division_arg()))
+        return jsonify(
+            stats.list_player_directory(
+                season=season_arg(), division=division_arg(), league_code=league_arg()
+            )
+        )
     except Exception as error:
         return error_response(error)
 
@@ -157,6 +168,7 @@ def api_player_dashboard_overview(player_id):
         return jsonify(
             dashboards.get_player_overview(
                 player_id,
+                league=league_arg(),
                 season=season_arg(),
                 division=division_arg(),
                 team_id=optional_int_arg("team_id"),
@@ -175,6 +187,7 @@ def api_player_dashboard_performance(player_id):
         return jsonify(
             dashboards.get_player_performance(
                 player_id,
+                league=league_arg(),
                 season=season_arg(),
                 division=division_arg(),
                 team_id=optional_int_arg("team_id"),
@@ -192,6 +205,7 @@ def api_player_dashboard_tracks(player_id):
         return jsonify(
             dashboards.get_player_tracks(
                 player_id,
+                league=league_arg(),
                 season=season_arg(),
                 division=division_arg(),
                 team_id=optional_int_arg("team_id"),
@@ -210,6 +224,7 @@ def api_team_dashboard_overview(team_id):
         return jsonify(
             dashboards.get_team_overview(
                 team_id,
+                league=league_arg(),
                 season=season_arg(),
                 division=division_arg(),
                 opponent_team_id=optional_int_arg("opponent_team_id"),
@@ -227,6 +242,7 @@ def api_team_dashboard_roster(team_id):
         return jsonify(
             dashboards.get_team_roster(
                 team_id,
+                league=league_arg(),
                 season=season_arg(),
                 division=division_arg(),
                 opponent_team_id=optional_int_arg("opponent_team_id"),
@@ -245,6 +261,7 @@ def api_team_dashboard_tracks(team_id):
         return jsonify(
             dashboards.get_team_tracks(
                 team_id,
+                league=league_arg(),
                 season=season_arg(),
                 division=division_arg(),
                 opponent_team_id=optional_int_arg("opponent_team_id"),
@@ -259,7 +276,18 @@ def api_team_dashboard_tracks(team_id):
 @public_api.get("/api/track-search")
 def api_track_search():
     try:
-        return jsonify(stats.search_tracks(query=request.args.get("query")))
+        include_other_leagues = str(request.args.get("include_other_leagues") or "").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        return jsonify(
+            stats.search_tracks(
+                query=request.args.get("query"),
+                league_code=league_arg(),
+                include_other_leagues=include_other_leagues,
+            )
+        )
     except Exception as error:
         return error_response(error)
 
@@ -267,7 +295,7 @@ def api_track_search():
 @public_api.get("/api/seasons")
 def api_seasons():
     try:
-        return jsonify(stats.list_seasons())
+        return jsonify(stats.list_seasons(league_code=league_arg()))
     except Exception as error:
         logger.exception("Failed to list seasons")
         return error_response(error)
@@ -292,7 +320,7 @@ def api_team_scopes():
 @public_api.get("/api/divisions")
 def api_divisions():
     try:
-        return jsonify(stats.list_divisions(season=season_arg()))
+        return jsonify(stats.list_divisions(season=season_arg(), league_code=league_arg()))
     except Exception as error:
         logger.exception("Failed to list divisions")
         return error_response(error)
@@ -314,6 +342,7 @@ def api_top_team_players():
                 season=season_arg(),
                 role=role,
                 match_set=match_set_arg(),
+                league=league_arg(),
             )
         )
     except Exception as error:
@@ -324,7 +353,9 @@ def api_top_team_players():
 @public_api.get("/api/teams")
 def api_teams():
     try:
-        return jsonify(stats.list_teams(season=season_arg(), division=division_arg()))
+        return jsonify(
+            stats.list_teams(season=season_arg(), division=division_arg(), league_code=league_arg())
+        )
     except Exception as error:
         logger.exception("Failed to list teams")
         return error_response(error)
@@ -335,6 +366,7 @@ def api_matches():
     try:
         return jsonify(
             stats.list_matches(
+                league_code=league_arg(),
                 season=season_arg(),
                 division=division_arg(),
                 team=request.args.get("team"),
@@ -351,6 +383,7 @@ def api_playoff_series():
     try:
         return jsonify(
             stats.list_playoff_series(
+                league_code=league_arg(),
                 season=season_arg(),
                 division=division_arg(),
                 team=request.args.get("team"),
@@ -384,6 +417,7 @@ def api_top_team_tracks():
                 division=division_arg(),
                 season=season_arg(),
                 match_set=match_set_arg(),
+                league=league_arg(),
             )
         )
     except Exception as error:
@@ -396,6 +430,7 @@ def api_tracks():
     try:
         return jsonify(
             stats.list_tracks(
+                league_code=league_arg(),
                 season=season_arg(),
                 division=division_arg(),
                 match_set=match_set_arg(),
@@ -425,6 +460,7 @@ def api_top_tracks():
                 season=season_arg(),
                 role=role,
                 match_set=match_set_arg(),
+                league=league_arg(),
             )
         )
     except Exception as error:
@@ -446,6 +482,7 @@ def api_top_teams_on_track():
                 division=division_arg(),
                 season=season_arg(),
                 match_set=match_set_arg(),
+                league=league_arg(),
             )
         )
     except Exception as error:

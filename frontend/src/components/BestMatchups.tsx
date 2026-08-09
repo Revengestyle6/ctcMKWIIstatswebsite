@@ -2,6 +2,7 @@ import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetchCachedJson, fetchJson, prefetchMatchSetVariants } from "../api";
+import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { LegacyStatHeader } from "./LegacyStatHeader";
 import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
@@ -55,6 +56,7 @@ function normalizeTracks(raw: unknown): TrackStat[] {
 }
 
 export default function BestMatchups(): React.JSX.Element {
+  const { league } = useLeague();
   const { seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision } =
     useSeasonDivision();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -85,7 +87,7 @@ export default function BestMatchups(): React.JSX.Element {
       setTeam2Tracks([]);
       setError("");
       try {
-        const data = await fetchJson<string[]>("/api/teams", { season, division });
+        const data = await fetchJson<string[]>("/api/teams", { league, season, division });
         if (cancelled) return;
         const sortedData = [...data].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
         setTeams(sortedData);
@@ -102,13 +104,14 @@ export default function BestMatchups(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [season, division]);
+  }, [league, season, division]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchTeamTracks(team: string): Promise<TrackStat[]> {
       const raw = await fetchCachedJson<unknown>("/api/top-team-tracks", {
+        league,
         team,
         season,
         division,
@@ -134,7 +137,7 @@ export default function BestMatchups(): React.JSX.Element {
           if (team) {
             prefetchMatchSetVariants(
               "/api/top-team-tracks",
-              { team, season, division, min_races: minRaces },
+              { league, team, season, division, min_races: minRaces },
               matchSet
             );
           }
@@ -154,7 +157,7 @@ export default function BestMatchups(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTeam, selectedTeam2, season, division, minRaces, matchSet]);
+  }, [league, selectedTeam, selectedTeam2, season, division, minRaces, matchSet]);
 
   const comparisonRows = useMemo(() => {
     if (!selectedTeam || !selectedTeam2) return [];

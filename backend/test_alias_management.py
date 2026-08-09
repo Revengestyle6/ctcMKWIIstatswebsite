@@ -136,6 +136,7 @@ class AliasManagementTests(unittest.TestCase):
                 ],
             )
             self.assertEqual(len(detail["season_entries"]), 1)
+            self.assertEqual(detail["season_entries"][0]["league"], "ctc")
             self.assertEqual(detail["season_entries"][0]["season"], "s3")
             self.assertEqual(detail["season_entries"][0]["division"], "d2")
             self.assertEqual(detail["season_entries"][0]["team"]["clan_tag"], "CS")
@@ -166,6 +167,22 @@ class AliasManagementTests(unittest.TestCase):
             )
             self.assertEqual(deleted["value"], "LC")
             self.assertEqual(detail["aliases"], [])
+
+    def test_track_list_can_be_filtered_by_league(self):
+        with self.SessionLocal.begin() as session:
+            gsc_track = Track(league_code="gsc", canonical_name="Mario Circuit")
+            session.add(gsc_track)
+            session.flush()
+
+            ctc_results = alias_management.list_entities(
+                session, "tracks", league_code="ctc"
+            )
+            gsc_results = alias_management.list_entities(
+                session, "tracks", league_code="gsc"
+            )
+
+            self.assertEqual([row["id"] for row in ctc_results], [self.track_id])
+            self.assertEqual([row["id"] for row in gsc_results], [gsc_track.track_id])
 
     def test_team_alias_is_used_by_match_import_resolution(self):
         with self.SessionLocal.begin() as session:

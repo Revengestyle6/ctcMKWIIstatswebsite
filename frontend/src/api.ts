@@ -117,12 +117,12 @@ export async function deleteJson<T>(path: string): Promise<T> {
   return requestJson<T>(path, { method: "DELETE" });
 }
 
-export function fetchSeasons(): Promise<SeasonOption[]> {
-  return fetchJson<SeasonOption[]>("/api/seasons");
+export function fetchSeasons(league: string): Promise<SeasonOption[]> {
+  return fetchJson<SeasonOption[]>("/api/seasons", { league });
 }
 
-export function fetchDivisions(season: string): Promise<DivisionOption[]> {
-  return fetchJson<DivisionOption[]>("/api/divisions", { season });
+export function fetchDivisions(league: string, season: string): Promise<DivisionOption[]> {
+  return fetchJson<DivisionOption[]>("/api/divisions", { league, season });
 }
 
 export function formatDivisionName(division: DivisionOption): string {
@@ -157,14 +157,30 @@ export interface PlayerDirectoryEntry {
 }
 
 export function fetchPlayerDirectory(
+  league: string,
   season: string,
   division: string
 ): Promise<PlayerDirectoryEntry[]> {
-  return fetchJson("/api/player-directory", { season, division });
+  return fetchJson("/api/player-directory", { league, season, division });
 }
 
-export function searchTracks(query = ""): Promise<Array<{ track_id: number; name: string }>> {
-  return fetchJson("/api/track-search", { query });
+export interface TrackOption {
+  track_id: number;
+  name: string;
+  league: string;
+  aliases: string[];
+}
+
+export function searchTracks(
+  league: string,
+  query = "",
+  includeOtherLeagues = false
+): Promise<TrackOption[]> {
+  return fetchJson("/api/track-search", {
+    league,
+    query,
+    include_other_leagues: includeOtherLeagues ? "true" : undefined,
+  });
 }
 
 export interface MatchScope {
@@ -210,11 +226,12 @@ export interface PlayoffSeriesResponse {
 }
 
 export function fetchPlayoffSeries(
+  league: string,
   season: string,
   division: string,
   team?: string
 ): Promise<PlayoffSeriesResponse> {
-  return fetchJson("/api/playoff-series", { season, division, team });
+  return fetchJson("/api/playoff-series", { league, season, division, team });
 }
 
 export interface TeamScope {

@@ -2,6 +2,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchCachedJson, fetchJson, fetchTeamScopes, prefetchMatchSetVariants } from "../api";
+import { useLeague } from "../context/LeagueContext";
 import type { LegacyTeamRosterPlayer, LegacyTeamTrackRow, PlayerRoleMode } from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { LegacyStatHeader } from "./LegacyStatHeader";
@@ -14,6 +15,7 @@ function value(valueToFormat: number | null, suffix = ""): string {
 }
 
 export default function TopTeamPlayers(): React.JSX.Element {
+  const { league } = useLeague();
   const { seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision } =
     useSeasonDivision();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -40,8 +42,16 @@ export default function TopTeamPlayers(): React.JSX.Element {
   const [tracksLoading, setTracksLoading] = useState(false);
   const [playersError, setPlayersError] = useState("");
   const [tracksError, setTracksError] = useState("");
-  const playerKey = JSON.stringify([selectedTeam, season, division, minRaces, role, matchSet]);
-  const trackKey = JSON.stringify([selectedTeam, season, division, matchSet]);
+  const playerKey = JSON.stringify([
+    league,
+    selectedTeam,
+    season,
+    division,
+    minRaces,
+    role,
+    matchSet,
+  ]);
+  const trackKey = JSON.stringify([league, selectedTeam, season, division, matchSet]);
   const topPlayers = playerResult?.key === playerKey ? playerResult.rows : [];
   const topTracks = trackResult?.key === trackKey ? trackResult.rows : [];
 
@@ -68,7 +78,10 @@ export default function TopTeamPlayers(): React.JSX.Element {
     setTracksLoading(false);
     setPlayersError("");
     setTracksError("");
-    Promise.all([fetchJson<string[]>("/api/teams", { season, division }), fetchTeamScopes()])
+    Promise.all([
+      fetchJson<string[]>("/api/teams", { league, season, division }),
+      fetchTeamScopes(),
+    ])
       .then(([data, scopes]) => {
         if (cancelled) return;
         const sorted = [...data].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
@@ -76,7 +89,10 @@ export default function TopTeamPlayers(): React.JSX.Element {
         setTeamIds(
           Object.fromEntries(
             scopes
-              .filter((scope) => scope.season === season && scope.division === division)
+              .filter(
+                (scope) =>
+                  scope.league === league && scope.season === season && scope.division === division
+              )
               .map((scope) => [scope.clan_tag, scope.team_id])
           )
         );
@@ -91,7 +107,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [season, division]);
+  }, [league, season, division]);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +119,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
     setPlayersLoading(true);
     setPlayersError("");
     fetchCachedJson<LegacyTeamRosterPlayer[]>("/api/top-team-players", {
+      league,
       team: selectedTeam,
       min_races: minRaces,
       season,
@@ -114,7 +131,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
         if (!cancelled) setPlayerResult({ key: playerKey, rows });
         prefetchMatchSetVariants(
           "/api/top-team-players",
-          { team: selectedTeam, min_races: minRaces, season, division, role },
+          { league, team: selectedTeam, min_races: minRaces, season, division, role },
           matchSet
         );
       })
@@ -130,7 +147,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTeam, season, division, minRaces, role, matchSet, playerKey]);
+  }, [league, selectedTeam, season, division, minRaces, role, matchSet, playerKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,6 +159,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
     setTracksLoading(true);
     setTracksError("");
     fetchCachedJson<LegacyTeamTrackRow[]>("/api/top-team-tracks", {
+      league,
       team: selectedTeam,
       season,
       division,
@@ -151,7 +169,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
         if (!cancelled) setTrackResult({ key: trackKey, rows });
         prefetchMatchSetVariants(
           "/api/top-team-tracks",
-          { team: selectedTeam, season, division },
+          { league, team: selectedTeam, season, division },
           matchSet
         );
       })
@@ -167,7 +185,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTeam, season, division, matchSet, trackKey]);
+  }, [league, selectedTeam, season, division, matchSet, trackKey]);
 
   function updateRole(nextRole: PlayerRoleMode) {
     const next = new URLSearchParams(searchParams);

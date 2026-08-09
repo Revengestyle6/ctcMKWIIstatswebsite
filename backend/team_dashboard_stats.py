@@ -41,7 +41,7 @@ from player_role_analytics import (
 from sqlalchemy import select
 
 SessionLocal = get_session_factory()
-PLACEHOLDER_LOGO = "/images/team-logos/placeholder.webp"
+PLACEHOLDER_LOGO = "/media/shared/team-logo-placeholder.svg"
 
 
 def _team_identity(session, team, scope):
@@ -59,6 +59,7 @@ def _team_identity(session, team, scope):
         .join(Season, Season.season_id == TeamSeasonEntry.season_id)
         .join(Division, Division.division_id == TeamSeasonEntry.division_id)
         .where(TeamSeasonEntry.team_id == team.team_id)
+        .where(Season.league_code == scope.league_code)
     ).all()
     entries = sorted(
         entry_rows,
@@ -142,7 +143,10 @@ def _team_match_rows(session, team_id, scope, match_set="regular"):
             TeamSeasonEntry,
             TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id,
         )
-        .where(TeamSeasonEntry.team_id == team_id)
+        .where(
+            TeamSeasonEntry.team_id == team_id,
+            Season.league_code == scope.league_code,
+        )
     )
     if scope.season_id is not None:
         statement = statement.where(Match.season_id == scope.season_id)
@@ -208,6 +212,7 @@ def _team_ranking(session, team_id, scope, min_races, match_set="regular"):
 
 def get_team_overview(
     team_id,
+    league="ctc",
     season=None,
     division=None,
     opponent_team_id=None,
@@ -220,6 +225,7 @@ def get_team_overview(
         with SessionLocal() as owned_session:
             return get_team_overview(
                 team_id,
+                league=league,
                 season=season,
                 division=division,
                 opponent_team_id=opponent_team_id,
@@ -231,7 +237,7 @@ def get_team_overview(
     team = session.get(Team, team_id)
     if not team:
         raise DashboardNotFound("Team not found.")
-    scope = _resolve_scope(session, season=season, division=division)
+    scope = _resolve_scope(session, league=league, season=season, division=division)
     if opponent_team_id is not None:
         if opponent_team_id == team_id:
             raise DashboardError("A team cannot be its own opponent filter.")
@@ -418,6 +424,7 @@ def _bulk_bagger_counterpart_summaries(session, classified_rows, confirmed_ids):
 
 def get_team_roster(
     team_id,
+    league="ctc",
     season=None,
     division=None,
     opponent_team_id=None,
@@ -432,6 +439,7 @@ def get_team_roster(
         with SessionLocal() as owned_session:
             return get_team_roster(
                 team_id,
+                league=league,
                 season=season,
                 division=division,
                 opponent_team_id=opponent_team_id,
@@ -442,7 +450,7 @@ def get_team_roster(
             )
     if not session.get(Team, team_id):
         raise DashboardNotFound("Team not found.")
-    scope = _resolve_scope(session, season=season, division=division)
+    scope = _resolve_scope(session, league=league, season=season, division=division)
     if opponent_team_id is not None:
         if opponent_team_id == team_id:
             raise DashboardError("A team cannot be its own opponent filter.")
@@ -602,6 +610,7 @@ def get_team_roster(
 
 def get_team_tracks(
     team_id,
+    league="ctc",
     season=None,
     division=None,
     opponent_team_id=None,
@@ -614,6 +623,7 @@ def get_team_tracks(
         with SessionLocal() as owned_session:
             return get_team_tracks(
                 team_id,
+                league=league,
                 season=season,
                 division=division,
                 opponent_team_id=opponent_team_id,
@@ -623,7 +633,7 @@ def get_team_tracks(
             )
     if not session.get(Team, team_id):
         raise DashboardNotFound("Team not found.")
-    scope = _resolve_scope(session, season=season, division=division)
+    scope = _resolve_scope(session, league=league, season=season, division=division)
     if opponent_team_id is not None and not session.get(Team, opponent_team_id):
         raise DashboardError("Unknown opponent filter.")
     match_ids = _filtered_team_match_ids(session, team_id, scope, opponent_team_id, match_set)

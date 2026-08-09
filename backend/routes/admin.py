@@ -25,6 +25,7 @@ from routes.common import (
     error_response,
     match_request_payload,
     player_identity_links_from_payload,
+    team_identity_resolutions_from_payload,
     unapproved_entries,
 )
 
@@ -67,7 +68,11 @@ def api_alias_entities(entity_type):
         with stats.SessionLocal() as session:
             return jsonify(
                 alias_management.list_entities(
-                    session, entity_type, query=request.args.get("query", ""), limit=limit
+                    session,
+                    entity_type,
+                    query=request.args.get("query", ""),
+                    limit=limit,
+                    league_code=request.args.get("league"),
                 )
             )
     except Exception as error:
@@ -193,6 +198,54 @@ def api_team_identity_update(team_id):
         return _team_identity_error(error)
 
 
+@admin_api.post("/api/admin/teams/<int:team_id>/league-identities")
+@require_admin
+def api_team_league_identity_add(team_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, identity = team_identity_management.add_league_identity(
+                session, team_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team.league_identity_created",
+                target_type="team_league_identity",
+                target_id=identity.team_league_identity_id,
+                details={
+                    "team_id": team_id,
+                    "league": identity.league_code,
+                    "tag": identity.tag,
+                },
+            )
+        cache.clear()
+        return jsonify(detail), 201
+    except Exception as error:
+        return _team_identity_error(error)
+
+
+@admin_api.delete("/api/admin/teams/<int:team_id>/league-identities/<int:team_league_identity_id>")
+@require_admin
+def api_team_league_identity_delete(team_id, team_league_identity_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, deleted = team_identity_management.delete_league_identity(
+                session, team_id, team_league_identity_id
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team.league_identity_deleted",
+                target_type="team_league_identity",
+                target_id=team_league_identity_id,
+                details={"team_id": team_id, **deleted},
+            )
+        cache.clear()
+        return jsonify(detail)
+    except Exception as error:
+        return _team_identity_error(error)
+
+
 @admin_api.patch("/api/admin/teams/<int:team_id>/season-entries/<int:team_season_entry_id>")
 @require_admin
 def api_team_season_identity_update(team_id, team_season_entry_id):
@@ -308,11 +361,12 @@ def api_match_preview():
     session = stats.SessionLocal()
     transaction = session.begin()
     try:
-        new_entries, unapproved, player_identity_links = unapproved_entries(
+        new_entries, unapproved, player_identity_links, team_identity_links = unapproved_entries(
             session,
             match_data,
             approved_keys,
             player_identity_links_from_payload(payload),
+            team_identity_resolutions_from_payload(payload),
         )
         if unapproved:
             transaction.rollback()
@@ -322,7 +376,12 @@ def api_match_preview():
                     "new_entries": new_entries,
                 }
             ), 409
-        match = import_preview_match(session, match_data, player_identity_links)
+        match = import_preview_match(
+            session,
+            match_data,
+            player_identity_links,
+            team_identity_links,
+        )
         session.flush()
         detail = stats.get_match_detail(match.match_id, session=session)
         transaction.rollback()
@@ -360,6 +419,7 @@ def api_match_new_entries():
                         session,
                         match_data,
                         player_identity_links=player_identity_links_from_payload(payload),
+                        team_identity_resolutions=team_identity_resolutions_from_payload(payload),
                     )
                 }
             )
@@ -391,6 +451,7 @@ def api_match_commit():
             expected_fingerprint=expected_fingerprint,
             temporary_key=temporary_key,
             requested_player_identity_links=player_identity_links_from_payload(payload),
+            requested_team_identity_resolutions=team_identity_resolutions_from_payload(payload),
         )
         return jsonify(result.payload), result.status_code
     except Exception as error:

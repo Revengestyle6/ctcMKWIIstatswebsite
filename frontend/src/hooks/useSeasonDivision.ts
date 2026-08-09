@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { type DivisionOption, fetchDivisions, fetchSeasons, type SeasonOption } from "../api";
+import { useLeague } from "../context/LeagueContext";
 
 export function useSeasonDivision(
   options: { initialSeason?: string; initialDivision?: string } = {}
 ) {
+  const { league } = useLeague();
   const { initialSeason = "", initialDivision = "" } = options;
   const [seasons, setSeasons] = useState<SeasonOption[]>([]);
   const [divisions, setDivisions] = useState<DivisionOption[]>([]);
@@ -19,7 +21,7 @@ export function useSeasonDivision(
       setLoadingScope(true);
       setScopeError("");
       try {
-        const seasonData = await fetchSeasons();
+        const seasonData = await fetchSeasons(league);
         if (cancelled) return;
         setSeasons(seasonData);
         setSeason(
@@ -41,7 +43,7 @@ export function useSeasonDivision(
     return () => {
       cancelled = true;
     };
-  }, [initialSeason]);
+  }, [initialSeason, league]);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +58,7 @@ export function useSeasonDivision(
       setLoadingScope(true);
       setScopeError("");
       try {
-        const divisionData = await fetchDivisions(season);
+        const divisionData = await fetchDivisions(league, season);
         if (cancelled) return;
         setDivisions(divisionData);
         setDivision(
@@ -78,7 +80,7 @@ export function useSeasonDivision(
     return () => {
       cancelled = true;
     };
-  }, [season, initialDivision]);
+  }, [league, season, initialDivision]);
 
   return {
     seasons,

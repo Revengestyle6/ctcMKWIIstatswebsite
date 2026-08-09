@@ -2,6 +2,8 @@ import { type JSX, lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import LeagueSwitcher from "./components/LeagueSwitcher";
+import { LeagueProvider } from "./context/LeagueContext";
 
 const BestMatchups = lazy(() => import("./components/BestMatchups"));
 const AdminAccessPage = lazy(() => import("./pages/AdminAccessPage"));
@@ -41,29 +43,32 @@ function RouteFallback(): JSX.Element {
 export default function App(): JSX.Element {
   return (
     <BrowserRouter>
-      <BackgroundSlideshow />
-      <Suspense fallback={null}>
-        <MusicPlayer />
-      </Suspense>
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/stats" element={<PlayerStats />} />
-          <Route path="/top-team-players" element={<TopTeamPlayers />} />
-          <Route path="/top-tracks" element={<TopTracks />} />
-          <Route path="/best-matchups" element={<BestMatchups />} />
-          <Route path="/matches" element={<MatchHistory />} />
-          <Route path="/players/:playerId" element={<PlayerDashboard />} />
-          <Route path="/teams/:teamId" element={<TeamDashboard />} />
-          <Route path="/players" element={<PlayerDirectory />} />
-          <Route path="/teams" element={<TeamDirectory />} />
-          <Route path="/json-editor" element={<MatchJsonEditor />} />
-          <Route path="/database-health" element={<DatabaseHealthDashboard />} />
-          <Route path="/admin/access" element={<AdminAccessPage />} />
-          <Route path="/admin/aliases" element={<AdminAliasManagementPage />} />
-          <Route path="/admin/review-queue" element={<AdminReviewQueuePage />} />
-        </Routes>
-      </Suspense>
+      <LeagueProvider>
+        <BackgroundSlideshow />
+        <LeagueSwitcher />
+        <Suspense fallback={null}>
+          <MusicPlayer />
+        </Suspense>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/stats" element={<PlayerStats />} />
+            <Route path="/top-team-players" element={<TopTeamPlayers />} />
+            <Route path="/top-tracks" element={<TopTracks />} />
+            <Route path="/best-matchups" element={<BestMatchups />} />
+            <Route path="/matches" element={<MatchHistory />} />
+            <Route path="/players/:playerId" element={<PlayerDashboard />} />
+            <Route path="/teams/:teamId" element={<TeamDashboard />} />
+            <Route path="/players" element={<PlayerDirectory />} />
+            <Route path="/teams" element={<TeamDirectory />} />
+            <Route path="/json-editor" element={<MatchJsonEditor />} />
+            <Route path="/database-health" element={<DatabaseHealthDashboard />} />
+            <Route path="/admin/access" element={<AdminAccessPage />} />
+            <Route path="/admin/aliases" element={<AdminAliasManagementPage />} />
+            <Route path="/admin/review-queue" element={<AdminReviewQueuePage />} />
+          </Routes>
+        </Suspense>
+      </LeagueProvider>
     </BrowserRouter>
   );
 }

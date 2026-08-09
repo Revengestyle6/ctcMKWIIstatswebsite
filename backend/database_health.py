@@ -129,43 +129,52 @@ def _addition_data(session, limit):
 def _catalog_issues(session):
     issues = []
 
-    tracks = list(session.execute(select(Track.track_id, Track.canonical_name)).all())
+    tracks = list(
+        session.execute(select(Track.track_id, Track.canonical_name, Track.league_code)).all()
+    )
     tracks_by_key = {}
-    for track_id, name in tracks:
-        tracks_by_key.setdefault(_normalized_name(name), []).append((track_id, name))
-    for name_key, group in tracks_by_key.items():
+    for track_id, name, league_code in tracks:
+        tracks_by_key.setdefault((league_code.casefold(), _normalized_name(name)), []).append(
+            (track_id, name)
+        )
+    for (league_code, name_key), group in tracks_by_key.items():
         if name_key and len(group) > 1:
             issues.append(
                 _issue(
-                    f"duplicate-track:{name_key}",
+                    f"duplicate-track:{league_code}:{name_key}",
                     "warning",
                     "tracks",
                     "Duplicate normalized track names",
-                    "These canonical track names differ only by case, spacing, punctuation, or Unicode formatting.",
+                    f"These {league_code.upper()} canonical track names differ only by case, spacing, punctuation, or Unicode formatting.",
                     count=len(group),
                     entities=[{"id": track_id, "label": name} for track_id, name in group],
                     dismissible=True,
                 )
             )
 
-    unique_tracks = [(track_id, name, _normalized_name(name)) for track_id, name in tracks]
+    unique_tracks = [
+        (track_id, name, league_code.casefold(), _normalized_name(name))
+        for track_id, name, league_code in tracks
+    ]
     fuzzy_candidates = []
-    for index, (left_id, left_name, left_key) in enumerate(unique_tracks):
+    for index, (left_id, left_name, left_league, left_key) in enumerate(unique_tracks):
         if len(left_key) < 5:
             continue
-        for right_id, right_name, right_key in unique_tracks[index + 1 :]:
-            if len(right_key) < 5 or left_key == right_key:
+        for right_id, right_name, right_league, right_key in unique_tracks[index + 1 :]:
+            if right_league != left_league or len(right_key) < 5 or left_key == right_key:
                 continue
             ratio = SequenceMatcher(None, left_key, right_key).ratio()
             if ratio >= TRACK_SIMILARITY_THRESHOLD:
-                fuzzy_candidates.append((ratio, left_id, left_name, right_id, right_name))
-    for ratio, left_id, left_name, right_id, right_name in sorted(fuzzy_candidates, reverse=True)[
-        :25
-    ]:
+                fuzzy_candidates.append(
+                    (ratio, left_id, left_name, right_id, right_name, left_league)
+                )
+    for ratio, left_id, left_name, right_id, right_name, league_code in sorted(
+        fuzzy_candidates, reverse=True
+    )[:25]:
         stable_names = sorted((_normalized_name(left_name), _normalized_name(right_name)))
         issues.append(
             _issue(
-                f"similar-track:{stable_names[0]}:{stable_names[1]}",
+                f"similar-track:{league_code}:{stable_names[0]}:{stable_names[1]}",
                 "warning",
                 "tracks",
                 "Similar canonical track names",

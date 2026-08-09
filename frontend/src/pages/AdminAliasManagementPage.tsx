@@ -5,6 +5,7 @@ import { deleteJson, fetchJson, patchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
 import TeamIdentityManager from "../components/admin/TeamIdentityManager";
 import TeamLogoManager from "../components/admin/TeamLogoManager";
+import { useLeague } from "../context/LeagueContext";
 import { useAdminSession } from "../hooks/useAdminSession";
 
 type EntityType = "players" | "teams" | "tracks";
@@ -30,6 +31,7 @@ type FriendCodeItem = {
 };
 type PlayerSeasonEntryItem = {
   id: number;
+  league: string;
   season: string;
   division: string;
   team: {
@@ -85,7 +87,9 @@ function aliasTypeSingularLabel(value: string): string {
 
 export default function AdminAliasManagementPage(): React.JSX.Element {
   const auth = useAdminSession();
+  const { league } = useLeague();
   const [entityType, setEntityType] = useState<EntityType>("tracks");
+  const [trackLeague, setTrackLeague] = useState<"ctc" | "gsc">(league);
   const [query, setQuery] = useState("");
   const [entities, setEntities] = useState<AliasEntity[]>([]);
   const [selected, setSelected] = useState<AliasDetail | null>(null);
@@ -102,7 +106,11 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     const timeout = window.setTimeout(() => {
       setLoading(true);
       setError("");
-      fetchJson<AliasEntity[]>(`/api/admin/aliases/${entityType}`, { query, limit: 500 })
+      fetchJson<AliasEntity[]>(`/api/admin/aliases/${entityType}`, {
+        query,
+        limit: 500,
+        league: entityType === "tracks" ? trackLeague : undefined,
+      })
         .then((response) => {
           if (!cancelled) setEntities(response);
         })
@@ -118,7 +126,12 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [auth.session?.authenticated, entityType, query]);
+  }, [auth.session?.authenticated, entityType, query, trackLeague]);
+
+  useEffect(() => {
+    setTrackLeague(league);
+    setSelected(null);
+  }, [league]);
 
   const visibleAliases = useMemo(
     () => selected?.aliases.filter((alias) => alias.type === aliasType) ?? [],
@@ -279,6 +292,31 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
 
             <div className="grid gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.4fr)]">
               <section className="border border-white/15 bg-zinc-950/90 p-4">
+                {entityType === "tracks" ? (
+                  <fieldset className="mb-4">
+                    <legend className="mb-2 text-sm font-bold text-gray-200">Track league</legend>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["ctc", "gsc"] as const).map((code) => (
+                        <button
+                          key={code}
+                          type="button"
+                          aria-pressed={trackLeague === code}
+                          onClick={() => {
+                            setTrackLeague(code);
+                            setSelected(null);
+                          }}
+                          className={`rounded px-3 py-2 text-sm font-bold ${
+                            trackLeague === code
+                              ? "bg-emerald-500 text-black"
+                              : "border border-white/20 bg-black/40 text-gray-300"
+                          }`}
+                        >
+                          {code.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+                ) : null}
                 <label className="block text-sm font-bold text-gray-200">
                   Search {entityLabels[entityType].toLowerCase()}
                   <input
@@ -547,7 +585,8 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                             >
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <h3 className="font-bold">
-                                  {entry.season.toUpperCase()} · {entry.division.toUpperCase()}
+                                  {entry.league.toUpperCase()} · {entry.season.toUpperCase()} ·{" "}
+                                  {entry.division.toUpperCase()}
                                 </h3>
                                 <span className="text-xs text-gray-400">Entry ID {entry.id}</span>
                               </div>

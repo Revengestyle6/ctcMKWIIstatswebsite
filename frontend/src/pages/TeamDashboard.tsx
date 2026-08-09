@@ -19,6 +19,7 @@ import {
 } from "../components/dashboard/DashboardTabViews";
 import { type MatchSet, MatchSetToggle } from "../components/MatchSetToggle";
 import { RoleModeToggle } from "../components/RoleModeToggle";
+import { useLeague } from "../context/LeagueContext";
 import {
   fetchTeamOverview,
   fetchTeamRoster,
@@ -40,6 +41,7 @@ function signedValue(value: number | null): string {
 }
 
 export default function TeamDashboard() {
+  const { league, leaguePath } = useLeague();
   const { teamId = "" } = useParams();
   const numericTeamId = Number(teamId);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -67,6 +69,7 @@ export default function TeamDashboard() {
     : "overview";
   const rosterQueryKey = JSON.stringify([
     numericTeamId,
+    league,
     season,
     division,
     opponentId,
@@ -76,6 +79,7 @@ export default function TeamDashboard() {
   ]);
   const tracksQueryKey = JSON.stringify([
     numericTeamId,
+    league,
     season,
     division,
     opponentId,
@@ -96,7 +100,7 @@ export default function TeamDashboard() {
       .then((scopes) => {
         setOpponentOptions(
           scopes
-            .filter((scope) => scope.team_id !== numericTeamId)
+            .filter((scope) => scope.league === league && scope.team_id !== numericTeamId)
             .map((scope) => ({
               id: scope.team_id,
               label: `${scope.clan_tag} - ${scope.display_name}`,
@@ -106,7 +110,7 @@ export default function TeamDashboard() {
         );
       })
       .catch(() => setOpponentOptions([]));
-  }, [numericTeamId]);
+  }, [league, numericTeamId]);
 
   useEffect(() => {
     if (!Number.isInteger(numericTeamId) || numericTeamId < 1) {
@@ -116,6 +120,7 @@ export default function TeamDashboard() {
     let cancelled = false;
     setError("");
     fetchTeamOverview(numericTeamId, {
+      league,
       season: season || undefined,
       division: division || undefined,
       opponent_team_id: opponentId ? Number(opponentId) : undefined,
@@ -126,6 +131,7 @@ export default function TeamDashboard() {
       .then((response) => {
         if (!cancelled) setData(response);
         prefetchTeamDashboardMatchSets(numericTeamId, {
+          league,
           season: season || undefined,
           division: division || undefined,
           opponent_team_id: opponentId ? Number(opponentId) : undefined,
@@ -143,7 +149,7 @@ export default function TeamDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [numericTeamId, season, division, opponentId, minRaces, role, matchSet]);
+  }, [numericTeamId, league, season, division, opponentId, minRaces, role, matchSet]);
 
   useEffect(() => {
     if (activeTab !== "roster" || !Number.isInteger(numericTeamId) || numericTeamId < 1) return;
@@ -152,6 +158,7 @@ export default function TeamDashboard() {
     setTabLoadingKey(requestKey);
     setTabError(null);
     fetchTeamRoster(numericTeamId, {
+      league,
       season: season || undefined,
       division: division || undefined,
       opponent_team_id: opponentId ? Number(opponentId) : undefined,
@@ -182,6 +189,7 @@ export default function TeamDashboard() {
   }, [
     activeTab,
     numericTeamId,
+    league,
     season,
     division,
     opponentId,
@@ -198,6 +206,7 @@ export default function TeamDashboard() {
     setTabLoadingKey(requestKey);
     setTabError(null);
     fetchTeamTracks(numericTeamId, {
+      league,
       season: season || undefined,
       division: division || undefined,
       opponent_team_id: opponentId ? Number(opponentId) : undefined,
@@ -224,7 +233,17 @@ export default function TeamDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, numericTeamId, season, division, opponentId, minRaces, matchSet, tracksQueryKey]);
+  }, [
+    activeTab,
+    numericTeamId,
+    league,
+    season,
+    division,
+    opponentId,
+    minRaces,
+    matchSet,
+    tracksQueryKey,
+  ]);
 
   function updateQuery(name: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -451,7 +470,9 @@ export default function TeamDashboard() {
                         </td>
                         <td className="px-4 py-3">
                           <Link
-                            to={`/matches?season=${match.season}&division=${match.division}&match=${match.match_id}&match_set=${matchSet}`}
+                            to={leaguePath(
+                              `/matches?season=${match.season}&division=${match.division}&match=${match.match_id}&match_set=${matchSet}`
+                            )}
                             className="font-semibold text-blue-300 hover:text-blue-200"
                           >
                             {match.label}

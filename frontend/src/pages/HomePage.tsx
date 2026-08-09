@@ -1,5 +1,7 @@
 import type React from "react";
 import { Link } from "react-router-dom";
+import { LeagueLogo } from "../components/LeagueBrand";
+import { useLeague } from "../context/LeagueContext";
 
 const analyticsLinks = [
   {
@@ -45,19 +47,17 @@ const analyticsLinks = [
 ];
 
 export default function HomePage(): React.JSX.Element {
+  const { config, leaguePath } = useLeague();
   return (
     <main className="relative min-h-screen text-white">
       <section className="border-b border-white/10 bg-black/55 px-5 py-12 backdrop-blur-sm sm:px-8 sm:py-16">
         <div className="mx-auto max-w-6xl text-center">
-          <img
-            src="/images/CTC_LOGO/ctclogo.webp"
-            alt="Custom Track Cup logo"
-            className="mx-auto mb-5 h-24 w-24 rounded-md sm:h-28 sm:w-28"
-          />
-          <h1 className="text-4xl font-bold sm:text-5xl">Custom Track Cup Statistics</h1>
+          <div className="mx-auto mb-5 w-fit">
+            <LeagueLogo className="h-24 w-24 sm:h-28 sm:w-28" />
+          </div>
+          <h1 className="text-4xl font-bold sm:text-5xl">{config.name} Statistics</h1>
           <p className="mx-auto mt-4 max-w-3xl text-base leading-7 text-gray-200 sm:text-lg">
-            Multi-season player, team, track, matchup, and race analytics built from the CTC match
-            archive.
+            {config.description}
           </p>
 
           <nav
@@ -67,7 +67,7 @@ export default function HomePage(): React.JSX.Element {
             {analyticsLinks.map((link, index) => (
               <Link
                 key={link.to}
-                to={link.to}
+                to={leaguePath(link.to)}
                 className={`rounded-md border px-4 py-4 transition hover:-translate-y-0.5 hover:border-blue-300/70 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-blue-300 ${index === 0 ? "border-blue-300/50 bg-blue-950/80" : "border-white/15 bg-black/65"}`}
               >
                 <span className="block text-lg font-bold text-white">{link.title}</span>
@@ -77,7 +77,7 @@ export default function HomePage(): React.JSX.Element {
               </Link>
             ))}
             <Link
-              to="/json-editor"
+              to={leaguePath("/json-editor")}
               className="rounded-md border border-emerald-300/40 bg-emerald-950/75 px-4 py-4 transition hover:-translate-y-0.5 hover:border-emerald-200/70 hover:bg-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-300"
             >
               <span className="block text-lg font-bold text-white">Match JSON Editor</span>
@@ -86,7 +86,7 @@ export default function HomePage(): React.JSX.Element {
               </span>
             </Link>
             <Link
-              to="/admin/access"
+              to={leaguePath("/admin/access")}
               className="rounded-md border border-amber-300/30 bg-amber-950/65 px-4 py-4 transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-300"
             >
               <span className="block text-lg font-bold text-white">Administrator Access</span>
@@ -121,7 +121,7 @@ export default function HomePage(): React.JSX.Element {
               differential over time.
             </p>
             <Link
-              to="/matches"
+              to={leaguePath("/matches")}
               className="mt-4 inline-block font-semibold text-blue-300 hover:text-blue-200"
             >
               Open Match History →
@@ -134,28 +134,36 @@ export default function HomePage(): React.JSX.Element {
         <div className="mx-auto max-w-5xl">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
             <div>
-              <p className="text-sm font-semibold uppercase text-red-200">Live competition</p>
-              <h2 className="mt-1 text-2xl font-bold">Custom Track Cup on Twitch</h2>
+              <p className="text-sm font-semibold uppercase league-accent-text">Live competition</p>
+              <h2 className="mt-1 text-2xl font-bold">{config.name}</h2>
             </div>
-            <a
-              href="https://www.twitch.tv/customtrackcupmkwii"
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold text-red-200 hover:text-red-100"
-            >
-              Open on Twitch →
-            </a>
+            {config.twitchChannel ? (
+              <a
+                href={`https://www.twitch.tv/${config.twitchChannel}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold league-accent-text"
+              >
+                Open on Twitch →
+              </a>
+            ) : null}
           </div>
-          <div className="aspect-video overflow-hidden rounded-md border border-white/15 bg-black shadow-2xl">
-            <iframe
-              src={`https://player.twitch.tv/?channel=customtrackcupmkwii&parent=${window.location.hostname}`}
-              allow="autoplay; fullscreen; encrypted-media"
-              allowFullScreen
-              className="h-full w-full"
-              title="Custom Track Cup MKWii Twitch channel"
-              loading="lazy"
-            />
-          </div>
+          {config.twitchChannel ? (
+            <div className="aspect-video overflow-hidden rounded-md border border-white/15 bg-black shadow-2xl">
+              <iframe
+                src={`https://player.twitch.tv/?channel=${config.twitchChannel}&parent=${window.location.hostname}`}
+                allow="autoplay; fullscreen; encrypted-media"
+                allowFullScreen
+                className="h-full w-full"
+                title={`${config.name} Twitch channel`}
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <div className="rounded-md border border-white/15 bg-black/70 px-6 py-10 text-center text-gray-300">
+              Broadcast information for {config.shortName} will appear here when configured.
+            </div>
+          )}
         </div>
       </section>
     </main>

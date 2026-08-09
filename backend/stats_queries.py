@@ -248,7 +248,7 @@ def _resolve_team(session, team, scope):
     return row
 
 
-def _resolve_track(session, track, scope, match_set="regular"):
+def _resolve_track(session, track, scope, match_set="regular", league_code="ctc"):
     if not track or not track.strip():
         raise AnalyticsError("Track name is required")
     query = track.strip().lower()
@@ -266,6 +266,7 @@ def _resolve_track(session, track, scope, match_set="regular"):
     row = session.execute(apply_match_set(statement, match_set)).first()
     if row is None:
         valid_tracks = list_tracks(
+            league_code=league_code,
             season=scope.season_code,
             division=scope.division_code,
             match_set=match_set,
@@ -274,9 +275,9 @@ def _resolve_track(session, track, scope, match_set="regular"):
     return row
 
 
-def list_players(season=None, division=None):
+def list_players(season=None, division=None, league_code="ctc"):
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league_code)
         players = {}
         for row in _valid_players(session, scope):
             display_name = _display_player(row)
@@ -285,9 +286,9 @@ def list_players(season=None, division=None):
         return sorted(players.values(), key=lambda name: name.lower())
 
 
-def list_player_directory(season=None, division=None):
+def list_player_directory(season=None, division=None, league_code="ctc"):
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league_code)
         players = {}
         for row in _valid_players(session, scope):
             display_name = _display_player(row)
@@ -385,10 +386,14 @@ def find_player_identities(friend_code=None, query=None, limit=12):
         }
 
 
-def search_tracks(query=None, limit=500):
+def search_tracks(query=None, limit=500, league_code="ctc", include_other_leagues=False):
     query = (query or "").strip().lower()
     with SessionLocal() as session:
-        statement = select(Track.track_id, Track.canonical_name).order_by(Track.canonical_name)
+        statement = select(Track.track_id, Track.canonical_name, Track.league_code).order_by(
+            Track.canonical_name
+        )
+        if not include_other_leagues:
+            statement = statement.where(func.lower(Track.league_code) == league_code.casefold())
         if query:
             pattern = f"%{query}%"
             matching_ids = select(TrackAlias.track_id).where(
@@ -398,7 +403,24 @@ def search_tracks(query=None, limit=500):
                 func.lower(Track.canonical_name).like(pattern) | Track.track_id.in_(matching_ids)
             )
         rows = session.execute(statement.limit(limit)).all()
-        return [{"track_id": row.track_id, "name": row.canonical_name} for row in rows]
+        track_ids = [row.track_id for row in rows]
+        aliases_by_track: dict[int, list[str]] = {track_id: [] for track_id in track_ids}
+        if track_ids:
+            for track_id, alias in session.execute(
+                select(TrackAlias.track_id, TrackAlias.alias_value)
+                .where(TrackAlias.track_id.in_(track_ids))
+                .order_by(TrackAlias.track_id, TrackAlias.alias_value)
+            ):
+                aliases_by_track[track_id].append(alias)
+        return [
+            {
+                "track_id": row.track_id,
+                "name": row.canonical_name,
+                "league": row.league_code,
+                "aliases": aliases_by_track[row.track_id],
+            }
+            for row in rows
+        ]
 
 
 def list_seasons(league_code="ctc"):
@@ -498,9 +520,9 @@ def list_divisions(season=None, league_code="ctc"):
         return [{"division": row.division_code, "name": row.division_name} for row in rows]
 
 
-def list_teams(season=None, division=None):
+def list_teams(season=None, division=None, league_code="ctc"):
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league_code)
         rows = session.execute(
             select(TeamSeasonEntry.clan_tag)
             .where(
@@ -512,9 +534,9 @@ def list_teams(season=None, division=None):
         return list(rows)
 
 
-def list_tracks(season=None, division=None, match_set="regular"):
+def list_tracks(season=None, division=None, match_set="regular", league_code="ctc"):
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league_code)
         statement = (
             select(Track.canonical_name)
             .join(Race, Race.track_id == Track.track_id)
@@ -553,9 +575,9 @@ def _playoff_match_display_label(
     return stored_label
 
 
-def list_matches(season=None, division=None, team=None, match_set="regular"):
+def list_matches(season=None, division=None, team=None, match_set="regular", league_code="ctc"):
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league_code)
         match_set = normalize_match_set(match_set)
         playoff_config = session.get(DivisionPlayoffConfig, scope.division_id)
         statement = (
@@ -654,9 +676,9 @@ def list_matches(season=None, division=None, team=None, match_set="regular"):
         return matches
 
 
-def list_playoff_series(season=None, division=None, team=None):
+def list_playoff_series(season=None, division=None, team=None, league_code="ctc"):
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league_code)
         config = session.get(DivisionPlayoffConfig, scope.division_id)
         series_rows = session.scalars(
             select(PlayoffSeries)

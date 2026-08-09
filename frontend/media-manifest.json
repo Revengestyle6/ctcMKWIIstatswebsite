@@ -1,0 +1,7 @@
+{
+  "leagues": {
+    "ctc": { "backgroundCount": 343, "requireLogo": true },
+    "gsc": { "backgroundCount": 118, "requireLogo": true }
+  },
+  "sharedAudioTrackCount": 17
+}

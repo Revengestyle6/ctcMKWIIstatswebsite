@@ -43,6 +43,37 @@ class RoleApiTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(mocked.call_args.kwargs["role"], "runner")
 
+    def test_league_scope_is_forwarded_to_public_analytics(self):
+        cases = (
+            ("/api/seasons?league=gsc", app_module.stats, "list_seasons", "league_code"),
+            (
+                "/api/matches?league=gsc&season=s1&division=d1",
+                app_module.stats,
+                "list_matches",
+                "league_code",
+            ),
+            (
+                "/api/players/7/overview?league=gsc",
+                app_module.dashboards,
+                "get_player_overview",
+                "league",
+            ),
+            (
+                "/api/teams/4/overview?league=gsc",
+                app_module.dashboards,
+                "get_team_overview",
+                "league",
+            ),
+        )
+        for path, owner, function_name, keyword in cases:
+            with (
+                self.subTest(path=path),
+                patch.object(owner, function_name, return_value={"ok": True}) as mocked,
+            ):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(mocked.call_args.kwargs[keyword], "gsc")
+
     def test_bagger_forwards_on_every_player_derived_route_family(self):
         cases = (
             ("/api/player?name=Example&role=bagger", app_module.stats, "findtopplayertracks"),

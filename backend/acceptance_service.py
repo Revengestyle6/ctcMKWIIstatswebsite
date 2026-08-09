@@ -81,6 +81,7 @@ def accept_match(
     temporary_key: str,
     review_submission_id: str | None = None,
     requested_player_identity_links: dict[str, int] | None = None,
+    requested_team_identity_resolutions: dict[str, dict] | None = None,
 ) -> AcceptanceResult:
     document = prepare_upload_document(match_data)
     validate_committable_match(match_data)
@@ -111,11 +112,12 @@ def accept_match(
             submission.claimed_by_admin_user_id = actor.admin_user_id
             submission.claimed_at = submission.claimed_at or _utc_now()
 
-        new_entries, unapproved, player_identity_links = unapproved_entries(
+        new_entries, unapproved, player_identity_links, team_identity_links = unapproved_entries(
             session,
             match_data,
             approved_keys,
             requested_player_identity_links,
+            requested_team_identity_resolutions,
         )
         if unapproved:
             raise ValueError("Every new database entry must be approved before acceptance.")
@@ -180,6 +182,7 @@ def accept_match(
             source_filename=document.filename,
             file_sha256=document.fingerprint,
             player_identity_links=player_identity_links,
+            team_identity_links=team_identity_links,
             source_metadata={
                 "storage_provider": storage.provider,
                 "storage_object_key": accepted_key,

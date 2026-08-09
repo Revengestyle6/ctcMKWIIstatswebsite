@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { fetchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
+import { isLeagueCode } from "../config/leagues";
 import { useAdminSession } from "../hooks/useAdminSession";
 
 type Submission = {
@@ -62,6 +63,10 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
   };
   const openEditor = () => {
     if (!selected?.match) return;
+    const submittedLeague = String(selected.match.league ?? "ctc")
+      .trim()
+      .toLowerCase();
+    const league = isLeagueCode(submittedLeague) ? submittedLeague : "ctc";
     sessionStorage.setItem(
       "ctc-review-draft",
       JSON.stringify({
@@ -70,7 +75,9 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
         match: selected.match,
       })
     );
-    navigate(`/json-editor?review_submission=${selected.submission_id}`);
+    navigate(
+      `/json-editor?review_submission=${encodeURIComponent(selected.submission_id)}&league=${league}`
+    );
   };
 
   return (

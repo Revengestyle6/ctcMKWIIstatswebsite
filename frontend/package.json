@@ -14,6 +14,7 @@
     "build": "tsc && vite build",
     "check": "biome check . && tsc --noEmit",
     "format": "biome format --write .",
+    "verify:media": "node scripts/verify-media.mjs",
     "preview": "vite preview",
     "test:e2e": "playwright test e2e/smoke.spec.ts",
     "baseline:ui": "playwright test e2e/capture-baseline.spec.ts"

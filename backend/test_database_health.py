@@ -62,7 +62,7 @@ class DatabaseHealthTests(unittest.TestCase):
         self.assertEqual(report["counts"]["players"], 2)
         self.assertEqual(report["status"], "warning")
         issue_keys = {issue["key"] for issue in report["issues"]}
-        self.assertIn("duplicate-track:testtrack", issue_keys)
+        self.assertIn("duplicate-track:ctc:testtrack", issue_keys)
         self.assertIn("duplicate-player-name:example", issue_keys)
         self.assertEqual(report["archive"]["status"], "skipped")
 
@@ -83,7 +83,7 @@ class DatabaseHealthTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             review_path = Path(directory) / "reviews.json"
             set_issue_review(
-                "duplicate-track:testtrack",
+                "duplicate-track:ctc:testtrack",
                 "dismissed",
                 "Confirmed aliases for the same reviewed catalog entry.",
                 path=review_path,
@@ -95,7 +95,7 @@ class DatabaseHealthTests(unittest.TestCase):
             )
 
         issue = next(
-            item for item in report["issues"] if item["key"] == "duplicate-track:testtrack"
+            item for item in report["issues"] if item["key"] == "duplicate-track:ctc:testtrack"
         )
         self.assertTrue(issue["dismissible"])
         self.assertTrue(issue["is_dismissed"])
