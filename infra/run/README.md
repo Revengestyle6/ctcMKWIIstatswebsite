@@ -23,6 +23,11 @@ All workloads attach Cloud SQL instance
 rather than literal credentials. The service also uses only the staging archive
 bucket. Never give it access to the production archive or export bucket.
 
+The staging service sets `MEDIA_STORAGE_PROVIDER=gcs` and
+`MEDIA_GCS_BUCKET=mkw-stats-staging-media`. The future production service must set
+the same provider with `MEDIA_GCS_BUCKET=mkw-stats-prod-media` and run as
+`ctc-api-prod`; do not attach either service to the other environment's bucket.
+
 Deployment order matters:
 
 1. Build and pin one Artifact Registry image digest.

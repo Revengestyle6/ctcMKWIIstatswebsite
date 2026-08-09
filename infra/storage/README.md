@@ -1,13 +1,14 @@
 # Cloud Storage Configuration
 
-The Phase 4 storage checkpoint uses three private, regional Standard-class
-buckets:
+The production topology uses five private, regional Standard-class buckets:
 
 | Bucket | Purpose |
 | --- | --- |
 | `mkw-stats-staging-archive` | Staging review queue and accepted match JSON |
 | `mkw-stats-prod-archive` | Production review queue and accepted match JSON |
 | `mkw-stats-db-exports` | Logical PostgreSQL exports |
+| `mkw-stats-staging-media` | Staging normalized team-logo uploads |
+| `mkw-stats-prod-media` | Production normalized team-logo uploads |
 
 Both archive buckets use `archive-lifecycle.json`. Objects under `queue/` are
 deleted after 30 days; objects under `accepted/` have no lifecycle deletion rule.
@@ -17,8 +18,14 @@ no lifecycle deletion rule.
 
 All buckets are in `us-central1`, enforce public-access prevention and uniform
 bucket-level access, and retain soft-deleted objects for seven days. Object
-versioning is disabled. The application also uses generation-match preconditions
-to prevent overwriting an accepted object.
+versioning is disabled. The application uses generation-match preconditions for
+both immutable accepted JSON and content-addressed uploaded media.
+
+Media objects have no lifecycle deletion rule. Administrators deactivate logo
+metadata instead of deleting historical assets. The staging API identity has
+`roles/storage.objectCreator` and `roles/storage.objectViewer` only on
+`mkw-stats-staging-media`; the production API identity has the same two roles only
+on `mkw-stats-prod-media`. Neither runtime can delete media objects.
 
 The July 25, 2026 staging rebuild temporarily uploaded 464 repository files under
 `bootstrap/JSON`. The controlled bootstrap job imported 244 authoritative sources,

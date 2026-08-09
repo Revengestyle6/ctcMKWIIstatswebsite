@@ -38,6 +38,14 @@ state. Set `MEDIA_STORAGE_ROOT` to override it. Staging and production require
 `MEDIA_STORAGE_PROVIDER=gcs` and `MEDIA_GCS_BUCKET` for a dedicated media bucket.
 The Cloud Run runtime identity needs object create/read access to that bucket.
 
+The deployed bucket mapping is:
+
+- staging: `mkw-stats-staging-media`, accessed only by `ctc-api-staging`;
+- production: `mkw-stats-prod-media`, accessed only by `ctc-api-prod`.
+
+Each runtime has bucket-scoped `roles/storage.objectCreator` and
+`roles/storage.objectViewer`. It cannot delete media objects.
+
 The public content endpoint is `/api/team-logos/{team_logo_id}/content`. Responses
 use immutable one-year browser caching because each uploaded object key is derived
 from its normalized content. Existing repository-managed paths below
