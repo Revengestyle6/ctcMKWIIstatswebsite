@@ -8,7 +8,7 @@ configure_test_environment()
 
 from alias_management import add_alias  # noqa: E402
 from app import app  # noqa: E402
-from import_json_to_db import get_or_create_team_entry  # noqa: E402
+from import_json_to_db import get_or_create_team, get_or_create_team_entry  # noqa: E402
 from models import (  # noqa: E402
     AdminAuditLog,
     AdminUser,
@@ -16,11 +16,14 @@ from models import (  # noqa: E402
     Season,
     Team,
     TeamAlias,
+    TeamLeagueIdentity,
     TeamSeasonEntry,
 )
 from player_dashboard_stats import DashboardScope  # noqa: E402
 from team_dashboard_stats import _team_identity  # noqa: E402
 from team_identity_management import (  # noqa: E402
+    add_league_identity,
+    delete_league_identity,
     get_team_identity,
     update_canonical_identity,
     update_season_identity,
@@ -42,6 +45,7 @@ class TeamIdentityManagementTests(unittest.TestCase):
             session.query(AdminAuditLog).delete()
             session.query(AdminUser).delete()
             session.query(TeamAlias).delete()
+            session.query(TeamLeagueIdentity).delete()
             session.query(TeamSeasonEntry).delete()
             session.query(Division).delete()
             session.query(Season).delete()
@@ -91,6 +95,7 @@ class TeamIdentityManagementTests(unittest.TestCase):
                 clan_tag="CS3",
             )
             session.add_all((entry_two, entry_three))
+            session.add(TeamLeagueIdentity(team_id=team.team_id, league_code="ctc", tag="CS"))
             session.flush()
             self.team_id = team.team_id
             self.other_team_id = other_team.team_id
@@ -121,14 +126,39 @@ class TeamIdentityManagementTests(unittest.TestCase):
             )
             self.assertEqual(alias.alias_value, "CS")
 
-    def test_canonical_tag_rejects_case_insensitive_conflicts(self):
+    def test_canonical_tag_can_match_an_unlinked_team(self):
         with self.SessionLocal.begin() as session:
-            with self.assertRaisesRegex(ValueError, "another team"):
-                update_canonical_identity(
-                    session,
-                    self.team_id,
-                    {"canonical_name": "Cosmic Speed", "canonical_tag": "ot"},
-                )
+            detail, _ = update_canonical_identity(
+                session,
+                self.team_id,
+                {"canonical_name": "Cosmic Speed", "canonical_tag": "ot"},
+            )
+            self.assertEqual(detail["team"]["canonical_tag"], "ot")
+
+    def test_same_tag_in_another_league_stays_separate_until_linked(self):
+        with self.SessionLocal.begin() as session:
+            separate = get_or_create_team(session, "gsc", "CS", "GSC Cosmic")
+            self.assertNotEqual(separate.team_id, self.team_id)
+            identity = session.scalar(
+                session.query(TeamLeagueIdentity)
+                .where(TeamLeagueIdentity.team_id == separate.team_id)
+                .statement
+            )
+            self.assertEqual(identity.league_code, "gsc")
+
+    def test_admin_league_identity_explicitly_links_team(self):
+        with self.SessionLocal.begin() as session:
+            detail, identity = add_league_identity(
+                session, self.team_id, {"league": "gsc", "tag": "CS"}
+            )
+            self.assertEqual(detail["league_identities"][-1]["league"], "gsc")
+            linked = get_or_create_team(session, "gsc", "CS", "Ignored")
+            self.assertEqual(linked.team_id, self.team_id)
+            detail, deleted = delete_league_identity(
+                session, self.team_id, identity.team_league_identity_id
+            )
+            self.assertEqual(deleted, {"league": "gsc", "tag": "CS"})
+            self.assertFalse(any(item["league"] == "gsc" for item in detail["league_identities"]))
 
     def test_team_alias_rejects_another_canonical_tag(self):
         with self.SessionLocal.begin() as session:
@@ -177,7 +207,7 @@ class TeamIdentityManagementTests(unittest.TestCase):
             identity = _team_identity(
                 session,
                 team,
-                DashboardScope(self.season_two_id, "s2", 2, self.division_two_id, "d2"),
+                DashboardScope("ctc", self.season_two_id, "s2", 2, self.division_two_id, "d2"),
             )
             self.assertEqual(identity["display_name"], "Season Two Name")
             self.assertEqual(identity["current_entry"]["tag"], "CS2")
@@ -199,7 +229,7 @@ class TeamIdentityManagementTests(unittest.TestCase):
             identity = _team_identity(
                 session,
                 team,
-                DashboardScope(self.season_two_id, "s2", 2, self.division_two_id, "d2"),
+                DashboardScope("ctc", self.season_two_id, "s2", 2, self.division_two_id, "d2"),
             )
             self.assertEqual(identity["display_name"], "Cosmic Speed")
             self.assertEqual(identity["current_entry"]["name"], "Cosmic Speed")

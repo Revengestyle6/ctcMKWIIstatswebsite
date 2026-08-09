@@ -6,4 +6,32 @@
 
 body {
   font-family: "IBM Plex Sans", sans-serif;
+  background: var(--league-page-fallback, #020617);
+}
+
+.league-accent-text {
+  color: var(--league-accent, #60a5fa);
+}
+
+.league-accent-bg {
+  background-color: var(--league-accent, #60a5fa);
+}
+
+.league-accent-border {
+  border-color: var(--league-accent, #60a5fa);
+}
+
+.league-page-fallback {
+  background-color: var(--league-page-fallback, #020617);
+}
+
+.league-background-fallback {
+  background:
+    radial-gradient(circle at 20% 20%, var(--league-accent-muted, #172554), transparent 45%),
+    radial-gradient(circle at 80% 70%, var(--league-accent, #60a5fa), transparent 55%),
+    var(--league-page-fallback, #020617);
+}
+
+.league-focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--league-focus, #60a5fa);
 }

@@ -686,7 +686,7 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.assertEqual(bagger_player["metrics"]["total_points"], 7)
         self.assertEqual(bagger_player["metrics"]["bag_points"], 3)
         self.assertNotIn("twelve_race_pace", bagger_player["metrics"])
-        self.assertEqual(bagger["scope"], {"season": "s2", "division": "d1"})
+        self.assertEqual(bagger["scope"], {"league": "ctc", "season": "s2", "division": "d1"})
         self.assertEqual(bagger_player["role_coverage"]["total"], 8)
 
         thresholded = get_track_player_rankings(

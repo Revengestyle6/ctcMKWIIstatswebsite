@@ -19,6 +19,7 @@ import {
 } from "../components/dashboard/DashboardTabViews";
 import { type MatchSet, MatchSetToggle } from "../components/MatchSetToggle";
 import { RoleModeToggle } from "../components/RoleModeToggle";
+import { useLeague } from "../context/LeagueContext";
 import {
   fetchPlayerOverview,
   fetchPlayerPerformance,
@@ -39,6 +40,7 @@ function signedValue(value: number): string {
 }
 
 export default function PlayerDashboard() {
+  const { league, leaguePath } = useLeague();
   const { playerId = "" } = useParams();
   const numericPlayerId = Number(playerId);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -66,6 +68,7 @@ export default function PlayerDashboard() {
     : "overview";
   const overviewQueryKey = JSON.stringify([
     playerId,
+    league,
     season,
     division,
     teamId,
@@ -86,6 +89,7 @@ export default function PlayerDashboard() {
     setLoading(true);
     setOverviewError(null);
     fetchPlayerOverview(numericPlayerId, {
+      league,
       season: season || undefined,
       division: division || undefined,
       team_id: teamId ? Number(teamId) : undefined,
@@ -96,6 +100,7 @@ export default function PlayerDashboard() {
       .then((response) => {
         if (!cancelled) setOverview({ key: overviewQueryKey, value: response });
         prefetchPlayerDashboardMatchSets(numericPlayerId, {
+          league,
           season: season || undefined,
           division: division || undefined,
           team_id: teamId ? Number(teamId) : undefined,
@@ -121,7 +126,17 @@ export default function PlayerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [numericPlayerId, season, division, teamId, minRaces, role, matchSet, overviewQueryKey]);
+  }, [
+    numericPlayerId,
+    league,
+    season,
+    division,
+    teamId,
+    minRaces,
+    role,
+    matchSet,
+    overviewQueryKey,
+  ]);
 
   useEffect(() => {
     if (activeTab === "overview" || !Number.isInteger(numericPlayerId) || numericPlayerId < 1)
@@ -130,6 +145,7 @@ export default function PlayerDashboard() {
     setTabLoading(true);
     setTabError("");
     const query = {
+      league,
       season: season || undefined,
       division: division || undefined,
       team_id: teamId ? Number(teamId) : undefined,
@@ -159,7 +175,7 @@ export default function PlayerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, numericPlayerId, season, division, teamId, minRaces, role, matchSet]);
+  }, [activeTab, numericPlayerId, league, season, division, teamId, minRaces, role, matchSet]);
 
   function updateQuery(name: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -274,7 +290,7 @@ export default function PlayerDashboard() {
               alt={`${currentTeam.name} logo`}
             />
           ) : (
-            <TeamLogo src="/images/team-logos/placeholder.webp" alt="Team logo unavailable" />
+            <TeamLogo src="/media/shared/team-logo-placeholder.svg" alt="Team logo unavailable" />
           )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -457,7 +473,9 @@ export default function PlayerDashboard() {
                         </td>
                         <td className="px-4 py-3">
                           <Link
-                            to={`/matches?season=${match.season}&division=${match.division}&match=${match.match_id}&match_set=${matchSet}`}
+                            to={leaguePath(
+                              `/matches?season=${match.season}&division=${match.division}&match=${match.match_id}&match_set=${matchSet}`
+                            )}
                             className="font-semibold text-blue-300 hover:text-blue-200"
                           >
                             {match.label}

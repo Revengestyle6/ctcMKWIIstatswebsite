@@ -6,6 +6,7 @@ import {
   type PlayerDirectoryEntry,
   prefetchMatchSetVariants,
 } from "../api";
+import { useLeague } from "../context/LeagueContext";
 import type {
   LegacyPlayerAverageResponse,
   LegacyPlayerTracksResponse,
@@ -23,6 +24,7 @@ function value(value: number | null, suffix = ""): string {
 }
 
 export default function PlayerStats() {
+  const { league, leaguePath } = useLeague();
   const { seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision } =
     useSeasonDivision();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -43,7 +45,7 @@ export default function PlayerStats() {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const queryKey = JSON.stringify([selectedPlayer, season, division, role, matchSet]);
+  const queryKey = JSON.stringify([league, selectedPlayer, season, division, role, matchSet]);
   const currentStats = stats?.key === queryKey ? stats : null;
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function PlayerStats() {
     setStats(null);
     setLoading(false);
     setError("");
-    fetchPlayerDirectory(season, division)
+    fetchPlayerDirectory(league, season, division)
       .then((directory) => {
         if (cancelled) return;
         const sorted = [...directory].sort((a, b) =>
@@ -80,7 +82,7 @@ export default function PlayerStats() {
     return () => {
       cancelled = true;
     };
-  }, [season, division]);
+  }, [league, season, division]);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,6 +95,7 @@ export default function PlayerStats() {
     setError("");
     Promise.all([
       fetchCachedJson<LegacyPlayerTracksResponse>("/api/player", {
+        league,
         name: selectedPlayer,
         season,
         division,
@@ -100,6 +103,7 @@ export default function PlayerStats() {
         match_set: matchSet,
       }),
       fetchCachedJson<LegacyPlayerAverageResponse>("/api/player-avg", {
+        league,
         name: selectedPlayer,
         season,
         division,
@@ -109,7 +113,7 @@ export default function PlayerStats() {
     ])
       .then(([tracks, average]) => {
         if (!cancelled) setStats({ key: queryKey, tracks, average });
-        const params = { name: selectedPlayer, season, division, role };
+        const params = { league, name: selectedPlayer, season, division, role };
         prefetchMatchSetVariants("/api/player", params, matchSet);
         prefetchMatchSetVariants("/api/player-avg", params, matchSet);
       })
@@ -127,7 +131,7 @@ export default function PlayerStats() {
     return () => {
       cancelled = true;
     };
-  }, [selectedPlayer, season, division, role, matchSet, queryKey]);
+  }, [league, selectedPlayer, season, division, role, matchSet, queryKey]);
 
   function updateRole(nextRole: PlayerRoleMode) {
     const next = new URLSearchParams(searchParams);
@@ -284,7 +288,9 @@ export default function PlayerStats() {
               </div>
               {selectedPlayerId && (
                 <Link
-                  to={`/players/${selectedPlayerId}?season=${season}&division=${division}&role=${role}&match_set=${matchSet}`}
+                  to={leaguePath(
+                    `/players/${selectedPlayerId}?season=${season}&division=${division}&role=${role}&match_set=${matchSet}`
+                  )}
                   className="mt-5 inline-block font-semibold text-blue-300 hover:text-blue-200"
                 >
                   Open player dashboard &rarr;

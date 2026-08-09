@@ -16,6 +16,10 @@ def division_arg():
     return request.args.get("division")
 
 
+def league_arg():
+    return str(request.args.get("league") or "ctc").strip().lower()
+
+
 def match_set_arg():
     return normalize_match_set(request.args.get("match_set"))
 
@@ -82,26 +86,49 @@ def player_identity_links_from_payload(payload):
     return links
 
 
+def team_identity_resolutions_from_payload(payload):
+    if not isinstance(payload, dict):
+        return {}
+    resolutions = payload.get("team_identity_resolutions") or {}
+    if not isinstance(resolutions, dict):
+        raise ValueError("Team identity resolutions must be an object keyed by review entry.")
+    return resolutions
+
+
 def unapproved_entries(
     session,
     match_data,
     approved_keys,
     requested_player_identity_links=None,
+    requested_team_identity_resolutions=None,
 ):
     new_entries = detect_new_entries(
         session,
         match_data,
         player_identity_links=requested_player_identity_links,
+        team_identity_resolutions=requested_team_identity_resolutions,
     )
     unapproved = [
         entry
         for entry in new_entries
-        if entry["key"] not in approved_keys or entry.get("kind") == "player_identity_conflict"
+        if entry["key"] not in approved_keys
+        or entry.get("kind") == "player_identity_conflict"
+        or (
+            entry.get("kind") == "cross_league_team_match"
+            and not entry.get("resolution")
+        )
     ]
     player_identity_links = {
         entry["friend_code"]: entry["proposed_player_id"]
         for entry in new_entries
         if entry["key"] in approved_keys and entry.get("kind") == "existing_player_new_friend_code"
+    }
+    team_identity_links = {
+        entry["value"].casefold(): entry["resolution"]["team_id"]
+        for entry in new_entries
+        if entry["key"] in approved_keys
+        and entry.get("kind") == "cross_league_team_match"
+        and entry.get("resolution", {}).get("action") == "link"
     }
     friend_codes = [
         friend_code
@@ -126,7 +153,7 @@ def unapproved_entries(
                 f"({prior_code} and {friend_code})."
             )
         configured_players[player_id] = friend_code
-    return new_entries, unapproved, player_identity_links
+    return new_entries, unapproved, player_identity_links, team_identity_links
 
 
 def duplicate_commit_response(session, source_file, fingerprint):

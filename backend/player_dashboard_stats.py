@@ -33,7 +33,7 @@ from player_role_analytics import (
 from sqlalchemy import desc, select
 
 SessionLocal = get_session_factory()
-PLACEHOLDER_LOGO = "/images/team-logos/placeholder.webp"
+PLACEHOLDER_LOGO = "/media/shared/team-logo-placeholder.svg"
 
 
 class DashboardError(ValueError):
@@ -46,6 +46,7 @@ class DashboardNotFound(DashboardError):
 
 @dataclass(frozen=True)
 class DashboardScope:
+    league_code: str
     season_id: int | None
     season_code: str | None
     season_number: int | None
@@ -60,18 +61,19 @@ def _normalize_code(value, prefix):
     return code if code.startswith(prefix) else f"{prefix}{code}"
 
 
-def _resolve_scope(session, season=None, division=None):
+def _resolve_scope(session, league="ctc", season=None, division=None):
+    league_code = str(league or "ctc").strip().lower()
     season_code = _normalize_code(season, "s")
     division_code = _normalize_code(division, "d")
     if division_code and not season_code:
         raise DashboardError("Division requires a season.")
 
     if not season_code:
-        return DashboardScope(None, None, None, None, None)
+        return DashboardScope(league_code, None, None, None, None, None)
 
     season_row = session.execute(
         select(Season.season_id, Season.season_code, Season.season_number).where(
-            Season.league_code == "ctc",
+            Season.league_code == league_code,
             Season.season_code == season_code,
         )
     ).first()
@@ -80,6 +82,7 @@ def _resolve_scope(session, season=None, division=None):
 
     if not division_code:
         return DashboardScope(
+            league_code,
             season_row.season_id,
             season_row.season_code,
             season_row.season_number,
@@ -97,6 +100,7 @@ def _resolve_scope(session, season=None, division=None):
         raise DashboardError(f"Unknown division for {season_code}: {division_code}")
 
     return DashboardScope(
+        league_code,
         season_row.season_id,
         season_row.season_code,
         season_row.season_number,
@@ -107,6 +111,7 @@ def _resolve_scope(session, season=None, division=None):
 
 def _scope_payload(scope):
     return {
+        "league": scope.league_code,
         "season": scope.season_code,
         "division": scope.division_code,
     }
@@ -182,7 +187,7 @@ def _team_logo_url(session, team_id, season_id=None):
     )
 
 
-def _player_identity(session, player):
+def _player_identity(session, player, league_code="ctc"):
     codes = list(
         session.scalars(
             select(PlayerFriendCode.friend_code)
@@ -227,7 +232,10 @@ def _player_identity(session, player):
             TeamSeasonEntry.team_season_entry_id == PlayerSeasonEntry.team_season_entry_id,
         )
         .join(Team, Team.team_id == TeamSeasonEntry.team_id)
-        .where(PlayerSeasonEntry.player_id == player.player_id)
+        .where(
+            PlayerSeasonEntry.player_id == player.player_id,
+            Season.league_code == league_code,
+        )
     ).all()
     entries = sorted(
         entry_rows,
@@ -326,7 +334,10 @@ def _player_race_rows(session, player_id, scope, team_id=None, match_set="regula
             TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id,
         )
         .join(Team, Team.team_id == TeamSeasonEntry.team_id)
-        .where(RacePlayerResult.player_id == player_id)
+        .where(
+            RacePlayerResult.player_id == player_id,
+            Season.league_code == scope.league_code,
+        )
     )
     if scope.season_id is not None:
         statement = statement.where(Match.season_id == scope.season_id)
@@ -429,6 +440,7 @@ def _player_ranking(session, player_id, scope, min_races, role, team_id=None, ma
 
 def get_player_overview(
     player_id,
+    league="ctc",
     season=None,
     division=None,
     team_id=None,
@@ -443,6 +455,7 @@ def get_player_overview(
         with SessionLocal() as owned_session:
             return get_player_overview(
                 player_id,
+                league=league,
                 season=season,
                 division=division,
                 team_id=team_id,
@@ -455,7 +468,7 @@ def get_player_overview(
     player = session.get(Player, player_id)
     if not player:
         raise DashboardNotFound("Player not found.")
-    scope = _resolve_scope(session, season=season, division=division)
+    scope = _resolve_scope(session, league=league, season=season, division=division)
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
 
@@ -559,7 +572,7 @@ def get_player_overview(
     for row in recent_matches:
         record[_record_key(row["result"])] += 1
 
-    identity = _player_identity(session, player)
+    identity = _player_identity(session, player, scope.league_code)
     metrics.update(
         {
             "matches": len(match_groups),
@@ -602,6 +615,7 @@ def get_player_overview(
 
 def get_player_performance(
     player_id,
+    league="ctc",
     season=None,
     division=None,
     team_id=None,
@@ -615,6 +629,7 @@ def get_player_performance(
         with SessionLocal() as owned_session:
             return get_player_performance(
                 player_id,
+                league=league,
                 season=season,
                 division=division,
                 team_id=team_id,
@@ -624,7 +639,7 @@ def get_player_performance(
             )
     if not session.get(Player, player_id):
         raise DashboardNotFound("Player not found.")
-    scope = _resolve_scope(session, season=season, division=division)
+    scope = _resolve_scope(session, league=league, season=season, division=division)
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
     rows = _player_race_rows(session, player_id, scope, team_id=team_id, match_set=match_set)
@@ -681,6 +696,7 @@ def get_player_performance(
 
 def get_player_tracks(
     player_id,
+    league="ctc",
     season=None,
     division=None,
     team_id=None,
@@ -695,6 +711,7 @@ def get_player_tracks(
         with SessionLocal() as owned_session:
             return get_player_tracks(
                 player_id,
+                league=league,
                 season=season,
                 division=division,
                 team_id=team_id,
@@ -705,7 +722,7 @@ def get_player_tracks(
             )
     if not session.get(Player, player_id):
         raise DashboardNotFound("Player not found.")
-    scope = _resolve_scope(session, season=season, division=division)
+    scope = _resolve_scope(session, league=league, season=season, division=division)
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
     rows = _player_race_rows(session, player_id, scope, team_id=team_id, match_set=match_set)
@@ -756,6 +773,7 @@ def get_track_player_rankings(
     track_id,
     season,
     division,
+    league="ctc",
     role="runner",
     min_races=2,
     match_set="regular",
@@ -769,13 +787,14 @@ def get_track_player_rankings(
                 track_id,
                 season=season,
                 division=division,
+                league=league,
                 role=role,
                 min_races=min_races,
                 match_set=match_set,
                 session=owned_session,
             )
 
-    scope = _resolve_scope(session, season=season, division=division)
+    scope = _resolve_scope(session, league=league, season=season, division=division)
     if scope.season_id is None or scope.division_id is None:
         raise DashboardError("Track player rankings require season and division.")
     if not session.get(Track, track_id):

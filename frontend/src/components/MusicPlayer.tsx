@@ -1,24 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 
-// List of music tracks (add your music files to public/music/)
 const musicTracks = [
-  "/music/track%20(1).mp3",
-  "/music/track%20(2).mp3",
-  "/music/track%20(3).mp3",
-  "/music/track%20(4).mp3",
-  "/music/track%20(5).mp3",
-  "/music/track%20(6).mp3",
-  "/music/track%20(7).mp3",
-  "/music/track%20(8).mp3",
-  "/music/track%20(9).mp3",
-  "/music/track%20(10).mp3",
-  "/music/track%20(11).mp3",
-  "/music/track%20(12).mp3",
-  "/music/track%20(13).mp3",
-  "/music/track%20(14).mp3",
-  "/music/track%20(15).mp3",
-  "/music/track%20(16).mp3",
-  "/music/track%20(17).mp3",
+  "/media/audio/shared/track-01.mp3",
+  "/media/audio/shared/track-02.mp3",
+  "/media/audio/shared/track-03.mp3",
+  "/media/audio/shared/track-04.mp3",
+  "/media/audio/shared/track-05.mp3",
+  "/media/audio/shared/track-06.mp3",
+  "/media/audio/shared/track-07.mp3",
+  "/media/audio/shared/track-08.mp3",
+  "/media/audio/shared/track-09.mp3",
+  "/media/audio/shared/track-10.mp3",
+  "/media/audio/shared/track-11.mp3",
+  "/media/audio/shared/track-12.mp3",
+  "/media/audio/shared/track-13.mp3",
+  "/media/audio/shared/track-14.mp3",
+  "/media/audio/shared/track-15.mp3",
+  "/media/audio/shared/track-16.mp3",
+  "/media/audio/shared/track-17.mp3",
 ];
 
 export default function MusicPlayer() {

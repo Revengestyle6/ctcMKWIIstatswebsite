@@ -65,21 +65,29 @@ SessionLocal = get_session_factory()
 
 
 def findplayeravg(
-    player, track="", division=None, team="", season=None, role="runner", match_set="regular"
+    player,
+    track="",
+    division=None,
+    team="",
+    season=None,
+    role="runner",
+    match_set="regular",
+    league="ctc",
 ):
     role = normalize_role(role)
     match_set = normalize_match_set(match_set)
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league)
         player_row = _resolve_player(session, player, scope)
         team_row = None
         if team:
             team_row = _resolve_team(session, team, scope)
 
         if track:
-            track_row = _resolve_track(session, track, scope, match_set)
+            track_row = _resolve_track(session, track, scope, match_set, league_code=league)
             tracks = dashboards.get_player_tracks(
                 player_row.player_id,
+                league=league,
                 season=scope.season_code,
                 division=scope.division_code,
                 team_id=team_row.team_id if team_row else None,
@@ -101,6 +109,7 @@ def findplayeravg(
         else:
             overview = dashboards.get_player_overview(
                 player_row.player_id,
+                league=league,
                 season=scope.season_code,
                 division=scope.division_code,
                 team_id=team_row.team_id if team_row else None,
@@ -119,11 +128,11 @@ def findplayeravg(
         }
 
 
-def findteamavg(team, track, division=None, season=None, match_set="regular"):
+def findteamavg(team, track, division=None, season=None, match_set="regular", league="ctc"):
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league)
         team_row = _resolve_team(session, team, scope)
-        track_row = _resolve_track(session, track, scope, match_set)
+        track_row = _resolve_track(session, track, scope, match_set, league_code=league)
         statement = (
             select(
                 func.sum(RacePlayerResult.score).label("points"),
@@ -148,11 +157,17 @@ def findteamavg(team, track, division=None, season=None, match_set="regular"):
 
 
 def top_player_tracks(
-    player, min_races=2, division=None, season=None, role="runner", match_set="regular"
+    player,
+    min_races=2,
+    division=None,
+    season=None,
+    role="runner",
+    match_set="regular",
+    league="ctc",
 ):
     role = normalize_role(role)
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league)
         player_row = _resolve_player(session, player, scope)
         kwargs = {
             "season": scope.season_code,
@@ -161,14 +176,18 @@ def top_player_tracks(
             "role": role,
             "session": session,
         }
+        if league != "ctc":
+            kwargs["league"] = league
         if normalize_match_set(match_set) != "regular":
             kwargs["match_set"] = match_set
         return dashboards.get_player_tracks(player_row.player_id, **kwargs)["tracks"]
 
 
-def top_team_tracks(team, min_races=2, division=None, season=None, match_set="regular"):
+def top_team_tracks(
+    team, min_races=2, division=None, season=None, match_set="regular", league="ctc"
+):
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league)
         team_row = _resolve_team(session, team, scope)
         statement = (
             select(
@@ -205,14 +224,21 @@ def top_team_tracks(team, min_races=2, division=None, season=None, match_set="re
 
 
 def top_team_players(
-    team, min_races=12, division=None, season=None, role="runner", match_set="regular"
+    team,
+    min_races=12,
+    division=None,
+    season=None,
+    role="runner",
+    match_set="regular",
+    league="ctc",
 ):
     role = normalize_role(role)
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
+        scope = _get_scope(session, season=season, division=division, league_code=league)
         team_row = _resolve_team(session, team, scope)
         players = dashboards.get_team_roster(
             team_row.team_id,
+            league=league,
             season=scope.season_code,
             division=scope.division_code,
             min_races=min_races,
@@ -224,14 +250,21 @@ def top_team_players(
 
 
 def top_track_players(
-    track, min_races=2, division=None, season=None, role="runner", match_set="regular"
+    track,
+    min_races=2,
+    division=None,
+    season=None,
+    role="runner",
+    match_set="regular",
+    league="ctc",
 ):
     role = normalize_role(role)
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
-        track_row = _resolve_track(session, track, scope, match_set)
+        scope = _get_scope(session, season=season, division=division, league_code=league)
+        track_row = _resolve_track(session, track, scope, match_set, league_code=league)
         players = dashboards.get_track_player_rankings(
             track_row.track_id,
+            league=league,
             season=scope.season_code,
             division=scope.division_code,
             min_races=min_races,
@@ -262,10 +295,12 @@ def top_track_players(
         return rows
 
 
-def top_track_teams(track, min_races=2, division=None, season=None, match_set="regular"):
+def top_track_teams(
+    track, min_races=2, division=None, season=None, match_set="regular", league="ctc"
+):
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division)
-        track_row = _resolve_track(session, track, scope, match_set)
+        scope = _get_scope(session, season=season, division=division, league_code=league)
+        track_row = _resolve_track(session, track, scope, match_set, league_code=league)
         statement = (
             select(
                 TeamSeasonEntry.clan_tag.label("name"),
@@ -304,26 +339,54 @@ def top_track_teams(track, min_races=2, division=None, season=None, match_set="r
 
 
 def findtopplayertracks(
-    player, min_races=2, division=None, season=None, role="runner", match_set="regular"
+    player,
+    min_races=2,
+    division=None,
+    season=None,
+    role="runner",
+    match_set="regular",
+    league="ctc",
 ):
-    return top_player_tracks(player, min_races, division, season, role, match_set)
+    return top_player_tracks(
+        player, min_races, division, season, role, match_set, league=league
+    )
 
 
-def findtopteamtracks(team, min_races=2, division=None, season=None, match_set="regular"):
-    return top_team_tracks(team, min_races, division, season, match_set)
+def findtopteamtracks(
+    team, min_races=2, division=None, season=None, match_set="regular", league="ctc"
+):
+    return top_team_tracks(team, min_races, division, season, match_set, league=league)
 
 
 def findtopteamplayers(
-    team, min_races=12, division=None, season=None, role="runner", match_set="regular"
+    team,
+    min_races=12,
+    division=None,
+    season=None,
+    role="runner",
+    match_set="regular",
+    league="ctc",
 ):
-    return top_team_players(team, min_races, division, season, role, match_set)
+    return top_team_players(
+        team, min_races, division, season, role, match_set, league=league
+    )
 
 
 def findtoptracks(
-    track, min_races=2, division=None, season=None, role="runner", match_set="regular"
+    track,
+    min_races=2,
+    division=None,
+    season=None,
+    role="runner",
+    match_set="regular",
+    league="ctc",
 ):
-    return top_track_players(track, min_races, division, season, role, match_set)
+    return top_track_players(
+        track, min_races, division, season, role, match_set, league=league
+    )
 
 
-def findtopteamsontrack(track, min_races=2, division=None, season=None, match_set="regular"):
-    return top_track_teams(track, min_races, division, season, match_set)
+def findtopteamsontrack(
+    track, min_races=2, division=None, season=None, match_set="regular", league="ctc"
+):
+    return top_track_teams(track, min_races, division, season, match_set, league=league)

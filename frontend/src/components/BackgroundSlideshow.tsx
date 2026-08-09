@@ -1,43 +1,42 @@
 import type React from "react";
 import { useEffect, useState } from "react";
+import { useLeague } from "../context/LeagueContext";
 
 export default function BackgroundSlideshow(): React.JSX.Element {
-  const images = Array.from({ length: 343 }, (_, i) => `/images/CT_BGS_WEBP/bg_(${i + 1}).webp`);
-
+  const { config } = useLeague();
+  const images = config.backgrounds;
   const [current, setCurrent] = useState(0);
 
-  // Preload only current image for reduced data transfer
   useEffect(() => {
-    const preload = (src: string) => {
-      const img = new Image();
-      img.src = src;
-    };
-
-    // Preload only the current image
-    preload(images[current]);
-  }, [current, images]);
+    setCurrent(images.length > 0 ? Math.floor(Math.random() * images.length) : 0);
+  }, [images]);
 
   useEffect(() => {
+    if (images.length < 2) return;
     const interval = setInterval(() => {
-      setCurrent(Math.floor(Math.random() * images.length));
+      setCurrent((previous) => {
+        const candidate = Math.floor(Math.random() * (images.length - 1));
+        return candidate >= previous ? candidate + 1 : candidate;
+      });
     }, 15000);
     return () => clearInterval(interval);
-  }, [images.length]);
+  }, [images]);
+
+  const imageUrl = images[current];
 
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden bg-black">
-      {/* Render only current image to reduce memory/bandwidth */}
-      {images[current] && (
+    <div className="fixed inset-0 z-0 overflow-hidden league-page-fallback" aria-hidden="true">
+      {imageUrl ? (
         <img
-          key={images[current]}
-          src={images[current]}
-          alt={`Background ${current + 1}`}
-          className="absolute inset-0 w-full h-full object-cover"
+          key={imageUrl}
+          src={imageUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
         />
+      ) : (
+        <div className="absolute inset-0 league-background-fallback" />
       )}
-
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/40 z-10" />
+      <div className="absolute inset-0 z-10 bg-black/45" />
     </div>
   );
 }

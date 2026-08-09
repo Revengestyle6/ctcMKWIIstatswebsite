@@ -8,6 +8,7 @@ import {
 } from "../api";
 import { DashboardShell } from "../components/dashboard/DashboardPrimitives";
 import SeasonDivisionSelector from "../components/SeasonDivisionSelector";
+import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
 function DirectoryTable({
@@ -51,6 +52,7 @@ function DirectoryTable({
 }
 
 export function PlayerDirectory() {
+  const { league, leaguePath } = useLeague();
   const scope = useSeasonDivision();
   const [players, setPlayers] = useState<PlayerDirectoryEntry[]>([]);
   const [query, setQuery] = useState("");
@@ -62,7 +64,7 @@ export function PlayerDirectory() {
     let cancelled = false;
     setLoading(true);
     setError("");
-    fetchPlayerDirectory(scope.season, scope.division)
+    fetchPlayerDirectory(league, scope.season, scope.division)
       .then((data) => {
         if (!cancelled) setPlayers(data);
       })
@@ -78,7 +80,7 @@ export function PlayerDirectory() {
     return () => {
       cancelled = true;
     };
-  }, [scope.season, scope.division]);
+  }, [league, scope.season, scope.division]);
 
   const filtered = players.filter(
     (player) =>
@@ -138,7 +140,9 @@ export function PlayerDirectory() {
                       {player.teams.map((team) => (
                         <Link
                           key={team.team_id}
-                          to={`/teams/${team.team_id}?season=${scope.season}&division=${scope.division}`}
+                          to={leaguePath(
+                            `/teams/${team.team_id}?season=${scope.season}&division=${scope.division}`
+                          )}
                           className="mr-3 text-blue-300 hover:text-blue-200"
                         >
                           {team.tag}
@@ -148,7 +152,9 @@ export function PlayerDirectory() {
                     <td className="px-4 py-3 text-gray-400">{player.primary_friend_code ?? "-"}</td>
                     <td className="px-4 py-3 text-right">
                       <Link
-                        to={`/players/${player.player_id}?season=${scope.season}&division=${scope.division}`}
+                        to={leaguePath(
+                          `/players/${player.player_id}?season=${scope.season}&division=${scope.division}`
+                        )}
                         className="font-semibold text-blue-300 hover:text-blue-200"
                       >
                         Open &rarr;
@@ -166,6 +172,7 @@ export function PlayerDirectory() {
 }
 
 export function TeamDirectory() {
+  const { league, leaguePath } = useLeague();
   const scope = useSeasonDivision();
   const [allTeams, setAllTeams] = useState<TeamScope[]>([]);
   const [query, setQuery] = useState("");
@@ -187,10 +194,11 @@ export function TeamDirectory() {
         (team) =>
           team.season === scope.season &&
           team.division === scope.division &&
+          team.league === league &&
           (team.clan_tag.toLowerCase().includes(query.toLowerCase()) ||
             team.display_name.toLowerCase().includes(query.toLowerCase()))
       ),
-    [allTeams, scope.season, scope.division, query]
+    [allTeams, league, scope.season, scope.division, query]
   );
   const controls = (
     <div className="flex flex-col gap-3 md:flex-row md:items-end">
@@ -242,7 +250,9 @@ export function TeamDirectory() {
                     <td className="px-4 py-3 font-semibold">{team.display_name}</td>
                     <td className="px-4 py-3 text-right">
                       <Link
-                        to={`/teams/${team.team_id}?season=${scope.season}&division=${scope.division}`}
+                        to={leaguePath(
+                          `/teams/${team.team_id}?season=${scope.season}&division=${scope.division}`
+                        )}
                         className="font-semibold text-blue-300 hover:text-blue-200"
                       >
                         Open &rarr;

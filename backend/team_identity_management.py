@@ -1,4 +1,4 @@
-from models import Division, Season, Team, TeamAlias, TeamSeasonEntry
+from models import Division, Season, Team, TeamAlias, TeamLeagueIdentity, TeamSeasonEntry
 from sqlalchemy import desc, func, select
 
 MAX_TEAM_NAME_LENGTH = 200
@@ -30,17 +30,31 @@ def get_team_identity(session, team_id):
             TeamSeasonEntry.team_season_entry_id,
         )
     ).all()
+    league_identities = session.scalars(
+        select(TeamLeagueIdentity)
+        .where(TeamLeagueIdentity.team_id == team_id)
+        .order_by(TeamLeagueIdentity.league_code, func.lower(TeamLeagueIdentity.tag))
+    ).all()
     return {
         "team": {
             "id": team.team_id,
             "canonical_name": team.canonical_name,
             "canonical_tag": team.canonical_tag,
         },
+        "league_identities": [
+            {
+                "id": identity.team_league_identity_id,
+                "league": identity.league_code,
+                "tag": identity.tag,
+            }
+            for identity in league_identities
+        ],
         "season_entries": [
             {
                 "id": entry.team_season_entry_id,
                 "season": {
                     "id": season.season_id,
+                    "league": season.league_code,
                     "code": season.season_code,
                     "name": season.name,
                     "season_number": season.season_number,
@@ -70,14 +84,6 @@ def update_canonical_identity(session, team_id, payload):
     canonical_tag = _required_text(
         payload, "canonical_tag", "Canonical team tag", MAX_TEAM_TAG_LENGTH
     )
-    conflicting_team = session.scalar(
-        select(Team).where(
-            Team.team_id != team_id,
-            func.lower(Team.canonical_tag) == canonical_tag.casefold(),
-        )
-    )
-    if conflicting_team is not None:
-        raise ValueError("That canonical tag is already assigned to another team.")
     conflicting_alias = session.scalar(
         select(TeamAlias).where(func.lower(TeamAlias.alias_value) == canonical_tag.casefold())
     )
@@ -101,6 +107,43 @@ def update_canonical_identity(session, team_id, payload):
             session.add(TeamAlias(team_id=team_id, alias_value=previous_tag))
     session.flush()
     return get_team_identity(session, team_id), previous
+
+
+def add_league_identity(session, team_id, payload):
+    team = session.get(Team, team_id)
+    if team is None:
+        raise LookupError("Team not found.")
+    league_code = _required_text(payload, "league", "League", 32).casefold()
+    tag = _required_text(payload, "tag", "League team tag", MAX_TEAM_TAG_LENGTH)
+    existing = session.scalar(
+        select(TeamLeagueIdentity).where(
+            func.lower(TeamLeagueIdentity.league_code) == league_code,
+            func.lower(TeamLeagueIdentity.tag) == tag.casefold(),
+        )
+    )
+    if existing is not None:
+        if existing.team_id == team_id:
+            raise ValueError("That league tag is already linked to this team.")
+        raise ValueError("That league tag is already linked to another team.")
+    identity = TeamLeagueIdentity(team_id=team_id, league_code=league_code, tag=tag)
+    session.add(identity)
+    session.flush()
+    return get_team_identity(session, team_id), identity
+
+
+def delete_league_identity(session, team_id, identity_id):
+    identity = session.scalar(
+        select(TeamLeagueIdentity).where(
+            TeamLeagueIdentity.team_league_identity_id == identity_id,
+            TeamLeagueIdentity.team_id == team_id,
+        )
+    )
+    if identity is None:
+        raise LookupError("League identity not found.")
+    deleted = {"league": identity.league_code, "tag": identity.tag}
+    session.delete(identity)
+    session.flush()
+    return get_team_identity(session, team_id), deleted
 
 
 def update_season_identity(session, team_id, entry_id, payload):

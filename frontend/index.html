@@ -2,12 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="/logo.svg" />
+    <script>
+      (() => {
+        const queryLeague = new URLSearchParams(window.location.search).get("league");
+        let league = queryLeague === "ctc" || queryLeague === "gsc" ? queryLeague : "ctc";
+        if (queryLeague !== "ctc" && queryLeague !== "gsc") {
+          try {
+            const storedLeague = window.localStorage.getItem("mkw-stats:league:v1");
+            if (storedLeague === "ctc" || storedLeague === "gsc") league = storedLeague;
+          } catch {
+            // CTC remains the default when browser storage is unavailable.
+          }
+        }
+
+        const favicon = document.createElement("link");
+        favicon.id = "league-favicon";
+        favicon.rel = "icon";
+        favicon.type = league === "gsc" ? "image/png" : "image/webp";
+        favicon.href =
+          league === "gsc"
+            ? "/media/leagues/gsc/branding/favicon.png"
+            : "/media/leagues/ctc/branding/logo.webp";
+        favicon.dataset.league = league;
+        document.head.append(favicon);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <meta
       name="description"
-      content="Multi-season player, team, track, matchup, and race analytics for the Mario Kart Wii Custom Track Cup."
+      content="Multi-season player, team, track, matchup, and race analytics for Mario Kart Wii leagues."
     />
     <title>Custom Track Cup Statistics</title>
   </head>

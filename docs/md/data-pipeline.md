@@ -80,10 +80,13 @@ explicit roles, and records findings that require review.
 3. An anonymous user can submit the canonical bytes to temporary queue storage;
    this does not call the importer or change analytics.
 4. An authenticated admin claims, edits if necessary, and approves new catalog
-   entries in the existing editor. An unknown friend code can either create a new
-   player or be explicitly mapped to an existing player found by canonical name or
-   player ID. The selected player ID is part of the approval key and is revalidated
-   during acceptance.
+   entries in the existing editor. The first season for a league requires separate
+   league and season approvals. If a team tag exists only in another league, the
+   admin must explicitly link the new league identity to that global team or choose
+   to create an entirely separate team entity. An unknown friend code can either
+   create a new player or be explicitly mapped to an existing player found by
+   canonical name or player ID. Selected identity decisions are revalidated during
+   acceptance.
 5. The acceptance service repeats validation and duplicate checks, commits all
    normalized rows and audit records in PostgreSQL, then promotes the exact bytes
    into the immutable accepted archive.
@@ -95,6 +98,11 @@ friend-code and name aliases to that player. It reuses an existing
 `player_season_entries` row for the same team-season entry, or creates one when the
 player has not previously appeared in that scope. It never creates a second player
 or duplicate player-season/team record for an approved link.
+
+An approved cross-league team link creates a `team_league_identities` row for the
+new league and reuses the existing `teams` row. Match analytics remain scoped by
+league, season, and division. Choosing the separate-team action instead creates a
+new global `teams` row even though another league uses the same tag.
 
 ## Regression Checks
 

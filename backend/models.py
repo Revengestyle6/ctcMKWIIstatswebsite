@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     Text,
     UniqueConstraint,
+    func,
     text,
 )
 from sqlalchemy.orm import relationship
@@ -169,7 +170,28 @@ class Team(Base):
     canonical_tag = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
-    __table_args__ = (UniqueConstraint("canonical_tag", name="uq_team_canonical_tag"),)
+
+class TeamLeagueIdentity(Base):
+    """A league-scoped tag that explicitly resolves to one canonical team."""
+
+    __tablename__ = "team_league_identities"
+
+    team_league_identity_id = Column(Integer, primary_key=True)
+    team_id = Column(
+        Integer, ForeignKey("teams.team_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    league_code = Column(Text, nullable=False)
+    tag = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    __table_args__ = (
+        Index(
+            "uq_team_league_identity_code_tag_ci",
+            func.lower(league_code),
+            func.lower(tag),
+            unique=True,
+        ),
+    )
 
 
 class TeamLogo(Base):
@@ -376,10 +398,13 @@ class Track(Base):
     __tablename__ = "tracks"
 
     track_id = Column(Integer, primary_key=True)
+    league_code = Column(Text, nullable=False, default="ctc", index=True)
     canonical_name = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
-    __table_args__ = (UniqueConstraint("canonical_name", name="uq_track_canonical_name"),)
+    __table_args__ = (
+        UniqueConstraint("league_code", "canonical_name", name="uq_track_league_name"),
+    )
 
 
 class TrackAlias(Base):

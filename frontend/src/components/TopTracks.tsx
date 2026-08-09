@@ -2,6 +2,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchCachedJson, prefetchMatchSetVariants } from "../api";
+import { useLeague } from "../context/LeagueContext";
 import type { LegacyTrackPlayerRow, LegacyTrackTeamRow, PlayerRoleMode } from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { LegacyStatHeader } from "./LegacyStatHeader";
@@ -14,6 +15,7 @@ function value(valueToFormat: number | null, suffix = ""): string {
 }
 
 export default function TopTracks(): React.JSX.Element {
+  const { league } = useLeague();
   const { seasons, divisions, season, division, loadingScope, scopeError, setSeason, setDivision } =
     useSeasonDivision();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -38,8 +40,16 @@ export default function TopTracks(): React.JSX.Element {
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [playersError, setPlayersError] = useState("");
   const [teamsError, setTeamsError] = useState("");
-  const playerKey = JSON.stringify([selectedTrack, season, division, minRaces, role, matchSet]);
-  const teamKey = JSON.stringify([selectedTrack, season, division, minRaces, matchSet]);
+  const playerKey = JSON.stringify([
+    league,
+    selectedTrack,
+    season,
+    division,
+    minRaces,
+    role,
+    matchSet,
+  ]);
+  const teamKey = JSON.stringify([league, selectedTrack, season, division, minRaces, matchSet]);
   const topPlayers = playerResult?.key === playerKey ? playerResult.rows : [];
   const topTeams = teamResult?.key === teamKey ? teamResult.rows : [];
 
@@ -64,12 +74,12 @@ export default function TopTracks(): React.JSX.Element {
     setTeamsLoading(false);
     setPlayersError("");
     setTeamsError("");
-    fetchCachedJson<string[]>("/api/tracks", { season, division, match_set: matchSet })
+    fetchCachedJson<string[]>("/api/tracks", { league, season, division, match_set: matchSet })
       .then((data) => {
         if (cancelled) return;
         setTracks(data);
         setSelectedTrack(data[0] ?? "");
-        prefetchMatchSetVariants("/api/tracks", { season, division }, matchSet);
+        prefetchMatchSetVariants("/api/tracks", { league, season, division }, matchSet);
       })
       .catch((requestError: unknown) => {
         if (!cancelled)
@@ -80,7 +90,7 @@ export default function TopTracks(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [season, division, matchSet]);
+  }, [league, season, division, matchSet]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,6 +102,7 @@ export default function TopTracks(): React.JSX.Element {
     setPlayersLoading(true);
     setPlayersError("");
     fetchCachedJson<LegacyTrackPlayerRow[]>("/api/top-tracks", {
+      league,
       track: selectedTrack,
       min_races: minRaces,
       season,
@@ -103,7 +114,7 @@ export default function TopTracks(): React.JSX.Element {
         if (!cancelled) setPlayerResult({ key: playerKey, rows });
         prefetchMatchSetVariants(
           "/api/top-tracks",
-          { track: selectedTrack, min_races: minRaces, season, division, role },
+          { league, track: selectedTrack, min_races: minRaces, season, division, role },
           matchSet
         );
       })
@@ -119,7 +130,7 @@ export default function TopTracks(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTrack, season, division, minRaces, role, matchSet, playerKey]);
+  }, [league, selectedTrack, season, division, minRaces, role, matchSet, playerKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +142,7 @@ export default function TopTracks(): React.JSX.Element {
     setTeamsLoading(true);
     setTeamsError("");
     fetchCachedJson<LegacyTrackTeamRow[]>("/api/top-teams-on-track", {
+      league,
       track: selectedTrack,
       min_races: minRaces,
       season,
@@ -141,7 +153,7 @@ export default function TopTracks(): React.JSX.Element {
         if (!cancelled) setTeamResult({ key: teamKey, rows });
         prefetchMatchSetVariants(
           "/api/top-teams-on-track",
-          { track: selectedTrack, min_races: minRaces, season, division },
+          { league, track: selectedTrack, min_races: minRaces, season, division },
           matchSet
         );
       })
@@ -157,7 +169,7 @@ export default function TopTracks(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTrack, season, division, minRaces, matchSet, teamKey]);
+  }, [league, selectedTrack, season, division, minRaces, matchSet, teamKey]);
 
   function updateRole(nextRole: PlayerRoleMode) {
     const next = new URLSearchParams(searchParams);

@@ -13,6 +13,7 @@ from models import (  # noqa: E402
     Season,
     SourceFile,
     Team,
+    TeamLeagueIdentity,
     TeamSeasonEntry,
 )
 from playoff_service import resolve_playoff_series, validate_competition_metadata  # noqa: E402
@@ -63,6 +64,7 @@ class PlayoffSupportTests(unittest.TestCase):
                     clan_tag=tag,
                 )
                 session.add(entry)
+                session.add(TeamLeagueIdentity(team_id=team.team_id, league_code="ctc", tag=tag))
                 session.flush()
                 self.team_ids.append(team.team_id)
                 self.entry_ids[team.team_id] = entry.team_season_entry_id

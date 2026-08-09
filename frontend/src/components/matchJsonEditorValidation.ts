@@ -4,6 +4,7 @@ import type {
   PlayerIdentity,
   PlayoffSeriesResponse,
   TeamScope,
+  TrackOption,
 } from "../api";
 import type { MatchDetail } from "./MatchHistory";
 import {
@@ -32,12 +33,14 @@ export type Issue = {
 };
 export type NewEntry = {
   key: string;
-  type: "season" | "division" | "team" | "player" | "track" | "playoff_format";
+  type: "league" | "season" | "division" | "team" | "player" | "track" | "playoff_format";
   value: string;
   kind:
+    | "new_league"
     | "new_season"
     | "new_division"
     | "existing_team_new_scope"
+    | "cross_league_team_match"
     | "new_team"
     | "new_player_identity"
     | "existing_player_new_friend_code"
@@ -55,6 +58,8 @@ export type NewEntry = {
   proposed_player_id?: number;
   proposed_player?: PlayerIdentitySummary;
   candidates?: PlayerIdentitySummary[];
+  team_candidates?: TeamIdentityCandidate[];
+  resolution?: TeamIdentityResolution;
   match_reason?: string;
   existing_seasons?: string[];
   format_code?: "three_team" | "four_team";
@@ -63,6 +68,13 @@ export type NewEntry = {
   semifinal_series_count?: number;
   finals_bye_count?: number;
 };
+export type TeamIdentityCandidate = {
+  team_id: number;
+  canonical_tag: string;
+  canonical_name: string;
+  league_identities: { league: string; tag: string }[];
+};
+export type TeamIdentityResolution = { action: "create" } | { action: "link"; team_id: number };
 export type PlayerIdentitySummary = {
   player_id: number;
   canonical_name: string | null;
@@ -213,11 +225,39 @@ export function normalized(value: string | undefined): string {
   return (value ?? "").trim().toLowerCase();
 }
 
+export function trackOptionMatches(track: TrackOption, value: string): boolean {
+  const expected = normalized(value);
+  return [track.name, ...track.aliases].some((name) => normalized(name) === expected);
+}
+
 export function newEntryDescription(entry: NewEntry): {
   heading: string;
   detail: string;
   caution?: string;
 } {
+  if (entry.kind === "new_league")
+    return {
+      heading: `${entry.value.toUpperCase()} is a new league`,
+      detail:
+        "Approval establishes this league in the database through its first season. Verify the site league selection before continuing.",
+      caution: "League analytics remain isolated even when player or team identities are shared.",
+    };
+  if (entry.kind === "cross_league_team_match") {
+    const matches = (entry.team_candidates ?? [])
+      .map((candidate) => {
+        const identities = candidate.league_identities
+          .map((identity) => `${identity.league.toUpperCase()} ${identity.tag}`)
+          .join(", ");
+        return `${candidate.canonical_name} (team ID ${candidate.team_id}; ${identities})`;
+      })
+      .join("; ");
+    return {
+      heading: `${entry.value} matches a team tag in another league`,
+      detail: `Possible existing team: ${matches}. Choose whether this is the same organization or an entirely separate team entity.`,
+      caution:
+        "Linking preserves one global team identity while keeping league analytics separate. Creating a separate entity treats the matching tag as coincidental.",
+    };
+  }
   if (entry.kind === "existing_team_new_scope") {
     const name =
       entry.canonical_name && normalized(entry.canonical_name) !== normalized(entry.value)
@@ -304,7 +344,7 @@ export function validation(
   scopesLoaded: boolean,
   teamScopes: TeamScope[],
   teamsLoaded: boolean,
-  trackOptions: Array<{ track_id: number; name: string }>,
+  trackOptions: TrackOption[],
   tracksLoaded: boolean,
   newEntries: NewEntry[],
   approvalDecisions: Record<string, ApprovalDecision>,
@@ -455,13 +495,13 @@ export function validation(
     !scopes.some((scope) => normalized(scope.league) === normalized(match.league))
   ) {
     const approved = approvedEntry(
-      "season",
-      (entry) => normalized(entry.value) === normalized(match.season)
+      "league",
+      (entry) => normalized(entry.value) === normalized(match.league)
     );
     newEntryIssue(
       approved,
-      `League ${match.league} does not exist in the database. Review the new season entry.`,
-      `League ${match.league} will be created with season ${match.season}.`
+      `League ${match.league} does not exist in the database and requires approval.`,
+      `New league ${match.league} is approved for database insertion.`
     );
   }
   const seasonScopes = scopes.filter(
@@ -532,7 +572,11 @@ export function validation(
         const approvedMessage =
           proposal?.kind === "existing_team_new_scope"
             ? `Existing team ${tag} is approved for a new ${match.season} ${match.division} entry.`
-            : `Completely new team ${tag} is approved for database insertion.`;
+            : proposal?.kind === "cross_league_team_match" && proposal.resolution?.action === "link"
+              ? `Team ${tag} is approved for linking to team ID ${proposal.resolution.team_id}.`
+              : proposal?.kind === "cross_league_team_match"
+                ? `Team ${tag} is approved as a separate global team entity.`
+                : `Completely new team ${tag} is approved for database insertion.`;
         newEntryIssue(
           approved,
           `Team ${tag} does not belong to ${match.league || "the selected league"} ${match.season || "season"} ${match.division || "division"}.`,
@@ -646,19 +690,24 @@ export function validation(
         message: `${label} has unsupported room size ${race.roomSize}.`,
       });
     if (!race.trackName.trim()) issues.push({ level: "error", message: `${label} needs a track.` });
-    else if (
-      tracksLoaded &&
-      !trackOptions.some((track) => normalized(track.name) === normalized(race.trackName))
-    ) {
-      const approved = approvedEntry(
-        "track",
-        (entry) => normalized(entry.value) === normalized(race.trackName)
-      );
-      newEntryIssue(
-        approved,
-        `${label} track ${race.trackName} does not exist in the database.`,
-        `${label} uses new track ${race.trackName}, which is approved for database insertion.`
-      );
+    else if (tracksLoaded) {
+      const matchingTrack = trackOptions.find((track) => trackOptionMatches(track, race.trackName));
+      if (matchingTrack && normalized(matchingTrack.league) !== normalized(match.league)) {
+        issues.push({
+          level: "error",
+          message: `${label} track ${race.trackName} belongs to ${matchingTrack.league.toUpperCase()} and cannot be used in a ${String(match.league).toUpperCase()} match.`,
+        });
+      } else if (!matchingTrack) {
+        const approved = approvedEntry(
+          "track",
+          (entry) => normalized(entry.value) === normalized(race.trackName)
+        );
+        newEntryIssue(
+          approved,
+          `${label} track ${race.trackName} does not exist in the database.`,
+          `${label} uses new track ${race.trackName}, which is approved for database insertion.`
+        );
+      }
     }
     const assigned = race.placements.filter(Boolean);
     if (assigned.length !== race.roomSize)

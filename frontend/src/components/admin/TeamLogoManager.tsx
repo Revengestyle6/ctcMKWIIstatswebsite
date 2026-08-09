@@ -4,6 +4,7 @@ import { fetchJson, patchJson, postFormData, resolveAssetUrl } from "../../api";
 
 type LogoSeason = {
   id: number;
+  league: string;
   season: string;
   name: string;
   season_number: number | null;
@@ -122,7 +123,7 @@ export default function TeamLogoManager({ teamId }: { teamId: number }): React.J
               <option value="">Default / career logo</option>
               {detail?.seasons.map((season) => (
                 <option key={season.id} value={season.id}>
-                  {season.name} ({season.season.toUpperCase()})
+                  {season.league.toUpperCase()} · {season.name} ({season.season.toUpperCase()})
                 </option>
               ))}
             </select>

@@ -14,6 +14,35 @@ const routes = [
   "/admin/aliases",
 ];
 
+test("GSC receives the correct favicon before React boots", async ({ page }) => {
+  await page.route("**/src/index.tsx", (route) => route.abort());
+  await page.goto("/?league=gsc");
+
+  const favicon = page.locator("#league-favicon");
+  await expect(favicon).toHaveAttribute("data-league", "gsc");
+  await expect(favicon).toHaveAttribute("type", "image/png");
+  await expect(favicon).toHaveAttribute("href", /\/media\/leagues\/gsc\/branding\/favicon\.png$/);
+});
+
+test("league switch replaces the browser-tab icon", async ({ page }) => {
+  await page.goto("/?league=ctc");
+  const ctcFavicon = page.locator("#league-favicon");
+  await expect(ctcFavicon).toHaveAttribute("data-league", "ctc");
+  await expect(ctcFavicon).toHaveAttribute("href", /\/media\/leagues\/ctc\/branding\/logo\.webp$/);
+
+  await page.getByRole("button", { name: "GSC", exact: true }).click();
+  const gscFavicon = page.locator("#league-favicon");
+  await expect(gscFavicon).toHaveAttribute("data-league", "gsc");
+  await expect(gscFavicon).toHaveAttribute(
+    "href",
+    /\/media\/leagues\/gsc\/branding\/favicon\.png$/
+  );
+  await expect(gscFavicon).toHaveAttribute("type", "image/png");
+
+  await page.getByRole("button", { name: "CTC", exact: true }).click();
+  await expect(page.locator("#league-favicon")).toHaveAttribute("data-league", "ctc");
+});
+
 for (const route of routes) {
   test(`${route} loads`, async ({ page }) => {
     const response = await page.goto(route);

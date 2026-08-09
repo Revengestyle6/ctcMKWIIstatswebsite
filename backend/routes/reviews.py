@@ -13,7 +13,10 @@ from models import ReviewSubmission
 from review_queue import admin_submission, create_submission, public_receipt
 from sqlalchemy import select
 
-from routes.common import player_identity_links_from_payload
+from routes.common import (
+    player_identity_links_from_payload,
+    team_identity_resolutions_from_payload,
+)
 
 logger = logging.getLogger(__name__)
 reviews_api = Blueprint("reviews_api", __name__)
@@ -189,6 +192,7 @@ def accept_review_submission(submission_id):
             temporary_key=temporary_key,
             review_submission_id=submission_id,
             requested_player_identity_links=player_identity_links_from_payload(payload),
+            requested_team_identity_resolutions=team_identity_resolutions_from_payload(payload),
         )
         if temporary_key != original_queue_key:
             storage.delete(original_queue_key)

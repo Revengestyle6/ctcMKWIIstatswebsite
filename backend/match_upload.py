@@ -23,6 +23,7 @@ from models import (
     Season,
     SourceFile,
     Team,
+    TeamLeagueIdentity,
     TeamSeasonEntry,
     Track,
     TrackAlias,
@@ -224,6 +225,7 @@ TRACKED_ADDITION_MODELS = (
     DivisionPlayoffConfig,
     SourceFile,
     Team,
+    TeamLeagueIdentity,
     TeamSeasonEntry,
     Player,
     PlayerFriendCode,
@@ -317,6 +319,18 @@ def _addition_data(instance: Any) -> tuple[str, int, str, dict[str, Any]]:
             "canonical_name": instance.canonical_name,
         }
         return "team", instance.team_id, f"Added team {instance.canonical_tag}", details
+    if isinstance(instance, TeamLeagueIdentity):
+        details = {
+            "team_id": instance.team_id,
+            "league": instance.league_code,
+            "tag": instance.tag,
+        }
+        return (
+            "team_league_identity",
+            instance.team_league_identity_id,
+            f"Linked team {instance.team_id} to {instance.league_code.upper()} as {instance.tag}",
+            details,
+        )
     if isinstance(instance, TeamSeasonEntry):
         details = {
             "team_id": instance.team_id,
@@ -379,7 +393,7 @@ def _addition_data(instance: Any) -> tuple[str, int, str, dict[str, Any]]:
             "track",
             instance.track_id,
             f"Added track {instance.canonical_name}",
-            {"name": instance.canonical_name},
+            {"name": instance.canonical_name, "league": instance.league_code},
         )
     if isinstance(instance, TrackAlias):
         details = {"track_id": instance.track_id, "alias": instance.alias_value}

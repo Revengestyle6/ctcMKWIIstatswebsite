@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { fetchJson, patchJson } from "../../api";
+import { deleteJson, fetchJson, patchJson, postJson } from "../../api";
 
 type TeamIdentity = {
   id: number;
@@ -10,14 +10,21 @@ type TeamIdentity = {
 
 type TeamSeasonIdentity = {
   id: number;
-  season: { id: number; code: string; name: string; season_number: number | null };
+  season: { id: number; league: string; code: string; name: string; season_number: number | null };
   division: { id: number; code: string; name: string };
   display_name: string;
   clan_tag: string;
 };
 
+type TeamLeagueIdentity = {
+  id: number;
+  league: string;
+  tag: string;
+};
+
 type TeamIdentityDetail = {
   team: TeamIdentity;
+  league_identities: TeamLeagueIdentity[];
   season_entries: TeamSeasonIdentity[];
 };
 
@@ -64,7 +71,7 @@ function SeasonIdentityEditor({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="font-bold">
-          {entry.season.name} · {entry.division.name}
+          {entry.season.league.toUpperCase()} · {entry.season.name} · {entry.division.name}
         </h4>
         <span className="text-xs text-gray-500">
           {entry.season.code.toUpperCase()} / {entry.division.code.toUpperCase()}
@@ -118,6 +125,8 @@ export default function TeamIdentityManager({
   const [detail, setDetail] = useState<TeamIdentityDetail | null>(null);
   const [canonicalName, setCanonicalName] = useState("");
   const [canonicalTag, setCanonicalTag] = useState("");
+  const [leagueCode, setLeagueCode] = useState("ctc");
+  const [leagueTag, setLeagueTag] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -171,6 +180,45 @@ export default function TeamIdentityManager({
     }
   };
 
+  const addLeagueIdentity = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!leagueTag.trim()) return;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await postJson<TeamIdentityDetail>(
+        `/api/admin/teams/${teamId}/league-identities`,
+        { league: leagueCode, tag: leagueTag }
+      );
+      setDetail(response);
+      setLeagueTag("");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not link the league tag.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeLeagueIdentity = async (identity: TeamLeagueIdentity) => {
+    if (
+      !window.confirm(`Unlink ${identity.tag} from ${identity.league.toUpperCase()} for this team?`)
+    )
+      return;
+    setSaving(true);
+    setError("");
+    try {
+      setDetail(
+        await deleteJson<TeamIdentityDetail>(
+          `/api/admin/teams/${teamId}/league-identities/${identity.id}`
+        )
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not unlink the league tag.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <p className="mt-5 text-gray-400">Loading team identity…</p>;
 
   return (
@@ -217,6 +265,73 @@ export default function TeamIdentityManager({
           {error ? <p className="text-sm text-red-300">{error}</p> : null}
         </div>
       </form>
+
+      <section className="rounded border border-amber-300/20 bg-amber-950/20 p-4">
+        <h3 className="text-lg font-bold text-amber-100">League identity links</h3>
+        <p className="mt-1 text-sm text-gray-400">
+          These links control match-import identity. Add a GSC tag here to explicitly connect that
+          league&apos;s team to this canonical team. Equal tags in different leagues are not linked
+          automatically.
+        </p>
+        <form
+          onSubmit={addLeagueIdentity}
+          className="mt-4 grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
+        >
+          <label className="text-sm font-bold text-gray-200">
+            League
+            <select
+              value={leagueCode}
+              onChange={(event) => setLeagueCode(event.target.value)}
+              className="mt-2 min-h-11 w-full rounded border border-white/20 bg-black/50 px-3"
+            >
+              <option value="ctc">CTC</option>
+              <option value="gsc">GSC</option>
+            </select>
+          </label>
+          <label className="text-sm font-bold text-gray-200">
+            Team tag in league
+            <input
+              value={leagueTag}
+              required
+              maxLength={64}
+              onChange={(event) => setLeagueTag(event.target.value)}
+              className="mt-2 min-h-11 w-full rounded border border-white/20 bg-black/50 px-3"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={saving || !leagueTag.trim()}
+            className="self-end rounded bg-amber-400 px-4 py-3 font-bold text-black disabled:opacity-40"
+          >
+            Link tag
+          </button>
+        </form>
+        <div className="mt-4 space-y-2">
+          {detail?.league_identities.length ? (
+            detail.league_identities.map((identity) => (
+              <div
+                key={identity.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded border border-white/10 bg-black/30 px-3 py-2"
+              >
+                <p>
+                  <span className="font-bold text-amber-200">{identity.league.toUpperCase()}</span>{" "}
+                  · {identity.tag}
+                </p>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void removeLeagueIdentity(identity)}
+                  className="rounded border border-red-400/40 px-3 py-1.5 text-sm text-red-300"
+                >
+                  Unlink
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-400">No league tags linked yet.</p>
+          )}
+        </div>
+      </section>
 
       <section>
         <h3 className="text-lg font-bold">Season identities</h3>

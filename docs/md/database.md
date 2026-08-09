@@ -1,7 +1,7 @@
 # Database Reference
 
 Last verified against `backend/models.py` and Alembic revision
-`20260808_0006` on August 8, 2026.
+`20260809_0008` on August 9, 2026.
 
 ## Platform and ownership
 
@@ -38,7 +38,7 @@ data in the named `ctc-postgres-data` volume. `docker compose stop` and ordinary
 Season
 └── Division
     ├── DivisionPlayoffConfig
-    ├── TeamSeasonEntry ── Team ── TeamAlias / TeamLogo
+    ├── TeamSeasonEntry ── Team ── TeamAlias / TeamLeagueIdentity / TeamLogo
     │   └── PlayerSeasonEntry ── Player ── FriendCode / PlayerAlias
     ├── PlayoffSeries ── PlayoffSeriesParticipant ── Team
     └── SourceFile ── Match ── MatchTeam ── MatchPlayer
@@ -148,9 +148,13 @@ raw text, and the source field.
 
 ### `tracks` and `track_aliases`
 
-`tracks` stores a unique canonical name and creation time. `track_aliases` links
-alternate values to a track; `(track_id, alias_value)` is unique. Editor detection
-checks both canonical names and aliases case-insensitively.
+`tracks` stores a league code, canonical name, and creation time.
+`(league_code, canonical_name)` is unique. All tracks that predate GSC support are
+backfilled as `ctc`; newly approved tracks inherit the league of their match.
+`track_aliases` links alternate values to a track; `(track_id, alias_value)` is
+unique. Editor detection checks canonical names and aliases case-insensitively and
+rejects a name already owned by another league rather than allowing it to be
+approved as a new track.
 
 ### `races`
 
@@ -173,10 +177,18 @@ reason. Result type is `missing_player`; reason is `short_roster`,
 
 ## Team and player identity
 
-### `teams`, `team_aliases`, and `team_logos`
+### `teams`, `team_aliases`, `team_league_identities`, and `team_logos`
 
-`teams` is the global identity (`team_id`, unique canonical tag, canonical name,
-created time). `team_aliases` maps a globally unique alternate tag to a team.
+`teams` is the global identity (`team_id`, canonical tag, canonical name, created
+time). Canonical tags are presentation metadata and may match across otherwise
+unlinked teams. `team_aliases` maps a globally unique administrator-managed
+alternate tag to a team.
+
+`team_league_identities` is the authoritative import boundary. Each row explicitly
+maps `(league_code, tag)` to a global team, with a case-insensitive unique index on
+that pair. A team may own multiple tags in a league and may be linked to both CTC
+and GSC. Matching text across two leagues never establishes identity on its own.
+
 `team_logos` stores prioritized, active assets that may be global or season-specific;
 `(team_id, season_id, asset_path)` is unique. Repository-managed records use paths
 under `images/team-logos/`. Admin uploads use content-addressed object keys under
@@ -295,6 +307,10 @@ Current linear revisions are:
 5. `20260726_0005_player_canonical_name` — player canonical naming.
 6. `20260808_0006_playoff_series` — division formats, series, participants, and
    match competition metadata.
+7. `20260809_0007_team_league_identities` — explicit league-scoped team import
+   identities and removal of global canonical-tag uniqueness.
+8. `20260809_0008_track_leagues` — league-owned track catalogs, with all existing
+   tracks backfilled to CTC.
 
 Useful checks:
 

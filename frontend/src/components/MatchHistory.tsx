@@ -2,7 +2,9 @@ import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchCachedJson, fetchJson, fetchPlayoffSeries, type PlayoffSeriesSummary } from "../api";
+import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
+import { LeagueLogo } from "./LeagueBrand";
 import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
 import {
   type ChartMode,
@@ -29,6 +31,7 @@ export {
 } from "./matchHistoryViews";
 
 export default function MatchHistory(): React.JSX.Element {
+  const { league, leaguePath } = useLeague();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSeason = searchParams.get("season") ?? "";
   const requestedDivision = searchParams.get("division") ?? "";
@@ -63,7 +66,7 @@ export default function MatchHistory(): React.JSX.Element {
       setTeams([]);
       setSelectedTeam("");
       try {
-        const data = await fetchJson<string[]>("/api/teams", { season, division });
+        const data = await fetchJson<string[]>("/api/teams", { league, season, division });
         if (cancelled) return;
         setTeams([...data].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())));
       } catch (_err) {
@@ -74,7 +77,7 @@ export default function MatchHistory(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [season, division]);
+  }, [league, season, division]);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +91,7 @@ export default function MatchHistory(): React.JSX.Element {
       try {
         const [data, seriesData] = await Promise.all([
           fetchCachedJson<MatchSummary[]>("/api/matches", {
+            league,
             season,
             division,
             team: selectedTeam || undefined,
@@ -95,7 +99,7 @@ export default function MatchHistory(): React.JSX.Element {
           }),
           matchSet === "regular"
             ? Promise.resolve(null)
-            : fetchPlayoffSeries(season, division, selectedTeam || undefined),
+            : fetchPlayoffSeries(league, season, division, selectedTeam || undefined),
         ]);
         if (cancelled) return;
         setMatches(data);
@@ -115,20 +119,21 @@ export default function MatchHistory(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [season, division, selectedTeam, requestedMatchId, matchSet]);
+  }, [league, season, division, selectedTeam, requestedMatchId, matchSet]);
 
   useEffect(() => {
     if (!season || !division) return;
     for (const candidate of ["regular", "playoffs", "all"] as MatchSet[]) {
       if (candidate === matchSet) continue;
       void fetchCachedJson<MatchSummary[]>("/api/matches", {
+        league,
         season,
         division,
         team: selectedTeam || undefined,
         match_set: candidate,
       });
     }
-  }, [season, division, selectedTeam, matchSet]);
+  }, [league, season, division, selectedTeam, matchSet]);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,17 +173,12 @@ export default function MatchHistory(): React.JSX.Element {
     <div className="relative min-h-screen text-white font-sans p-6">
       <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
         <div className="flex justify-between items-center max-w-7xl mx-auto px-2">
-          <Link to="/" className="text-blue-400 hover:text-blue-300 font-semibold">
+          <Link to={leaguePath("/")} className="font-semibold league-accent-text">
             &lt; Back
           </Link>
           <h1 className="text-3xl font-bold text-center flex-1">Match History</h1>
           <div className="w-32"></div>
-          <img
-            src="/images/CTC_LOGO/ctclogo.webp"
-            alt="Logo"
-            className="w-12 h-12 rounded-lg"
-            loading="lazy"
-          />
+          <LeagueLogo className="h-12 w-12" />
         </div>
       </div>
 

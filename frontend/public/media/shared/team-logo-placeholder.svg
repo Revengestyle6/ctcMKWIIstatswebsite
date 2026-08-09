@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Team logo unavailable</title>
+  <description id="description">A neutral shield with a question mark.</description>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#27272a"/>
+      <stop offset="1" stop-color="#09090b"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="72" fill="url(#background)"/>
+  <path d="M256 75 414 136v112c0 94-63 157-158 194C161 405 98 342 98 248V136L256 75Z" fill="none" stroke="#a1a1aa" stroke-width="24"/>
+  <text x="256" y="330" fill="#d4d4d8" font-family="system-ui,sans-serif" font-size="210" font-weight="700" text-anchor="middle">?</text>
+</svg>

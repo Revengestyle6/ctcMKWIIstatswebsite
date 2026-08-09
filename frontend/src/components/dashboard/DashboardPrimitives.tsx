@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useLeague } from "../../context/LeagueContext";
+import { LeagueLogo } from "../LeagueBrand";
 
 export interface MetricItem {
   label: string;
@@ -32,19 +34,18 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ title, identity, controls, children }: DashboardShellProps) {
+  const { leaguePath } = useLeague();
   return (
     <div className="relative min-h-screen text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 px-4 py-3 backdrop-blur-md">
         <div className="mx-auto grid max-w-7xl grid-cols-[5rem_1fr_5rem] items-center sm:grid-cols-[8rem_1fr_8rem]">
-          <Link to="/" className="font-semibold text-blue-300 hover:text-blue-200">
+          <Link to={leaguePath("/")} className="font-semibold league-accent-text">
             &larr; Back
           </Link>
           <h1 className="text-center text-xl font-bold sm:text-2xl">{title}</h1>
-          <img
-            src="/images/CTC_LOGO/ctclogo.webp"
-            alt="Custom Track Cup"
-            className="ml-auto h-11 w-11 rounded-md"
-          />
+          <div className="ml-auto">
+            <LeagueLogo />
+          </div>
         </div>
       </header>
 
@@ -77,8 +78,8 @@ export function TeamLogo({
       className={`${className} shrink-0 rounded-md border border-white/15 bg-black/60 object-contain p-1`}
       onError={(event) => {
         const image = event.currentTarget;
-        if (!image.src.endsWith("/images/team-logos/placeholder.webp")) {
-          image.src = "/images/team-logos/placeholder.webp";
+        if (!image.src.endsWith("/media/shared/team-logo-placeholder.svg")) {
+          image.src = "/media/shared/team-logo-placeholder.svg";
         }
       }}
     />
