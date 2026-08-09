@@ -11,7 +11,9 @@ const routes = [
   "/teams/41",
   "/json-editor",
   "/database-health",
+  "/admin/access",
   "/admin/aliases",
+  "/admin/review-queue",
 ];
 
 test("GSC receives the correct favicon before React boots", async ({ page }) => {
@@ -26,11 +28,27 @@ test("GSC receives the correct favicon before React boots", async ({ page }) => 
 
 test("league switch replaces the browser-tab icon", async ({ page }) => {
   await page.goto("/?league=ctc");
+  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
+  const ctcSelector = page.getByRole("button", { name: "CTC", exact: true });
+  const gscSelector = page.getByRole("button", { name: "GSC", exact: true });
+  await expect(ctcSelector.getByRole("img")).toHaveAttribute(
+    "src",
+    "/media/leagues/ctc/branding/logo.webp"
+  );
+  await expect(gscSelector.getByRole("img")).toHaveAttribute(
+    "src",
+    "/media/leagues/gsc/branding/logo.webp"
+  );
+  await expect(ctcSelector).toHaveClass(/opacity-100/);
+  await expect(gscSelector).toHaveClass(/opacity-35/);
+
   const ctcFavicon = page.locator("#league-favicon");
   await expect(ctcFavicon).toHaveAttribute("data-league", "ctc");
   await expect(ctcFavicon).toHaveAttribute("href", /\/media\/leagues\/ctc\/branding\/logo\.webp$/);
 
-  await page.getByRole("button", { name: "GSC", exact: true }).click();
+  await gscSelector.click();
+  await expect(ctcSelector).toHaveClass(/opacity-35/);
+  await expect(gscSelector).toHaveClass(/opacity-100/);
   const gscFavicon = page.locator("#league-favicon");
   await expect(gscFavicon).toHaveAttribute("data-league", "gsc");
   await expect(gscFavicon).toHaveAttribute(
@@ -39,8 +57,17 @@ test("league switch replaces the browser-tab icon", async ({ page }) => {
   );
   await expect(gscFavicon).toHaveAttribute("type", "image/png");
 
-  await page.getByRole("button", { name: "CTC", exact: true }).click();
+  await ctcSelector.click();
   await expect(page.locator("#league-favicon")).toHaveAttribute("data-league", "ctc");
+});
+
+test("inner-page league switch is placed beside the active league logo", async ({ page }) => {
+  await page.goto("/matches?league=ctc&season=s3&division=d1");
+
+  const switcher = page.getByRole("group", { name: "League", exact: true });
+  await expect(switcher).toBeVisible();
+  await expect(switcher).not.toHaveClass(/fixed/);
+  await expect(switcher.locator("..").getByRole("link", { name: "CTC home" })).toBeVisible();
 });
 
 for (const route of routes) {

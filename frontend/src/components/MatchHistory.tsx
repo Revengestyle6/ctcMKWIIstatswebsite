@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { fetchCachedJson, fetchJson, fetchPlayoffSeries, type PlayoffSeriesSummary } from "../api";
 import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
-import { LeagueLogo } from "./LeagueBrand";
+import { LeagueHeaderControls } from "./LeagueHeaderControls";
 import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
 import {
   type ChartMode,
@@ -175,13 +175,12 @@ export default function MatchHistory(): React.JSX.Element {
   return (
     <div className="relative min-h-screen text-white font-sans p-6">
       <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
-        <div className="flex justify-between items-center max-w-7xl mx-auto px-2">
+        <div className="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-2">
           <Link to={leaguePath("/")} className="font-semibold league-accent-text">
             &lt; Back
           </Link>
-          <h1 className="text-3xl font-bold text-center flex-1">Match History</h1>
-          <div className="w-32"></div>
-          <LeagueLogo className="h-12 w-12" />
+          <h1 className="text-center text-xl font-bold sm:text-3xl">Match History</h1>
+          <LeagueHeaderControls logoClassName="h-12 w-12" />
         </div>
       </div>
 

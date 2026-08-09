@@ -5,6 +5,7 @@ import { deleteJson, fetchJson, patchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
 import TeamIdentityManager from "../components/admin/TeamIdentityManager";
 import TeamLogoManager from "../components/admin/TeamLogoManager";
+import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import { useLeague } from "../context/LeagueContext";
 import { useAdminSession } from "../hooks/useAdminSession";
 
@@ -250,17 +251,17 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
               during match imports and statistics searches.
             </p>
           </div>
-          <nav className="flex flex-wrap gap-3">
-            <Link to="/admin/review-queue" className="text-blue-300 hover:text-blue-200">
-              Review queue
-            </Link>
-            <Link to="/admin/access" className="text-blue-300 hover:text-blue-200">
-              Admin access
-            </Link>
-            <Link to="/" className="text-blue-300 hover:text-blue-200">
-              Home
-            </Link>
-          </nav>
+          <div className="flex flex-wrap items-center justify-end gap-4">
+            <nav className="flex flex-wrap gap-3">
+              <Link to="/admin/review-queue" className="text-blue-300 hover:text-blue-200">
+                Review queue
+              </Link>
+              <Link to="/admin/access" className="text-blue-300 hover:text-blue-200">
+                Admin access
+              </Link>
+            </nav>
+            <LeagueHeaderControls />
+          </div>
         </header>
 
         <section className="border border-white/15 bg-zinc-950/90 p-5">

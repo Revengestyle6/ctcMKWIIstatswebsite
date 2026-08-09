@@ -2,7 +2,6 @@ import { type JSX, lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
-import LeagueSwitcher from "./components/LeagueSwitcher";
 import { LeagueProvider } from "./context/LeagueContext";
 
 const BestMatchups = lazy(() => import("./components/BestMatchups"));
@@ -45,7 +44,6 @@ export default function App(): JSX.Element {
     <BrowserRouter>
       <LeagueProvider>
         <BackgroundSlideshow />
-        <LeagueSwitcher />
         <Suspense fallback={null}>
           <MusicPlayer />
         </Suspense>
