@@ -1,9 +1,16 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { LEAGUES, type LeagueCode } from "../config/leagues";
 import { useLeague } from "../context/LeagueContext";
 
-export function LeagueLogo({ className = "h-11 w-11" }: { className?: string }) {
-  const { config } = useLeague();
+export function LeagueLogoImage({
+  league,
+  className = "h-11 w-11",
+}: {
+  league: LeagueCode;
+  className?: string;
+}) {
+  const config = LEAGUES[league];
   const [failedUrl, setFailedUrl] = useState("");
   const failed = failedUrl === config.logoUrl;
 
@@ -27,6 +34,11 @@ export function LeagueLogo({ className = "h-11 w-11" }: { className?: string }) 
       onError={() => setFailedUrl(config.logoUrl)}
     />
   );
+}
+
+export function LeagueLogo({ className = "h-11 w-11" }: { className?: string }) {
+  const { league } = useLeague();
+  return <LeagueLogoImage league={league} className={className} />;
 }
 
 export function LeagueHomeLogo({ className }: { className?: string }) {

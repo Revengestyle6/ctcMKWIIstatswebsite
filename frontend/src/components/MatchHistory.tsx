@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { fetchCachedJson, fetchJson, fetchPlayoffSeries, type PlayoffSeriesSummary } from "../api";
 import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
-import { LeagueLogo } from "./LeagueBrand";
+import { LeagueHeaderControls } from "./LeagueHeaderControls";
 import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
 import {
   type ChartMode,
@@ -85,9 +85,6 @@ export default function MatchHistory(): React.JSX.Element {
       if (!season || !division) return;
       setLoadingMatches(true);
       setError("");
-      setMatches([]);
-      setSelectedMatchId(null);
-      setMatchDetail(null);
       try {
         const [data, seriesData] = await Promise.all([
           fetchCachedJson<MatchSummary[]>("/api/matches", {
@@ -104,13 +101,18 @@ export default function MatchHistory(): React.JSX.Element {
         if (cancelled) return;
         setMatches(data);
         setPlayoffSeries(seriesData?.series ?? []);
-        setSelectedMatchId(
+        const nextMatchId =
           requestedMatchId && data.some((match) => match.match_id === requestedMatchId)
             ? requestedMatchId
-            : (data[0]?.match_id ?? null)
-        );
+            : (data[0]?.match_id ?? null);
+        setSelectedMatchId(nextMatchId);
       } catch (_err) {
-        if (!cancelled) setError("Failed to load matches.");
+        if (!cancelled) {
+          setMatches([]);
+          setPlayoffSeries([]);
+          setSelectedMatchId(null);
+          setError("Failed to load matches.");
+        }
       } finally {
         if (!cancelled) setLoadingMatches(false);
       }
@@ -160,11 +162,12 @@ export default function MatchHistory(): React.JSX.Element {
     () => matches.find((match) => match.match_id === selectedMatchId) ?? null,
     [matches, selectedMatchId]
   );
-  const detailPlayoffSeriesLabel = matchDetail
+  const displayedMatchDetail = matchDetail?.match_id === selectedMatchId ? matchDetail : null;
+  const detailPlayoffSeriesLabel = displayedMatchDetail
     ? playoffSeriesAbbreviation(
-        matchDetail.playoff_stage,
-        matchDetail.playoff_series_number,
-        matchDetail.playoff_semifinal_series_count
+        displayedMatchDetail.playoff_stage,
+        displayedMatchDetail.playoff_series_number,
+        displayedMatchDetail.playoff_semifinal_series_count
       )
     : "";
   const combinedError = scopeError || error;
@@ -172,13 +175,12 @@ export default function MatchHistory(): React.JSX.Element {
   return (
     <div className="relative min-h-screen text-white font-sans p-6">
       <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
-        <div className="flex justify-between items-center max-w-7xl mx-auto px-2">
+        <div className="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-2">
           <Link to={leaguePath("/")} className="font-semibold league-accent-text">
             &lt; Back
           </Link>
-          <h1 className="text-3xl font-bold text-center flex-1">Match History</h1>
-          <div className="w-32"></div>
-          <LeagueLogo className="h-12 w-12" />
+          <h1 className="text-center text-xl font-bold sm:text-3xl">Match History</h1>
+          <LeagueHeaderControls logoClassName="h-12 w-12" />
         </div>
       </div>
 
@@ -305,32 +307,33 @@ export default function MatchHistory(): React.JSX.Element {
           </div>
         )}
 
-        {!loadingDetail && matchDetail && (
+        {!loadingDetail && displayedMatchDetail && (
           <div className="space-y-6">
             <section className="rounded-md border border-white/10 bg-black/60 p-5">
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="text-sm uppercase tracking-wide text-blue-200">
-                    {matchDetail.season.toUpperCase()} / {matchDetail.division.toUpperCase()}
-                    {matchDetail.match_type === "playoff" ? (
+                    {displayedMatchDetail.season.toUpperCase()} /{" "}
+                    {displayedMatchDetail.division.toUpperCase()}
+                    {displayedMatchDetail.match_type === "playoff" ? (
                       <>
                         {detailPlayoffSeriesLabel ? ` / ${detailPlayoffSeriesLabel}` : ""}
-                        {matchDetail.series_match_number
-                          ? ` / M${matchDetail.series_match_number}`
+                        {displayedMatchDetail.series_match_number
+                          ? ` / M${displayedMatchDetail.series_match_number}`
                           : ""}
                       </>
-                    ) : matchDetail.week ? (
-                      ` / Week ${matchDetail.week}`
+                    ) : displayedMatchDetail.week ? (
+                      ` / Week ${displayedMatchDetail.week}`
                     ) : (
                       ""
                     )}
                   </p>
                   <h2 className="mt-1 text-3xl font-bold">
-                    {selectedSummary?.teams || matchDetail.label}
+                    {selectedSummary?.teams || displayedMatchDetail.label}
                   </h2>
                   <p className="mt-1 text-gray-300">
-                    {matchDetail.races_played} races
-                    {matchDetail.format ? ` / ${matchDetail.format}` : ""}
+                    {displayedMatchDetail.races_played} races
+                    {displayedMatchDetail.format ? ` / ${displayedMatchDetail.format}` : ""}
                     {selectedSummary?.scores ? ` / ${selectedSummary.scores}` : ""}
                   </p>
                 </div>
@@ -396,7 +399,7 @@ export default function MatchHistory(): React.JSX.Element {
                         Team colors
                       </summary>
                       <div className="mt-3 grid grid-cols-[max-content_2.5rem_5.5rem] items-center gap-x-2 gap-y-2">
-                        {matchDetail.teams.map((team, teamIndex) => {
+                        {displayedMatchDetail.teams.map((team, teamIndex) => {
                           const fallback = teamIndex === 0 ? "#1d4ed8" : "#be185d";
                           const color = teamColor(team, teamColors, fallback);
                           const colorInput = teamColorInputs[team.match_team_id] ?? color;
@@ -462,20 +465,20 @@ export default function MatchHistory(): React.JSX.Element {
 
             {tableMode === "traditional" ? (
               <TraditionalTable
-                match={matchDetail}
+                match={displayedMatchDetail}
                 groupByGp={groupByGp}
                 teamColors={teamColors}
                 chartMode={chartMode}
               />
             ) : (
               <VerticalScorecard
-                match={matchDetail}
+                match={displayedMatchDetail}
                 teamColors={teamColors}
                 chartMode={chartMode}
               />
             )}
 
-            <TrackList tracks={matchDetail.tracks} />
+            <TrackList tracks={displayedMatchDetail.tracks} />
           </div>
         )}
 

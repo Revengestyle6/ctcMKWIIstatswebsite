@@ -26,9 +26,9 @@ const LeagueContext = createContext<LeagueContextValue | null>(null);
 function storedLeague(): LeagueCode {
   try {
     const value = window.localStorage.getItem(STORAGE_KEY);
-    return isLeagueCode(value) ? value : "ctc";
+    return isLeagueCode(value) ? value : "gsc";
   } catch {
-    return "ctc";
+    return "gsc";
   }
 }
 

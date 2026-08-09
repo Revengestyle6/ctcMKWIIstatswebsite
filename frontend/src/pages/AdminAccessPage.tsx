@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { fetchJson, patchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
+import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import { useAdminSession } from "../hooks/useAdminSession";
 
 type AdminUser = {
@@ -78,17 +79,17 @@ export default function AdminAccessPage(): React.JSX.Element {
             <p className="text-sm uppercase text-blue-200">Restricted administration</p>
             <h1 className="text-3xl font-bold">Administrator Access</h1>
           </div>
-          <nav className="flex gap-3">
-            <Link to="/admin/aliases" className="text-blue-300 hover:text-blue-200">
-              Alias management
-            </Link>
-            <Link to="/admin/review-queue" className="text-blue-300 hover:text-blue-200">
-              Review queue
-            </Link>
-            <Link to="/" className="text-blue-300 hover:text-blue-200">
-              Home
-            </Link>
-          </nav>
+          <div className="flex flex-wrap items-center justify-end gap-4">
+            <nav className="flex gap-3">
+              <Link to="/admin/aliases" className="text-blue-300 hover:text-blue-200">
+                Alias management
+              </Link>
+              <Link to="/admin/review-queue" className="text-blue-300 hover:text-blue-200">
+                Review queue
+              </Link>
+            </nav>
+            <LeagueHeaderControls />
+          </div>
         </header>
         <section className="border border-white/15 bg-zinc-950/90 p-5">
           <AdminSessionPanel {...auth} />

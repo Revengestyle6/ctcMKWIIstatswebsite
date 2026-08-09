@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { fetchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
+import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import { isLeagueCode } from "../config/leagues";
 import { useAdminSession } from "../hooks/useAdminSession";
 
@@ -88,19 +89,17 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
             <p className="text-sm uppercase text-blue-200">Restricted administration</p>
             <h1 className="text-3xl font-bold">JSON Review Queue</h1>
           </div>
-          <nav className="flex gap-3">
-            <div className="flex gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-4">
+            <nav className="flex gap-3">
               <Link to="/admin/aliases" className="text-blue-300">
                 Alias management
               </Link>
               <Link to="/admin/access" className="text-blue-300">
                 Access
               </Link>
-            </div>
-            <Link to="/" className="text-blue-300">
-              Home
-            </Link>
-          </nav>
+            </nav>
+            <LeagueHeaderControls />
+          </div>
         </header>
         <section className="border border-white/15 bg-zinc-950/90 p-5">
           <AdminSessionPanel {...auth} />

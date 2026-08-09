@@ -1,6 +1,6 @@
 import type React from "react";
 import { Link } from "react-router-dom";
-import { LeagueLogo } from "../components/LeagueBrand";
+import { HomeLeagueSelector } from "../components/LeagueSwitcher";
 import { useLeague } from "../context/LeagueContext";
 
 const analyticsLinks = [
@@ -53,7 +53,7 @@ export default function HomePage(): React.JSX.Element {
       <section className="border-b border-white/10 bg-black/55 px-5 py-12 backdrop-blur-sm sm:px-8 sm:py-16">
         <div className="mx-auto max-w-6xl text-center">
           <div className="mx-auto mb-5 w-fit">
-            <LeagueLogo className="h-24 w-24 sm:h-28 sm:w-28" />
+            <HomeLeagueSelector />
           </div>
           <h1 className="text-4xl font-bold sm:text-5xl">{config.name} Statistics</h1>
           <p className="mx-auto mt-4 max-w-3xl text-base leading-7 text-gray-200 sm:text-lg">

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useLeague } from "../../context/LeagueContext";
-import { LeagueLogo } from "../LeagueBrand";
+import { LeagueHeaderControls } from "../LeagueHeaderControls";
 
 export interface MetricItem {
   label: string;
@@ -38,14 +38,12 @@ export function DashboardShell({ title, identity, controls, children }: Dashboar
   return (
     <div className="relative min-h-screen text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto grid max-w-7xl grid-cols-[5rem_1fr_5rem] items-center sm:grid-cols-[8rem_1fr_8rem]">
+        <div className="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <Link to={leaguePath("/")} className="font-semibold league-accent-text">
             &larr; Back
           </Link>
           <h1 className="text-center text-xl font-bold sm:text-2xl">{title}</h1>
-          <div className="ml-auto">
-            <LeagueLogo />
-          </div>
+          <LeagueHeaderControls className="ml-auto" />
         </div>
       </header>
 
