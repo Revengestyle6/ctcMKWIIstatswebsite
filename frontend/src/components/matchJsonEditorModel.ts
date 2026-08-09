@@ -45,6 +45,12 @@ export type MatchJson = {
   season?: string;
   division?: string;
   week?: number;
+  match_type?: "regular" | "playoff";
+  playoff_format?: "three_team" | "four_team";
+  playoff_stage?: "semifinals" | "finals";
+  playoff_series_number?: number;
+  series_match_number?: number;
+  best_of?: number;
   match_label?: string;
   rxx?: string[];
   tracks?: string[];

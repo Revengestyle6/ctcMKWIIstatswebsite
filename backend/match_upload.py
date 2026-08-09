@@ -11,12 +11,15 @@ from database import BASE_DIR
 from models import (
     DatabaseAdditionLog,
     Division,
+    DivisionPlayoffConfig,
     Match,
     MatchTableRef,
     Player,
     PlayerAlias,
     PlayerFriendCode,
     PlayerSeasonEntry,
+    PlayoffSeries,
+    PlayoffSeriesParticipant,
     Season,
     SourceFile,
     Team,
@@ -24,6 +27,7 @@ from models import (
     Track,
     TrackAlias,
 )
+from playoff_service import validate_competition_metadata
 from sqlalchemy import event, select
 
 DEFAULT_JSON_ROOT = BASE_DIR / "JSON"
@@ -73,7 +77,13 @@ def _archive_component(value: Any, label: str) -> str:
 def _archive_filename(match_data: dict[str, Any], fingerprint: str) -> str:
     label = str(match_data.get("match_label") or "").strip()
     week = match_data.get("week")
-    if (
+    if str(match_data.get("match_type") or "regular").strip().lower() == "playoff":
+        stage = str(match_data.get("playoff_stage") or "").strip().lower()
+        series_number = match_data.get("playoff_series_number")
+        match_number = match_data.get("series_match_number")
+        stage_label = f"Semifinals Series {series_number}" if stage == "semifinals" else "Finals"
+        label = f"{stage_label} - Match {match_number}"
+    elif (
         isinstance(week, (int, float))
         and int(week) > 0
         and not re.match(r"^W\d+\b", label, re.IGNORECASE)
@@ -106,9 +116,10 @@ def validate_committable_match(match_data: dict[str, Any]) -> None:
     for field in ("league", "season", "division", "match_label"):
         if not str(match_data.get(field) or "").strip():
             errors.append(f"{field.replace('_', ' ').title()} is required.")
-    week = match_data.get("week")
-    if not isinstance(week, int) or isinstance(week, bool) or week < 1:
-        errors.append("Week is required and must be a positive whole number.")
+    try:
+        validate_competition_metadata(match_data)
+    except ValueError as error:
+        errors.append(str(error))
     tracks = match_data.get("tracks") or []
     if not tracks:
         errors.append("At least one race track is required.")
@@ -210,6 +221,7 @@ def source_archive_path(source_file: SourceFile) -> Path:
 TRACKED_ADDITION_MODELS = (
     Season,
     Division,
+    DivisionPlayoffConfig,
     SourceFile,
     Team,
     TeamSeasonEntry,
@@ -220,6 +232,8 @@ TRACKED_ADDITION_MODELS = (
     Track,
     TrackAlias,
     Match,
+    PlayoffSeries,
+    PlayoffSeriesParticipant,
 )
 
 
@@ -255,6 +269,45 @@ def _addition_data(instance: Any) -> tuple[str, int, str, dict[str, Any]]:
     if isinstance(instance, Division):
         details = {"season_id": instance.season_id, "division": instance.division_code}
         return "division", instance.division_id, f"Added division {instance.division_code}", details
+    if isinstance(instance, DivisionPlayoffConfig):
+        details = {
+            "division_id": instance.division_id,
+            "format_code": instance.format_code,
+            "playoff_team_count": instance.playoff_team_count,
+            "semifinal_series_count": instance.semifinal_series_count,
+            "finals_bye_count": instance.finals_bye_count,
+        }
+        return (
+            "division_playoff_config",
+            instance.division_id,
+            f"Locked division playoff format as {instance.format_code}",
+            details,
+        )
+    if isinstance(instance, PlayoffSeries):
+        details = {
+            "division_id": instance.division_id,
+            "stage": instance.stage,
+            "series_number": instance.series_number,
+            "best_of": instance.best_of,
+        }
+        return (
+            "playoff_series",
+            instance.playoff_series_id,
+            f"Added {instance.display_label}",
+            details,
+        )
+    if isinstance(instance, PlayoffSeriesParticipant):
+        details = {
+            "playoff_series_id": instance.playoff_series_id,
+            "team_id": instance.team_id,
+            "participant_slot": instance.participant_slot,
+        }
+        return (
+            "playoff_series_participant",
+            instance.playoff_series_participant_id,
+            f"Added team {instance.team_id} to playoff series {instance.playoff_series_id}",
+            details,
+        )
     if isinstance(instance, SourceFile):
         details = {"source_path": instance.source_path, "sha256": instance.file_sha256}
         return "source_file", instance.source_file_id, f"Archived {instance.source_path}", details

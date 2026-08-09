@@ -32,13 +32,14 @@ back safely before production cutover.
 | Phase 4: managed staging topology | Complete | Cloud SQL, Cloud Run, Firebase Hosting, Cloud Storage, Secret Manager, dedicated identities, budgets, and same-origin routing are deployed |
 | Phase 4: CI/CD | Complete | Keyless WIF deployment from `main` has succeeded repeatedly; GitHub Actions run 17 successfully deployed the July 27 `main` merge |
 | Phase 4: functional staging proof | Substantially complete | Owner sign-in, direct acceptance, anonymous queue/owner acceptance, SQL visibility, immutable archive promotion, and health checks have passed |
+| Functionality stabilization: playoff support | Implemented locally; staging proof pending | Migration `20260808_0006`, transactional series validation, scoped analytics, editor controls, and grouped match navigation are complete; representative Season 3 uploads and staging deployment remain |
 | Phase 4: operations and recovery | Open | Monitoring/alerts, scheduled reconciliation and integrity work, logical exports, a restore drill, rollback proof, and remaining authorization-boundary checks are not complete |
 | Phase 5: production cutover | Not started | Begin only after the Phase 4 exit gates below pass and the planned functionality changes have stabilized in staging |
 
 This review revalidated the current code and deployed staging system:
 
 - The working tree was clean before this documentation update.
-- Ruff lint and format checks pass, and all 83 PostgreSQL-backed backend tests pass.
+- Ruff lint and format checks pass, and all 88 PostgreSQL-backed backend tests pass.
 - Frontend Biome/type checks and the Vite production build pass.
 - The latest recorded GitHub Actions runs for both the feature branch and `main`
   completed successfully.
@@ -49,6 +50,10 @@ This review revalidated the current code and deployed staging system:
   aliases, player canonical names, roster identity workflows, and stricter editor
   metadata validation are represented by migrations `20260726_0004` and
   `20260726_0005` and the healthy deployed schema.
+- Playoff support is implemented in the local branch and documented in
+  [`playoff-support-implementation.md`](playoff-support-implementation.md). It adds
+  the local schema revision `20260808_0006`; staging correctly remains on
+  `20260726_0005` until real Season 3 playoff JSON passes local acceptance testing.
 
 ### Next Readiness Steps
 
@@ -56,6 +61,11 @@ The owner has intentionally paused these operational steps while another batch o
 functionality changes is made. Those changes should keep the existing PostgreSQL,
 archive, authentication, and migration boundaries intact and should pass the local
 and staging gates above before this sequence resumes.
+
+Before resuming the operational sequence, exercise the playoff implementation with
+representative Season 3 semifinal/finals JSON, verify all three statistics scopes,
+then deploy the migration and application to staging and repeat that acceptance
+matrix there.
 
 1. Configure monitoring and actionable alerts for public availability, Cloud Run
    errors/latency, Cloud SQL capacity/backups, archive repair state, and cost.

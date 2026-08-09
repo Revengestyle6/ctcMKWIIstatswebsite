@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from analytics_eligibility import apply_analytics_race_filter
 from database import get_session_factory
+from match_sets import apply_match_set, normalize_match_set
 from models import (
     Division,
     Match,
@@ -95,7 +96,7 @@ def _team_identity(session, team, scope):
     }
 
 
-def _team_match_rows(session, team_id, scope):
+def _team_match_rows(session, team_id, scope, match_set="regular"):
     statement = (
         select(
             Match.match_id,
@@ -125,13 +126,14 @@ def _team_match_rows(session, team_id, scope):
         statement = statement.where(Match.season_id == scope.season_id)
     if scope.division_id is not None:
         statement = statement.where(Match.division_id == scope.division_id)
+    statement = apply_match_set(statement, match_set)
     return session.execute(statement.order_by(Match.match_id)).all()
 
 
-def _team_ranking(session, team_id, scope, min_races):
+def _team_ranking(session, team_id, scope, min_races, match_set="regular"):
     if scope.season_id is None or scope.division_id is None:
         return None
-    match_rows = session.execute(
+    statement = (
         select(
             Match.match_id,
             Match.races_played,
@@ -147,7 +149,8 @@ def _team_ranking(session, team_id, scope, min_races):
             TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id,
         )
         .where(Match.season_id == scope.season_id, Match.division_id == scope.division_id)
-    ).all()
+    )
+    match_rows = session.execute(apply_match_set(statement, match_set)).all()
     by_match = defaultdict(list)
     for row in match_rows:
         by_match[row.match_id].append(row)
@@ -182,8 +185,15 @@ def _team_ranking(session, team_id, scope, min_races):
 
 
 def get_team_overview(
-    team_id, season=None, division=None, opponent_team_id=None, min_races=12, session=None
+    team_id,
+    season=None,
+    division=None,
+    opponent_team_id=None,
+    min_races=12,
+    match_set="regular",
+    session=None,
 ):
+    match_set = normalize_match_set(match_set)
     if session is None:
         with SessionLocal() as owned_session:
             return get_team_overview(
@@ -192,6 +202,7 @@ def get_team_overview(
                 division=division,
                 opponent_team_id=opponent_team_id,
                 min_races=min_races,
+                match_set=match_set,
                 session=owned_session,
             )
 
@@ -205,7 +216,7 @@ def get_team_overview(
         if not session.get(Team, opponent_team_id):
             raise DashboardError("Unknown opponent filter.")
 
-    rows = _team_match_rows(session, team_id, scope)
+    rows = _team_match_rows(session, team_id, scope, match_set)
     match_ids = [row.match_id for row in rows]
     teams_by_match = defaultdict(list)
     for row in _match_team_rows(session, match_ids):
@@ -264,7 +275,11 @@ def get_team_overview(
 
     return {
         "identity": _team_identity(session, team, scope),
-        "scope": {**_scope_payload(scope), "opponent_team_id": opponent_team_id},
+        "scope": {
+            **_scope_payload(scope),
+            "opponent_team_id": opponent_team_id,
+            "match_set": match_set,
+        },
         "metrics": {
             "matches": len(matches),
             "races": sum(row["races"] for row in matches),
@@ -286,7 +301,7 @@ def get_team_overview(
             "largest_loss": min((row["differential"] for row in losses), default=None),
         },
         "record": record,
-        "ranking": _team_ranking(session, team_id, scope, min_races),
+        "ranking": _team_ranking(session, team_id, scope, min_races, match_set),
         "recent_matches": matches[:5],
         "score_trend": [
             {
@@ -299,8 +314,8 @@ def get_team_overview(
     }
 
 
-def _filtered_team_match_ids(session, team_id, scope, opponent_team_id=None):
-    rows = _team_match_rows(session, team_id, scope)
+def _filtered_team_match_ids(session, team_id, scope, opponent_team_id=None, match_set="regular"):
+    rows = _team_match_rows(session, team_id, scope, match_set)
     match_ids = [row.match_id for row in rows]
     if opponent_team_id is None or not match_ids:
         return match_ids
@@ -382,9 +397,11 @@ def get_team_roster(
     opponent_team_id=None,
     min_races=12,
     role="runner",
+    match_set="regular",
     session=None,
 ):
     role = normalize_role(role)
+    match_set = normalize_match_set(match_set)
     if session is None:
         with SessionLocal() as owned_session:
             return get_team_roster(
@@ -394,6 +411,7 @@ def get_team_roster(
                 opponent_team_id=opponent_team_id,
                 min_races=min_races,
                 role=role,
+                match_set=match_set,
                 session=owned_session,
             )
     if not session.get(Team, team_id):
@@ -404,13 +422,17 @@ def get_team_roster(
             raise DashboardError("A team cannot be its own opponent filter.")
         if not session.get(Team, opponent_team_id):
             raise DashboardError("Unknown opponent filter.")
-    match_ids = _filtered_team_match_ids(session, team_id, scope, opponent_team_id)
+    match_ids = _filtered_team_match_ids(session, team_id, scope, opponent_team_id, match_set)
     if not match_ids:
         empty_coverage, _ = role_coverage([], set())
         return {
             "team_id": team_id,
             "role": role,
-            "scope": {**_scope_payload(scope), "opponent_team_id": opponent_team_id},
+            "scope": {
+                **_scope_payload(scope),
+                "opponent_team_id": opponent_team_id,
+                "match_set": match_set,
+            },
             "minimum_races": min_races,
             "role_coverage": empty_coverage,
             "players": [],
@@ -541,7 +563,11 @@ def get_team_roster(
     return {
         "team_id": team_id,
         "role": role,
-        "scope": {**_scope_payload(scope), "opponent_team_id": opponent_team_id},
+        "scope": {
+            **_scope_payload(scope),
+            "opponent_team_id": opponent_team_id,
+            "match_set": match_set,
+        },
         "minimum_races": min_races,
         "role_coverage": coverage,
         "players": players,
@@ -549,8 +575,15 @@ def get_team_roster(
 
 
 def get_team_tracks(
-    team_id, season=None, division=None, opponent_team_id=None, min_races=12, session=None
+    team_id,
+    season=None,
+    division=None,
+    opponent_team_id=None,
+    min_races=12,
+    match_set="regular",
+    session=None,
 ):
+    match_set = normalize_match_set(match_set)
     if session is None:
         with SessionLocal() as owned_session:
             return get_team_tracks(
@@ -559,6 +592,7 @@ def get_team_tracks(
                 division=division,
                 opponent_team_id=opponent_team_id,
                 min_races=min_races,
+                match_set=match_set,
                 session=owned_session,
             )
     if not session.get(Team, team_id):
@@ -566,11 +600,15 @@ def get_team_tracks(
     scope = _resolve_scope(session, season=season, division=division)
     if opponent_team_id is not None and not session.get(Team, opponent_team_id):
         raise DashboardError("Unknown opponent filter.")
-    match_ids = _filtered_team_match_ids(session, team_id, scope, opponent_team_id)
+    match_ids = _filtered_team_match_ids(session, team_id, scope, opponent_team_id, match_set)
     if not match_ids:
         return {
             "team_id": team_id,
-            "scope": {**_scope_payload(scope), "opponent_team_id": opponent_team_id},
+            "scope": {
+                **_scope_payload(scope),
+                "opponent_team_id": opponent_team_id,
+                "match_set": match_set,
+            },
             "minimum_races": min_races,
             "tracks": [],
         }
@@ -659,7 +697,11 @@ def get_team_tracks(
     results.sort(key=lambda row: (-row["average_score"], -row["races"], row["name"].lower()))
     return {
         "team_id": team_id,
-        "scope": {**_scope_payload(scope), "opponent_team_id": opponent_team_id},
+        "scope": {
+            **_scope_payload(scope),
+            "opponent_team_id": opponent_team_id,
+            "match_set": match_set,
+        },
         "minimum_races": min_races,
         "tracks": results,
     }

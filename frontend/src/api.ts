@@ -41,6 +41,7 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
     },
   });
   if (response.ok) {
+    if (requestOptions.method && requestOptions.method !== "GET") responseCache.clear();
     return response.json() as Promise<T>;
   }
 
@@ -56,6 +57,36 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
 
 export async function fetchJson<T>(path: string, params?: Record<string, QueryValue>): Promise<T> {
   return requestJson<T>(path, { cache: "no-store", params });
+}
+
+const responseCache = new Map<string, { expiresAt: number; promise: Promise<unknown> }>();
+
+export function fetchCachedJson<T>(
+  path: string,
+  params?: Record<string, QueryValue>,
+  maxAgeMs = 5 * 60 * 1000
+): Promise<T> {
+  const key = apiUrl(path, params).toString();
+  const cached = responseCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.promise as Promise<T>;
+  const promise = fetchJson<T>(path, params).catch((error) => {
+    responseCache.delete(key);
+    throw error;
+  });
+  responseCache.set(key, { expiresAt: Date.now() + maxAgeMs, promise });
+  return promise;
+}
+
+export function prefetchMatchSetVariants(
+  path: string,
+  params: Record<string, QueryValue>,
+  selected: "regular" | "playoffs" | "all"
+): void {
+  for (const matchSet of ["regular", "playoffs", "all"] as const) {
+    if (matchSet !== selected) {
+      void fetchCachedJson(path, { ...params, match_set: matchSet });
+    }
+  }
 }
 
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
@@ -138,6 +169,44 @@ export interface MatchScope {
 
 export function fetchMatchScopes(): Promise<MatchScope[]> {
   return fetchJson("/api/match-scopes");
+}
+
+export interface PlayoffSeriesSummary {
+  playoff_series_id: number;
+  stage: "semifinals" | "finals";
+  series_number: number;
+  label: string;
+  best_of: number;
+  status: "in_progress" | "complete";
+  winner_team_id: number | null;
+  participants: Array<{
+    team_id: number;
+    tag: string;
+    name: string;
+    slot: number;
+    wins: number;
+  }>;
+  matches: Array<{ match_id: number; series_match_number: number; label: string }>;
+}
+
+export interface PlayoffSeriesResponse {
+  season: string;
+  division: string;
+  format: {
+    code: "three_team" | "four_team";
+    playoff_team_count: number;
+    semifinal_series_count: number;
+    finals_bye_count: number;
+  } | null;
+  series: PlayoffSeriesSummary[];
+}
+
+export function fetchPlayoffSeries(
+  season: string,
+  division: string,
+  team?: string
+): Promise<PlayoffSeriesResponse> {
+  return fetchJson("/api/playoff-series", { season, division, team });
 }
 
 export interface TeamScope {

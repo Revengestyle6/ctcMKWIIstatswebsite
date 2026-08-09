@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { fetchJson, fetchPlayerDirectory, type PlayerDirectoryEntry } from "../api";
+import {
+  fetchCachedJson,
+  fetchPlayerDirectory,
+  type PlayerDirectoryEntry,
+  prefetchMatchSetVariants,
+} from "../api";
 import type {
   LegacyPlayerAverageResponse,
   LegacyPlayerTracksResponse,
@@ -9,6 +14,7 @@ import type {
 } from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { LegacyStatHeader } from "./LegacyStatHeader";
+import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
 import { RoleModeToggle } from "./RoleModeToggle";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
@@ -21,6 +27,12 @@ export default function PlayerStats() {
     useSeasonDivision();
   const [searchParams, setSearchParams] = useSearchParams();
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
+  const matchSet: MatchSet =
+    searchParams.get("match_set") === "playoffs"
+      ? "playoffs"
+      : searchParams.get("match_set") === "all"
+        ? "all"
+        : "regular";
   const [playerDirectory, setPlayerDirectory] = useState<PlayerDirectoryEntry[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState("");
   const [playerSearch, setPlayerSearch] = useState("");
@@ -31,7 +43,7 @@ export default function PlayerStats() {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const queryKey = JSON.stringify([selectedPlayer, season, division, role]);
+  const queryKey = JSON.stringify([selectedPlayer, season, division, role, matchSet]);
   const currentStats = stats?.key === queryKey ? stats : null;
 
   useEffect(() => {
@@ -80,21 +92,26 @@ export default function PlayerStats() {
     setLoading(true);
     setError("");
     Promise.all([
-      fetchJson<LegacyPlayerTracksResponse>("/api/player", {
+      fetchCachedJson<LegacyPlayerTracksResponse>("/api/player", {
         name: selectedPlayer,
         season,
         division,
         role,
+        match_set: matchSet,
       }),
-      fetchJson<LegacyPlayerAverageResponse>("/api/player-avg", {
+      fetchCachedJson<LegacyPlayerAverageResponse>("/api/player-avg", {
         name: selectedPlayer,
         season,
         division,
         role,
+        match_set: matchSet,
       }),
     ])
       .then(([tracks, average]) => {
         if (!cancelled) setStats({ key: queryKey, tracks, average });
+        const params = { name: selectedPlayer, season, division, role };
+        prefetchMatchSetVariants("/api/player", params, matchSet);
+        prefetchMatchSetVariants("/api/player-avg", params, matchSet);
       })
       .catch((requestError: unknown) => {
         if (!cancelled)
@@ -110,12 +127,19 @@ export default function PlayerStats() {
     return () => {
       cancelled = true;
     };
-  }, [selectedPlayer, season, division, role, queryKey]);
+  }, [selectedPlayer, season, division, role, matchSet, queryKey]);
 
   function updateRole(nextRole: PlayerRoleMode) {
     const next = new URLSearchParams(searchParams);
     if (nextRole === "runner") next.delete("role");
     else next.set("role", nextRole);
+    setSearchParams(next, { replace: true });
+  }
+
+  function updateMatchSet(value: MatchSet) {
+    const next = new URLSearchParams(searchParams);
+    if (value === "regular") next.delete("match_set");
+    else next.set("match_set", value);
     setSearchParams(next, { replace: true });
   }
 
@@ -202,6 +226,7 @@ export default function PlayerStats() {
               </p>
             </div>
             <RoleModeToggle value={role} onChange={updateRole} disabled={loading} />
+            <MatchSetToggle value={matchSet} onChange={updateMatchSet} disabled={loading} />
           </div>
         </div>
 
@@ -259,7 +284,7 @@ export default function PlayerStats() {
               </div>
               {selectedPlayerId && (
                 <Link
-                  to={`/players/${selectedPlayerId}?season=${season}&division=${division}&role=${role}`}
+                  to={`/players/${selectedPlayerId}?season=${season}&division=${division}&role=${role}&match_set=${matchSet}`}
                   className="mt-5 inline-block font-semibold text-blue-300 hover:text-blue-200"
                 >
                   Open player dashboard &rarr;

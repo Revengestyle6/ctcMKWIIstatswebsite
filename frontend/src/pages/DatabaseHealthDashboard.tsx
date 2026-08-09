@@ -18,7 +18,16 @@ const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
 const COUNT_GROUPS = [
   {
     label: "Competition",
-    tables: ["seasons", "divisions", "teams", "team_logos", "team_season_entries"],
+    tables: [
+      "seasons",
+      "divisions",
+      "division_playoff_configs",
+      "playoff_series",
+      "playoff_series_participants",
+      "teams",
+      "team_logos",
+      "team_season_entries",
+    ],
   },
   {
     label: "Player identity",

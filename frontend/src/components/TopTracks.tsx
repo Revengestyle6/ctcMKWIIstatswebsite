@@ -1,10 +1,11 @@
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { fetchJson } from "../api";
+import { fetchCachedJson, prefetchMatchSetVariants } from "../api";
 import type { LegacyTrackPlayerRow, LegacyTrackTeamRow, PlayerRoleMode } from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { LegacyStatHeader } from "./LegacyStatHeader";
+import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
 import { RoleModeToggle } from "./RoleModeToggle";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
@@ -17,6 +18,12 @@ export default function TopTracks(): React.JSX.Element {
     useSeasonDivision();
   const [searchParams, setSearchParams] = useSearchParams();
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
+  const matchSet: MatchSet =
+    searchParams.get("match_set") === "playoffs"
+      ? "playoffs"
+      : searchParams.get("match_set") === "all"
+        ? "all"
+        : "regular";
   const [tracks, setTracks] = useState<string[]>([]);
   const [selectedTrack, setSelectedTrack] = useState("");
   const [playerResult, setPlayerResult] = useState<{
@@ -31,8 +38,8 @@ export default function TopTracks(): React.JSX.Element {
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [playersError, setPlayersError] = useState("");
   const [teamsError, setTeamsError] = useState("");
-  const playerKey = JSON.stringify([selectedTrack, season, division, minRaces, role]);
-  const teamKey = JSON.stringify([selectedTrack, season, division, minRaces]);
+  const playerKey = JSON.stringify([selectedTrack, season, division, minRaces, role, matchSet]);
+  const teamKey = JSON.stringify([selectedTrack, season, division, minRaces, matchSet]);
   const topPlayers = playerResult?.key === playerKey ? playerResult.rows : [];
   const topTeams = teamResult?.key === teamKey ? teamResult.rows : [];
 
@@ -57,11 +64,12 @@ export default function TopTracks(): React.JSX.Element {
     setTeamsLoading(false);
     setPlayersError("");
     setTeamsError("");
-    fetchJson<string[]>("/api/tracks", { season, division })
+    fetchCachedJson<string[]>("/api/tracks", { season, division, match_set: matchSet })
       .then((data) => {
         if (cancelled) return;
         setTracks(data);
         setSelectedTrack(data[0] ?? "");
+        prefetchMatchSetVariants("/api/tracks", { season, division }, matchSet);
       })
       .catch((requestError: unknown) => {
         if (!cancelled)
@@ -72,7 +80,7 @@ export default function TopTracks(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [season, division]);
+  }, [season, division, matchSet]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,15 +91,21 @@ export default function TopTracks(): React.JSX.Element {
     }
     setPlayersLoading(true);
     setPlayersError("");
-    fetchJson<LegacyTrackPlayerRow[]>("/api/top-tracks", {
+    fetchCachedJson<LegacyTrackPlayerRow[]>("/api/top-tracks", {
       track: selectedTrack,
       min_races: minRaces,
       season,
       division,
       role,
+      match_set: matchSet,
     })
       .then((rows) => {
         if (!cancelled) setPlayerResult({ key: playerKey, rows });
+        prefetchMatchSetVariants(
+          "/api/top-tracks",
+          { track: selectedTrack, min_races: minRaces, season, division, role },
+          matchSet
+        );
       })
       .catch((requestError: unknown) => {
         if (!cancelled)
@@ -105,7 +119,7 @@ export default function TopTracks(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTrack, season, division, minRaces, role, playerKey]);
+  }, [selectedTrack, season, division, minRaces, role, matchSet, playerKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,14 +130,20 @@ export default function TopTracks(): React.JSX.Element {
     }
     setTeamsLoading(true);
     setTeamsError("");
-    fetchJson<LegacyTrackTeamRow[]>("/api/top-teams-on-track", {
+    fetchCachedJson<LegacyTrackTeamRow[]>("/api/top-teams-on-track", {
       track: selectedTrack,
       min_races: minRaces,
       season,
       division,
+      match_set: matchSet,
     })
       .then((rows) => {
         if (!cancelled) setTeamResult({ key: teamKey, rows });
+        prefetchMatchSetVariants(
+          "/api/top-teams-on-track",
+          { track: selectedTrack, min_races: minRaces, season, division },
+          matchSet
+        );
       })
       .catch((requestError: unknown) => {
         if (!cancelled)
@@ -137,12 +157,19 @@ export default function TopTracks(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [selectedTrack, season, division, minRaces, teamKey]);
+  }, [selectedTrack, season, division, minRaces, matchSet, teamKey]);
 
   function updateRole(nextRole: PlayerRoleMode) {
     const next = new URLSearchParams(searchParams);
     if (nextRole === "runner") next.delete("role");
     else next.set("role", nextRole);
+    setSearchParams(next, { replace: true });
+  }
+
+  function updateMatchSet(value: MatchSet) {
+    const next = new URLSearchParams(searchParams);
+    if (value === "regular") next.delete("match_set");
+    else next.set("match_set", value);
     setSearchParams(next, { replace: true });
   }
 
@@ -199,6 +226,11 @@ export default function TopTracks(): React.JSX.Element {
               />
             </div>
             <RoleModeToggle value={role} onChange={updateRole} disabled={playersLoading} />
+            <MatchSetToggle
+              value={matchSet}
+              onChange={updateMatchSet}
+              disabled={playersLoading || teamsLoading}
+            />
           </div>
         </div>
 
@@ -223,6 +255,7 @@ export default function TopTracks(): React.JSX.Element {
                 role={role}
                 season={season}
                 division={division}
+                matchSet={matchSet}
               />
             ) : selectedTrack && !playersError ? (
               <p className="py-8 text-center text-gray-300">No qualifying {role} results.</p>
@@ -249,11 +282,13 @@ function PlayerRankingTable({
   role,
   season,
   division,
+  matchSet,
 }: {
   rows: LegacyTrackPlayerRow[];
   role: PlayerRoleMode;
   season: string;
   division: string;
+  matchSet: MatchSet;
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-white/10 shadow-lg">
@@ -307,7 +342,7 @@ function PlayerRankingTable({
             >
               <td className="whitespace-nowrap px-4 py-3 font-semibold">
                 <Link
-                  to={`/players/${row.player_id}?season=${season}&division=${division}&role=${role}`}
+                  to={`/players/${row.player_id}?season=${season}&division=${division}&role=${role}&match_set=${matchSet}`}
                   className="text-blue-200 hover:text-blue-100"
                 >
                   {row.name ?? `Player ${row.player_id}`}

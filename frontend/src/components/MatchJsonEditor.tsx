@@ -7,10 +7,12 @@ import {
   fetchMatchScopes,
   fetchPlayerIdentity,
   fetchPlayerTeamMemberships,
+  fetchPlayoffSeries,
   fetchTeamScopes,
   type MatchScope,
   type PlayerIdentity,
   type PlayerTeamMembership,
+  type PlayoffSeriesResponse,
   postJson,
   searchTracks,
   type TeamRosterPlayer,
@@ -48,6 +50,7 @@ import {
   download,
   type IdentityState,
   type Issue,
+  type IssueField,
   isFfa,
   metadataValue,
   type NewEntry,
@@ -66,6 +69,79 @@ const inputClass =
   "mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300";
 const smallLabel = "text-xs font-semibold uppercase text-gray-400";
 
+function LockIcon(): React.JSX.Element {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="h-4 w-4 shrink-0 text-gray-400"
+    >
+      <rect x="5" y="10" width="14" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
+function ReadOnlyControl({
+  invalid = false,
+  label,
+  locked = false,
+  value,
+}: {
+  invalid?: boolean;
+  label: string;
+  locked?: boolean;
+  value: string | number;
+}): React.JSX.Element {
+  return (
+    <div className="relative mt-1">
+      <input
+        type="text"
+        readOnly
+        value={value}
+        aria-invalid={invalid || undefined}
+        aria-label={`${label}, ${locked ? "locked" : "assigned automatically"}`}
+        className={`w-full cursor-default rounded-md border bg-black/40 px-3 py-2 text-gray-200 outline-none ${invalid ? "border-red-400/70" : "border-white/15"} ${locked ? "pr-10" : ""}`}
+      />
+      {locked && (
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+          <LockIcon />
+        </span>
+      )}
+    </div>
+  );
+}
+
+function fieldHasError(issues: Issue[], field: IssueField): boolean {
+  return issues.some((issue) => issue.field === field && issue.level === "error");
+}
+
+function FieldIssues({
+  field,
+  issues,
+}: {
+  field: IssueField;
+  issues: Issue[];
+}): React.JSX.Element | null {
+  const matchingIssues = issues.filter((issue) => issue.field === field);
+  if (matchingIssues.length === 0) return null;
+  return (
+    <div className="mt-1 space-y-1">
+      {matchingIssues.map((issue) => (
+        <p
+          key={`${issue.level}:${issue.message}`}
+          className={`text-xs ${issue.level === "error" ? "text-red-300" : "text-amber-300"}`}
+        >
+          {issue.message}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export default function MatchJsonEditor(): React.JSX.Element {
   const auth = useAdminSession();
   const initial = clone(blankMatch);
@@ -77,6 +153,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [tracksLoaded, setTracksLoaded] = useState(false);
   const [matchScopes, setMatchScopes] = useState<MatchScope[]>([]);
   const [scopesLoaded, setScopesLoaded] = useState(false);
+  const [playoffContext, setPlayoffContext] = useState<PlayoffSeriesResponse | null>(null);
+  const [playoffContextStatus, setPlayoffContextStatus] = useState<
+    "idle" | "loading" | "loaded" | "error"
+  >("idle");
   const [teamScopes, setTeamScopes] = useState<TeamScope[]>([]);
   const [teamsLoaded, setTeamsLoaded] = useState(false);
   const [raceView, setRaceView] = useState<"one" | "all">("one");
@@ -136,6 +216,18 @@ export default function MatchJsonEditor(): React.JSX.Element {
     return counts;
   }, [players]);
   const compiled = useMemo(() => compileMatch(match, races), [match, races]);
+  const selectedPlayoffSeries = useMemo(
+    () =>
+      playoffContext?.series.find(
+        (series) =>
+          series.stage === match.playoff_stage &&
+          series.series_number === match.playoff_series_number
+      ) ?? null,
+    [match.playoff_series_number, match.playoff_stage, playoffContext]
+  );
+  const deterministicSeriesMatchNumber = selectedPlayoffSeries
+    ? selectedPlayoffSeries.matches.length + 1
+    : 1;
   const configuredPlayerIds = useMemo(
     () =>
       Array.from(
@@ -235,7 +327,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
         trackOptions,
         tracksLoaded,
         newEntries,
-        approvalDecisions
+        approvalDecisions,
+        playoffContext,
+        playoffContextStatus !== "error"
       ),
       ...unusualTeamIssues,
     ],
@@ -251,6 +345,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
       tracksLoaded,
       newEntries,
       approvalDecisions,
+      playoffContext,
+      playoffContextStatus,
       unusualTeamIssues,
     ]
   );
@@ -449,6 +545,74 @@ export default function MatchJsonEditor(): React.JSX.Element {
         setScopesLoaded(false);
       });
   }, []);
+  useEffect(() => {
+    if (!match.season || !match.division) {
+      setPlayoffContext(null);
+      setPlayoffContextStatus("idle");
+      return;
+    }
+    let cancelled = false;
+    setPlayoffContext(null);
+    setPlayoffContextStatus("loading");
+    fetchPlayoffSeries(match.season, match.division)
+      .then((context) => {
+        if (cancelled) return;
+        setPlayoffContext(context);
+        setPlayoffContextStatus("loaded");
+        const lockedFormat = context.format?.code;
+        if (lockedFormat) {
+          setMatch((current) =>
+            current.match_type === "playoff" && current.playoff_format !== lockedFormat
+              ? { ...current, playoff_format: lockedFormat }
+              : current
+          );
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPlayoffContext(null);
+        setPlayoffContextStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [match.division, match.season]);
+
+  useEffect(() => {
+    if (match.match_type !== "playoff" || playoffContextStatus !== "loaded") return;
+    const lockedBestOf = selectedPlayoffSeries?.best_of;
+    const lockedFormat = selectedPlayoffSeries ? playoffContext?.format?.code : undefined;
+    if (
+      match.series_match_number !== deterministicSeriesMatchNumber ||
+      (lockedBestOf !== undefined && match.best_of !== lockedBestOf) ||
+      (lockedFormat !== undefined && match.playoff_format !== lockedFormat)
+    ) {
+      setMatch((current) => ({
+        ...current,
+        series_match_number: deterministicSeriesMatchNumber,
+        best_of: lockedBestOf ?? current.best_of ?? 3,
+        playoff_format: lockedFormat ?? current.playoff_format,
+      }));
+    }
+  }, [
+    deterministicSeriesMatchNumber,
+    match.best_of,
+    match.match_type,
+    match.playoff_format,
+    match.series_match_number,
+    playoffContextStatus,
+    playoffContext,
+    selectedPlayoffSeries,
+  ]);
+  useEffect(() => {
+    if (
+      match.match_type === "playoff" &&
+      match.playoff_stage === "finals" &&
+      match.playoff_series_number !== 1
+    ) {
+      setMatch((current) => ({ ...current, playoff_series_number: 1 }));
+    }
+  }, [match.match_type, match.playoff_series_number, match.playoff_stage]);
   useEffect(() => {
     fetchTeamScopes()
       .then((scopes) => {
@@ -1441,33 +1605,190 @@ export default function MatchJsonEditor(): React.JSX.Element {
               ))}
             </datalist>
             <label className="text-sm font-semibold text-gray-200">
-              Week
-              {numberValue(match.week) === "" && (
-                <>
-                  <span
-                    aria-hidden="true"
-                    className="ml-1 text-red-400"
-                    data-required-marker="true"
-                  >
-                    *
-                  </span>
-                  <span className="sr-only"> required</span>
-                </>
-              )}
-              <input
-                type="number"
-                min={1}
-                step={1}
-                value={numberValue(match.week)}
-                onChange={(e) =>
-                  updateMatch({ week: e.target.value ? Number(e.target.value) : undefined })
-                }
-                required
-                aria-required="true"
-                aria-invalid={!Number.isInteger(match.week) || Number(match.week) < 1 || undefined}
-                className={`${inputClass} ${!Number.isInteger(match.week) || Number(match.week) < 1 ? "border-red-400/70" : ""}`}
-              />
+              Match type
+              <select
+                value={match.match_type ?? "regular"}
+                onChange={(event) => {
+                  if (event.target.value === "playoff") {
+                    updateMatch({
+                      match_type: "playoff",
+                      week: undefined,
+                      playoff_format:
+                        playoffContext?.format?.code ?? match.playoff_format ?? "four_team",
+                      playoff_stage: match.playoff_stage ?? "semifinals",
+                      playoff_series_number: match.playoff_series_number ?? 1,
+                      series_match_number: match.series_match_number ?? 1,
+                      best_of: match.best_of ?? 3,
+                    });
+                  } else {
+                    updateMatch({
+                      match_type: "regular",
+                      playoff_format: undefined,
+                      playoff_stage: undefined,
+                      playoff_series_number: undefined,
+                      series_match_number: undefined,
+                      best_of: undefined,
+                    });
+                  }
+                }}
+                className={inputClass}
+              >
+                <option value="regular">Regular season</option>
+                <option value="playoff">Playoff</option>
+              </select>
             </label>
+            {(match.match_type ?? "regular") === "regular" ? (
+              <label className="text-sm font-semibold text-gray-200">
+                Week
+                {numberValue(match.week) === "" && (
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="ml-1 text-red-400"
+                      data-required-marker="true"
+                    >
+                      *
+                    </span>
+                    <span className="sr-only"> required</span>
+                  </>
+                )}
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={numberValue(match.week)}
+                  onChange={(e) =>
+                    updateMatch({ week: e.target.value ? Number(e.target.value) : undefined })
+                  }
+                  required
+                  aria-required="true"
+                  aria-invalid={
+                    !Number.isInteger(match.week) || Number(match.week) < 1 || undefined
+                  }
+                  className={`${inputClass} ${!Number.isInteger(match.week) || Number(match.week) < 1 ? "border-red-400/70" : ""}`}
+                />
+              </label>
+            ) : (
+              <>
+                <div className="text-sm font-semibold text-gray-200">
+                  <span>Playoff format</span>
+                  {selectedPlayoffSeries && playoffContext?.format ? (
+                    <ReadOnlyControl
+                      invalid={fieldHasError(issues, "playoff_format")}
+                      label="Playoff format"
+                      locked
+                      value={
+                        playoffContext.format.code === "three_team"
+                          ? "3 teams (one semifinal)"
+                          : "4 teams (two semifinals)"
+                      }
+                    />
+                  ) : (
+                    <select
+                      id="playoff-format"
+                      aria-label="Playoff format"
+                      value={match.playoff_format ?? "four_team"}
+                      onChange={(event) =>
+                        updateMatch({
+                          playoff_format: event.target.value as "three_team" | "four_team",
+                          playoff_series_number: 1,
+                        })
+                      }
+                      aria-invalid={fieldHasError(issues, "playoff_format") || undefined}
+                      className={`${inputClass} ${fieldHasError(issues, "playoff_format") ? "border-red-400/70" : ""}`}
+                    >
+                      <option value="three_team">3 teams (one semifinal)</option>
+                      <option value="four_team">4 teams (two semifinals)</option>
+                    </select>
+                  )}
+                  <FieldIssues field="playoff_format" issues={issues} />
+                </div>
+                <div className="text-sm font-semibold text-gray-200">
+                  <span>Playoff stage</span>
+                  <select
+                    aria-label="Playoff stage"
+                    value={match.playoff_stage ?? "semifinals"}
+                    onChange={(event) =>
+                      updateMatch({
+                        playoff_stage: event.target.value as "semifinals" | "finals",
+                        playoff_series_number:
+                          event.target.value === "finals" ? 1 : (match.playoff_series_number ?? 1),
+                      })
+                    }
+                    aria-invalid={fieldHasError(issues, "playoff_stage") || undefined}
+                    className={`${inputClass} ${fieldHasError(issues, "playoff_stage") ? "border-red-400/70" : ""}`}
+                  >
+                    <option value="semifinals">Semifinals</option>
+                    <option value="finals">Finals</option>
+                  </select>
+                  <FieldIssues field="playoff_stage" issues={issues} />
+                </div>
+                <div className="text-sm font-semibold text-gray-200">
+                  <span>Series number</span>
+                  {match.playoff_stage === "finals" ? (
+                    <ReadOnlyControl label="Series number" locked value={1} />
+                  ) : (
+                    <input
+                      id="playoff-series-number"
+                      aria-label="Series number"
+                      type="number"
+                      min={1}
+                      max={match.playoff_format === "four_team" ? 2 : 1}
+                      step={1}
+                      value={numberValue(match.playoff_series_number ?? 1)}
+                      onChange={(event) =>
+                        updateMatch({ playoff_series_number: Number(event.target.value) })
+                      }
+                      aria-invalid={fieldHasError(issues, "playoff_series_number") || undefined}
+                      className={`${inputClass} ${fieldHasError(issues, "playoff_series_number") ? "border-red-400/70" : ""}`}
+                    />
+                  )}
+                  <FieldIssues field="playoff_series_number" issues={issues} />
+                </div>
+                <div className="text-sm font-semibold text-gray-200">
+                  <span>Match in series</span>
+                  {selectedPlayoffSeries ? (
+                    <ReadOnlyControl
+                      invalid={fieldHasError(issues, "series_match_number")}
+                      label="Match in series"
+                      locked
+                      value={deterministicSeriesMatchNumber}
+                    />
+                  ) : (
+                    <ReadOnlyControl
+                      invalid={fieldHasError(issues, "series_match_number")}
+                      label="Match in series"
+                      value={1}
+                    />
+                  )}
+                  <FieldIssues field="series_match_number" issues={issues} />
+                </div>
+                <div className="text-sm font-semibold text-gray-200">
+                  <span>Best of</span>
+                  {selectedPlayoffSeries ? (
+                    <ReadOnlyControl
+                      invalid={fieldHasError(issues, "best_of")}
+                      label="Best of"
+                      locked
+                      value={selectedPlayoffSeries.best_of}
+                    />
+                  ) : (
+                    <input
+                      id="playoff-best-of"
+                      aria-label="Best of"
+                      type="number"
+                      min={1}
+                      step={2}
+                      value={numberValue(match.best_of ?? 3)}
+                      onChange={(event) => updateMatch({ best_of: Number(event.target.value) })}
+                      aria-invalid={fieldHasError(issues, "best_of") || undefined}
+                      className={`${inputClass} ${fieldHasError(issues, "best_of") ? "border-red-400/70" : ""}`}
+                    />
+                  )}
+                  <FieldIssues field="best_of" issues={issues} />
+                </div>
+              </>
+            )}
             <label className="text-sm font-semibold text-gray-200">
               Format
               <select
@@ -2323,6 +2644,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 disabled={
                   previewLoading ||
                   membershipStatus === "loading" ||
+                  playoffContextStatus === "loading" ||
                   errorCount > 0 ||
                   Boolean(commitResult)
                 }

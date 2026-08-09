@@ -12,6 +12,7 @@ from typing import Any
 from database import BASE_DIR, get_session_factory
 from models import (
     Division,
+    DivisionPlayoffConfig,
     Match,
     MatchPlayer,
     MatchTableRef,
@@ -31,6 +32,13 @@ from models import (
     TeamSeasonEntry,
     Track,
     TrackAlias,
+)
+from playoff_service import (
+    match_type,
+    playoff_format_new_entry,
+    resolve_playoff_series,
+    validate_competition_metadata,
+    validate_playoff_against_existing,
 )
 from sqlalchemy import func, or_, select, update
 
@@ -575,11 +583,25 @@ def import_match(
         )
 
     resolved_team_keys = []
-    for raw_team_key in teams:
+    resolved_teams = {}
+    for raw_team_key, team_data in teams.items():
         alias = resolve_team_alias(
             aliases, league_code, season_code, division_code, match_label, raw_team_key
         )
-        resolved_team_keys.append(alias["canonical_tag"])
+        canonical_tag = alias["canonical_tag"]
+        display_name = alias["display_name"] or canonical_tag
+        resolved_team_keys.append(canonical_tag)
+        team = get_or_create_team(session, canonical_tag, display_name)
+        team_entry = get_or_create_team_entry(
+            session,
+            team,
+            season,
+            division,
+            canonical_tag,
+            display_name,
+            team_data.get("hex_color"),
+        )
+        resolved_teams[raw_team_key] = (alias, team, team_entry)
         if alias.get("note"):
             review_notes.append(f"Team alias applied: {raw_team_key} -> {alias['canonical_tag']}.")
     if len(set(resolved_team_keys)) != 2:
@@ -587,14 +609,39 @@ def import_match(
             f"Expected 2 resolved teams, found {len(set(resolved_team_keys))} from {len(teams)} raw team objects."
         )
 
+    kind = match_type(match_data)
+    week_number = (
+        week_number_override
+        if week_number_override is not None
+        else week_number_from_filename(path)
+    )
+    playoff_series = None
+    series_match_number = None
+    if kind == "playoff":
+        playoff_series, playoff_metadata = resolve_playoff_series(
+            session,
+            season.season_id,
+            division,
+            match_data,
+            [resolved_teams[key][1].team_id for key in teams],
+        )
+        week_number = None
+        series_match_number = playoff_metadata["series_match_number"]
+        match_label = f"{playoff_series.display_label} — Match {series_match_number}"
+    elif week_number is None:
+        raise ValueError("Regular-season matches require a match week.")
+
     match = Match(
         season_id=season.season_id,
         division_id=division.division_id,
         source_file_id=source_file.source_file_id,
         match_index_in_source=match_index,
-        week_number=week_number_override
-        if week_number_override is not None
-        else week_number_from_filename(path),
+        match_type=kind,
+        week_number=week_number,
+        playoff_series_id=(
+            playoff_series.playoff_series_id if playoff_series is not None else None
+        ),
+        series_match_number=series_match_number,
         match_label=match_label,
         title_str=match_data.get("title_str"),
         format=match_data.get("format"),
@@ -628,15 +675,8 @@ def import_match(
 
     match_team_by_canonical_tag = {}
     for raw_team_key, team_data in teams.items():
-        alias = resolve_team_alias(
-            aliases, league_code, season_code, division_code, match_label, raw_team_key
-        )
+        alias, team, team_entry = resolved_teams[raw_team_key]
         canonical_tag = alias["canonical_tag"]
-        display_name = alias["display_name"] or canonical_tag
-        team = get_or_create_team(session, canonical_tag, display_name)
-        team_entry = get_or_create_team_entry(
-            session, team, season, division, canonical_tag, display_name, team_data.get("hex_color")
-        )
         match_team = match_team_by_canonical_tag.get(canonical_tag)
         if match_team:
             if raw_team_key != canonical_tag:
@@ -834,6 +874,7 @@ def import_editor_match(
     player_identity_links: dict[str, int] | None = None,
     source_metadata: dict[str, Any] | None = None,
 ) -> Match:
+    validate_competition_metadata(match_data)
     league_code = str(match_data.get("league") or "ctc").strip().lower()
     season_code = str(match_data.get("season") or "").strip().lower()
     division_code = str(match_data.get("division") or "").strip().lower()
@@ -932,6 +973,11 @@ def detect_new_entries(
     match_data: dict[str, Any],
     player_identity_links: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
+    competition_metadata = (
+        validate_competition_metadata(match_data)
+        if match_type(match_data) == "playoff"
+        else {"match_type": "regular"}
+    )
     league_code = str(match_data.get("league") or "ctc").strip().lower()
     season_code = str(match_data.get("season") or "").strip().lower()
     division_code = str(match_data.get("division") or "").strip().lower()
@@ -990,12 +1036,15 @@ def detect_new_entries(
 
     aliases = load_database_team_aliases(session)
     label = str(match_data.get("match_label") or "Match preview").strip() or "Match preview"
+    existing_team_ids = []
     for raw_team_key in match_data.get("teams") or {}:
         alias = resolve_team_alias(
             aliases, league_code, season_code, division_code, label, raw_team_key
         )
         canonical_tag = alias["canonical_tag"]
         team = session.scalar(select(Team).where(Team.canonical_tag == canonical_tag))
+        if team is not None:
+            existing_team_ids.append(team.team_id)
         team_entry = None
         if team is not None and season is not None and division is not None:
             team_entry = session.scalar(
@@ -1021,6 +1070,30 @@ def detect_new_entries(
                 canonical_name=team.canonical_name if team is not None else None,
             )
             entries[entry["key"]] = entry
+
+    if competition_metadata["match_type"] == "playoff":
+        config = (
+            session.get(DivisionPlayoffConfig, division.division_id)
+            if division is not None
+            else None
+        )
+        if config is None:
+            details = playoff_format_new_entry(match_data)
+            if details is not None:
+                entry = _new_entry(
+                    "playoff_format",
+                    details["format_label"],
+                    league_code,
+                    season_code,
+                    division_code,
+                    kind="new_playoff_format",
+                    league=league_code,
+                    season=season_code,
+                    division=division_code,
+                    **details,
+                )
+                entries[entry["key"]] = entry
+        validate_playoff_against_existing(session, division, match_data, existing_team_ids)
 
     identities = load_player_identities()
     for team_data in (match_data.get("teams") or {}).values():
