@@ -113,10 +113,7 @@ def unapproved_entries(
         for entry in new_entries
         if entry["key"] not in approved_keys
         or entry.get("kind") == "player_identity_conflict"
-        or (
-            entry.get("kind") == "cross_league_team_match"
-            and not entry.get("resolution")
-        )
+        or (entry.get("kind") == "cross_league_team_match" and not entry.get("resolution"))
     ]
     player_identity_links = {
         entry["friend_code"]: entry["proposed_player_id"]
