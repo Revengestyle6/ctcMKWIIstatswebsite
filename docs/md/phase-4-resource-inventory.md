@@ -5,7 +5,7 @@ Secrets and environment-specific credentials are never committed here.
 
 ## Status
 
-- Last reconciled: July 25, 2026
+- Last reconciled: August 8, 2026
 - Canonical phase: Phase 4, Infrastructure And Staging
 - Overall status: In progress
 
@@ -19,12 +19,12 @@ Secrets and environment-specific credentials are never committed here.
 | Archive/export Cloud Storage | Complete | Three private `us-central1` buckets isolate staging JSON, production JSON, and database exports; security and lifecycle policies were verified July 25 |
 | Runtime identities and secrets | Complete | Five keyless user-managed service accounts, three scoped SQL login users, and six regional secrets with per-resource IAM were verified July 25 |
 | Artifact Registry and backend image | Complete | Private immutable-tag repository `ctc-backend` contains the verified digest-addressed staging image |
-| Cloud Run staging | Complete | Migration/bootstrap jobs and `ctc-stats-api-staging` run as dedicated identities; live, ready, and data checks pass |
+| Cloud Run staging | Complete | Migration/bootstrap jobs and `ctc-stats-api-staging` run as dedicated identities; August 8 live, ready, and data checks pass at schema `20260726_0005` |
 | Firebase Hosting staging | Complete | Release `1785003027409000` serves the React SPA; deep-link fallback and same-origin Cloud Run API rewrites pass |
-| CI/CD identity and workflow | Verification pending | WIF pool/provider, keyless deployer grants, and digest-pinned staging workflow are configured; first successful run from `main` remains |
+| CI/CD identity and workflow | Complete | WIF keyless deployment, digest-pinned images, migrations, Cloud Run, Hosting, and post-deploy checks have succeeded repeatedly from `main`; run 17 passed July 27 |
 | Staging data rebuild and archive seed | Complete | 244 matches and 244 source files match the baseline; 244 accepted GCS objects and zero archive failures verified |
 | Monitoring and scheduled operations | Pending | Application/service alerts, archive reconciliation, logical exports, and integrity maintenance are not scheduled |
-| End-to-end staging validation | In progress | Hosted authentication and a controlled upload/accept/archive cycle pass; backup/export, restore, rollback, and remaining boundary checks remain |
+| End-to-end staging validation | In progress | Hosted authentication, controlled upload/accept/archive cycles, and August 8 health checks pass; backup/export, restore, rollback, and remaining boundary checks remain |
 | Production cutover | Phase 5 | Begins only after Phase 4 staging acceptance |
 
 ## Remaining Phase 4 Execution Order
@@ -46,20 +46,35 @@ Secrets and environment-specific credentials are never committed here.
 6. **Complete:** An anonymous submission entered the review queue without changing
    public analytics, then owner acceptance created match `251`, promoted the exact
    JSON to the accepted archive, and removed the pending queue object.
-7. **In verification:** GitHub Pages has been replaced locally by PostgreSQL CI and
+7. **Complete:** GitHub Pages has been replaced by PostgreSQL CI and
    a staging workflow using Workload Identity Federation, an immutable image
    digest, the explicit migration job, and no long-lived Google key. The Google
-   trust and least-privilege grants are live; commit to `main` and verify the first
-   workflow deployment.
+   trust and least-privilege grants are live. GitHub Actions run 17 completed the
+   full `main` deployment successfully on July 27, after earlier successful runs.
 8. Configure monitoring and scheduled operations: service/database alerts,
    archive reconciliation, integrity maintenance, daily/monthly/annual logical
    exports, retention checks, and a documented restore drill.
 9. Run the remaining staging acceptance matrix, including authentication
    boundaries, rollback, export, and restore.
 
-The immediate next checkpoint is completion evidence for step 7. Production resources beyond the already
+The immediate next checkpoint is monitoring and scheduled operations in step 8.
+Production resources beyond the already
 shared Cloud SQL instance and production archive/identity scaffolding remain
 unused until staging acceptance.
+
+## August 8 Revalidation
+
+- GitHub Actions reports successful checks for current feature commit `29595af7`
+  and a successful deployment of its `main` merge in run 17.
+- Hosted `/api/health/live`, `/api/health/ready`, and `/api/health/data` all returned
+  HTTP 200. The deployed schema is `20260726_0005`, the public database contains
+  277 matches, and no archive repair is pending.
+- The `/admin/access` deep link returned the React application with HTTP 200.
+- Local Ruff lint/format, 83 PostgreSQL-backed backend tests, frontend checks, and
+  the production build pass.
+- These checks establish current application and deployment health; they do not
+  satisfy the still-open export, restore, monitoring, scheduling, rollback, or
+  authorization-matrix gates.
 
 ## Firebase And Google Cloud Project
 
@@ -111,9 +126,8 @@ is retired.
 - Before the BU account is retired, transfer billing ownership and alert recipients
   to a permanent billing identity; project ownership alone does not grant access to
   the BU-owned billing account's budgets.
-- Create and document Artifact Registry, Cloud Run, Firebase Hosting deployment,
-  CI federation, monitoring, scheduled maintenance, and restore evidence through
-  their reviewed checkpoints.
+- Configure and document monitoring, scheduled maintenance, logical exports, and
+  restore/rollback evidence through their reviewed checkpoints.
 
 ## Database Health Additions After Application Deployment
 

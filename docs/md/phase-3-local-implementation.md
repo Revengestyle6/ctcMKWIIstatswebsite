@@ -140,8 +140,8 @@ any credentials or domain choices needed from the owner:
 7. [Pending] Deploy Firebase Hosting staging and its same-origin `/api/**` rewrite.
 8. [Pending] Validate admin sign-in, queue/acceptance, archive repair, read-only SQL,
    costs, cold starts, and rollback before approving production.
-9. [In verification] GitHub Workload Identity Federation, least-privilege staging
-   grants, and the digest-pinned deployment workflow are configured; record the
-   first successful `main` run before marking complete.
+9. [Complete] GitHub Workload Identity Federation, least-privilege staging grants,
+   and the digest-pinned deployment workflow are configured; repeated successful
+   `main` runs have verified the deployment path.
 10. [Pending; Phase 5] Repeat the reviewed configuration for production, then
     retire transitional hosting only after the rollback window.

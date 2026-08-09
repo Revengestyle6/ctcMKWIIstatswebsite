@@ -20,9 +20,8 @@ and bootstrap jobs, staging Cloud Run API, and Firebase Hosting deployment exist
 The staging database has 246 matches and 246 accepted source objects; all three
 public health checks, React SPA fallback, and same-origin API routing pass.
 Workload Identity Federation and the least-privilege staging deployer are
-configured; the first workflow-run deployment from `main` is the remaining proof
-for that checkpoint. Scheduled operations and the remaining staging acceptance
-matrix remain. See the
+configured and have completed multiple successful deployments from `main`.
+Scheduled operations and the remaining staging acceptance matrix remain. See the
 [Phase 4 resource inventory](phase-4-resource-inventory.md) for the authoritative
 checkpoint record.
 

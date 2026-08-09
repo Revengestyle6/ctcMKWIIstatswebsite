@@ -43,7 +43,6 @@ export default function TeamDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<TeamOverview | null>(null);
   const [opponentOptions, setOpponentOptions] = useState<ScopeEntityOption[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rosterResult, setRosterResult] = useState<{ key: string; value: TeamRoster } | null>(null);
   const [tracksResult, setTracksResult] = useState<{ key: string; value: TeamTracks } | null>(null);
@@ -96,11 +95,9 @@ export default function TeamDashboard() {
   useEffect(() => {
     if (!Number.isInteger(numericTeamId) || numericTeamId < 1) {
       setError("Team not found.");
-      setLoading(false);
       return;
     }
     let cancelled = false;
-    setLoading(true);
     setError("");
     fetchTeamOverview(numericTeamId, {
       season: season || undefined,
@@ -116,9 +113,6 @@ export default function TeamDashboard() {
           setError(
             requestError instanceof Error ? requestError.message : "Failed to load team dashboard."
           );
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -295,7 +289,6 @@ export default function TeamDashboard() {
           entityId={opponentId}
           entityOptions={opponentOptions}
           minRaces={minRaces}
-          disabled={loading}
           extraControl={
             activeTab === "roster" ? (
               <RoleModeToggle

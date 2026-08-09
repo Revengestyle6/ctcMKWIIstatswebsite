@@ -23,6 +23,34 @@ for (const route of routes) {
   });
 }
 
+test("team track minimum-races control stays interactive while results refresh", async ({
+  page,
+}) => {
+  let markRefreshStarted: () => void = () => {};
+  const refreshStarted = new Promise<void>((resolve) => {
+    markRefreshStarted = resolve;
+  });
+
+  await page.route("**/api/teams/41/overview**", async (route) => {
+    const minimumRaces = new URL(route.request().url()).searchParams.get("min_races");
+    if (minimumRaces === "3") {
+      markRefreshStarted();
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+    }
+    await route.continue();
+  });
+
+  await page.goto("/teams/41?tab=tracks");
+  const minimumRaces = page.getByLabel("Minimum races");
+  await expect(minimumRaces).toHaveValue("2");
+
+  await minimumRaces.press("ArrowUp");
+  await refreshStarted;
+
+  await expect(minimumRaces).toHaveValue("3");
+  await expect(minimumRaces).toBeEnabled();
+});
+
 test("json editor changes a misplaced player's team and deletes the accidental team", async ({
   page,
 }) => {
