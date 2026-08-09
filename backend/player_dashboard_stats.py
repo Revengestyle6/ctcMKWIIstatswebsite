@@ -142,8 +142,16 @@ def _asset_url(asset_path):
     return f"/{normalized}"
 
 
+def _team_display_name(display_name, clan_tag, canonical_name):
+    season_name = str(display_name or "").strip()
+    season_tag = str(clan_tag or "").strip()
+    if not season_name or season_name.casefold() == season_tag.casefold():
+        return canonical_name
+    return season_name
+
+
 def _team_logo_url(session, team_id, season_id=None):
-    base = select(TeamLogo.asset_path).where(
+    base = select(TeamLogo).where(
         TeamLogo.team_id == team_id,
         TeamLogo.is_active.is_(True),
     )
@@ -154,14 +162,24 @@ def _team_logo_url(session, team_id, season_id=None):
             .limit(1)
         )
         if season_asset:
-            return _asset_url(season_asset)
+            return (
+                f"/api/team-logos/{season_asset.team_logo_id}/content"
+                if season_asset.asset_path.startswith("team-logos/")
+                else _asset_url(season_asset.asset_path)
+            )
 
     default_asset = session.scalar(
         base.where(TeamLogo.season_id.is_(None))
         .order_by(desc(TeamLogo.priority), desc(TeamLogo.team_logo_id))
         .limit(1)
     )
-    return _asset_url(default_asset) if default_asset else PLACEHOLDER_LOGO
+    if not default_asset:
+        return PLACEHOLDER_LOGO
+    return (
+        f"/api/team-logos/{default_asset.team_logo_id}/content"
+        if default_asset.asset_path.startswith("team-logos/")
+        else _asset_url(default_asset.asset_path)
+    )
 
 
 def _player_identity(session, player):
@@ -246,7 +264,9 @@ def _player_identity(session, player):
         "current_team": (
             {
                 "team_id": latest.team_id,
-                "name": latest.display_name or latest.canonical_name,
+                "name": _team_display_name(
+                    latest.display_name, latest.clan_tag, latest.canonical_name
+                ),
                 "tag": latest.clan_tag,
                 "season": latest.season_code,
                 "division": latest.division_code,
@@ -260,7 +280,7 @@ def _player_identity(session, player):
                 "season": row.season_code,
                 "division": row.division_code,
                 "team_id": row.team_id,
-                "team_name": row.display_name or row.canonical_name,
+                "team_name": _team_display_name(row.display_name, row.clan_tag, row.canonical_name),
                 "team_tag": row.clan_tag,
                 "first_seen_match_id": row.first_seen_match_id,
                 "last_seen_match_id": row.last_seen_match_id,
@@ -501,7 +521,9 @@ def get_player_overview(
                 "opponents": [
                     {
                         "team_id": team.team_id,
-                        "name": team.display_name or team.canonical_name,
+                        "name": _team_display_name(
+                            team.display_name, team.clan_tag, team.canonical_name
+                        ),
                         "tag": team.clan_tag,
                         "score": _final_score(team),
                     }

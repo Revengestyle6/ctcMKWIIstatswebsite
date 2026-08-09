@@ -264,6 +264,21 @@ def get_or_create_team_entry(
     display_name: str,
     hex_color: str | None,
 ) -> TeamSeasonEntry:
+    existing_team_entry = session.scalar(
+        select(TeamSeasonEntry)
+        .where(
+            TeamSeasonEntry.team_id == team.team_id,
+            TeamSeasonEntry.season_id == season.season_id,
+            TeamSeasonEntry.division_id == division.division_id,
+        )
+        .order_by(TeamSeasonEntry.team_season_entry_id)
+        .limit(1)
+    )
+    if existing_team_entry:
+        if hex_color and not existing_team_entry.hex_color:
+            existing_team_entry.hex_color = hex_color
+        return existing_team_entry
+
     entry = session.scalar(
         select(TeamSeasonEntry).where(
             TeamSeasonEntry.season_id == season.season_id,

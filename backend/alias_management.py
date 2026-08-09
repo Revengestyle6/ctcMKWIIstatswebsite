@@ -280,6 +280,14 @@ def add_alias(session, entity_type, entity_id, payload):
         )
         if conflicting is not None:
             raise ValueError("That alias is already assigned to another object.")
+    if entity_type == "teams":
+        canonical_team = session.scalar(
+            select(Team).where(func.lower(Team.canonical_tag) == value.casefold())
+        )
+        if canonical_team is not None:
+            if canonical_team.team_id == entity_id:
+                raise ValueError("That value is already this team's canonical tag.")
+            raise ValueError("That value is another team's canonical tag.")
     values = {alias_identity.key: entity_id, "alias_value": value}
     if entity_type == "players":
         values["alias_type"] = alias_type

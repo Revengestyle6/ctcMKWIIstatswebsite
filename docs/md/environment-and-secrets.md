@@ -16,6 +16,9 @@ No secret belongs in Git, a frontend bundle, or a committed environment file.
 | `ARCHIVE_STORAGE_PROVIDER` | Backend | `local` for development; staging/production require `gcs` |
 | `ARCHIVE_STORAGE_ROOT` | Backend | Ignored local temporary/accepted object root |
 | `ARCHIVE_GCS_BUCKET` | Backend | Hosted immutable archive bucket name |
+| `MEDIA_STORAGE_PROVIDER` | Backend | `local` for development; staging/production require `gcs` |
+| `MEDIA_STORAGE_ROOT` | Backend | Local uploaded-media root; defaults to `backend/data/media` |
+| `MEDIA_GCS_BUCKET` | Backend | Hosted team-logo media bucket name |
 | `FIREBASE_PROJECT_ID` | Backend | Expected Firebase token audience; `GOOGLE_CLOUD_PROJECT` is a fallback |
 | `ALLOW_DEV_AUTH` | Backend | Explicit local/test identity override; never enable in hosted environments |
 | `SUBMISSION_RATE_LIMIT_SECRET` | Backend | HMAC key for non-reversible anonymous network identifiers |

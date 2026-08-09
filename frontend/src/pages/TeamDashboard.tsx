@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { fetchTeamScopes } from "../api";
+import { fetchTeamScopes, resolveAssetUrl } from "../api";
 import {
   DashboardScopeControls,
   DashboardShell,
@@ -251,6 +251,9 @@ export default function TeamDashboard() {
 
   const { identity, metrics, record } = data;
   const currentEntry = identity.current_entry;
+  const displayTag = currentEntry?.tag || identity.tag;
+  const showConventionalIdentity =
+    identity.display_name !== identity.name || displayTag !== identity.tag;
   const metricItems = [
     {
       label: "Record",
@@ -281,12 +284,21 @@ export default function TeamDashboard() {
       title="Team Dashboard"
       identity={
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-          <TeamLogo src={identity.logo_url} alt={`${identity.name} logo`} className="h-24 w-24" />
+          <TeamLogo
+            src={resolveAssetUrl(identity.logo_url)}
+            alt={`${identity.name} logo`}
+            className="h-24 w-24"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="text-3xl font-bold text-white">{identity.display_name}</h2>
-              <span className="text-xl font-bold text-blue-300">{identity.tag}</span>
+              <span className="text-xl font-bold text-blue-300">{displayTag}</span>
             </div>
+            {showConventionalIdentity ? (
+              <p className="mt-1 text-sm text-gray-300">
+                Conventional identity: {identity.name} ({identity.tag})
+              </p>
+            ) : null}
             {currentEntry && (
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-300">
                 <span>
@@ -310,7 +322,8 @@ export default function TeamDashboard() {
                     key={`${entry.season}-${entry.division}`}
                     className="border-r border-white/15 pr-2"
                   >
-                    {entry.season.toUpperCase()} {entry.division.toUpperCase()}: {entry.tag}
+                    {entry.season.toUpperCase()} {entry.division.toUpperCase()}: {entry.name} (
+                    {entry.tag})
                   </span>
                 ))}
               </div>

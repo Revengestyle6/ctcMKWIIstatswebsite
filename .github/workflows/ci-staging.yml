@@ -104,6 +104,7 @@ jobs:
       IMAGE_NAME: api
       MIGRATION_JOB: ctc-staging-migrate
       CLOUD_RUN_SERVICE: ctc-stats-api-staging
+      MEDIA_GCS_BUCKET: mkw-stats-staging-media
       FIREBASE_WEB_APP_ID: 1:1054134490602:web:6e5f37e3beccd7d4b28e93
       NO_UPDATE_NOTIFIER: "1"
     steps:
@@ -171,6 +172,7 @@ jobs:
             --project="${GCP_PROJECT_ID}" \
             --region="${GCP_REGION}" \
             --image="${IMAGE_REF}" \
+            --update-env-vars="MEDIA_STORAGE_PROVIDER=gcs,MEDIA_GCS_BUCKET=${MEDIA_GCS_BUCKET}" \
             --quiet
           DEPLOYED_IMAGE="$(gcloud run services describe "${CLOUD_RUN_SERVICE}" \
             --project="${GCP_PROJECT_ID}" \

@@ -6,6 +6,7 @@
 - Cloud Run: Flask API with request-based billing and zero minimum instances.
 - Cloud SQL: PostgreSQL 18 on the initial cost-first `db-f1-micro` configuration.
 - Cloud Storage: immutable archived JSON and database exports.
+- Cloud Storage media bucket: normalized team-logo uploads served by the API.
 - Firebase Authentication: Google sign-in for administrator actions.
 - GitHub Actions: Workload Identity Federation for deployment credentials.
 
@@ -101,12 +102,19 @@ Created and verified July 25, 2026:
 - Gunicorn: one worker with eight threads and a 60-second timeout
 - Database: `ctc_staging` through the Cloud SQL attachment
 - Archive: `mkw-stats-staging-archive`
+- Uploaded media: `mkw-stats-staging-media` through
+  `MEDIA_STORAGE_PROVIDER=gcs`
 
 The migration and historical rebuild are separate jobs named
 `ctc-staging-migrate` and `ctc-staging-bootstrap`. The migration job is safe to
 rerun because Alembic applies only unapplied revisions. The bootstrap job is a
 controlled rebuild tool, not a routine service operation; do not rerun it against
 a populated database without a reviewed rebuild plan.
+
+Cloud Run revision `ctc-stats-api-staging-00012-lm9` reconciled the media
+environment variables on August 9, 2026. The normal staging workflow also sets
+them explicitly on every image deployment so a later revision cannot silently
+lose the bucket binding.
 
 Verification endpoints have distinct purposes:
 

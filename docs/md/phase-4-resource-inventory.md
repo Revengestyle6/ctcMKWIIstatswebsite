@@ -16,7 +16,7 @@ Secrets and environment-specific credentials are never committed here.
 | Billing link and budget safeguards | Complete | Funded billing is linked; project and net-charge budgets are recorded below |
 | Shared Cloud SQL instance | Complete | `mkw-stats-prod-pg18` is `RUNNABLE` with backups, PITR, and deletion protection |
 | Staging/production databases and roles | Complete | Databases, non-login roles, ownership, environment isolation, and current/future grants were verified July 25 |
-| Archive/export Cloud Storage | Complete | Three private `us-central1` buckets isolate staging JSON, production JSON, and database exports; security and lifecycle policies were verified July 25 |
+| Archive/export/media Cloud Storage | Complete | Five private `us-central1` buckets isolate staging JSON/media, production JSON/media, and database exports; archive/export policies were verified July 25 and media policies August 9 |
 | Runtime identities and secrets | Complete | Five keyless user-managed service accounts, three scoped SQL login users, and six regional secrets with per-resource IAM were verified July 25 |
 | Artifact Registry and backend image | Complete | Private immutable-tag repository `ctc-backend` contains the verified digest-addressed staging image |
 | Cloud Run staging | Complete | Migration/bootstrap jobs and `ctc-stats-api-staging` run as dedicated identities; August 8 live, ready, and data checks pass at schema `20260726_0005` |
@@ -75,6 +75,23 @@ unused until staging acceptance.
 - These checks establish current application and deployment health; they do not
   satisfy the still-open export, restore, monitoring, scheduling, rollback, or
   authorization-matrix gates.
+
+## August 9 Uploaded Media Checkpoint
+
+- Created private regional Standard buckets `mkw-stats-staging-media` and
+  `mkw-stats-prod-media` in `us-central1`.
+- Both enforce public-access prevention and uniform bucket-level access, retain
+  soft-deleted objects for seven days, and have object versioning disabled.
+- Granted each API identity only `roles/storage.objectCreator` and
+  `roles/storage.objectViewer` on its matching media bucket. Neither identity can
+  delete media or access the other environment's bucket through these grants.
+- Configured staging Cloud Run with `MEDIA_STORAGE_PROVIDER=gcs` and
+  `MEDIA_GCS_BUCKET=mkw-stats-staging-media`. Ready revision
+  `ctc-stats-api-staging-00012-lm9` passed direct and Firebase-routed readiness
+  checks at schema `20260808_0006`.
+- The production media bucket and identity grant are ready. There is no production
+  Cloud Run service before Phase 5, so its environment variables remain a required
+  service-creation setting rather than an attached live configuration.
 
 ## Firebase And Google Cloud Project
 
@@ -216,7 +233,7 @@ Use the [Cloud SQL read-only access runbook](cloud-sql-read-access.md) for all
 future human-reader grants, connection verification, periodic review, and
 revocation.
 
-## Cloud Storage Archive And Exports
+## Cloud Storage Archive, Media, And Exports
 
 Created and verified July 25, 2026. Separate archive buckets are required because
 the application writes provider-relative `queue/` and `accepted/` keys without an
@@ -228,17 +245,19 @@ Flask runtime.
 | `mkw-stats-staging-archive` | Staging review queue and immutable accepted JSON | Delete `queue/` objects after 30 days; retain `accepted/` |
 | `mkw-stats-prod-archive` | Production review queue and immutable accepted JSON | Delete `queue/` objects after 30 days; retain `accepted/` |
 | `mkw-stats-db-exports` | Logical PostgreSQL exports | Delete `daily/` after 30 days and `monthly/` after 365 days; retain `annual/` |
+| `mkw-stats-staging-media` | Staging normalized team-logo uploads | Retain; administrators deactivate metadata rather than deleting history |
+| `mkw-stats-prod-media` | Production normalized team-logo uploads | Retain; administrators deactivate metadata rather than deleting history |
 
-All three buckets use regional Standard storage in `us-central1`, uniform
+All five buckets use regional Standard storage in `us-central1`, uniform
 bucket-level access, enforced public-access prevention, and seven-day soft delete.
 Object versioning is disabled. The application additionally uses
 `if_generation_match=0` when creating queue and accepted objects so a retry cannot
 overwrite different bytes at an existing key.
 
 The lifecycle files are versioned under [`infra/storage/`](../../infra/storage/).
-The staging and production API identities each have object access only to their
-environment's archive bucket. The export identity has no bucket access until its
-job is designed. The staging archive contains the 244-object historical baseline
+The staging and production API identities each have object-user access to their
+archive bucket and create/read-only access to their media bucket. The export identity has no bucket access
+until its job is designed. The staging archive contains the 244-object historical baseline
 plus two controlled accepted matches, for 246 accepted source objects. The
 production archive and export buckets remain unused.
 
@@ -338,8 +357,8 @@ migrations, exports, and deployment independently revocable.
 
 | Identity | Current privileges |
 | --- | --- |
-| `ctc-api-staging@mkw-stats.iam.gserviceaccount.com` | Cloud SQL Client; staging archive object user; accessor for staging database URL and HMAC secrets |
-| `ctc-api-prod@mkw-stats.iam.gserviceaccount.com` | Cloud SQL Client; production archive object user; accessor for production database URL and HMAC secrets |
+| `ctc-api-staging@mkw-stats.iam.gserviceaccount.com` | Cloud SQL Client; staging archive and media object user; accessor for staging database URL and HMAC secrets |
+| `ctc-api-prod@mkw-stats.iam.gserviceaccount.com` | Cloud SQL Client; production archive and media object user; accessor for production database URL and HMAC secrets |
 | `ctc-db-migrator@mkw-stats.iam.gserviceaccount.com` | Cloud SQL Client; accessor for staging and production migrator database URLs |
 | `ctc-db-exporter@mkw-stats.iam.gserviceaccount.com` | No roles until the scheduled export implementation is selected |
 | `ctc-cloud-builder@mkw-stats.iam.gserviceaccount.com` | Dedicated image builder; read submitted source objects from `mkw-stats_cloudbuild`; write build logs; push only to `ctc-backend` |
