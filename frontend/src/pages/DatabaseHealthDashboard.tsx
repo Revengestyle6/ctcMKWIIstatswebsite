@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminSessionPanel from "../components/AdminSessionPanel";
+import { BackToHomeLink } from "../components/BackToHomeLink";
 import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import { LegacyStatHeader } from "../components/LegacyStatHeader";
 import {
@@ -289,7 +290,10 @@ export default function DatabaseHealthDashboard() {
       <main className="relative z-10 min-h-screen bg-black/85 px-5 py-8 text-white sm:px-8">
         <div className="mx-auto max-w-4xl border border-white/15 bg-zinc-950/90 p-5">
           <header className="mb-4 flex flex-wrap items-center justify-between gap-4">
-            <h1 className="text-3xl font-bold">Database Health</h1>
+            <div>
+              <BackToHomeLink className="-ml-2 mb-1" />
+              <h1 className="text-3xl font-bold">Database Health</h1>
+            </div>
             <LeagueHeaderControls />
           </header>
           <AdminSessionPanel {...auth} />
