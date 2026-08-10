@@ -248,6 +248,7 @@ class Phase3AuthorizationTests(unittest.TestCase):
             ("get", "/api/admin/users", None),
             ("get", "/api/admin/aliases/tracks", None),
             ("get", "/api/admin/review-submissions", None),
+            ("post", "/api/admin/review-submissions", {}),
             ("post", "/api/matches/commit", {}),
         ):
             response = getattr(client, method)(path, json=payload)

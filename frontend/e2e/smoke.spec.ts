@@ -133,6 +133,56 @@ test("team track minimum-races control stays interactive while results refresh",
   await expect(minimumRaces).toBeEnabled();
 });
 
+test("authorized JSON editor users can upload directly or submit to the review queue", async ({
+  page,
+}) => {
+  let reviewSubmissionPath = "";
+  await page.route("**/api/auth/session", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        authenticated: true,
+        admin: { admin_user_id: 1, email: "owner@example.com", role: "owner" },
+      }),
+    })
+  );
+  await page.route(/\/api\/(?:admin\/)?review-submissions$/, (route) => {
+    reviewSubmissionPath = new URL(route.request().url()).pathname;
+    return route.fulfill({
+      status: 202,
+      contentType: "application/json",
+      body: JSON.stringify({
+        receipt: "admin-queued-receipt",
+        status: "pending",
+        submitted_at: "2026-08-09T12:00:00Z",
+        updated_at: "2026-08-09T12:00:00Z",
+        expires_at: "2026-09-08T12:00:00Z",
+      }),
+    });
+  });
+  await page.goto("/json-editor?league=ctc");
+  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
+  await page
+    .locator('input[type="file"]')
+    .setInputFiles("../backend/JSON/ctc/s3/d2/W11 [M11] sts 366 - 356 CS.json");
+
+  await page.getByRole("button", { name: "Review & Upload", exact: true }).first().click();
+
+  await expect(page.getByRole("button", { name: "Submit to review queue" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Confirm upload" })).toBeEnabled();
+  await expect(
+    page.getByText(
+      "Upload this match now, or submit it to the review queue without changing analytics."
+    )
+  ).toBeVisible();
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Submit to review queue" }).click();
+  await expect(page.getByText("Submitted for administrator review.")).toBeVisible();
+  expect(reviewSubmissionPath).toBe("/api/admin/review-submissions");
+});
+
 test("match history loads regular-season data directly after all matches", async ({ page }) => {
   await page.goto("/matches?league=ctc&season=s3&division=d1&match_set=all");
   const dismissWelcome = page.getByRole("button", { name: "No Thanks", exact: true });
@@ -290,4 +340,93 @@ test("json editor flags missing required metadata before review", async ({ page 
   await expect(
     page.getByText("This match contains 2 races instead of the usual 12.")
   ).toBeVisible();
+});
+
+test("json editor ignores positionless substitution artifacts when every racer finished", async ({
+  page,
+}) => {
+  await page.goto("/json-editor?league=ctc");
+  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
+
+  const scoreByPosition = [15, 12, 10, 8, 6, 4, 3, 2, 1, 0];
+  const player = (name: string, positions: Array<number | null>, scores: number[]) => ({
+    table_str: name,
+    mii_name: name,
+    lounge_name: name,
+    table_name: name,
+    tag: name.startsWith("Beta") ? "Beta" : "Alpha",
+    total_score: scores.reduce((total, score) => total + score, 0),
+    had_penalties: false,
+    penalties: 0,
+    subbed_out: positions[0] !== null && positions[1] === null,
+    race_scores: scores,
+    race_positions: positions,
+  });
+  const alphaPlayers = {
+    "0000-0000-0001": player("Outgoing", [1, null], [15, 3]),
+    "0000-0000-0002": {
+      ...player("Incoming", [null, 1], [15, 15]),
+      table_name: "Outgoing(1)/Incoming(1)",
+    },
+    ...Object.fromEntries(
+      [2, 3, 4, 5].map((position) => [
+        `0000-0000-${String(position + 1).padStart(4, "0")}`,
+        player(
+          `Alpha ${position}`,
+          [position, position],
+          [scoreByPosition[position - 1], scoreByPosition[position - 1]]
+        ),
+      ])
+    ),
+  };
+  const betaPlayers = Object.fromEntries(
+    [6, 7, 8, 9, 10].map((position) => [
+      `0000-0000-${String(position + 1).padStart(4, "0")}`,
+      player(
+        `Beta ${position}`,
+        [position, position],
+        [scoreByPosition[position - 1], scoreByPosition[position - 1]]
+      ),
+    ])
+  );
+  const match = {
+    title_str: "#title 2 races\n",
+    format: "5v5",
+    races_played: 2,
+    league: "ctc",
+    season: "s3",
+    division: "d2",
+    week: 1,
+    match_label: "Substitution artifact test",
+    rxx: ["r12345678"],
+    tracks: ["Substitution Test 1", "Substitution Test 2"],
+    teams: {
+      Alpha: {
+        table_tag_str: "Alpha #4F8CFF",
+        hex_color: "#4F8CFF",
+        penalties: 0,
+        players: alphaPlayers,
+      },
+      Beta: {
+        table_tag_str: "Beta #F45D8C",
+        hex_color: "#F45D8C",
+        penalties: 0,
+        players: betaPlayers,
+      },
+    },
+  };
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "substitution-artifacts.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(match)),
+  });
+
+  await expect(page.getByText(/gives Incoming .* disconnection points/)).not.toBeVisible();
+  await expect(page.getByText(/gives Outgoing .* disconnection points/)).not.toBeVisible();
+
+  await page.getByText("Generated JSON Preview").click();
+  const generated = JSON.parse((await page.locator("details pre").textContent()) ?? "{}");
+  expect(generated.teams.Alpha.players["0000-0000-0001"].race_scores).toEqual([15, null]);
+  expect(generated.teams.Alpha.players["0000-0000-0002"].race_scores).toEqual([null, 15]);
 });
