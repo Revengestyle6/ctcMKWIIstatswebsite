@@ -5,6 +5,7 @@ import { deleteJson, fetchJson, patchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
 import TeamIdentityManager from "../components/admin/TeamIdentityManager";
 import TeamLogoManager from "../components/admin/TeamLogoManager";
+import { BackToHomeLink } from "../components/BackToHomeLink";
 import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import { useLeague } from "../context/LeagueContext";
 import { useAdminSession } from "../hooks/useAdminSession";
@@ -244,6 +245,7 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       <div className="mx-auto max-w-7xl space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
+            <BackToHomeLink className="-ml-2 mb-1" />
             <p className="text-sm uppercase text-blue-200">Restricted administration</p>
             <h1 className="text-3xl font-bold">Alias Management</h1>
             <p className="mt-2 max-w-3xl text-gray-300">

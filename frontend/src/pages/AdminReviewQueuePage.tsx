@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { fetchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
+import { BackToHomeLink } from "../components/BackToHomeLink";
 import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import { isLeagueCode } from "../config/leagues";
 import { useAdminSession } from "../hooks/useAdminSession";
@@ -86,6 +87,7 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
       <div className="mx-auto max-w-6xl space-y-5">
         <header className="flex flex-wrap justify-between gap-3">
           <div>
+            <BackToHomeLink className="-ml-2 mb-1" />
             <p className="text-sm uppercase text-blue-200">Restricted administration</p>
             <h1 className="text-3xl font-bold">JSON Review Queue</h1>
           </div>

@@ -1,9 +1,10 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { fetchCachedJson, fetchJson, fetchPlayoffSeries, type PlayoffSeriesSummary } from "../api";
 import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
+import { BackToHomeLink } from "./BackToHomeLink";
 import { LeagueHeaderControls } from "./LeagueHeaderControls";
 import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
 import {
@@ -31,7 +32,7 @@ export {
 } from "./matchHistoryViews";
 
 export default function MatchHistory(): React.JSX.Element {
-  const { league, leaguePath } = useLeague();
+  const { league } = useLeague();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSeason = searchParams.get("season") ?? "";
   const requestedDivision = searchParams.get("division") ?? "";
@@ -176,9 +177,7 @@ export default function MatchHistory(): React.JSX.Element {
     <div className="relative min-h-screen text-white font-sans p-6">
       <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
         <div className="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-2">
-          <Link to={leaguePath("/")} className="font-semibold league-accent-text">
-            &lt; Back
-          </Link>
+          <BackToHomeLink />
           <h1 className="text-center text-xl font-bold sm:text-3xl">Match History</h1>
           <LeagueHeaderControls logoClassName="h-12 w-12" />
         </div>

@@ -86,6 +86,16 @@ test("inner-page league switch is placed beside the active league logo", async (
   await expect(switcher.locator("..").getByRole("link", { name: "CTC home" })).toBeVisible();
 });
 
+test("administrator access has a league-themed Back link", async ({ page }) => {
+  await page.goto("/admin/access?league=gsc");
+
+  const backLink = page.getByRole("link", { name: "Back", exact: true });
+  await expect(backLink).toBeVisible();
+  await expect(backLink).toHaveAttribute("href", "/?league=gsc");
+  await expect(backLink).toHaveClass(/league-accent-text/);
+  await expect(backLink).toHaveCSS("color", "rgb(251, 191, 36)");
+});
+
 for (const route of routes) {
   test(`${route} loads`, async ({ page }) => {
     const response = await page.goto(route);

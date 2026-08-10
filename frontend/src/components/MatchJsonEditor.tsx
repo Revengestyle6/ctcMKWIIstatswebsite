@@ -21,6 +21,7 @@ import {
 } from "../api";
 import { useLeague } from "../context/LeagueContext";
 import { useAdminSession } from "../hooks/useAdminSession";
+import { BackToHomeLink } from "./BackToHomeLink";
 import ExistingPlayerPicker from "./ExistingPlayerPicker";
 import { LeagueHeaderControls } from "./LeagueHeaderControls";
 import {
@@ -149,7 +150,7 @@ function FieldIssues({
 
 export default function MatchJsonEditor(): React.JSX.Element {
   const auth = useAdminSession();
-  const { league, leaguePath } = useLeague();
+  const { league } = useLeague();
   const [match, setMatch] = useState<MatchJson>(() => ({ ...clone(blankMatch), league }));
   const [races, setRaces] = useState<RaceDraft[]>(() =>
     racesFromMatch({ ...clone(blankMatch), league })
@@ -1483,9 +1484,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       <div className="mx-auto max-w-[92rem]">
         <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <Link to={leaguePath("/")} className="text-blue-400 hover:text-blue-300 font-semibold">
-              &lt; Back
-            </Link>
+            <BackToHomeLink className="-ml-2" />
             <h1 className="mt-2 text-3xl font-bold">Match JSON Editor</h1>
             <p className="text-sm text-gray-300">{fileName}</p>
           </div>
