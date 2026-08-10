@@ -84,6 +84,7 @@ def create_submission(
     original_filename: str,
     warnings_acknowledged: bool,
     network_identifier: str,
+    enforce_network_rate_limit: bool = True,
 ) -> ReviewSubmission:
     content, fingerprint, warnings = validate_submission(session, match_data)
     if warnings and not warnings_acknowledged:
@@ -97,7 +98,8 @@ def create_submission(
     if duplicate:
         return duplicate
 
-    enforce_rate_limit(session, network_identifier)
+    if enforce_network_rate_limit:
+        enforce_rate_limit(session, network_identifier)
     submission_id = str(uuid.uuid4())
     queue_key = f"queue/pending/{submission_id}.json"
     storage.put_temporary(queue_key, content)

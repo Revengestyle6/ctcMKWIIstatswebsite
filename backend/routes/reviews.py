@@ -22,8 +22,7 @@ logger = logging.getLogger(__name__)
 reviews_api = Blueprint("reviews_api", __name__)
 
 
-@reviews_api.post("/api/review-submissions")
-def submit_for_review():
+def _submit_for_review(*, admin_actor=None):
     maximum = int(os.environ.get("MAX_REVIEW_SUBMISSION_BYTES", str(1024 * 1024)))
     if request.content_length and request.content_length > maximum * 2:
         return jsonify({"error": "Submission request is too large."}), 413
@@ -41,7 +40,17 @@ def submit_for_review():
                 original_filename=str(payload.get("original_filename") or "match.json"),
                 warnings_acknowledged=payload.get("warnings_acknowledged") is True,
                 network_identifier=request.remote_addr or "unknown",
+                enforce_network_rate_limit=admin_actor is None,
             )
+            if admin_actor is not None:
+                record_audit(
+                    session,
+                    admin_actor,
+                    "review_submission.created",
+                    target_type="review_submission",
+                    target_id=submission.submission_id,
+                    details={"original_filename": submission.original_filename},
+                )
             response = public_receipt(submission)
         return jsonify(response), 202
     except PermissionError as error:
@@ -54,6 +63,17 @@ def submit_for_review():
         return jsonify({"error": "Warnings must be acknowledged.", **warning_payload}), 409
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
+
+
+@reviews_api.post("/api/review-submissions")
+def submit_for_review():
+    return _submit_for_review()
+
+
+@reviews_api.post("/api/admin/review-submissions")
+@require_admin
+def admin_submit_for_review():
+    return _submit_for_review(admin_actor=g.admin_actor)
 
 
 @reviews_api.get("/api/review-submissions/<submission_id>")

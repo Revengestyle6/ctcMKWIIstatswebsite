@@ -211,12 +211,16 @@ export function racesFromMatch(match: MatchJson): RaceDraft[] {
       : SCORE_TABLES[fallbackRoom]
         ? fallbackRoom
         : 10;
+    const hasCompletePlacements = byPosition.size >= roomSize;
     return {
       raceNumber: raceIndex + 1,
       trackName: match.tracks?.[raceIndex] ?? "",
       roomSize,
       placements: Array.from({ length: roomSize }, (_, index) => byPosition.get(index + 1) ?? null),
-      unplacedResults,
+      // Table Bot substitution rows can repeat a substitute's shared-slot scores before or after
+      // that player actually raced. A full set of finishers proves these positionless scores are
+      // substitution artifacts rather than disconnection awards.
+      unplacedResults: hasCompletePlacements ? [] : unplacedResults,
       missingPlayerResults,
     };
   });

@@ -197,6 +197,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [identityMappingError, setIdentityMappingError] = useState<string | null>(null);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [commitLoading, setCommitLoading] = useState(false);
+  const [commitAction, setCommitAction] = useState<"upload" | "review" | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [commitResult, setCommitResult] = useState<CommitResult | null>(null);
   const [submissionReceipt, setSubmissionReceipt] = useState<ReviewSubmissionReceipt | null>(null);
@@ -1212,6 +1213,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setIdentityMappingError(null);
     setApprovalModalOpen(false);
     setCommitLoading(false);
+    setCommitAction(null);
     setCommitError(null);
     setCommitResult(null);
     setSubmissionReceipt(null);
@@ -1277,31 +1279,56 @@ export default function MatchJsonEditor(): React.JSX.Element {
       if (editorVersion.current === requestVersion) setPreviewLoading(false);
     }
   }
-  async function confirmUpload(): Promise<void> {
-    if (
+  function finalSubmissionBlocked(): boolean {
+    return (
       !previewMetadata ||
       commitLoading ||
       (issues.some((issue) => issue.level === "warning") && !warningsAcknowledged)
-    ) {
+    );
+  }
+  async function submitForReview(): Promise<void> {
+    if (finalSubmissionBlocked()) return;
+    if (!window.confirm("Confirm that you want to submit this match for administrator review?")) {
       return;
     }
-    const isAdmin = auth.session?.authenticated === true;
-    const action = isAdmin ? "upload this match" : "submit this match for administrator review";
-    if (!window.confirm(`Confirm that you want to ${action}?`)) return;
     const requestVersion = editorVersion.current;
     setCommitLoading(true);
+    setCommitAction("review");
     setCommitError(null);
     try {
-      if (!isAdmin) {
-        const receipt = await postJson<ReviewSubmissionReceipt>("/api/review-submissions", {
-          match: compiled,
-          original_filename: fileName,
-          warnings_acknowledged: warningsAcknowledged,
-        });
-        if (editorVersion.current !== requestVersion) return;
-        setSubmissionReceipt(receipt);
-        return;
+      const endpoint = auth.session?.authenticated
+        ? "/api/admin/review-submissions"
+        : "/api/review-submissions";
+      const receipt = await postJson<ReviewSubmissionReceipt>(endpoint, {
+        match: compiled,
+        original_filename: fileName,
+        warnings_acknowledged: warningsAcknowledged,
+      });
+      if (editorVersion.current !== requestVersion) return;
+      setSubmissionReceipt(receipt);
+    } catch (error) {
+      if (editorVersion.current !== requestVersion) return;
+      setCommitError(
+        error instanceof Error ? error.message : "Could not submit this match for review."
+      );
+    } finally {
+      if (editorVersion.current === requestVersion) {
+        setCommitLoading(false);
+        setCommitAction(null);
       }
+    }
+  }
+  async function confirmUpload(): Promise<void> {
+    const previewFingerprint = previewMetadata?.fingerprint;
+    if (!previewFingerprint || finalSubmissionBlocked() || auth.session?.authenticated !== true) {
+      return;
+    }
+    if (!window.confirm("Confirm that you want to upload this match?")) return;
+    const requestVersion = editorVersion.current;
+    setCommitLoading(true);
+    setCommitAction("upload");
+    setCommitError(null);
+    try {
       const endpoint = reviewSubmissionId
         ? `/api/admin/review-submissions/${reviewSubmissionId}/accept`
         : "/api/matches/commit";
@@ -1313,7 +1340,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
         approved_new_entries: newEntries
           .filter((entry) => approvalDecisions[entry.key] === "approved")
           .map((entry) => entry.key),
-        expected_preview_fingerprint: previewMetadata.fingerprint,
+        expected_preview_fingerprint: previewFingerprint,
       });
       if (editorVersion.current !== requestVersion) return;
       setCommitResult(result);
@@ -1350,7 +1377,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
       if (editorVersion.current !== requestVersion) return;
       setCommitError(error instanceof Error ? error.message : "Could not upload this match.");
     } finally {
-      if (editorVersion.current === requestVersion) setCommitLoading(false);
+      if (editorVersion.current === requestVersion) {
+        setCommitLoading(false);
+        setCommitAction(null);
+      }
     }
   }
   function discardPreview(): void {
@@ -2849,7 +2879,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   </p>
                   <p className="text-sm text-gray-400">
                     {auth.session?.authenticated
-                      ? "Confirming reruns validation and commits the database before promoting the accepted archive object."
+                      ? reviewSubmissionId
+                        ? "Confirming reruns validation and commits the database before promoting the accepted archive object."
+                        : "Upload this match now, or submit it to the review queue without changing analytics."
                       : "You can submit this cleaned JSON to the administrator review queue; it will not change analytics yet."}
                   </p>
                 </div>
@@ -2872,6 +2904,20 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   >
                     Discard preview
                   </button>
+                  {auth.session?.authenticated && !reviewSubmissionId ? (
+                    <button
+                      type="button"
+                      disabled={
+                        commitLoading ||
+                        errorCount > 0 ||
+                        (issues.length > errorCount && !warningsAcknowledged)
+                      }
+                      onClick={submitForReview}
+                      className="rounded border border-blue-300/40 bg-blue-950/60 px-4 py-2 font-bold text-blue-100 hover:bg-blue-900/70 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {commitAction === "review" ? "Submitting..." : "Submit to review queue"}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     disabled={
@@ -2879,11 +2925,14 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       errorCount > 0 ||
                       (issues.length > errorCount && !warningsAcknowledged)
                     }
-                    onClick={confirmUpload}
+                    onClick={auth.session?.authenticated === true ? confirmUpload : submitForReview}
                     className="rounded bg-emerald-500 px-4 py-2 font-bold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {commitLoading
-                      ? "Working..."
+                    {commitAction === "upload" ||
+                    (commitAction === "review" && !auth.session?.authenticated)
+                      ? commitAction === "review"
+                        ? "Submitting..."
+                        : "Uploading..."
                       : auth.session?.authenticated
                         ? reviewSubmissionId
                           ? "Accept reviewed match"
