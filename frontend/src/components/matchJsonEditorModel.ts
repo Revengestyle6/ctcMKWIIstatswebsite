@@ -211,16 +211,17 @@ export function racesFromMatch(match: MatchJson): RaceDraft[] {
       : SCORE_TABLES[fallbackRoom]
         ? fallbackRoom
         : 10;
-    const hasCompletePlacements = byPosition.size >= roomSize;
+    const hasCompleteExpectedRoom = byPosition.size >= fallbackRoom;
     return {
       raceNumber: raceIndex + 1,
       trackName: match.tracks?.[raceIndex] ?? "",
       roomSize,
       placements: Array.from({ length: roomSize }, (_, index) => byPosition.get(index + 1) ?? null),
       // Table Bot substitution rows can repeat a substitute's shared-slot scores before or after
-      // that player actually raced. A full set of finishers proves these positionless scores are
-      // substitution artifacts rather than disconnection awards.
-      unplacedResults: hasCompletePlacements ? [] : unplacedResults,
+      // that player actually raced. Only a full room for the match format proves those
+      // positionless scores are substitution artifacts. A complete reduced room (for example,
+      // nine finishers in a 5v5) can still have one or more genuine pre-race DC awards.
+      unplacedResults: hasCompleteExpectedRoom ? [] : unplacedResults,
       missingPlayerResults,
     };
   });
