@@ -535,13 +535,33 @@ test("json editor locks a three-team semifinal to Series 1", async ({ page }) =>
         table_tag_str: "Alpha #4F8CFF",
         hex_color: "#4F8CFF",
         penalties: 0,
-        players: {},
+        players: {
+          "0000-0000-0001": {
+            lounge_name: "Alpha player",
+            table_name: "Alpha player",
+            mii_name: "Alpha player",
+            tag: "Alpha",
+            penalties: 0,
+            race_positions: [1],
+            race_scores: [15],
+          },
+        },
       },
       Beta: {
         table_tag_str: "Beta #F45D8C",
         hex_color: "#F45D8C",
         penalties: 0,
-        players: {},
+        players: {
+          "0000-0000-0002": {
+            lounge_name: "Beta player",
+            table_name: "Beta player",
+            mii_name: "Beta player",
+            tag: "Beta",
+            penalties: 0,
+            race_positions: [2],
+            race_scores: [12],
+          },
+        },
       },
     },
   };
@@ -556,8 +576,21 @@ test("json editor locks a three-team semifinal to Series 1", async ({ page }) =>
   await expect(seriesNumber).toBeVisible();
   await expect(seriesNumber).toHaveValue("1");
   await expect(page.locator("#playoff-series-number")).toHaveCount(0);
+  await expect(page.getByText("Each playoff team must have a numeric total score.")).toHaveCount(0);
+
+  const teamsSection = page.locator("section").filter({ hasText: "Teams And Players" });
+  const alphaTeam = page.locator('[data-team-key="Alpha"]');
+  await alphaTeam.getByLabel("Penalty", { exact: true }).fill("3");
+  await expect(
+    teamsSection.getByText(
+      "Playoff teams Alpha and Beta are tied at 12; a playoff match must have a winner."
+    )
+  ).toBeVisible();
+  await alphaTeam.getByLabel("Penalty", { exact: true }).fill("0");
 
   await page.getByText("Generated JSON Preview").click();
   const generated = JSON.parse((await page.locator("details pre").textContent()) ?? "{}");
   expect(generated.playoff_series_number).toBe(1);
+  expect(generated.teams.Alpha.total_score).toBe(15);
+  expect(generated.teams.Beta.total_score).toBe(12);
 });

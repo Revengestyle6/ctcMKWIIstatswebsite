@@ -25,7 +25,8 @@ export type IssueField =
   | "playoff_stage"
   | "playoff_series_number"
   | "series_match_number"
-  | "best_of";
+  | "best_of"
+  | "teams";
 export type Issue = {
   level: "error" | "warning";
   message: string;
@@ -349,7 +350,8 @@ export function validation(
   newEntries: NewEntry[],
   approvalDecisions: Record<string, ApprovalDecision>,
   playoffContext: PlayoffSeriesResponse | null = null,
-  playoffContextLoaded = true
+  playoffContextLoaded = true,
+  compiledMatch: MatchJson = match
 ): Issue[] {
   const issues: Issue[] = [];
   const players = allPlayers(match);
@@ -464,17 +466,25 @@ export function validation(
         field: "series_match_number",
         message: "Series match number cannot exceed best of.",
       });
-    const teamScores = Object.values(match.teams ?? {}).map((team) => team.total_score);
-    if (
-      teamScores.length === 2 &&
-      teamScores.some((score) => typeof score !== "number" || !Number.isFinite(score))
-    )
+    const teamScores = Object.entries(compiledMatch.teams ?? {}).map(([teamKey, team]) => ({
+      tag: teamTag(teamKey, team) || teamKey,
+      score: team.total_score,
+    }));
+    const teamsWithoutScores = teamScores.filter(
+      ({ score }) => typeof score !== "number" || !Number.isFinite(score)
+    );
+    if (teamScores.length === 2 && teamsWithoutScores.length > 0)
       issues.push({
         level: "error",
-        message: "Each playoff team must have a numeric total score.",
+        field: "teams",
+        message: `A playoff score could not be calculated for ${teamsWithoutScores.map(({ tag }) => tag).join(" and ")}. Check that the team has race results and a numeric penalty.`,
       });
-    else if (teamScores.length === 2 && teamScores[0] === teamScores[1])
-      issues.push({ level: "error", message: "Playoff matches cannot end in a tie." });
+    else if (teamScores.length === 2 && teamScores[0].score === teamScores[1].score)
+      issues.push({
+        level: "error",
+        field: "teams",
+        message: `Playoff teams ${teamScores[0].tag} and ${teamScores[1].tag} are tied at ${teamScores[0].score}; a playoff match must have a winner.`,
+      });
     issues.push(
       ...playoffConsistencyIssues(match, teamScopes, playoffContext, playoffContextLoaded)
     );
