@@ -509,3 +509,55 @@ test("json editor detects every positionless DC award in reduced rooms", async (
   expect(generated.teams.Beta.players["0000-0000-0009"].race_positions).toEqual([9, null]);
   expect(generated.teams.Beta.players["0000-0000-0010"].race_positions).toEqual([null, null]);
 });
+
+test("json editor locks a three-team semifinal to Series 1", async ({ page }) => {
+  await page.goto("/json-editor?league=ctc");
+  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
+
+  const match = {
+    title_str: "#title 1 races\n",
+    format: "5v5",
+    races_played: 1,
+    league: "ctc",
+    season: "s-test",
+    division: "d-test",
+    match_type: "playoff",
+    playoff_format: "three_team",
+    playoff_stage: "semifinals",
+    playoff_series_number: 2,
+    series_match_number: 1,
+    best_of: 3,
+    match_label: "Three-team semifinal lock test",
+    rxx: ["r12345678"],
+    tracks: ["Semifinal Test"],
+    teams: {
+      Alpha: {
+        table_tag_str: "Alpha #4F8CFF",
+        hex_color: "#4F8CFF",
+        penalties: 0,
+        players: {},
+      },
+      Beta: {
+        table_tag_str: "Beta #F45D8C",
+        hex_color: "#F45D8C",
+        penalties: 0,
+        players: {},
+      },
+    },
+  };
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "three-team-semifinal.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(match)),
+  });
+
+  const seriesNumber = page.getByLabel("Series number, locked");
+  await expect(seriesNumber).toBeVisible();
+  await expect(seriesNumber).toHaveValue("1");
+  await expect(page.locator("#playoff-series-number")).toHaveCount(0);
+
+  await page.getByText("Generated JSON Preview").click();
+  const generated = JSON.parse((await page.locator("details pre").textContent()) ?? "{}");
+  expect(generated.playoff_series_number).toBe(1);
+});

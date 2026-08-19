@@ -240,6 +240,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const deterministicSeriesMatchNumber = selectedPlayoffSeries
     ? selectedPlayoffSeries.matches.length + 1
     : 1;
+  const playoffSeriesNumberLocked =
+    match.playoff_stage === "finals" ||
+    (match.playoff_stage === "semifinals" && match.playoff_format === "three_team");
   const configuredPlayerIds = useMemo(
     () =>
       Array.from(
@@ -636,12 +639,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
   useEffect(() => {
     if (
       match.match_type === "playoff" &&
-      match.playoff_stage === "finals" &&
+      playoffSeriesNumberLocked &&
       match.playoff_series_number !== 1
     ) {
       setMatch((current) => ({ ...current, playoff_series_number: 1 }));
     }
-  }, [match.match_type, match.playoff_series_number, match.playoff_stage]);
+  }, [match.match_type, match.playoff_series_number, playoffSeriesNumberLocked]);
   useEffect(() => {
     fetchTeamScopes()
       .then((scopes) => {
@@ -1807,7 +1810,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 </div>
                 <div className="text-sm font-semibold text-gray-200">
                   <span>Series number</span>
-                  {match.playoff_stage === "finals" ? (
+                  {playoffSeriesNumberLocked ? (
                     <ReadOnlyControl label="Series number" locked value={1} />
                   ) : (
                     <input
