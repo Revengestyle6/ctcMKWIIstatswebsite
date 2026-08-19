@@ -240,6 +240,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const deterministicSeriesMatchNumber = selectedPlayoffSeries
     ? selectedPlayoffSeries.matches.length + 1
     : 1;
+  const playoffSeriesNumberLocked =
+    match.playoff_stage === "finals" ||
+    (match.playoff_stage === "semifinals" && match.playoff_format === "three_team");
   const configuredPlayerIds = useMemo(
     () =>
       Array.from(
@@ -341,7 +344,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
         newEntries,
         approvalDecisions,
         playoffContext,
-        playoffContextStatus !== "error"
+        playoffContextStatus !== "error",
+        compiled
       ),
       ...unusualTeamIssues,
     ],
@@ -359,6 +363,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       approvalDecisions,
       playoffContext,
       playoffContextStatus,
+      compiled,
       unusualTeamIssues,
     ]
   );
@@ -636,12 +641,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
   useEffect(() => {
     if (
       match.match_type === "playoff" &&
-      match.playoff_stage === "finals" &&
+      playoffSeriesNumberLocked &&
       match.playoff_series_number !== 1
     ) {
       setMatch((current) => ({ ...current, playoff_series_number: 1 }));
     }
-  }, [match.match_type, match.playoff_series_number, match.playoff_stage]);
+  }, [match.match_type, match.playoff_series_number, playoffSeriesNumberLocked]);
   useEffect(() => {
     fetchTeamScopes()
       .then((scopes) => {
@@ -1807,7 +1812,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 </div>
                 <div className="text-sm font-semibold text-gray-200">
                   <span>Series number</span>
-                  {match.playoff_stage === "finals" ? (
+                  {playoffSeriesNumberLocked ? (
                     <ReadOnlyControl label="Series number" locked value={1} />
                   ) : (
                     <input
@@ -1944,6 +1949,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
 
         <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
           <h2 className="mb-4 text-xl font-bold">Teams And Players</h2>
+          <FieldIssues field="teams" issues={issues} />
           <div className="grid gap-5 xl:grid-cols-2">
             {Object.entries(match.teams ?? {}).map(([teamKey, team]) => {
               const currentTag = teamTag(teamKey, team);
