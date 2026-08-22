@@ -144,6 +144,59 @@ def api_player_canonical_name_update(player_id):
         return _alias_error(error)
 
 
+@admin_api.patch("/api/admin/aliases/tracks/<int:track_id>/canonical-name")
+@require_admin
+def api_track_canonical_name_update(track_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, result = alias_management.update_track_canonical_name(
+                session, track_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "track.canonical_name_updated",
+                target_type="track",
+                target_id=track_id,
+                details={
+                    **result,
+                    "canonical_name": detail["canonical_name"],
+                },
+            )
+        cache.clear()
+        return jsonify({"track": detail, **result})
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.post("/api/admin/aliases/tracks/<int:track_id>/merge")
+@require_admin
+def api_track_merge(track_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            result = alias_management.merge_track(
+                session, track_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "track.merged",
+                target_type="track",
+                target_id=track_id,
+                details={
+                    "source": result["merged"],
+                    "target_track_id": result["target"]["id"],
+                    "target_canonical_name": result["target"]["canonical_name"],
+                    "races_updated": result["races_updated"],
+                    "aliases_moved": result["aliases_moved"],
+                },
+            )
+        cache.clear()
+        return jsonify(result)
+    except Exception as error:
+        return _alias_error(error)
+
+
 @admin_api.delete("/api/admin/aliases/<entity_type>/<int:entity_id>/<int:alias_id>")
 @require_admin
 def api_alias_delete(entity_type, entity_id, alias_id):

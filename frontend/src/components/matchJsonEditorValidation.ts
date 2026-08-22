@@ -226,6 +226,12 @@ export function normalized(value: string | undefined): string {
   return (value ?? "").trim().toLowerCase();
 }
 
+const TRACK_IDENTIFIER_PATTERN = /^[0-9a-f]{40}$/i;
+
+export function isTrackIdentifier(value: string): boolean {
+  return TRACK_IDENTIFIER_PATTERN.test(value.trim());
+}
+
 export function trackOptionMatches(track: TrackOption, value: string): boolean {
   const expected = normalized(value);
   return [track.name, ...track.aliases].some((name) => normalized(name) === expected);
@@ -700,6 +706,11 @@ export function validation(
         message: `${label} has unsupported room size ${race.roomSize}.`,
       });
     if (!race.trackName.trim()) issues.push({ level: "error", message: `${label} needs a track.` });
+    else if (isTrackIdentifier(race.trackName))
+      issues.push({
+        level: "error",
+        message: `${label} track ${race.trackName.trim()} is an unresolved track identifier. Replace it with the track's proper name.`,
+      });
     else if (tracksLoaded) {
       const matchingTrack = trackOptions.find((track) => trackOptionMatches(track, race.trackName));
       if (matchingTrack && normalized(matchingTrack.league) !== normalized(match.league)) {
