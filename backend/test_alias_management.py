@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import patch
 
@@ -14,13 +15,17 @@ from import_json_to_db import (  # noqa: E402
     resolve_team_alias,
 )
 from models import (  # noqa: E402
+    AdminAuditLog,
     AdminUser,
     Division,
+    Match,
     Player,
     PlayerAlias,
     PlayerFriendCode,
     PlayerSeasonEntry,
+    Race,
     Season,
+    SourceFile,
     Team,
     TeamAlias,
     TeamSeasonEntry,
@@ -41,6 +46,10 @@ class AliasManagementTests(unittest.TestCase):
 
     def setUp(self):
         with self.SessionLocal.begin() as session:
+            session.query(AdminAuditLog).delete()
+            session.query(Race).delete()
+            session.query(Match).delete()
+            session.query(SourceFile).delete()
             session.query(PlayerSeasonEntry).delete()
             session.query(PlayerFriendCode).delete()
             session.query(PlayerAlias).delete()
@@ -52,6 +61,7 @@ class AliasManagementTests(unittest.TestCase):
             session.query(Player).delete()
             session.query(Track).delete()
             session.query(Team).delete()
+            session.query(AdminUser).delete()
             player = Player(
                 canonical_name="June",
                 primary_friend_code="5031-1216-1890",
@@ -63,6 +73,53 @@ class AliasManagementTests(unittest.TestCase):
             self.player_id = player.player_id
             self.team_id = team.team_id
             self.track_id = track.track_id
+
+            season = Season(
+                league_code="ctc",
+                season_code="s0",
+                season_number=0,
+                name="Test Season",
+                status="complete",
+            )
+            session.add(season)
+            session.flush()
+            division = Division(
+                season_id=season.season_id,
+                division_code="d1",
+                division_name="Division 1",
+            )
+            session.add(division)
+            session.flush()
+            source = SourceFile(
+                season_id=season.season_id,
+                division_id=division.division_id,
+                source_path="test/alias-management.json",
+                source_filename="alias-management.json",
+                file_sha256="a" * 64,
+                json_shape="single_match",
+            )
+            session.add(source)
+            session.flush()
+            match = Match(
+                season_id=season.season_id,
+                division_id=division.division_id,
+                source_file_id=source.source_file_id,
+                match_label="W1 Test",
+                week_number=1,
+                races_played=2,
+            )
+            session.add(match)
+            session.flush()
+            race = Race(
+                match_id=match.match_id,
+                race_number=1,
+                track_id=track.track_id,
+                track_name_raw="Luigi Circuit",
+            )
+            session.add(race)
+            session.flush()
+            self.match_id = match.match_id
+            self.race_id = race.race_id
 
     def test_player_alias_types_are_grouped_and_searchable(self):
         with self.SessionLocal.begin() as session:
@@ -179,6 +236,99 @@ class AliasManagementTests(unittest.TestCase):
 
             self.assertEqual([row["id"] for row in ctc_results], [self.track_id])
             self.assertEqual([row["id"] for row in gsc_results], [gsc_track.track_id])
+
+    def test_track_can_be_renamed_and_historical_races_are_cleansed(self):
+        with self.SessionLocal.begin() as session:
+            detail, result = alias_management.update_track_canonical_name(
+                session, self.track_id, {"canonical_name": "Luigi Raceway"}
+            )
+
+            self.assertEqual(detail["canonical_name"], "Luigi Raceway")
+            self.assertEqual(detail["race_count"], 1)
+            self.assertEqual(result, {"previous_name": "Luigi Circuit", "races_updated": 1})
+            race = session.get(Race, self.race_id)
+            self.assertEqual(race.track_name_raw, "Luigi Raceway")
+            aliases = session.scalars(
+                session.query(TrackAlias).where(TrackAlias.track_id == self.track_id).statement
+            ).all()
+            self.assertEqual([alias.alias_value for alias in aliases], ["Luigi Circuit"])
+
+    def test_duplicate_track_can_be_merged_into_an_existing_track(self):
+        with self.SessionLocal.begin() as session:
+            duplicate = Track(league_code="ctc", canonical_name="Luigi Circut")
+            session.add(duplicate)
+            session.flush()
+            duplicate_id = duplicate.track_id
+            session.add(TrackAlias(track_id=duplicate_id, alias_value="LC typo"))
+            duplicate_race = Race(
+                match_id=self.match_id,
+                race_number=2,
+                track_id=duplicate_id,
+                track_name_raw="Luigi Circut",
+            )
+            session.add(duplicate_race)
+            session.flush()
+            duplicate_race_id = duplicate_race.race_id
+
+            result = alias_management.merge_track(
+                session, duplicate_id, {"target_track_id": self.track_id}
+            )
+
+            self.assertIsNone(session.get(Track, duplicate_id))
+            updated_race = session.get(Race, duplicate_race_id)
+            self.assertEqual(updated_race.track_id, self.track_id)
+            self.assertEqual(updated_race.track_name_raw, "Luigi Circuit")
+            self.assertEqual(result["races_updated"], 1)
+            self.assertEqual(result["aliases_moved"], 2)
+            self.assertEqual(result["target"]["race_count"], 2)
+            aliases = session.scalars(
+                session.query(TrackAlias).where(TrackAlias.track_id == self.track_id).statement
+            ).all()
+            self.assertEqual({alias.alias_value for alias in aliases}, {"Luigi Circut", "LC typo"})
+
+    def test_track_merge_rejects_cross_league_destination(self):
+        with self.SessionLocal.begin() as session:
+            destination = Track(league_code="gsc", canonical_name="Luigi Circuit")
+            session.add(destination)
+            session.flush()
+            with self.assertRaisesRegex(ValueError, "same league"):
+                alias_management.merge_track(
+                    session, self.track_id, {"target_track_id": destination.track_id}
+                )
+
+    def test_track_merge_route_records_an_audit_log(self):
+        with self.SessionLocal.begin() as session:
+            duplicate = Track(league_code="ctc", canonical_name="Luigi Circut")
+            admin = AdminUser(
+                email="owner@example.com",
+                normalized_email="owner@example.com",
+                role="owner",
+                status="active",
+            )
+            session.add_all((duplicate, admin))
+            session.flush()
+            duplicate_id = duplicate.track_id
+
+        headers = {"X-Dev-Admin-Email": "owner@example.com"}
+        with (
+            patch.dict(os.environ, {"APP_ENV": "test", "ALLOW_DEV_AUTH": "true"}),
+            patch("admin_auth.SessionLocal", self.SessionLocal),
+            patch("routes.admin.stats.SessionLocal", self.SessionLocal),
+            app.test_client() as client,
+        ):
+            response = client.post(
+                f"/api/admin/aliases/tracks/{duplicate_id}/merge",
+                json={"target_track_id": self.track_id},
+                headers=headers,
+            )
+            self.assertEqual(response.status_code, 200, response.get_json())
+            self.assertEqual(response.get_json()["target"]["id"], self.track_id)
+
+        with self.SessionLocal() as session:
+            audit = session.scalar(
+                session.query(AdminAuditLog).where(AdminAuditLog.action == "track.merged").statement
+            )
+            self.assertIsNotNone(audit)
 
     def test_team_alias_is_used_by_match_import_resolution(self):
         with self.SessionLocal.begin() as session:

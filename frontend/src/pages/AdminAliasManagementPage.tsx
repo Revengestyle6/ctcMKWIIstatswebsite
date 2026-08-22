@@ -57,6 +57,18 @@ type AliasDetail = {
   aliases: AliasItem[];
   friend_codes: FriendCodeItem[];
   season_entries: PlayerSeasonEntryItem[];
+  race_count?: number;
+};
+type TrackRenameResponse = {
+  track: AliasDetail;
+  previous_name: string;
+  races_updated: number;
+};
+type TrackMergeResponse = {
+  target: AliasDetail;
+  merged: { id: number; canonical_name: string };
+  races_updated: number;
+  aliases_moved: number;
 };
 
 const entityLabels: Record<EntityType, string> = {
@@ -94,13 +106,16 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
   const [trackLeague, setTrackLeague] = useState<"ctc" | "gsc">(league);
   const [query, setQuery] = useState("");
   const [entities, setEntities] = useState<AliasEntity[]>([]);
+  const [trackCandidates, setTrackCandidates] = useState<AliasEntity[]>([]);
   const [selected, setSelected] = useState<AliasDetail | null>(null);
   const [canonicalName, setCanonicalName] = useState("");
+  const [mergeTargetId, setMergeTargetId] = useState("");
   const [aliasType, setAliasType] = useState("alias");
   const [newAlias, setNewAlias] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     if (!auth.session?.authenticated) return;
@@ -131,6 +146,25 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
   }, [auth.session?.authenticated, entityType, query, trackLeague]);
 
   useEffect(() => {
+    if (!auth.session?.authenticated || entityType !== "tracks") return;
+    let cancelled = false;
+    fetchJson<AliasEntity[]>("/api/admin/aliases/tracks", {
+      limit: 500,
+      league: trackLeague,
+    })
+      .then((response) => {
+        if (!cancelled) setTrackCandidates(response);
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled)
+          setError(caught instanceof Error ? caught.message : "Could not load track choices.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.session?.authenticated, entityType, trackLeague]);
+
+  useEffect(() => {
     setTrackLeague(league);
     setSelected(null);
   }, [league]);
@@ -150,11 +184,13 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     setQuery("");
     setSelected(null);
     setCanonicalName("");
+    setMergeTargetId("");
     setAliasType(
       nextType === "players" ? "lounge_name" : nextType === "teams" ? "identity" : "alias"
     );
     setNewAlias("");
     setError("");
+    setNotice("");
   };
 
   const chooseEntity = async (entity: AliasEntity) => {
@@ -164,6 +200,7 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       const detail = await fetchJson<AliasDetail>(`/api/admin/aliases/${entityType}/${entity.id}`);
       setSelected(detail);
       setCanonicalName(detail.canonical_name ?? "");
+      setMergeTargetId("");
       setAliasType(entityType === "teams" ? "identity" : (detail.alias_types[0] ?? "alias"));
       setNewAlias("");
     } catch (caught) {
@@ -191,6 +228,86 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not update canonical name.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveTrackCanonicalName = async () => {
+    if (!selected || entityType !== "tracks" || !canonicalName.trim()) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await patchJson<TrackRenameResponse>(
+        `/api/admin/aliases/tracks/${selected.id}/canonical-name`,
+        { canonical_name: canonicalName }
+      );
+      setSelected(response.track);
+      setCanonicalName(response.track.canonical_name ?? "");
+      const updateEntity = (entity: AliasEntity) =>
+        entity.id === selected.id
+          ? {
+              ...entity,
+              label: response.track.label,
+              alias_count: response.track.aliases.length,
+            }
+          : entity;
+      setEntities((current) => current.map(updateEntity));
+      setTrackCandidates((current) => current.map(updateEntity));
+      setNotice(
+        `Renamed to ${response.track.label} and updated ${response.races_updated} historical ${response.races_updated === 1 ? "race" : "races"}.`
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not rename track.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const mergeSelectedTrack = async () => {
+    if (!selected || entityType !== "tracks" || !mergeTargetId) return;
+    const targetId = Number(mergeTargetId);
+    const target = trackCandidates.find((candidate) => candidate.id === targetId);
+    if (!target) return;
+    if (
+      !window.confirm(
+        `Merge “${selected.label}” into “${target.label}”? All historical races will use “${target.label}”, and the original track record will be deleted.`
+      )
+    )
+      return;
+
+    const sourceId = selected.id;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await postJson<TrackMergeResponse>(
+        `/api/admin/aliases/tracks/${sourceId}/merge`,
+        { target_track_id: targetId }
+      );
+      const updateEntities = (current: AliasEntity[]) =>
+        current
+          .filter((entity) => entity.id !== sourceId)
+          .map((entity) =>
+            entity.id === targetId
+              ? {
+                  ...entity,
+                  label: response.target.label,
+                  alias_count: response.target.aliases.length,
+                }
+              : entity
+          );
+      setEntities(updateEntities);
+      setTrackCandidates(updateEntities);
+      setSelected(response.target);
+      setCanonicalName(response.target.canonical_name ?? "");
+      setMergeTargetId("");
+      setNotice(
+        `Merged ${response.merged.canonical_name} into ${response.target.label}. Updated ${response.races_updated} ${response.races_updated === 1 ? "race" : "races"} and preserved ${response.aliases_moved} ${response.aliases_moved === 1 ? "alias" : "aliases"}.`
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not merge tracks.");
     } finally {
       setSaving(false);
     }
@@ -414,6 +531,88 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                           </button>
                         </div>
                       </form>
+                    ) : null}
+
+                    {entityType === "tracks" ? (
+                      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                        <form
+                          className="rounded border border-blue-300/20 bg-blue-950/20 p-4"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            void saveTrackCanonicalName();
+                          }}
+                        >
+                          <label
+                            htmlFor="track-canonical-name"
+                            className="block text-sm font-bold text-blue-100"
+                          >
+                            Rename canonical track
+                            <span className="mt-1 block text-xs font-normal text-gray-400">
+                              Changes this track&apos;s name on all {selected.race_count ?? 0}{" "}
+                              recorded races. The old name remains an alias for future imports.
+                            </span>
+                          </label>
+                          <input
+                            id="track-canonical-name"
+                            value={canonicalName}
+                            onChange={(event) => setCanonicalName(event.target.value)}
+                            required
+                            className="mt-3 min-h-11 w-full rounded border border-white/20 bg-black/50 px-3 text-white"
+                          />
+                          <button
+                            type="submit"
+                            disabled={
+                              saving ||
+                              !canonicalName.trim() ||
+                              canonicalName.trim() === selected.canonical_name
+                            }
+                            className="mt-3 rounded bg-blue-500 px-4 py-2 font-bold text-white disabled:opacity-40"
+                          >
+                            {saving ? "Saving…" : "Rename track"}
+                          </button>
+                        </form>
+
+                        <form
+                          className="rounded border border-amber-300/25 bg-amber-950/20 p-4"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            void mergeSelectedTrack();
+                          }}
+                        >
+                          <label
+                            htmlFor="track-merge-target"
+                            className="block text-sm font-bold text-amber-100"
+                          >
+                            Map to an existing track
+                            <span className="mt-1 block text-xs font-normal text-gray-400">
+                              Moves all races and aliases to the destination, then permanently
+                              removes this track record.
+                            </span>
+                          </label>
+                          <select
+                            id="track-merge-target"
+                            value={mergeTargetId}
+                            onChange={(event) => setMergeTargetId(event.target.value)}
+                            className="mt-3 min-h-11 w-full rounded border border-white/20 bg-black/50 px-3 text-white"
+                          >
+                            <option value="">Choose destination track</option>
+                            {trackCandidates
+                              .filter((candidate) => candidate.id !== selected.id)
+                              .map((candidate) => (
+                                <option key={candidate.id} value={candidate.id}>
+                                  {candidate.label}
+                                </option>
+                              ))}
+                          </select>
+                          <button
+                            type="submit"
+                            disabled={saving || !mergeTargetId}
+                            className="mt-3 rounded bg-amber-400 px-4 py-2 font-bold text-black disabled:opacity-40"
+                          >
+                            {saving ? "Merging…" : "Map and remove track"}
+                          </button>
+                        </form>
+                      </div>
                     ) : null}
 
                     {entityType === "players" ? (
@@ -662,6 +861,11 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
 
         {error ? (
           <p className="border border-red-500/40 bg-red-950/40 p-3 text-red-200">{error}</p>
+        ) : null}
+        {notice ? (
+          <p className="border border-emerald-500/40 bg-emerald-950/40 p-3 text-emerald-100">
+            {notice}
+          </p>
         ) : null}
       </div>
     </main>
