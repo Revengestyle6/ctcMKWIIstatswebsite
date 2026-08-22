@@ -56,6 +56,7 @@ import {
   type Issue,
   type IssueField,
   isFfa,
+  isTrackIdentifier,
   metadataValue,
   type NewEntry,
   newEntryDescription,
@@ -2286,12 +2287,13 @@ export default function MatchJsonEditor(): React.JSX.Element {
               const matchingTrack = trackOptions.find((track) =>
                 trackOptionMatches(track, race.trackName)
               );
+              const identifierTrack = isTrackIdentifier(race.trackName);
               const resolvedTrack =
-                matchingTrack && normalized(matchingTrack.league) === league
+                !identifierTrack && matchingTrack && normalized(matchingTrack.league) === league
                   ? matchingTrack
                   : undefined;
               const conflictingTrack =
-                matchingTrack && normalized(matchingTrack.league) !== league
+                !identifierTrack && matchingTrack && normalized(matchingTrack.league) !== league
                   ? matchingTrack
                   : undefined;
               const approvedTrack = isApprovedNewEntry(
@@ -2328,20 +2330,22 @@ export default function MatchJsonEditor(): React.JSX.Element {
                             trackName: e.target.value,
                           }))
                         }
-                        className={`${inputClass} ${resolvedTrack ? "border-emerald-400/70" : conflictingTrack ? "border-red-400/70" : approvedTrack ? "border-amber-300/70" : tracksLoaded ? "border-red-400/70" : ""}`}
+                        className={`${inputClass} ${resolvedTrack ? "border-emerald-400/70" : identifierTrack || conflictingTrack ? "border-red-400/70" : approvedTrack ? "border-amber-300/70" : tracksLoaded ? "border-red-400/70" : ""}`}
                       />
                       <span
-                        className={`mt-1 block text-xs normal-case ${resolvedTrack ? "text-emerald-300" : conflictingTrack ? "text-red-300" : approvedTrack ? "text-amber-300" : tracksLoaded ? "text-red-300" : "text-gray-400"}`}
+                        className={`mt-1 block text-xs normal-case ${resolvedTrack ? "text-emerald-300" : identifierTrack || conflictingTrack ? "text-red-300" : approvedTrack ? "text-amber-300" : tracksLoaded ? "text-red-300" : "text-gray-400"}`}
                       >
                         {resolvedTrack
                           ? `Confirmed as a ${league.toUpperCase()} track`
-                          : conflictingTrack
-                            ? `Registered for ${conflictingTrack.league.toUpperCase()}; not allowed in ${league.toUpperCase()}`
-                            : approvedTrack
-                              ? "Approved as a new track"
-                              : tracksLoaded
-                                ? "No matching database track"
-                                : "Checking database..."}
+                          : identifierTrack
+                            ? "Unresolved track identifier; replace it with the proper track name"
+                            : conflictingTrack
+                              ? `Registered for ${conflictingTrack.league.toUpperCase()}; not allowed in ${league.toUpperCase()}`
+                              : approvedTrack
+                                ? "Approved as a new track"
+                                : tracksLoaded
+                                  ? "No matching database track"
+                                  : "Checking database..."}
                       </span>
                     </label>
                     <label className={smallLabel}>
