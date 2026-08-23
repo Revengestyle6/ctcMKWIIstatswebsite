@@ -57,6 +57,10 @@ export type NewEntry = {
   friend_code?: string;
   lounge_name?: string | null;
   proposed_player_id?: number;
+  mkc_lookup_status?: "found" | "not_found" | "lookup_failed" | "ambiguous";
+  mkc_name?: string;
+  mkc_player_id?: number;
+  mkc_error?: string;
   proposed_player?: PlayerIdentitySummary;
   candidates?: PlayerIdentitySummary[];
   team_candidates?: TeamIdentityCandidate[];
@@ -307,13 +311,24 @@ export function newEntryDescription(entry: NewEntry): {
       detail: `Approval locks ${entry.season} ${entry.division} to this playoff format: ${entry.semifinal_series_count} semifinal series and ${entry.finals_bye_count} finals bye.`,
       caution: "The playoff format is division-specific and cannot be changed by a later upload.",
     };
-  if (entry.kind === "new_player_identity")
+  if (entry.kind === "new_player_identity") {
+    const mkcDetail =
+      entry.mkc_lookup_status === "found"
+        ? ` MKCentral identifies this friend code as ${entry.mkc_name} (profile ${entry.mkc_player_id}). That MKCentral name will be stored as an alias and used as the initial canonical name.`
+        : entry.mkc_lookup_status === "not_found"
+          ? " MKCentral responded successfully but has no Mario Kart Wii profile for this friend code."
+          : entry.mkc_lookup_status === "ambiguous"
+            ? ` MKCentral returned an ambiguous result${entry.mkc_error ? `: ${entry.mkc_error}` : "."}`
+            : entry.mkc_lookup_status === "lookup_failed"
+              ? ` The MKCentral lookup could not be completed${entry.mkc_error ? `: ${entry.mkc_error}` : "."}`
+              : "";
     return {
       heading: `${entry.value} has an unknown friend code`,
-      detail: "Approval creates a new player identity and assigns this friend code to it.",
+      detail: `Approval creates a new player identity and assigns this friend code to it.${mkcDetail}`,
       caution:
         "Create a player only if this person has never appeared before. Otherwise, map the new name and friend code to an existing player.",
     };
+  }
   if (entry.kind === "existing_player_new_friend_code") {
     const proposed = entry.proposed_player;
     const knownCodes = proposed?.friend_codes.length

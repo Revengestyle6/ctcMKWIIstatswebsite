@@ -8,7 +8,15 @@ from analytics_eligibility import analytics_excluded_race_ids
 from database import Base
 from database_health_reviews import load_reviews
 from match_upload import reconcile_archive, serialize_addition_log
-from models import DatabaseAdditionLog, Match, Player, SourceFile, Track
+from models import (
+    DatabaseAdditionLog,
+    Match,
+    Player,
+    PlayerAlias,
+    PlayerFriendCode,
+    SourceFile,
+    Track,
+)
 from sqlalchemy import func, inspect, select, text
 
 TRACK_SIMILARITY_THRESHOLD = 0.92
@@ -22,6 +30,11 @@ def _iso(value):
 def _normalized_name(value):
     normalized = unicodedata.normalize("NFKC", str(value or "")).casefold()
     return re.sub(r"[^a-z0-9]+", "", normalized)
+
+
+def _normalized_mkc_name(value):
+    normalized = unicodedata.normalize("NFKC", str(value or "")).casefold()
+    return " ".join(normalized.split())
 
 
 def _issue(key, severity, category, title, detail, *, count=1, entities=None, dismissible=False):
@@ -190,6 +203,123 @@ def _catalog_issues(session):
 
     players = list(session.execute(select(Player.player_id, Player.canonical_name)).all())
     player_name_by_id = {player_id: name for player_id, name in players}
+
+    mkc_alias_rows = session.execute(
+        select(PlayerAlias.player_id, PlayerAlias.alias_value).where(
+            PlayerAlias.alias_type == "mkc_name"
+        )
+    ).all()
+    players_with_mkc_names = {row.player_id for row in mkc_alias_rows}
+    friend_codes_by_player = {}
+    for player_id, friend_code in session.execute(
+        select(PlayerFriendCode.player_id, PlayerFriendCode.friend_code).order_by(
+            PlayerFriendCode.player_id,
+            PlayerFriendCode.player_friend_code_id,
+        )
+    ):
+        friend_codes_by_player.setdefault(player_id, []).append(friend_code)
+    missing_mkc_players = [
+        (player_id, name) for player_id, name in players if player_id not in players_with_mkc_names
+    ]
+    if missing_mkc_players:
+        issues.append(
+            _issue(
+                "player-missing-mkc-name",
+                "critical",
+                "players",
+                "Player has no MKCentral name",
+                "Every player must have an MKCentral name alias. Find the player's MKCentral "
+                "profile, add one of its associated friend codes in Alias Management, then "
+                "refresh that player's MKCentral name.",
+                count=len(missing_mkc_players),
+                entities=[
+                    {
+                        "id": player_id,
+                        "label": name or f"Player {player_id}",
+                        "value": ", ".join(friend_codes_by_player.get(player_id, []))
+                        or "No friend codes recorded",
+                    }
+                    for player_id, name in missing_mkc_players
+                ],
+            )
+        )
+
+    mkc_names = {}
+    for row in mkc_alias_rows:
+        name_key = _normalized_mkc_name(row.alias_value)
+        if name_key:
+            mkc_names.setdefault(name_key, []).append((row.player_id, row.alias_value))
+    duplicate_mkc_names = {
+        name_key: entries
+        for name_key, entries in mkc_names.items()
+        if len({player_id for player_id, _name in entries}) > 1
+    }
+    if duplicate_mkc_names:
+        entities = []
+        player_ids = set()
+        for entries in duplicate_mkc_names.values():
+            for player_id, mkc_name in entries:
+                player_ids.add(player_id)
+                entities.append(
+                    {
+                        "id": player_id,
+                        "label": player_name_by_id.get(player_id) or f"Player {player_id}",
+                        "value": mkc_name,
+                    }
+                )
+        issues.append(
+            _issue(
+                "duplicate-mkc-name",
+                "warning",
+                "players",
+                "MKCentral name is shared by multiple players",
+                "MKCentral permits different profiles to use the same name. Confirm the players "
+                "have different MKCentral IDs; automatic canonical naming uses their lounge "
+                "names while this collision exists.",
+                count=len(player_ids),
+                entities=entities,
+                dismissible=True,
+            )
+        )
+
+    mkc_id_rows = session.execute(
+        select(PlayerAlias.player_id, PlayerAlias.alias_value).where(
+            PlayerAlias.alias_type == "mkc_id"
+        )
+    ).all()
+    mkc_ids = {}
+    for row in mkc_id_rows:
+        mkc_id = str(row.alias_value or "").strip()
+        if mkc_id:
+            mkc_ids.setdefault(mkc_id, []).append(row.player_id)
+    duplicate_mkc_ids = {
+        mkc_id: sorted(set(player_ids))
+        for mkc_id, player_ids in mkc_ids.items()
+        if len(set(player_ids)) > 1
+    }
+    if duplicate_mkc_ids:
+        entities = [
+            {
+                "id": player_id,
+                "label": player_name_by_id.get(player_id) or f"Player {player_id}",
+                "value": f"MKCentral ID {mkc_id}",
+            }
+            for mkc_id, player_ids in duplicate_mkc_ids.items()
+            for player_id in player_ids
+        ]
+        issues.append(
+            _issue(
+                "duplicate-mkc-id",
+                "critical",
+                "players",
+                "MKCentral ID belongs to multiple player records",
+                "A single MKCentral profile ID must resolve to exactly one local player. "
+                "Review the records and merge the duplicate player identity.",
+                count=len({entity["id"] for entity in entities}),
+                entities=entities,
+            )
+        )
+
     players_by_key = {}
     for player_id, name in players:
         name_key = _normalized_name(name)

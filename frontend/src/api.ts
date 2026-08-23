@@ -137,9 +137,17 @@ export interface PlayerIdentity {
   aliases: Array<{ type: string; value: string }>;
 }
 
+export type MkcLookup = {
+  status: "found" | "not_found" | "lookup_failed" | "ambiguous";
+  friend_code: string;
+  mkc_player_id?: number;
+  mkc_name?: string;
+  error?: string;
+};
+
 export function fetchPlayerIdentity(
   friendCode: string
-): Promise<{ reason: string; results: PlayerIdentity[] }> {
+): Promise<{ reason: string; results: PlayerIdentity[]; mkc_lookup?: MkcLookup }> {
   return fetchJson("/api/player-identities", { friend_code: friendCode });
 }
 

@@ -273,6 +273,7 @@ Canonical player/person identity.
 | --- | --- | --- |
 | `player_id` | integer primary key | Internal ID. |
 | `canonical_name` | text nullable | Best display name. |
+| `canonical_name_override` | boolean | When true, only manual edits determine the canonical name. Defaults to false. |
 | `primary_friend_code` | text nullable | Friend codes can change, so keep aliases too. |
 | `created_at` | timestamp | Audit. |
 
@@ -292,16 +293,19 @@ Recommended unique key: `friend_code`, unless you later discover recycled/shared
 
 ### `player_aliases`
 
-Stores lounge names, Mii names, and table names seen for a player.
+Stores lounge, Mii, table, MKCentral names and IDs, and displaced canonical names
+seen for a player.
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | `player_alias_id` | integer primary key | Internal ID. |
 | `player_id` | foreign key to `players` | Required. |
-| `alias_type` | text | `lounge_name`, `mii_name`, `table_name`, `manual`. |
+| `alias_type` | text | Includes `lounge_name`, `mii_name`, `table_name`, `mkc_name`, `mkc_id`, and `canonical_name`. |
 | `alias_value` | text | Raw value. |
 | `first_seen_match_id` | foreign key nullable | Optional audit. |
 | `last_seen_match_id` | foreign key nullable | Optional audit. |
+| `created_at` | timestamp | When this distinct alias was first entered. |
+| `last_observed_at` | timestamp | Most recent observation; used to select the current MKCentral name. |
 
 ### `player_season_entries`
 
@@ -517,7 +521,8 @@ For each match object:
 7. Insert `match_teams`, but require the match to resolve to exactly two real teams.
 8. Insert team penalties into `penalties`.
 9. Insert or resolve each player by friend code into `players`.
-10. Store lounge, Mii, and table names in `player_aliases`.
+10. Store lounge, Mii, table, and any resolved MKCentral names and profile IDs in
+    `player_aliases`.
 11. Connect player to team/season/division in `player_season_entries`.
 12. Insert `match_players`.
 13. Insert player penalties into `penalties`.

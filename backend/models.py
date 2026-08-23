@@ -244,6 +244,7 @@ class Player(Base):
 
     player_id = Column(Integer, primary_key=True)
     canonical_name = Column(Text)
+    canonical_name_override = Column(Boolean, nullable=False, default=False)
     primary_friend_code = Column(Text)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
@@ -269,6 +270,8 @@ class PlayerAlias(Base):
     alias_value = Column(Text, nullable=False)
     first_seen_match_id = Column(Integer, ForeignKey("matches.match_id"))
     last_seen_match_id = Column(Integer, ForeignKey("matches.match_id"))
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_observed_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     __table_args__ = (
         UniqueConstraint("player_id", "alias_type", "alias_value", name="uq_player_alias_value"),
@@ -608,3 +611,27 @@ class AdminAuditLog(Base):
     request_id = Column(Text, nullable=False, index=True)
     details_json = Column(Text, nullable=False, default="{}")
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+
+
+class MkcRefreshPreview(Base):
+    __tablename__ = "mkc_refresh_previews"
+
+    preview_id = Column(Text, primary_key=True, default=lambda: str(uuid.uuid4()))
+    scope = Column(Text, nullable=False)
+    player_id = Column(Integer, ForeignKey("players.player_id"))
+    status = Column(Text, nullable=False, default="pending")
+    requested_by_admin_user_id = Column(Integer, ForeignKey("admin_users.admin_user_id"))
+    applied_by_admin_user_id = Column(Integer, ForeignKey("admin_users.admin_user_id"))
+    results_json = Column(Text, nullable=False)
+    summary_json = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    decided_at = Column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint("scope IN ('bulk', 'individual')", name="ck_mkc_refresh_preview_scope"),
+        CheckConstraint(
+            "status IN ('pending', 'applied', 'rejected')",
+            name="ck_mkc_refresh_preview_status",
+        ),
+    )

@@ -207,9 +207,15 @@ before comparing mutable tags.
 ### `players`, `player_friend_codes`, and `player_aliases`
 
 `players` is the global person identity with canonical name, primary friend code,
-and creation time. `player_friend_codes` makes each friend code globally unique and
-records optional first/last match sightings. `player_aliases` stores typed aliases
-with first/last match sightings; `(player_id, alias_type, alias_value)` is unique.
+canonical-name override flag, and creation time. `player_friend_codes` makes each
+friend code globally unique and records optional first/last match sightings.
+`player_aliases` stores typed aliases with first-entry and last-observed timestamps
+and optional first/last match sightings; `(player_id, alias_type, alias_value)` is unique. The
+`mkc_name`, `mkc_id`, and displaced `canonical_name` types preserve MKCentral
+identity and naming history. See
+[MKCentral Player Names](mkcentral-player-names.md) for automatic priority and the
+review/apply workflow. Administrators can add or remove friend codes from player
+details; `player_friend_codes.friend_code` remains globally unique.
 
 ### `player_season_entries`
 

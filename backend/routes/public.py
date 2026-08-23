@@ -7,6 +7,7 @@ from dashboard_stats import DashboardError
 from flask import Blueprint, jsonify, request, send_file
 from match_editor_catalog import list_player_team_memberships, list_team_roster_pool
 from media_storage import get_media_storage
+from mkc_registry import lookup_mkc_player
 from models import TeamLogo
 
 from routes.common import (
@@ -114,12 +115,14 @@ def api_player_directory():
 @public_api.get("/api/player-identities")
 def api_player_identities():
     try:
-        return jsonify(
-            stats.find_player_identities(
-                friend_code=request.args.get("friend_code"),
-                query=request.args.get("query"),
-            )
+        friend_code = request.args.get("friend_code")
+        result = stats.find_player_identities(
+            friend_code=friend_code,
+            query=request.args.get("query"),
         )
+        if friend_code and not result["results"]:
+            result["mkc_lookup"] = lookup_mkc_player(friend_code)
+        return jsonify(result)
     except Exception as error:
         return error_response(error)
 

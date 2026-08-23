@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from database import BASE_DIR, get_session_factory
+from mkc_registry import lookup_mkc_player
 from models import (
     Division,
     DivisionPlayoffConfig,
@@ -33,6 +34,13 @@ from models import (
     TeamSeasonEntry,
     Track,
     TrackAlias,
+)
+from player_naming import (
+    MKC_ALIAS_TYPE,
+    MKC_ID_ALIAS_TYPE,
+    add_player_alias,
+    apply_shared_mkc_name_priorities,
+    latest_mkc_name,
 )
 from playoff_service import (
     match_type,
@@ -422,6 +430,7 @@ def get_or_create_player(
     player_data: dict[str, Any],
     identities: PlayerIdentities,
     player_identity_links: dict[str, int] | None = None,
+    player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
 ) -> Player:
     canonical_friend_code = identities.friend_code_to_canonical.get(friend_code, friend_code)
     identity_friend_codes = identities.canonical_to_friend_codes.get(
@@ -465,8 +474,14 @@ def get_or_create_player(
             session.flush()
         return player
 
+    mkc_profile = (player_mkc_profiles or {}).get(friend_code) or {}
+    mkc_name = mkc_profile.get("mkc_name") if mkc_profile.get("status") == "found" else None
+    mkc_player_id = (
+        mkc_profile.get("mkc_player_id") if mkc_profile.get("status") == "found" else None
+    )
     player = Player(
-        canonical_name=identities.canonical_names.get(canonical_friend_code)
+        canonical_name=mkc_name
+        or identities.canonical_names.get(canonical_friend_code)
         or display_player_name(player_data),
         primary_friend_code=canonical_friend_code,
     )
@@ -474,6 +489,10 @@ def get_or_create_player(
     session.flush()
 
     session.add(PlayerFriendCode(player_id=player.player_id, friend_code=friend_code))
+    if mkc_name:
+        add_player_alias(session, player.player_id, MKC_ALIAS_TYPE, mkc_name)
+    if mkc_player_id is not None:
+        add_player_alias(session, player.player_id, MKC_ID_ALIAS_TYPE, str(mkc_player_id))
     session.flush()
     return player
 
@@ -483,24 +502,13 @@ def add_player_aliases(session, player: Player, player_data: dict[str, Any], mat
         alias_value = player_data.get(alias_type)
         if not alias_value:
             continue
-        alias = session.scalar(
-            select(PlayerAlias).where(
-                PlayerAlias.player_id == player.player_id,
-                PlayerAlias.alias_type == alias_type,
-                PlayerAlias.alias_value == alias_value,
-            )
-        )
-        if alias:
-            alias.last_seen_match_id = match_id
-            continue
-        session.add(
-            PlayerAlias(
-                player_id=player.player_id,
-                alias_type=alias_type,
-                alias_value=alias_value,
-                first_seen_match_id=match_id,
-                last_seen_match_id=match_id,
-            )
+        add_player_alias(
+            session,
+            player.player_id,
+            alias_type,
+            alias_value,
+            first_seen_match_id=match_id,
+            last_seen_match_id=match_id,
         )
 
 
@@ -665,6 +673,7 @@ def import_match(
     week_number_override: int | None = None,
     player_identity_links: dict[str, int] | None = None,
     team_identity_links: dict[str, int] | None = None,
+    player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
 ):
     teams = match_data.get("teams") or {}
     tracks = match_data.get("tracks") or []
@@ -864,8 +873,12 @@ def import_match(
                 player_data,
                 identities,
                 player_identity_links,
+                player_mkc_profiles,
             )
             add_player_aliases(session, player, player_data, match.match_id)
+            current_mkc_name = latest_mkc_name(session, player.player_id)
+            if current_mkc_name:
+                apply_shared_mkc_name_priorities(session, current_mkc_name)
             player_entry = get_or_create_player_entry(
                 session, player, team_entry, season, division, player_data, match.match_id
             )
@@ -956,6 +969,7 @@ def import_preview_match(
     match_data: dict[str, Any],
     player_identity_links: dict[str, int] | None = None,
     team_identity_links: dict[str, int] | None = None,
+    player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
 ) -> Match:
     token = uuid.uuid4().hex
     return import_editor_match(
@@ -967,6 +981,7 @@ def import_preview_match(
         json_shape="preview",
         player_identity_links=player_identity_links,
         team_identity_links=team_identity_links,
+        player_mkc_profiles=player_mkc_profiles,
     )
 
 
@@ -980,6 +995,7 @@ def import_editor_match(
     json_shape: str = "single_match",
     player_identity_links: dict[str, int] | None = None,
     team_identity_links: dict[str, int] | None = None,
+    player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
     source_metadata: dict[str, Any] | None = None,
 ) -> Match:
     validate_competition_metadata(match_data)
@@ -1024,6 +1040,7 @@ def import_editor_match(
         week_number_override=week_number,
         player_identity_links=player_identity_links,
         team_identity_links=team_identity_links,
+        player_mkc_profiles=player_mkc_profiles,
     )
 
 
@@ -1082,6 +1099,7 @@ def detect_new_entries(
     match_data: dict[str, Any],
     player_identity_links: dict[str, Any] | None = None,
     team_identity_resolutions: dict[str, Any] | None = None,
+    lookup_mkc_profiles: bool = False,
 ) -> list[dict[str, Any]]:
     competition_metadata = (
         validate_competition_metadata(match_data)
@@ -1379,6 +1397,14 @@ def detect_new_entries(
                     friend_code=friend_code,
                     lounge_name=lounge_name,
                 )
+                if lookup_mkc_profiles:
+                    mkc_lookup = lookup_mkc_player(friend_code)
+                    entry["mkc_lookup_status"] = mkc_lookup["status"]
+                    if mkc_lookup["status"] == "found":
+                        entry["mkc_name"] = mkc_lookup["mkc_name"]
+                        entry["mkc_player_id"] = mkc_lookup["mkc_player_id"]
+                    elif mkc_lookup.get("error"):
+                        entry["mkc_error"] = mkc_lookup["error"]
                 entries[entry["key"]] = entry
 
     for track_name in match_data.get("tracks") or []:

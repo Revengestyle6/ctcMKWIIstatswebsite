@@ -12,6 +12,8 @@ No secret belongs in Git, a frontend bundle, or a committed environment file.
 | `DB_POOL_RECYCLE_SECONDS` | Backend | PostgreSQL connection recycle interval; defaults to 1,800 seconds |
 | `DB_APPLICATION_NAME` | Backend | PostgreSQL connection label for diagnostics |
 | `POSTGRES_PORT` | Compose | Local PostgreSQL host port; defaults to 55432 |
+| `MKC_API_TIMEOUT_SECONDS` | Backend | MKCentral read timeout per friend-code request; defaults to 6 seconds |
+| `MKC_REFRESH_WORKERS` | Backend | Parallel MKCentral bulk-refresh requests; defaults to 8 and is capped at 16 |
 | `MATCH_JSON_ROOT` | Backend tools | Override the historical local archived-JSON root |
 | `ARCHIVE_STORAGE_PROVIDER` | Backend | `local` for development; staging/production require `gcs` |
 | `ARCHIVE_STORAGE_ROOT` | Backend | Ignored local temporary/accepted object root |

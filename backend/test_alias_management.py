@@ -19,11 +19,15 @@ from models import (  # noqa: E402
     AdminUser,
     Division,
     Match,
+    MatchPlayer,
+    MatchTeam,
+    MkcRefreshPreview,
     Player,
     PlayerAlias,
     PlayerFriendCode,
     PlayerSeasonEntry,
     Race,
+    RacePlayerResult,
     Season,
     SourceFile,
     Team,
@@ -47,6 +51,10 @@ class AliasManagementTests(unittest.TestCase):
     def setUp(self):
         with self.SessionLocal.begin() as session:
             session.query(AdminAuditLog).delete()
+            session.query(MkcRefreshPreview).delete()
+            session.query(RacePlayerResult).delete()
+            session.query(MatchPlayer).delete()
+            session.query(MatchTeam).delete()
             session.query(Race).delete()
             session.query(Match).delete()
             session.query(SourceFile).delete()
@@ -90,6 +98,8 @@ class AliasManagementTests(unittest.TestCase):
             )
             session.add(division)
             session.flush()
+            self.season_id = season.season_id
+            self.division_id = division.division_id
             source = SourceFile(
                 season_id=season.season_id,
                 division_id=division.division_id,
@@ -201,6 +211,11 @@ class AliasManagementTests(unittest.TestCase):
 
             friend_code_id = friend_code.player_friend_code_id
             season_entry_id = player_entry.player_season_entry_id
+            alias_management.update_player_canonical_override(
+                session,
+                self.player_id,
+                {"enabled": True},
+            )
             updated, previous_name = alias_management.update_player_canonical_name(
                 session,
                 self.player_id,
@@ -212,6 +227,107 @@ class AliasManagementTests(unittest.TestCase):
             self.assertEqual(updated["friend_codes"][0]["id"], friend_code_id)
             self.assertEqual(updated["season_entries"][0]["id"], season_entry_id)
             self.assertEqual(session.get(Player, self.player_id).player_id, self.player_id)
+
+    def test_friend_codes_can_be_added_and_primary_removal_selects_replacement(self):
+        with self.SessionLocal.begin() as session:
+            primary = PlayerFriendCode(
+                player_id=self.player_id,
+                friend_code="5031-1216-1890",
+            )
+            session.add(primary)
+            session.flush()
+            detail, added = alias_management.add_player_friend_code(
+                session,
+                self.player_id,
+                {"friend_code": "1111-2222-3333"},
+            )
+            self.assertEqual(added.friend_code, "1111-2222-3333")
+            self.assertEqual(len(detail["friend_codes"]), 2)
+            search_results = alias_management.list_entities(
+                session, "players", query="1111-2222-3333"
+            )
+            self.assertEqual([result["id"] for result in search_results], [self.player_id])
+
+            detail, deleted = alias_management.delete_player_friend_code(
+                session,
+                self.player_id,
+                primary.player_friend_code_id,
+            )
+            self.assertTrue(deleted["was_primary"])
+            self.assertEqual(detail["secondary"], "1111-2222-3333")
+            self.assertEqual(
+                [(code["value"], code["is_primary"]) for code in detail["friend_codes"]],
+                [("1111-2222-3333", True)],
+            )
+
+    def test_friend_code_add_rejects_invalid_or_other_player_code(self):
+        with self.SessionLocal.begin() as session:
+            other_player = Player(canonical_name="Other")
+            session.add(other_player)
+            session.flush()
+            session.add(
+                PlayerFriendCode(
+                    player_id=other_player.player_id,
+                    friend_code="9999-8888-7777",
+                )
+            )
+            session.flush()
+            with self.assertRaisesRegex(ValueError, "format"):
+                alias_management.add_player_friend_code(
+                    session,
+                    self.player_id,
+                    {"friend_code": "999988887777"},
+                )
+            with self.assertRaisesRegex(ValueError, f"player ID {other_player.player_id}"):
+                alias_management.add_player_friend_code(
+                    session,
+                    self.player_id,
+                    {"friend_code": "9999-8888-7777"},
+                )
+
+    def test_friend_code_routes_add_remove_and_audit(self):
+        with self.SessionLocal.begin() as session:
+            admin = AdminUser(
+                email="owner@example.com",
+                normalized_email="owner@example.com",
+                role="owner",
+                status="active",
+            )
+            session.add(admin)
+
+        headers = {"X-Dev-Admin-Email": "owner@example.com"}
+        with (
+            patch.dict(os.environ, {"APP_ENV": "test", "ALLOW_DEV_AUTH": "true"}),
+            patch("admin_auth.SessionLocal", self.SessionLocal),
+            patch("routes.admin.stats.SessionLocal", self.SessionLocal),
+            app.test_client() as client,
+        ):
+            added = client.post(
+                f"/api/admin/aliases/players/{self.player_id}/friend-codes",
+                json={"friend_code": "1111-2222-3333"},
+                headers=headers,
+            )
+            self.assertEqual(added.status_code, 201, added.get_json())
+            friend_code = next(
+                code
+                for code in added.get_json()["friend_codes"]
+                if code["value"] == "1111-2222-3333"
+            )
+            removed = client.delete(
+                f"/api/admin/aliases/players/{self.player_id}/friend-codes/{friend_code['id']}",
+                headers=headers,
+            )
+            self.assertEqual(removed.status_code, 200, removed.get_json())
+            self.assertFalse(
+                any(
+                    code["value"] == "1111-2222-3333" for code in removed.get_json()["friend_codes"]
+                )
+            )
+
+        with self.SessionLocal() as session:
+            actions = {audit.action for audit in session.query(AdminAuditLog).all()}
+            self.assertIn("player.friend_code_added", actions)
+            self.assertIn("player.friend_code_deleted", actions)
 
     def test_track_alias_can_be_added_and_removed(self):
         with self.SessionLocal.begin() as session:
@@ -327,6 +443,222 @@ class AliasManagementTests(unittest.TestCase):
         with self.SessionLocal() as session:
             audit = session.scalar(
                 session.query(AdminAuditLog).where(AdminAuditLog.action == "track.merged").statement
+            )
+            self.assertIsNotNone(audit)
+
+    def test_player_merge_moves_identity_and_historical_records(self):
+        with self.SessionLocal.begin() as session:
+            destination = Player(canonical_name="JuneMKC", primary_friend_code="1111-2222-3333")
+            session.add(destination)
+            session.flush()
+            destination_id = destination.player_id
+            session.add_all(
+                (
+                    PlayerFriendCode(player_id=self.player_id, friend_code="5031-1216-1890"),
+                    PlayerFriendCode(player_id=destination_id, friend_code="1111-2222-3333"),
+                    PlayerAlias(
+                        player_id=self.player_id,
+                        alias_type="mkc_name",
+                        alias_value="JuneMKC",
+                    ),
+                    PlayerAlias(
+                        player_id=destination_id,
+                        alias_type="mkc_name",
+                        alias_value="JuneMKC",
+                    ),
+                    PlayerAlias(
+                        player_id=self.player_id,
+                        alias_type="table_name",
+                        alias_value="June old",
+                    ),
+                )
+            )
+            team_entry = TeamSeasonEntry(
+                team_id=self.team_id,
+                season_id=self.season_id,
+                division_id=self.division_id,
+                display_name="Cosmic Speed",
+                clan_tag="CS",
+            )
+            session.add(team_entry)
+            session.flush()
+            source_entry = PlayerSeasonEntry(
+                player_id=self.player_id,
+                team_season_entry_id=team_entry.team_season_entry_id,
+                season_id=self.season_id,
+                division_id=self.division_id,
+                primary_lounge_name="June",
+            )
+            target_entry = PlayerSeasonEntry(
+                player_id=destination_id,
+                team_season_entry_id=team_entry.team_season_entry_id,
+                season_id=self.season_id,
+                division_id=self.division_id,
+                primary_mii_name="JUNE",
+            )
+            session.add_all((source_entry, target_entry))
+            session.flush()
+            source_entry_id = source_entry.player_season_entry_id
+            target_entry_id = target_entry.player_season_entry_id
+            match_team = MatchTeam(
+                match_id=self.match_id,
+                team_season_entry_id=team_entry.team_season_entry_id,
+                raw_team_key="CS",
+            )
+            session.add(match_team)
+            session.flush()
+            match_player = MatchPlayer(
+                match_team_id=match_team.match_team_id,
+                player_id=self.player_id,
+                player_season_entry_id=source_entry_id,
+                friend_code_raw="5031-1216-1890",
+            )
+            session.add(match_player)
+            session.flush()
+            result = RacePlayerResult(
+                race_id=self.race_id,
+                match_player_id=match_player.match_player_id,
+                player_id=self.player_id,
+                match_team_id=match_team.match_team_id,
+                team_season_entry_id=team_entry.team_season_entry_id,
+            )
+            session.add(result)
+            session.flush()
+            match_player_id = match_player.match_player_id
+            result_id = result.race_player_result_id
+
+            comparison = alias_management.player_merge_comparison(
+                session, self.player_id, destination_id
+            )
+            self.assertEqual(comparison["source"]["canonical_name"], "June")
+            self.assertEqual(comparison["target"]["canonical_name"], "JuneMKC")
+            self.assertEqual(comparison["impact"]["race_results"], 1)
+            self.assertEqual(comparison["blockers"], [])
+
+            merged = alias_management.merge_player(
+                session, self.player_id, {"target_player_id": destination_id}
+            )
+
+            self.assertIsNone(session.get(Player, self.player_id))
+            self.assertEqual(session.get(MatchPlayer, match_player_id).player_id, destination_id)
+            self.assertEqual(
+                session.get(MatchPlayer, match_player_id).player_season_entry_id,
+                target_entry_id,
+            )
+            self.assertEqual(session.get(RacePlayerResult, result_id).player_id, destination_id)
+            self.assertIsNone(session.get(PlayerSeasonEntry, source_entry_id))
+            self.assertEqual(merged["season_entries_consolidated"], 1)
+            self.assertEqual(merged["aliases_consolidated"], 1)
+            destination_codes = session.scalars(
+                session.query(PlayerFriendCode)
+                .where(PlayerFriendCode.player_id == destination_id)
+                .statement
+            ).all()
+            self.assertEqual(
+                {code.friend_code for code in destination_codes},
+                {"5031-1216-1890", "1111-2222-3333"},
+            )
+            destination_aliases = session.scalars(
+                session.query(PlayerAlias).where(PlayerAlias.player_id == destination_id).statement
+            ).all()
+            self.assertEqual(
+                {(alias.alias_type, alias.alias_value) for alias in destination_aliases},
+                {
+                    ("mkc_name", "JuneMKC"),
+                    ("table_name", "June old"),
+                    ("canonical_name", "June"),
+                },
+            )
+
+    def test_player_merge_is_blocked_when_both_records_appear_in_one_match(self):
+        with self.SessionLocal.begin() as session:
+            destination = Player(canonical_name="Other")
+            team_entry = TeamSeasonEntry(
+                team_id=self.team_id,
+                season_id=self.season_id,
+                division_id=self.division_id,
+                display_name="Cosmic Speed",
+                clan_tag="CS",
+            )
+            session.add_all((destination, team_entry))
+            session.flush()
+            match_team = MatchTeam(
+                match_id=self.match_id,
+                team_season_entry_id=team_entry.team_season_entry_id,
+                raw_team_key="CS",
+            )
+            session.add(match_team)
+            session.flush()
+            session.add_all(
+                (
+                    MatchPlayer(
+                        match_team_id=match_team.match_team_id,
+                        player_id=self.player_id,
+                        friend_code_raw="5031-1216-1890",
+                    ),
+                    MatchPlayer(
+                        match_team_id=match_team.match_team_id,
+                        player_id=destination.player_id,
+                        friend_code_raw="1111-2222-3333",
+                    ),
+                )
+            )
+            session.flush()
+
+            comparison = alias_management.player_merge_comparison(
+                session, self.player_id, destination.player_id
+            )
+            self.assertEqual(comparison["overlapping_matches"][0]["id"], self.match_id)
+            self.assertTrue(comparison["blockers"])
+            with self.assertRaisesRegex(ValueError, "same match"):
+                alias_management.merge_player(
+                    session,
+                    self.player_id,
+                    {"target_player_id": destination.player_id},
+                )
+
+    def test_player_merge_review_and_confirmation_routes_are_audited(self):
+        with self.SessionLocal.begin() as session:
+            destination = Player(canonical_name="JuneMKC")
+            admin = AdminUser(
+                email="owner@example.com",
+                normalized_email="owner@example.com",
+                role="owner",
+                status="active",
+            )
+            session.add_all((destination, admin))
+            session.flush()
+            destination_id = destination.player_id
+
+        headers = {"X-Dev-Admin-Email": "owner@example.com"}
+        with (
+            patch.dict(os.environ, {"APP_ENV": "test", "ALLOW_DEV_AUTH": "true"}),
+            patch("admin_auth.SessionLocal", self.SessionLocal),
+            patch("routes.admin.stats.SessionLocal", self.SessionLocal),
+            app.test_client() as client,
+        ):
+            comparison = client.get(
+                f"/api/admin/aliases/players/{self.player_id}/merge-comparison",
+                query_string={"target_player_id": destination_id},
+                headers=headers,
+            )
+            self.assertEqual(comparison.status_code, 200, comparison.get_json())
+            self.assertEqual(comparison.get_json()["target"]["id"], destination_id)
+
+            response = client.post(
+                f"/api/admin/aliases/players/{self.player_id}/merge",
+                json={"target_player_id": destination_id},
+                headers=headers,
+            )
+            self.assertEqual(response.status_code, 200, response.get_json())
+            self.assertEqual(response.get_json()["target"]["id"], destination_id)
+
+        with self.SessionLocal() as session:
+            self.assertIsNone(session.get(Player, self.player_id))
+            audit = session.scalar(
+                session.query(AdminAuditLog)
+                .where(AdminAuditLog.action == "player.merged")
+                .statement
             )
             self.assertIsNotNone(audit)
 
