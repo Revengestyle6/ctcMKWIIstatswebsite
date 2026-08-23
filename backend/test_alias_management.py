@@ -448,20 +448,14 @@ class AliasManagementTests(unittest.TestCase):
 
     def test_player_merge_moves_identity_and_historical_records(self):
         with self.SessionLocal.begin() as session:
-            destination = Player(
-                canonical_name="JuneMKC", primary_friend_code="1111-2222-3333"
-            )
+            destination = Player(canonical_name="JuneMKC", primary_friend_code="1111-2222-3333")
             session.add(destination)
             session.flush()
             destination_id = destination.player_id
             session.add_all(
                 (
-                    PlayerFriendCode(
-                        player_id=self.player_id, friend_code="5031-1216-1890"
-                    ),
-                    PlayerFriendCode(
-                        player_id=destination_id, friend_code="1111-2222-3333"
-                    ),
+                    PlayerFriendCode(player_id=self.player_id, friend_code="5031-1216-1890"),
+                    PlayerFriendCode(player_id=destination_id, friend_code="1111-2222-3333"),
                     PlayerAlias(
                         player_id=self.player_id,
                         alias_type="mkc_name",
@@ -551,9 +545,7 @@ class AliasManagementTests(unittest.TestCase):
                 session.get(MatchPlayer, match_player_id).player_season_entry_id,
                 target_entry_id,
             )
-            self.assertEqual(
-                session.get(RacePlayerResult, result_id).player_id, destination_id
-            )
+            self.assertEqual(session.get(RacePlayerResult, result_id).player_id, destination_id)
             self.assertIsNone(session.get(PlayerSeasonEntry, source_entry_id))
             self.assertEqual(merged["season_entries_consolidated"], 1)
             self.assertEqual(merged["aliases_consolidated"], 1)
@@ -567,9 +559,7 @@ class AliasManagementTests(unittest.TestCase):
                 {"5031-1216-1890", "1111-2222-3333"},
             )
             destination_aliases = session.scalars(
-                session.query(PlayerAlias)
-                .where(PlayerAlias.player_id == destination_id)
-                .statement
+                session.query(PlayerAlias).where(PlayerAlias.player_id == destination_id).statement
             ).all()
             self.assertEqual(
                 {(alias.alias_type, alias.alias_value) for alias in destination_aliases},

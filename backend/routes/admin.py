@@ -251,9 +251,7 @@ def api_player_merge(player_id):
                     "aliases_moved": result["aliases_moved"],
                     "aliases_consolidated": result["aliases_consolidated"],
                     "season_entries_moved": result["season_entries_moved"],
-                    "season_entries_consolidated": result[
-                        "season_entries_consolidated"
-                    ],
+                    "season_entries_consolidated": result["season_entries_consolidated"],
                     "match_players_updated": result["match_players_updated"],
                     "race_results_updated": result["race_results_updated"],
                 },

@@ -390,9 +390,7 @@ def _player_match_ids(session, player_id):
 def _player_merge_state(session, source_player_id, target_player_id, *, lock=False):
     if source_player_id == target_player_id:
         raise ValueError("A player cannot be merged into itself.")
-    statement = select(Player).where(
-        Player.player_id.in_([source_player_id, target_player_id])
-    )
+    statement = select(Player).where(Player.player_id.in_([source_player_id, target_player_id]))
     if lock:
         statement = statement.with_for_update()
     players = session.scalars(statement).all()
@@ -405,8 +403,7 @@ def _player_merge_state(session, source_player_id, target_player_id, *, lock=Fal
         raise LookupError("Destination player was not found.")
 
     overlapping_match_ids = sorted(
-        _player_match_ids(session, source_player_id)
-        & _player_match_ids(session, target_player_id)
+        _player_match_ids(session, source_player_id) & _player_match_ids(session, target_player_id)
     )
     overlapping_matches = []
     if overlapping_match_ids:
@@ -427,9 +424,12 @@ def player_merge_comparison(session, source_player_id, target_player_id):
     )
 
     def count(model, player_id):
-        return session.scalar(
-            select(func.count()).select_from(model).where(model.player_id == player_id)
-        ) or 0
+        return (
+            session.scalar(
+                select(func.count()).select_from(model).where(model.player_id == player_id)
+            )
+            or 0
+        )
 
     source_team_entry_ids = set(
         session.scalars(
@@ -462,9 +462,7 @@ def player_merge_comparison(session, source_player_id, target_player_id):
             "friend_codes": count(PlayerFriendCode, source_player_id),
             "aliases": count(PlayerAlias, source_player_id),
             "season_entries": count(PlayerSeasonEntry, source_player_id),
-            "overlapping_season_entries": len(
-                source_team_entry_ids & target_team_entry_ids
-            ),
+            "overlapping_season_entries": len(source_team_entry_ids & target_team_entry_ids),
             "match_players": count(MatchPlayer, source_player_id),
             "race_results": count(RacePlayerResult, source_player_id),
         },
@@ -534,9 +532,7 @@ def merge_player(session, source_player_id, payload):
         )
         aliases_moved += int(created)
     target_mkc_name = latest_mkc_name(session, target.player_id)
-    if not target_mkc_name or not apply_shared_mkc_name_priorities(
-        session, target_mkc_name
-    ):
+    if not target_mkc_name or not apply_shared_mkc_name_priorities(session, target_mkc_name):
         apply_canonical_priority(session, target)
     session.flush()
 
@@ -590,9 +586,7 @@ def merge_player(session, source_player_id, payload):
             .where(MatchPlayer.player_season_entry_id == entry.player_season_entry_id)
             .values(player_season_entry_id=existing.player_season_entry_id)
         )
-        existing.primary_lounge_name = (
-            existing.primary_lounge_name or entry.primary_lounge_name
-        )
+        existing.primary_lounge_name = existing.primary_lounge_name or entry.primary_lounge_name
         existing.primary_mii_name = existing.primary_mii_name or entry.primary_mii_name
         existing.flag = existing.flag or entry.flag
         existing.first_seen_match_id = _minimum_optional(

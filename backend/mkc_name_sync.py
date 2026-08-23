@@ -137,9 +137,7 @@ def _decorate_shared_mkc_names(session, results: list[dict]) -> None:
         if result["canonical_name_override"] or not result.get("lounge_name"):
             continue
         result["proposed_canonical_name"] = result["lounge_name"]
-        result["canonical_will_change"] = (
-            result["lounge_name"] != result["canonical_name"]
-        )
+        result["canonical_will_change"] = result["lounge_name"] != result["canonical_name"]
 
 
 def _lookup_player(snapshot: dict) -> dict:
@@ -297,8 +295,7 @@ def apply_refresh_preview(
 
     applied_aliases = 0
     canonical_names_before = {
-        player.player_id: player.canonical_name
-        for player in session.scalars(select(Player)).all()
+        player.player_id: player.canonical_name for player in session.scalars(select(Player)).all()
     }
     applied_selections = {}
     refreshed_mkc_names = set()

@@ -313,17 +313,13 @@ class MkcPlayerNameTests(unittest.TestCase):
 
         with self.SessionLocal() as session:
             self.assertEqual(session.get(Player, self.player_id).canonical_name, "First Lounge")
-            self.assertEqual(
-                session.get(Player, second_player_id).canonical_name, "Second Lounge"
-            )
+            self.assertEqual(session.get(Player, second_player_id).canonical_name, "Second Lounge")
             ids = session.execute(
                 session.query(PlayerAlias.player_id, PlayerAlias.alias_value)
                 .where(PlayerAlias.alias_type == "mkc_id")
                 .statement
             ).all()
-            self.assertEqual(
-                set(ids), {(self.player_id, "42"), (second_player_id, "43")}
-            )
+            self.assertEqual(set(ids), {(self.player_id, "42"), (second_player_id, "43")})
 
 
 class MkcRegistryResponseTests(unittest.TestCase):

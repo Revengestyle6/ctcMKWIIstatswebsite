@@ -492,9 +492,7 @@ def get_or_create_player(
     if mkc_name:
         add_player_alias(session, player.player_id, MKC_ALIAS_TYPE, mkc_name)
     if mkc_player_id is not None:
-        add_player_alias(
-            session, player.player_id, MKC_ID_ALIAS_TYPE, str(mkc_player_id)
-        )
+        add_player_alias(session, player.player_id, MKC_ID_ALIAS_TYPE, str(mkc_player_id))
     session.flush()
     return player
 
