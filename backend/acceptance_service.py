@@ -15,7 +15,7 @@ from match_upload import (
     validate_committable_match,
 )
 from models import Match, ReviewSubmission, SourceFile
-from routes.common import duplicate_commit_response, unapproved_entries
+from routes.common import duplicate_commit_response, mkc_profiles_from_entries, unapproved_entries
 from sqlalchemy import select
 
 
@@ -118,6 +118,7 @@ def accept_match(
             approved_keys,
             requested_player_identity_links,
             requested_team_identity_resolutions,
+            lookup_mkc_profiles=True,
         )
         if unapproved:
             raise ValueError("Every new database entry must be approved before acceptance.")
@@ -183,6 +184,7 @@ def accept_match(
             file_sha256=document.fingerprint,
             player_identity_links=player_identity_links,
             team_identity_links=team_identity_links,
+            player_mkc_profiles=mkc_profiles_from_entries(new_entries),
             source_metadata={
                 "storage_provider": storage.provider,
                 "storage_object_key": accepted_key,

@@ -9,3 +9,4 @@ psycopg[binary]==3.3.4
 google-auth==2.56.0
 google-cloud-storage==3.13.0
 Pillow==11.3.0
+requests>=2.32,<3.0

@@ -3,6 +3,7 @@ import uuid
 
 import alias_management
 import database_health as database_health_service
+import mkc_name_sync
 import stats_db as stats
 import team_identity_management
 import team_logo_management
@@ -24,6 +25,7 @@ from sqlalchemy import select
 from routes.common import (
     error_response,
     match_request_payload,
+    mkc_profiles_from_entries,
     player_identity_links_from_payload,
     team_identity_resolutions_from_payload,
     unapproved_entries,
@@ -140,6 +142,196 @@ def api_player_canonical_name_update(player_id):
             )
         cache.clear()
         return jsonify(detail)
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.patch("/api/admin/aliases/players/<int:player_id>/canonical-name-override")
+@require_admin
+def api_player_canonical_name_override_update(player_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, previous = alias_management.update_player_canonical_override(
+                session, player_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "player.canonical_name_override_updated",
+                target_type="player",
+                target_id=player_id,
+                details={
+                    "previous": previous,
+                    "enabled": detail["canonical_name_override"],
+                    "canonical_name": detail["canonical_name"],
+                },
+            )
+        cache.clear()
+        return jsonify(detail)
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.post("/api/admin/aliases/players/<int:player_id>/friend-codes")
+@require_admin
+def api_player_friend_code_add(player_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, friend_code = alias_management.add_player_friend_code(
+                session, player_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "player.friend_code_added",
+                target_type="player_friend_code",
+                target_id=friend_code.player_friend_code_id,
+                details={"player_id": player_id, "friend_code": friend_code.friend_code},
+            )
+        cache.clear()
+        return jsonify(detail), 201
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.delete("/api/admin/aliases/players/<int:player_id>/friend-codes/<int:friend_code_id>")
+@require_admin
+def api_player_friend_code_delete(player_id, friend_code_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, deleted = alias_management.delete_player_friend_code(
+                session, player_id, friend_code_id
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "player.friend_code_deleted",
+                target_type="player_friend_code",
+                target_id=friend_code_id,
+                details={"player_id": player_id, **deleted},
+            )
+        cache.clear()
+        return jsonify(detail)
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.get("/api/admin/aliases/players/<int:player_id>/merge-comparison")
+@require_admin
+def api_player_merge_comparison(player_id):
+    try:
+        target_player_id = int(request.args.get("target_player_id", ""))
+        with stats.SessionLocal() as session:
+            comparison = alias_management.player_merge_comparison(
+                session, player_id, target_player_id
+            )
+        return jsonify(comparison)
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.post("/api/admin/aliases/players/<int:player_id>/merge")
+@require_admin
+def api_player_merge(player_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            result = alias_management.merge_player(
+                session, player_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "player.merged",
+                target_type="player",
+                target_id=result["target"]["id"],
+                details={
+                    "source_player": result["merged"],
+                    "target_player_id": result["target"]["id"],
+                    "friend_codes_moved": result["friend_codes_moved"],
+                    "aliases_moved": result["aliases_moved"],
+                    "aliases_consolidated": result["aliases_consolidated"],
+                    "season_entries_moved": result["season_entries_moved"],
+                    "season_entries_consolidated": result[
+                        "season_entries_consolidated"
+                    ],
+                    "match_players_updated": result["match_players_updated"],
+                    "race_results_updated": result["race_results_updated"],
+                },
+            )
+        cache.clear()
+        return jsonify(result)
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.post("/api/admin/mkc-refresh-previews")
+@require_admin
+def api_mkc_refresh_preview_create():
+    try:
+        payload = request.get_json(silent=True) or {}
+        player_id = payload.get("player_id")
+        if player_id is not None:
+            player_id = int(player_id)
+        with stats.SessionLocal.begin() as session:
+            preview = mkc_name_sync.create_refresh_preview(session, g.admin_actor, player_id)
+            record_audit(
+                session,
+                g.admin_actor,
+                "mkc.refresh_preview_created",
+                target_type="mkc_refresh_preview",
+                target_id=preview["preview_id"],
+                details={
+                    "scope": preview["scope"],
+                    "player_id": player_id,
+                    "summary": preview["summary"],
+                },
+            )
+        return jsonify(preview), 201
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.post("/api/admin/mkc-refresh-previews/<preview_id>/apply")
+@require_admin
+def api_mkc_refresh_preview_apply(preview_id):
+    try:
+        payload = request.get_json(silent=True) or {}
+        with stats.SessionLocal.begin() as session:
+            preview = mkc_name_sync.apply_refresh_preview(
+                session,
+                preview_id,
+                g.admin_actor,
+                payload.get("canonical_name_selections"),
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "mkc.refresh_applied",
+                target_type="mkc_refresh_preview",
+                target_id=preview_id,
+                details={"summary": preview["summary"], "applied": preview["applied"]},
+            )
+        cache.clear()
+        return jsonify(preview)
+    except Exception as error:
+        return _alias_error(error)
+
+
+@admin_api.post("/api/admin/mkc-refresh-previews/<preview_id>/reject")
+@require_admin
+def api_mkc_refresh_preview_reject(preview_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            preview = mkc_name_sync.reject_refresh_preview(session, preview_id)
+            record_audit(
+                session,
+                g.admin_actor,
+                "mkc.refresh_rejected",
+                target_type="mkc_refresh_preview",
+                target_id=preview_id,
+                details={"summary": preview["summary"]},
+            )
+        return jsonify(preview)
     except Exception as error:
         return _alias_error(error)
 
@@ -420,6 +612,7 @@ def api_match_preview():
             approved_keys,
             player_identity_links_from_payload(payload),
             team_identity_resolutions_from_payload(payload),
+            lookup_mkc_profiles=True,
         )
         if unapproved:
             transaction.rollback()
@@ -434,6 +627,7 @@ def api_match_preview():
             match_data,
             player_identity_links,
             team_identity_links,
+            mkc_profiles_from_entries(new_entries),
         )
         session.flush()
         detail = stats.get_match_detail(match.match_id, session=session)
@@ -473,6 +667,7 @@ def api_match_new_entries():
                         match_data,
                         player_identity_links=player_identity_links_from_payload(payload),
                         team_identity_resolutions=team_identity_resolutions_from_payload(payload),
+                        lookup_mkc_profiles=True,
                     )
                 }
             )

@@ -101,12 +101,14 @@ def unapproved_entries(
     approved_keys,
     requested_player_identity_links=None,
     requested_team_identity_resolutions=None,
+    lookup_mkc_profiles=False,
 ):
     new_entries = detect_new_entries(
         session,
         match_data,
         player_identity_links=requested_player_identity_links,
         team_identity_resolutions=requested_team_identity_resolutions,
+        lookup_mkc_profiles=lookup_mkc_profiles,
     )
     unapproved = [
         entry
@@ -151,6 +153,22 @@ def unapproved_entries(
             )
         configured_players[player_id] = friend_code
     return new_entries, unapproved, player_identity_links, team_identity_links
+
+
+def mkc_profiles_from_entries(new_entries):
+    return {
+        entry["friend_code"]: {
+            "status": "found",
+            "mkc_name": entry["mkc_name"],
+            "mkc_player_id": entry.get("mkc_player_id"),
+        }
+        for entry in new_entries
+        if entry.get("type") == "player"
+        and entry.get("kind") == "new_player_identity"
+        and entry.get("mkc_lookup_status") == "found"
+        and entry.get("friend_code")
+        and entry.get("mkc_name")
+    }
 
 
 def duplicate_commit_response(session, source_file, fingerprint):

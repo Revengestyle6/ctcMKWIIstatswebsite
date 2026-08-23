@@ -143,10 +143,21 @@ threshold. Results are warnings only and must be reviewed manually.
 
 #### Players
 
+- player records with no `mkc_name` alias (critical and non-dismissible);
+- the same normalized `mkc_name` alias attached to multiple player IDs (warning
+  and dismissible, because MKCentral names are not unique);
+- the same `mkc_id` alias attached to multiple player IDs (critical and
+  non-dismissible);
 - duplicate normalized canonical names; and
 - aliases of the same type and value that map to multiple player IDs within the
   same season/division. Findings identify whether the collision is a Mii name,
   lounge name, table name, or another stored alias type.
+
+A missing MKCentral name is repaired through Alias Management: manually locate the
+player's MKCentral profile, add a friend code associated with that profile to the
+player, and run the individual MKCentral refresh. A shared MKCentral name requires
+review but can be legitimate when the records have different MKCentral IDs. A
+shared MKCentral ID indicates duplicate local identities that should be merged.
 
 Collision scope comes from the raw alias on each `match_players` appearance and
 the season/division of that actual match. Global `player_aliases` records are
@@ -197,6 +208,9 @@ Recommended handling by finding type:
 | Inferred-role mismatch | Check explicit role, placement, and `role_source`. | Correct source role data or rerun the role repair/import. It cannot be dismissed. |
 | Similar tracks | Compare full names, console prefix, course number, aliases, and race history. | Register an alias/rename a typo, or dismiss that exact pair if both are real tracks. |
 | Duplicate canonical player | Compare friend codes, aliases, seasons, teams, and match history. | Merge identities through the reviewed identity workflow, or dismiss if distinct people legitimately share a name. |
+| Missing MKCentral player name | Find the player's MKCentral profile and verify one of its MKW friend codes. | Add that friend code to the player in Alias Management, then run the individual MKCentral refresh. It cannot be dismissed. |
+| Shared MKCentral player name | Compare the affected players and confirm that their MKCentral IDs differ. | Keep and dismiss the warning when legitimate; otherwise correct the friend-code assignment or merge the duplicate. Automatic canonical names fall back to lounge names while shared. |
+| Shared MKCentral player ID | Compare both complete player records. | Merge the duplicate local player into the correct destination. It cannot be dismissed. |
 | Player alias collision | Check friend codes and whether the Mii/display name was reused in the same season/division. | Correct identity mapping, or dismiss that scoped collision with a reason. |
 | Archive mismatch | Compare `source_files.source_path` and SHA-256 with the file on disk. | Restore the expected file or re-import the intended archive content. It cannot be dismissed. |
 

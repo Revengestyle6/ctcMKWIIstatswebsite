@@ -680,7 +680,19 @@ export default function MatchJsonEditor(): React.JSX.Element {
             result.results.length === 1
               ? { status: "confirmed", identity: result.results[0] }
               : result.results.length === 0
-                ? { status: "new", message: "Not found in database" }
+                ? {
+                    status: "new",
+                    message:
+                      result.mkc_lookup?.status === "found"
+                        ? `Not found in the database; MKCentral profile: ${result.mkc_lookup.mkc_name}`
+                        : result.mkc_lookup?.status === "not_found"
+                          ? "Not found in the database or MKCentral"
+                          : result.mkc_lookup?.status === "lookup_failed"
+                            ? `Not found in the database; ${result.mkc_lookup.error ?? "MKCentral lookup failed"}`
+                            : result.mkc_lookup?.status === "ambiguous"
+                              ? `Not found in the database; ${result.mkc_lookup.error ?? "MKCentral returned multiple matches"}`
+                              : "Not found in database",
+                  }
                 : { status: "conflict", message: "Multiple matches" };
           setIdentityStates((current) => ({ ...current, [playerKey]: nextState }));
         })
@@ -2154,7 +2166,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                                     ? proposedPlayerEntry.kind === "existing_player_new_friend_code"
                                       ? `Approved for player ID ${proposedPlayerEntry.proposed_player_id}`
                                       : "Approved as a new player"
-                                    : "New friend code: approval required"}
+                                    : state.message || "New friend code: approval required"}
                                 </span>
                               )}
                               {state?.status === "conflict" && (

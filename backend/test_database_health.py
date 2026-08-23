@@ -22,6 +22,7 @@ from models import (
     MatchTeam,
     Player,
     PlayerAlias,
+    PlayerFriendCode,
     PlayerSeasonEntry,
     Season,
     SourceFile,
@@ -42,12 +43,29 @@ class DatabaseHealthTests(unittest.TestCase):
         self.database.close()
 
     def test_report_counts_records_and_surfaces_duplicate_catalog_names(self):
+        first_player = Player(canonical_name="Example")
+        second_player = Player(canonical_name=" example ")
         self.session.add_all(
             [
                 Track(canonical_name="Test Track"),
                 Track(canonical_name="Test-Track"),
-                Player(canonical_name="Example"),
-                Player(canonical_name=" example "),
+                first_player,
+                second_player,
+            ]
+        )
+        self.session.flush()
+        self.session.add_all(
+            [
+                PlayerAlias(
+                    player_id=first_player.player_id,
+                    alias_type="mkc_name",
+                    alias_value="MKC Example One",
+                ),
+                PlayerAlias(
+                    player_id=second_player.player_id,
+                    alias_type="mkc_name",
+                    alias_value="MKC Example Two",
+                ),
             ]
         )
         self.session.commit()
@@ -65,6 +83,113 @@ class DatabaseHealthTests(unittest.TestCase):
         self.assertIn("duplicate-track:ctc:testtrack", issue_keys)
         self.assertIn("duplicate-player-name:example", issue_keys)
         self.assertEqual(report["archive"]["status"], "skipped")
+
+    def test_player_without_mkc_name_is_a_critical_finding(self):
+        with_mkc = Player(canonical_name="Resolved")
+        missing_mkc = Player(canonical_name="Needs MKC")
+        self.session.add_all((with_mkc, missing_mkc))
+        self.session.flush()
+        self.session.add_all(
+            (
+                PlayerAlias(
+                    player_id=with_mkc.player_id,
+                    alias_type="mkc_name",
+                    alias_value="Resolved MKC",
+                ),
+                PlayerFriendCode(
+                    player_id=missing_mkc.player_id,
+                    friend_code="1111-1111-1111",
+                ),
+            )
+        )
+        self.session.commit()
+
+        report = build_database_health(self.session, include_archive=False)
+        issue = next(item for item in report["issues"] if item["key"] == "player-missing-mkc-name")
+
+        self.assertEqual(report["status"], "critical")
+        self.assertEqual(issue["severity"], "critical")
+        self.assertFalse(issue["dismissible"])
+        self.assertEqual(issue["count"], 1)
+        self.assertEqual(issue["entities"][0]["id"], missing_mkc.player_id)
+        self.assertEqual(issue["entities"][0]["value"], "1111-1111-1111")
+
+    def test_shared_mkc_name_is_a_dismissible_warning(self):
+        first_player = Player(canonical_name="First")
+        second_player = Player(canonical_name="Second")
+        self.session.add_all((first_player, second_player))
+        self.session.flush()
+        self.session.add_all(
+            (
+                PlayerAlias(
+                    player_id=first_player.player_id,
+                    alias_type="mkc_name",
+                    alias_value="Shared Name",
+                ),
+                PlayerAlias(
+                    player_id=second_player.player_id,
+                    alias_type="mkc_name",
+                    alias_value="  shared   name ",
+                ),
+            )
+        )
+        self.session.commit()
+
+        report = build_database_health(self.session, include_archive=False)
+        issue = next(item for item in report["issues"] if item["key"] == "duplicate-mkc-name")
+
+        self.assertEqual(report["status"], "warning")
+        self.assertEqual(issue["severity"], "warning")
+        self.assertTrue(issue["dismissible"])
+        self.assertEqual(issue["count"], 2)
+        self.assertEqual(
+            {entity["id"] for entity in issue["entities"]},
+            {first_player.player_id, second_player.player_id},
+        )
+
+    def test_shared_mkc_id_is_a_critical_finding(self):
+        first_player = Player(canonical_name="First")
+        second_player = Player(canonical_name="Second")
+        self.session.add_all((first_player, second_player))
+        self.session.flush()
+        self.session.add_all(
+            (
+                PlayerAlias(
+                    player_id=first_player.player_id,
+                    alias_type="mkc_name",
+                    alias_value="First MKC",
+                ),
+                PlayerAlias(
+                    player_id=second_player.player_id,
+                    alias_type="mkc_name",
+                    alias_value="Second MKC",
+                ),
+                PlayerAlias(
+                    player_id=first_player.player_id,
+                    alias_type="mkc_id",
+                    alias_value="1461",
+                ),
+                PlayerAlias(
+                    player_id=second_player.player_id,
+                    alias_type="mkc_id",
+                    alias_value="1461",
+                ),
+            )
+        )
+        self.session.commit()
+
+        report = build_database_health(self.session, include_archive=False)
+        issue = next(item for item in report["issues"] if item["key"] == "duplicate-mkc-id")
+
+        self.assertEqual(report["status"], "critical")
+        self.assertEqual(issue["severity"], "critical")
+        self.assertFalse(issue["dismissible"])
+        self.assertEqual(issue["count"], 2)
+        self.assertEqual(
+            {entity["id"] for entity in issue["entities"]},
+            {first_player.player_id, second_player.player_id},
+        )
+        self.assertEqual({entity["value"] for entity in issue["entities"]}, {"MKCentral ID 1461"})
 
     def test_empty_database_is_healthy_when_archive_check_is_skipped(self):
         report = build_database_health(self.session, include_archive=False)

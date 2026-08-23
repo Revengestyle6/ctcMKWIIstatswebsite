@@ -23,6 +23,8 @@ type AliasItem = {
   value: string;
   first_seen_match_id?: number | null;
   last_seen_match_id?: number | null;
+  created_at?: string;
+  last_observed_at?: string;
 };
 type FriendCodeItem = {
   id: number | null;
@@ -58,6 +60,7 @@ type AliasDetail = {
   friend_codes: FriendCodeItem[];
   season_entries: PlayerSeasonEntryItem[];
   race_count?: number;
+  canonical_name_override?: boolean;
 };
 type TrackRenameResponse = {
   track: AliasDetail;
@@ -70,6 +73,65 @@ type TrackMergeResponse = {
   races_updated: number;
   aliases_moved: number;
 };
+type PlayerMergeComparison = {
+  source: AliasDetail;
+  target: AliasDetail;
+  impact: {
+    friend_codes: number;
+    aliases: number;
+    season_entries: number;
+    overlapping_season_entries: number;
+    match_players: number;
+    race_results: number;
+  };
+  overlapping_matches: Array<{ id: number; label: string }>;
+  blockers: string[];
+};
+type PlayerMergeResponse = {
+  target: AliasDetail;
+  merged: { id: number; canonical_name: string };
+  friend_codes_moved: number;
+  aliases_moved: number;
+  aliases_consolidated: number;
+  season_entries_moved: number;
+  season_entries_consolidated: number;
+  match_players_updated: number;
+  race_results_updated: number;
+};
+type MkcRefreshResult = {
+  player_id: number;
+  canonical_name: string | null;
+  canonical_name_override: boolean;
+  friend_codes: string[];
+  mkc_aliases: string[];
+  mkc_ids: string[];
+  lounge_name: string | null;
+  status: "found" | "not_found" | "lookup_failed" | "ambiguous" | "no_friend_codes";
+  change?: "new" | "updated" | "unchanged";
+  friend_code?: string;
+  mkc_player_id?: number;
+  mkc_name?: string;
+  canonical_name_options?: string[];
+  proposed_canonical_name?: string | null;
+  canonical_will_change?: boolean;
+  shared_mkc_name_player_ids?: number[];
+  attempts: Array<{ friend_code: string; status: string; error?: string }>;
+};
+type MkcRefreshPreview = {
+  preview_id: string;
+  scope: "bulk" | "individual";
+  player_id: number | null;
+  status: "pending" | "applied" | "rejected";
+  summary: Record<string, number>;
+  results: MkcRefreshResult[];
+  created_at: string;
+  expires_at: string;
+  applied?: {
+    aliases_created: number;
+    canonical_names_changed: number;
+    canonical_name_selections: Record<string, string>;
+  };
+};
 
 const entityLabels: Record<EntityType, string> = {
   players: "Players",
@@ -80,6 +142,9 @@ const aliasTypeLabels: Record<string, string> = {
   lounge_name: "Lounge names",
   table_name: "Table names",
   mii_name: "Mii names",
+  mkc_name: "MKCentral names",
+  mkc_id: "MKCentral IDs",
+  canonical_name: "Previous canonical names",
   friend_codes: "Friend codes",
   season_entries: "Season entries",
   alias: "Aliases",
@@ -88,6 +153,9 @@ const aliasTypeSingularLabels: Record<string, string> = {
   lounge_name: "lounge name",
   table_name: "table name",
   mii_name: "Mii name",
+  mkc_name: "MKCentral name",
+  mkc_id: "MKCentral ID",
+  canonical_name: "previous canonical name",
   alias: "alias",
 };
 
@@ -99,6 +167,96 @@ function aliasTypeSingularLabel(value: string): string {
   return aliasTypeSingularLabels[value] ?? value.replaceAll("_", " ");
 }
 
+function PlayerComparisonCard({
+  detail,
+  disposition,
+}: {
+  detail: AliasDetail;
+  disposition: "removed" | "kept";
+}): React.JSX.Element {
+  return (
+    <article className="rounded border border-white/15 bg-black/35 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+            {disposition === "removed" ? "Source record" : "Destination record"}
+          </p>
+          <h3 className="mt-1 text-xl font-bold text-white">{detail.label}</h3>
+          <p className="text-xs text-gray-400">Player ID {detail.id}</p>
+        </div>
+        <span
+          className={`rounded px-2 py-1 text-xs font-bold ${
+            disposition === "removed"
+              ? "bg-red-500/20 text-red-200"
+              : "bg-emerald-500/20 text-emerald-200"
+          }`}
+        >
+          {disposition === "removed" ? "Will be removed" : "Will remain"}
+        </span>
+      </div>
+      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-xs uppercase text-gray-500">Canonical name</dt>
+          <dd>{detail.canonical_name ?? "Not set"}</dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase text-gray-500">Manual override</dt>
+          <dd>{detail.canonical_name_override ? "Enabled" : "Disabled"}</dd>
+        </div>
+      </dl>
+      <div className="mt-4">
+        <h4 className="text-xs font-bold uppercase text-gray-400">
+          Friend codes ({detail.friend_codes.length})
+        </h4>
+        <p className="mt-1 text-sm text-gray-200">
+          {detail.friend_codes.length
+            ? detail.friend_codes
+                .map((friendCode) =>
+                  friendCode.is_primary ? `${friendCode.value} (primary)` : friendCode.value
+                )
+                .join(", ")
+            : "None recorded"}
+        </p>
+      </div>
+      <div className="mt-4">
+        <h4 className="text-xs font-bold uppercase text-gray-400">
+          Aliases ({detail.aliases.length})
+        </h4>
+        <ul className="mt-1 space-y-1 text-sm text-gray-200">
+          {detail.aliases.length ? (
+            detail.aliases.map((alias) => (
+              <li key={alias.id}>
+                <span className="text-gray-500">{aliasTypeLabel(alias.type)}:</span> {alias.value}
+              </li>
+            ))
+          ) : (
+            <li>None recorded</li>
+          )}
+        </ul>
+      </div>
+      <div className="mt-4">
+        <h4 className="text-xs font-bold uppercase text-gray-400">
+          Season entries ({detail.season_entries.length})
+        </h4>
+        <ul className="mt-1 space-y-1 text-sm text-gray-200">
+          {detail.season_entries.length ? (
+            detail.season_entries.map((entry) => (
+              <li key={entry.id}>
+                {entry.league.toUpperCase()} {entry.season.toUpperCase()}{" "}
+                {entry.division.toUpperCase()}
+                {" · "}
+                {entry.team.clan_tag} — {entry.team.display_name}
+              </li>
+            ))
+          ) : (
+            <li>None recorded</li>
+          )}
+        </ul>
+      </div>
+    </article>
+  );
+}
+
 export default function AdminAliasManagementPage(): React.JSX.Element {
   const auth = useAdminSession();
   const { league } = useLeague();
@@ -107,15 +265,23 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
   const [query, setQuery] = useState("");
   const [entities, setEntities] = useState<AliasEntity[]>([]);
   const [trackCandidates, setTrackCandidates] = useState<AliasEntity[]>([]);
+  const [playerCandidates, setPlayerCandidates] = useState<AliasEntity[]>([]);
   const [selected, setSelected] = useState<AliasDetail | null>(null);
   const [canonicalName, setCanonicalName] = useState("");
   const [mergeTargetId, setMergeTargetId] = useState("");
+  const [playerMergeTargetId, setPlayerMergeTargetId] = useState("");
+  const [playerMergeReview, setPlayerMergeReview] = useState<PlayerMergeComparison | null>(null);
+  const [playerMergeLoading, setPlayerMergeLoading] = useState(false);
   const [aliasType, setAliasType] = useState("alias");
   const [newAlias, setNewAlias] = useState("");
+  const [newFriendCode, setNewFriendCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [mkcLoading, setMkcLoading] = useState(false);
+  const [mkcPreview, setMkcPreview] = useState<MkcRefreshPreview | null>(null);
+  const [mkcCanonicalSelections, setMkcCanonicalSelections] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (!auth.session?.authenticated) return;
@@ -165,6 +331,22 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
   }, [auth.session?.authenticated, entityType, trackLeague]);
 
   useEffect(() => {
+    if (!auth.session?.authenticated || entityType !== "players") return;
+    let cancelled = false;
+    fetchJson<AliasEntity[]>("/api/admin/aliases/players", { limit: 500 })
+      .then((response) => {
+        if (!cancelled) setPlayerCandidates(response);
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled)
+          setError(caught instanceof Error ? caught.message : "Could not load player choices.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.session?.authenticated, entityType]);
+
+  useEffect(() => {
     setTrackLeague(league);
     setSelected(null);
   }, [league]);
@@ -178,6 +360,27 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     [selected]
   );
   const isAliasTab = selected?.alias_types.includes(aliasType) ?? false;
+  const combinedMkcNameResults = useMemo(
+    () =>
+      mkcPreview?.results.filter(
+        (result) =>
+          result.status === "found" &&
+          !result.shared_mkc_name_player_ids?.length &&
+          (result.canonical_name_options?.length ?? 0) > 1
+      ) ?? [],
+    [mkcPreview]
+  );
+  const reviewedCanonicalChanges = useMemo(
+    () =>
+      mkcPreview?.results.filter(
+        (result) =>
+          result.status === "found" &&
+          !result.canonical_name_override &&
+          (mkcCanonicalSelections[result.player_id] ?? result.proposed_canonical_name) !==
+            result.canonical_name
+      ).length ?? 0,
+    [mkcCanonicalSelections, mkcPreview]
+  );
 
   const chooseType = (nextType: EntityType) => {
     setEntityType(nextType);
@@ -185,10 +388,13 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     setSelected(null);
     setCanonicalName("");
     setMergeTargetId("");
+    setPlayerMergeTargetId("");
+    setPlayerMergeReview(null);
     setAliasType(
       nextType === "players" ? "lounge_name" : nextType === "teams" ? "identity" : "alias"
     );
     setNewAlias("");
+    setNewFriendCode("");
     setError("");
     setNotice("");
   };
@@ -201,8 +407,11 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       setSelected(detail);
       setCanonicalName(detail.canonical_name ?? "");
       setMergeTargetId("");
+      setPlayerMergeTargetId("");
+      setPlayerMergeReview(null);
       setAliasType(entityType === "teams" ? "identity" : (detail.alias_types[0] ?? "alias"));
       setNewAlias("");
+      setNewFriendCode("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load aliases.");
     } finally {
@@ -231,6 +440,152 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     } finally {
       setSaving(false);
     }
+  };
+
+  const setCanonicalOverride = async (enabled: boolean) => {
+    if (!selected || entityType !== "players") return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const detail = await patchJson<AliasDetail>(
+        `/api/admin/aliases/players/${selected.id}/canonical-name-override`,
+        { enabled }
+      );
+      setSelected(detail);
+      setCanonicalName(detail.canonical_name ?? "");
+      setEntities((current) =>
+        current.map((entity) =>
+          entity.id === detail.id ? { ...entity, label: detail.label } : entity
+        )
+      );
+      setNotice(
+        enabled
+          ? "Canonical-name override enabled. MKCentral refreshes will preserve this name."
+          : "Canonical-name override disabled. Automatic name priority has been reapplied."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update name override.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const createMkcPreview = async (playerId?: number) => {
+    setMkcLoading(true);
+    setError("");
+    setNotice("");
+    try {
+      const preview = await postJson<MkcRefreshPreview>("/api/admin/mkc-refresh-previews", {
+        player_id: playerId,
+      });
+      setMkcPreview(preview);
+      setMkcCanonicalSelections(
+        Object.fromEntries(
+          preview.results
+            .filter(
+              (result) =>
+                result.status === "found" &&
+                !result.canonical_name_override &&
+                !result.shared_mkc_name_player_ids?.length &&
+                (result.canonical_name_options?.length ?? 0) > 1
+            )
+            .map((result) => [
+              result.player_id,
+              result.proposed_canonical_name ?? result.mkc_name ?? "",
+            ])
+        )
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not query MKCentral names.");
+    } finally {
+      setMkcLoading(false);
+    }
+  };
+
+  const decideMkcPreview = async (decision: "apply" | "reject") => {
+    if (!mkcPreview) return;
+    setMkcLoading(true);
+    setError("");
+    try {
+      const decided = await postJson<MkcRefreshPreview>(
+        `/api/admin/mkc-refresh-previews/${mkcPreview.preview_id}/${decision}`,
+        decision === "apply" ? { canonical_name_selections: mkcCanonicalSelections } : {}
+      );
+      if (decision === "apply") {
+        const entityPromise = fetchJson<AliasEntity[]>("/api/admin/aliases/players", {
+          query: entityType === "players" ? query : "",
+          limit: 500,
+        });
+        const detailPromise =
+          entityType === "players" && selected
+            ? fetchJson<AliasDetail>(`/api/admin/aliases/players/${selected.id}`)
+            : Promise.resolve(null);
+        const [refreshedEntities, refreshedDetail] = await Promise.all([
+          entityPromise,
+          detailPromise,
+        ]);
+        if (entityType === "players") setEntities(refreshedEntities);
+        if (refreshedDetail) {
+          setSelected(refreshedDetail);
+          setCanonicalName(refreshedDetail.canonical_name ?? "");
+        }
+        setNotice(
+          `Applied MKCentral refresh: ${decided.applied?.aliases_created ?? 0} aliases added and ${decided.applied?.canonical_names_changed ?? 0} canonical names changed.`
+        );
+      } else {
+        setNotice("MKCentral refresh rejected. No player names were changed.");
+      }
+      setMkcPreview(null);
+      setMkcCanonicalSelections({});
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : `Could not ${decision} refresh.`);
+    } finally {
+      setMkcLoading(false);
+    }
+  };
+
+  const downloadMkcReport = () => {
+    if (!mkcPreview) return;
+    const escapeCsv = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const rows = [
+      [
+        "Player ID",
+        "Current canonical name",
+        "Override enabled",
+        "Result",
+        "Change",
+        "MKCentral name",
+        "MKCentral player ID",
+        "Resolved friend code",
+        "Friend codes tried",
+        "Lookup details",
+        "Proposed canonical name",
+      ],
+      ...mkcPreview.results.map((result) => [
+        result.player_id,
+        result.canonical_name,
+        result.canonical_name_override,
+        result.status,
+        result.change ?? "",
+        result.mkc_name ?? "",
+        result.mkc_player_id ?? "",
+        result.friend_code ?? "",
+        result.attempts.map((attempt) => `${attempt.friend_code}: ${attempt.status}`).join("; "),
+        result.attempts
+          .filter((attempt) => attempt.error)
+          .map((attempt) => `${attempt.friend_code}: ${attempt.error}`)
+          .join("; "),
+        mkcCanonicalSelections[result.player_id] ?? result.proposed_canonical_name ?? "",
+      ]),
+    ];
+    const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `mkcentral-name-refresh-${mkcPreview.preview_id}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   const saveTrackCanonicalName = async () => {
@@ -313,6 +668,65 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     }
   };
 
+  const reviewPlayerMerge = async () => {
+    if (!selected || entityType !== "players" || !playerMergeTargetId) return;
+    setPlayerMergeLoading(true);
+    setError("");
+    setNotice("");
+    try {
+      const comparison = await fetchJson<PlayerMergeComparison>(
+        `/api/admin/aliases/players/${selected.id}/merge-comparison`,
+        { target_player_id: playerMergeTargetId }
+      );
+      setPlayerMergeReview(comparison);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not compare player records.");
+    } finally {
+      setPlayerMergeLoading(false);
+    }
+  };
+
+  const confirmPlayerMerge = async () => {
+    if (!playerMergeReview || playerMergeReview.blockers.length) return;
+    const sourceId = playerMergeReview.source.id;
+    const targetId = playerMergeReview.target.id;
+    setPlayerMergeLoading(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await postJson<PlayerMergeResponse>(
+        `/api/admin/aliases/players/${sourceId}/merge`,
+        { target_player_id: targetId }
+      );
+      const updatePlayers = (current: AliasEntity[]) =>
+        current
+          .filter((entity) => entity.id !== sourceId)
+          .map((entity) =>
+            entity.id === targetId
+              ? {
+                  ...entity,
+                  label: response.target.label,
+                  secondary: response.target.secondary,
+                  alias_count: response.target.aliases.length,
+                }
+              : entity
+          );
+      setEntities(updatePlayers);
+      setPlayerCandidates(updatePlayers);
+      setSelected(response.target);
+      setCanonicalName(response.target.canonical_name ?? "");
+      setPlayerMergeReview(null);
+      setPlayerMergeTargetId("");
+      setNotice(
+        `Merged ${response.merged.canonical_name} into ${response.target.label}. Moved ${response.friend_codes_moved} friend codes, updated ${response.match_players_updated} match appearances, and updated ${response.race_results_updated} race results.`
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not merge player records.");
+    } finally {
+      setPlayerMergeLoading(false);
+    }
+  };
+
   const saveAlias = async () => {
     if (!selected || !newAlias.trim()) return;
     setSaving(true);
@@ -352,6 +766,62 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not remove alias.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addFriendCode = async () => {
+    if (!selected || entityType !== "players" || !newFriendCode.trim()) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const detail = await postJson<AliasDetail>(
+        `/api/admin/aliases/players/${selected.id}/friend-codes`,
+        { friend_code: newFriendCode }
+      );
+      setSelected(detail);
+      setNewFriendCode("");
+      setEntities((current) =>
+        current.map((entity) =>
+          entity.id === selected.id ? { ...entity, secondary: detail.secondary } : entity
+        )
+      );
+      setNotice(
+        "Friend code added. Refresh this player's MKCentral name to resolve the associated profile."
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not add friend code.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeFriendCode = async (friendCode: FriendCodeItem) => {
+    if (!selected || friendCode.id === null) return;
+    if (
+      !window.confirm(
+        `Remove friend code ${friendCode.value} from ${selected.label}? Friend codes should generally only be removed when they were added by mistake.`
+      )
+    )
+      return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const detail = await deleteJson<AliasDetail>(
+        `/api/admin/aliases/players/${selected.id}/friend-codes/${friendCode.id}`
+      );
+      setSelected(detail);
+      setEntities((current) =>
+        current.map((entity) =>
+          entity.id === selected.id ? { ...entity, secondary: detail.secondary } : entity
+        )
+      );
+      setNotice(`Removed friend code ${friendCode.value}.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not remove friend code.");
     } finally {
       setSaving(false);
     }
@@ -408,6 +878,22 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                   </button>
                 ))}
               </div>
+              {entityType === "players" ? (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+                  <p className="max-w-3xl text-sm text-gray-400">
+                    Query MKCentral using each player&apos;s most recently used friend code first,
+                    then review every proposed alias and canonical-name change before applying it.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={mkcLoading}
+                    onClick={() => void createMkcPreview()}
+                    className="rounded bg-violet-500 px-4 py-2 font-bold text-white disabled:opacity-40"
+                  >
+                    {mkcLoading ? "Querying MKCentral…" : "Refresh all MKCentral names"}
+                  </button>
+                </div>
+              ) : null}
             </section>
 
             <div className="grid gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.4fr)]">
@@ -506,8 +992,25 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                           </span>
                           <span className="sr-only"> (required)</span>
                           <span className="mt-1 block text-xs font-normal text-gray-400">
-                            This is the player&apos;s display name throughout the site. Changing it
-                            does not change their player ID or related records.
+                            {selected.canonical_name_override
+                              ? "Manual override is active. MKCentral refreshes will still record aliases but will not replace this name."
+                              : "Automatic priority is active. The latest MKCentral name is preferred when one is available."}
+                          </span>
+                        </label>
+                        <label className="mt-3 flex items-start gap-3 rounded border border-white/10 bg-black/25 p-3 text-sm text-gray-200">
+                          <input
+                            type="checkbox"
+                            checked={selected.canonical_name_override ?? false}
+                            disabled={saving}
+                            onChange={(event) => void setCanonicalOverride(event.target.checked)}
+                            className="mt-1 h-4 w-4"
+                          />
+                          <span>
+                            Keep canonical name under manual control
+                            <span className="mt-1 block text-xs text-gray-400">
+                              Enabling this keeps the current canonical name. MKCentral names remain
+                              recorded as timestamped aliases.
+                            </span>
                           </span>
                         </label>
                         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -516,18 +1019,76 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                             value={canonicalName}
                             onChange={(event) => setCanonicalName(event.target.value)}
                             required
+                            disabled={!selected.canonical_name_override}
                             className="min-h-11 flex-1 rounded border border-white/20 bg-black/50 px-3 text-white"
                           />
                           <button
                             type="submit"
                             disabled={
                               saving ||
+                              !selected.canonical_name_override ||
                               !canonicalName.trim() ||
                               canonicalName.trim() === selected.canonical_name
                             }
                             className="rounded bg-blue-500 px-4 py-2 font-bold text-white disabled:opacity-40"
                           >
                             {saving ? "Saving…" : "Save canonical name"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={mkcLoading}
+                            onClick={() => void createMkcPreview(selected.id)}
+                            className="rounded border border-violet-300/40 px-4 py-2 font-bold text-violet-200 disabled:opacity-40"
+                          >
+                            {mkcLoading ? "Querying…" : "Refresh MKCentral name"}
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
+
+                    {entityType === "players" ? (
+                      <form
+                        className="mt-5 rounded border border-amber-300/25 bg-amber-950/20 p-4"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void reviewPlayerMerge();
+                        }}
+                      >
+                        <label
+                          htmlFor="player-merge-target"
+                          className="block text-sm font-bold text-amber-100"
+                        >
+                          Merge into an existing player
+                          <span className="mt-1 block text-xs font-normal text-gray-400">
+                            Moves all friend codes, aliases, season entries, match appearances, and
+                            race results to the destination. You will review both records before
+                            this player record is permanently removed.
+                          </span>
+                        </label>
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                          <select
+                            id="player-merge-target"
+                            value={playerMergeTargetId}
+                            onChange={(event) => setPlayerMergeTargetId(event.target.value)}
+                            className="min-h-11 flex-1 rounded border border-white/20 bg-black/50 px-3 text-white"
+                          >
+                            <option value="">Choose destination player</option>
+                            {playerCandidates
+                              .filter((candidate) => candidate.id !== selected.id)
+                              .map((candidate) => (
+                                <option key={candidate.id} value={candidate.id}>
+                                  {candidate.label}
+                                  {candidate.secondary ? ` — ${candidate.secondary}` : ""} (ID{" "}
+                                  {candidate.id})
+                                </option>
+                              ))}
+                          </select>
+                          <button
+                            type="submit"
+                            disabled={playerMergeLoading || !playerMergeTargetId}
+                            className="rounded bg-amber-400 px-4 py-2 font-bold text-black disabled:opacity-40"
+                          >
+                            {playerMergeLoading ? "Loading comparison…" : "Review merge"}
                           </button>
                         </div>
                       </form>
@@ -637,6 +1198,7 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                               onClick={() => {
                                 setAliasType(type);
                                 setNewAlias("");
+                                setNewFriendCode("");
                               }}
                               className={`rounded px-3 py-2 text-sm font-bold ${
                                 aliasType === type
@@ -725,6 +1287,11 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                                       {alias.last_seen_match_id ?? "unknown"}
                                     </p>
                                   ) : null}
+                                  {alias.created_at ? (
+                                    <p className="text-xs text-gray-400">
+                                      Added {new Date(alias.created_at).toLocaleString()}
+                                    </p>
+                                  ) : null}
                                 </div>
                                 <button
                                   type="button"
@@ -747,26 +1314,61 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
 
                     {entityType === "players" && aliasType === "friend_codes" ? (
                       <div className="mt-5 space-y-2">
+                        <form
+                          className="mb-5 flex flex-col gap-2 sm:flex-row"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            void addFriendCode();
+                          }}
+                        >
+                          <input
+                            value={newFriendCode}
+                            onChange={(event) => setNewFriendCode(event.target.value)}
+                            placeholder="0000-0000-0000"
+                            aria-label="New friend code"
+                            inputMode="numeric"
+                            maxLength={14}
+                            pattern="\d{4}-\d{4}-\d{4}"
+                            className="min-h-11 flex-1 rounded border border-white/20 bg-black/50 px-3"
+                          />
+                          <button
+                            type="submit"
+                            disabled={saving || !newFriendCode.trim()}
+                            className="rounded bg-emerald-500 px-4 py-2 font-bold text-black disabled:opacity-40"
+                          >
+                            {saving ? "Saving…" : "Add friend code"}
+                          </button>
+                        </form>
                         {selected.friend_codes.length ? (
                           selected.friend_codes.map((friendCode) => (
                             <div
                               key={friendCode.id ?? friendCode.value}
-                              className="border-t border-white/10 py-3"
+                              className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 py-3"
                             >
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="font-semibold">{friendCode.value}</p>
-                                {friendCode.is_primary ? (
-                                  <span className="rounded bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-200">
-                                    Primary
-                                  </span>
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-semibold">{friendCode.value}</p>
+                                  {friendCode.is_primary ? (
+                                    <span className="rounded bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-200">
+                                      Primary
+                                    </span>
+                                  ) : null}
+                                </div>
+                                {friendCode.first_seen_match_id || friendCode.last_seen_match_id ? (
+                                  <p className="mt-1 text-xs text-gray-400">
+                                    Match history: {friendCode.first_seen_match_id ?? "unknown"}–
+                                    {friendCode.last_seen_match_id ?? "unknown"}
+                                  </p>
                                 ) : null}
                               </div>
-                              {friendCode.first_seen_match_id || friendCode.last_seen_match_id ? (
-                                <p className="mt-1 text-xs text-gray-400">
-                                  Match history: {friendCode.first_seen_match_id ?? "unknown"}–
-                                  {friendCode.last_seen_match_id ?? "unknown"}
-                                </p>
-                              ) : null}
+                              <button
+                                type="button"
+                                disabled={saving || friendCode.id === null}
+                                onClick={() => void removeFriendCode(friendCode)}
+                                className="rounded border border-red-400/40 px-3 py-2 text-red-300 hover:bg-red-950/50 disabled:opacity-40"
+                              >
+                                Remove
+                              </button>
                             </div>
                           ))
                         ) : (
@@ -868,6 +1470,301 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
           </p>
         ) : null}
       </div>
+
+      {playerMergeReview ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="player-merge-review-title"
+        >
+          <section className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded border border-amber-300/30 bg-zinc-950 p-5 shadow-2xl">
+            <h2 id="player-merge-review-title" className="text-2xl font-bold text-amber-100">
+              Review player merge
+            </h2>
+            <p className="mt-2 text-sm text-gray-300">
+              No changes have been made. Confirming keeps the destination player and permanently
+              removes the source after its identity and historical records are transferred.
+            </p>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <PlayerComparisonCard detail={playerMergeReview.source} disposition="removed" />
+              <PlayerComparisonCard detail={playerMergeReview.target} disposition="kept" />
+            </div>
+
+            <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ["Friend codes moved", playerMergeReview.impact.friend_codes],
+                ["Aliases moved", playerMergeReview.impact.aliases],
+                ["Season entries moved", playerMergeReview.impact.season_entries],
+                ["Season entries combined", playerMergeReview.impact.overlapping_season_entries],
+                ["Match appearances updated", playerMergeReview.impact.match_players],
+                ["Race results updated", playerMergeReview.impact.race_results],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded border border-white/10 bg-black/30 p-3">
+                  <dt className="text-xs uppercase text-gray-400">{label}</dt>
+                  <dd className="mt-1 text-2xl font-bold">{value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {playerMergeReview.blockers.length ? (
+              <div className="mt-5 rounded border border-red-500/40 bg-red-950/40 p-4 text-red-100">
+                <h3 className="font-bold">This merge cannot be completed</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                  {playerMergeReview.blockers.map((blocker) => (
+                    <li key={blocker}>{blocker}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-white/10 pt-4">
+              <button
+                type="button"
+                disabled={playerMergeLoading}
+                onClick={() => setPlayerMergeReview(null)}
+                className="rounded border border-white/25 px-4 py-2 font-bold text-gray-100 disabled:opacity-40"
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                disabled={playerMergeLoading || playerMergeReview.blockers.length > 0}
+                onClick={() => void confirmPlayerMerge()}
+                className="rounded bg-red-500 px-4 py-2 font-bold text-white disabled:opacity-40"
+              >
+                {playerMergeLoading ? "Merging…" : "Confirm merge"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {mkcPreview ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mkc-review-title"
+        >
+          <section className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded border border-violet-300/30 bg-zinc-950 p-5 shadow-2xl">
+            <h2 id="mkc-review-title" className="text-2xl font-bold text-violet-100">
+              Review MKCentral name refresh
+            </h2>
+            <p className="mt-2 text-sm text-gray-300">
+              No database names have changed yet. Review or download these lookup results, then
+              accept or reject the complete refresh.
+            </p>
+
+            <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ["New MKCentral names", mkcPreview.summary.new],
+                ["Updated MKCentral names", mkcPreview.summary.updated],
+                ["Profiles not found", mkcPreview.summary.not_found],
+                ["Lookup failures", mkcPreview.summary.lookup_failed],
+                ["Unchanged", mkcPreview.summary.unchanged],
+                ["Ambiguous", mkcPreview.summary.ambiguous],
+                ["No friend codes", mkcPreview.summary.no_friend_codes],
+                ["Canonical changes", reviewedCanonicalChanges],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded border border-white/10 bg-black/30 p-3">
+                  <dt className="text-xs uppercase text-gray-400">{label}</dt>
+                  <dd className="mt-1 text-2xl font-bold">{value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {combinedMkcNameResults.length ? (
+              <div className="mt-6 rounded border border-violet-300/25 bg-violet-950/15 p-4">
+                <h3 className="font-bold text-violet-100">
+                  Choose canonical names for combined MKCentral records
+                </h3>
+                <p className="mt-1 text-xs text-gray-400">
+                  The complete MKCentral value is always saved as the alias. Choose one separated
+                  name for the canonical display, or keep the complete value if the slash or pipe is
+                  part of the name.
+                </p>
+                <div className="mt-4 space-y-4">
+                  {combinedMkcNameResults.map((result) => (
+                    <div
+                      key={result.player_id}
+                      className="block rounded border border-white/10 bg-black/30 p-3 text-sm"
+                    >
+                      <span className="block font-semibold">
+                        Player {result.player_id}: {result.canonical_name ?? "Unnamed"}
+                      </span>
+                      <span className="mt-1 block text-xs text-gray-400">
+                        Raw MKCentral alias: {result.mkc_name}
+                      </span>
+                      {result.canonical_name_override ? (
+                        <span className="mt-2 block text-amber-200">
+                          Manual override is active, so this refresh will retain the current
+                          canonical name.
+                        </span>
+                      ) : (
+                        <select
+                          aria-label={`Canonical name for player ${result.player_id}`}
+                          value={
+                            mkcCanonicalSelections[result.player_id] ??
+                            result.proposed_canonical_name ??
+                            result.mkc_name
+                          }
+                          onChange={(event) =>
+                            setMkcCanonicalSelections((current) => ({
+                              ...current,
+                              [result.player_id]: event.target.value,
+                            }))
+                          }
+                          className="mt-2 min-h-11 w-full rounded border border-white/20 bg-zinc-950 px-3 text-white"
+                        >
+                          {result.proposed_canonical_name &&
+                          !result.canonical_name_options?.includes(
+                            result.proposed_canonical_name
+                          ) ? (
+                            <option value={result.proposed_canonical_name}>
+                              {result.proposed_canonical_name} (lounge-name fallback)
+                            </option>
+                          ) : null}
+                          {result.canonical_name_options?.map((option) => (
+                            <option key={option} value={option}>
+                              {option === result.mkc_name
+                                ? `${option} (use complete MKCentral name)`
+                                : option}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {[
+              ["New MKCentral names", "new"],
+              ["Changed MKCentral names", "updated"],
+            ].map(([heading, change]) => {
+              const results = mkcPreview.results.filter((result) => result.change === change);
+              return results.length ? (
+                <div key={change} className="mt-6">
+                  <h3 className="font-bold text-emerald-200">{heading}</h3>
+                  <div className="mt-2 space-y-2">
+                    {results.map((result) => (
+                      <div
+                        key={result.player_id}
+                        className="rounded border border-white/10 bg-black/30 p-3 text-sm"
+                      >
+                        <span className="font-semibold">
+                          Player {result.player_id}: {result.canonical_name ?? "Unnamed"}
+                        </span>
+                        <span className="ml-2 text-gray-400">
+                          · MKCentral name{" "}
+                          <span className="text-emerald-200">{result.mkc_name}</span>
+                          {" · "}ID {result.mkc_player_id} · via {result.friend_code}
+                          {result.canonical_name_override ? " · canonical override retained" : ""}
+                        </span>
+                        {result.shared_mkc_name_player_ids?.length ? (
+                          <span className="mt-2 block text-amber-200">
+                            This name is shared by players{" "}
+                            {result.shared_mkc_name_player_ids.join(", ")}. Their lounge names
+                            become the automatic canonical names.
+                          </span>
+                        ) : null}
+                        {!result.canonical_name_override && result.proposed_canonical_name ? (
+                          <span className="mt-1 block text-gray-300">
+                            Canonical name after approval: {result.proposed_canonical_name}
+                          </span>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+            })}
+
+            {mkcPreview.results.some((result) => result.status === "not_found") ? (
+              <div className="mt-6">
+                <h3 className="font-bold text-amber-200">No MKCentral profile found</h3>
+                <p className="mt-1 text-xs text-gray-400">
+                  MKCentral responded successfully for every friend code tried for these players.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {mkcPreview.results
+                    .filter((result) => result.status === "not_found")
+                    .map((result) => (
+                      <span
+                        key={result.player_id}
+                        className="rounded border border-amber-300/20 bg-amber-950/20 px-3 py-2 text-sm"
+                      >
+                        Player {result.player_id}: {result.canonical_name ?? "Unnamed"}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            ) : null}
+
+            {mkcPreview.results.some((result) =>
+              ["lookup_failed", "ambiguous", "no_friend_codes"].includes(result.status)
+            ) ? (
+              <div className="mt-6">
+                <h3 className="font-bold text-red-200">Could not resolve</h3>
+                <div className="mt-2 space-y-2">
+                  {mkcPreview.results
+                    .filter((result) =>
+                      ["lookup_failed", "ambiguous", "no_friend_codes"].includes(result.status)
+                    )
+                    .map((result) => (
+                      <div
+                        key={result.player_id}
+                        className="rounded border border-red-300/20 bg-red-950/20 p-3 text-sm"
+                      >
+                        Player {result.player_id}: {result.canonical_name ?? "Unnamed"} ·{" "}
+                        {result.status.replaceAll("_", " ")}
+                        {result.attempts.some((attempt) => attempt.error) ? (
+                          <span className="mt-1 block text-xs text-red-100/80">
+                            {result.attempts
+                              .filter((attempt) => attempt.error)
+                              .map((attempt) => attempt.error)
+                              .join("; ")}
+                          </span>
+                        ) : null}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-7 flex flex-wrap justify-between gap-3 border-t border-white/10 pt-5">
+              <button
+                type="button"
+                onClick={downloadMkcReport}
+                className="rounded border border-violet-300/40 px-4 py-2 font-bold text-violet-200"
+              >
+                Download CSV report
+              </button>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  disabled={mkcLoading}
+                  onClick={() => void decideMkcPreview("reject")}
+                  className="rounded border border-red-300/40 px-4 py-2 font-bold text-red-200 disabled:opacity-40"
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  disabled={mkcLoading}
+                  onClick={() => void decideMkcPreview("apply")}
+                  className="rounded bg-emerald-500 px-4 py-2 font-bold text-black disabled:opacity-40"
+                >
+                  {mkcLoading ? "Applying…" : "Accept and apply"}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
