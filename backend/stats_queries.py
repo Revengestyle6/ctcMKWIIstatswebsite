@@ -584,7 +584,7 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
             select(
                 Match.match_id,
                 Match.match_type,
-                Match.week_number,
+                Match.match_number,
                 Match.playoff_series_id,
                 Match.series_match_number,
                 PlayoffSeries.stage.label("playoff_stage"),
@@ -604,7 +604,7 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
             )
             .order_by(
                 Match.match_type,
-                Match.week_number,
+                Match.match_number,
                 PlayoffSeries.stage,
                 PlayoffSeries.series_number,
                 Match.series_match_number,
@@ -646,7 +646,7 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
             {
                 "match_id": row.match_id,
                 "match_type": row.match_type,
-                "week": row.week_number,
+                "match_number": row.match_number,
                 "playoff_series_id": row.playoff_series_id,
                 "series_match_number": row.series_match_number,
                 "playoff_stage": row.playoff_stage,
@@ -1031,7 +1031,7 @@ def get_match_detail(match_id, session=None):
             "match_type": match.match_type,
             "season": season.season_code if season else "",
             "division": division.division_code if division else "",
-            "week": match.week_number,
+            "match_number": match.match_number,
             "playoff_series_id": match.playoff_series_id,
             "series_match_number": match.series_match_number,
             "playoff_stage": playoff_series.stage if playoff_series else None,

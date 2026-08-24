@@ -55,7 +55,7 @@ class MatchUploadLeagueTeamValidationTests(unittest.TestCase):
             "division": "d1",
             "match_label": "GSC first match",
             "match_type": "regular",
-            "week": 1,
+            "match_number": 1,
             "format": "5v5",
             "tracks": [],
             "teams": {"CS": {"players": {}}, "NEW": {"players": {}}},

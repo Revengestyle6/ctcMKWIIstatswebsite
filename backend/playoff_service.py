@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -38,6 +39,49 @@ def match_type(match_data: dict[str, Any]) -> str:
     return value
 
 
+def automatic_match_label(match_data: dict[str, Any]) -> str:
+    """Build the stable label used for new editor-created matches."""
+    kind = match_type(match_data)
+    if kind == "playoff":
+        stage = str(match_data.get("playoff_stage") or "").strip().lower()
+        series_number = match_data.get("playoff_series_number")
+        series_match_number = match_data.get("series_match_number")
+        if stage == "finals":
+            series_label = "Finals"
+        elif stage == "semifinals" and series_number:
+            series_label = f"Semifinals Series {series_number}"
+        else:
+            series_label = "Playoff"
+        return (
+            f"{series_label} — Match {series_match_number}" if series_match_number else series_label
+        )
+
+    match_number = match_data.get("match_number", match_data.get("week"))
+    number_label = (
+        f"M{match_number}"
+        if isinstance(match_number, int) and not isinstance(match_number, bool) and match_number > 0
+        else ""
+    )
+    team_tags = []
+    for team_key, team in (match_data.get("teams") or {}).items():
+        raw_tag = team_key if "table_tag_str" not in team else team.get("table_tag_str")
+        tag = str(raw_tag or "").strip()
+        tag = re.sub(r"#[0-9a-f]{3,6}", "", tag, flags=re.IGNORECASE).strip()
+        if tag:
+            team_tags.append(tag)
+    matchup = " vs ".join(team_tags[:2]) if team_tags else ""
+    return " ".join(value for value in (number_label, matchup) if value).strip()
+
+
+def ensure_match_label(match_data: dict[str, Any]) -> str:
+    """Preserve an imported label, or add an automatic label for a new document."""
+    existing = str(match_data.get("match_label") or "").strip()
+    label = existing or automatic_match_label(match_data)
+    if label:
+        match_data["match_label"] = label
+    return label
+
+
 def _positive_int(value: Any, label: str, *, default: int | None = None) -> int:
     if value is None and default is not None:
         return default
@@ -48,13 +92,13 @@ def _positive_int(value: Any, label: str, *, default: int | None = None) -> int:
 
 def validate_competition_metadata(match_data: dict[str, Any]) -> dict[str, Any]:
     kind = match_type(match_data)
-    week = match_data.get("week")
+    match_number = match_data.get("match_number", match_data.get("week"))
     if kind == "regular":
-        _positive_int(week, "Week")
-        return {"match_type": kind, "week_number": week}
+        _positive_int(match_number, "Match number")
+        return {"match_type": kind, "match_number": match_number}
 
-    if week is not None:
-        raise ValueError("Playoff matches do not have a match week.")
+    if match_number is not None:
+        raise ValueError("Playoff matches do not have a regular-season match number.")
     format_code = str(match_data.get("playoff_format") or "").strip().lower()
     definition = PLAYOFF_FORMATS.get(format_code)
     if definition is None:
@@ -93,7 +137,7 @@ def validate_competition_metadata(match_data: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "match_type": kind,
-        "week_number": None,
+        "match_number": None,
         "format": definition,
         "stage": stage,
         "series_number": series_number,

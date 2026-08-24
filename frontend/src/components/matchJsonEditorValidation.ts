@@ -217,10 +217,7 @@ export function playoffConsistencyIssues(
   }
   return issues;
 }
-export function metadataValue(
-  field: "league" | "season" | "division" | "match_label",
-  value: string
-): string {
+export function metadataValue(field: "league" | "season" | "division", value: string): string {
   if (field === "season" && /^\d+$/.test(value)) return `s${value}`;
   if (field === "division" && /^\d+$/.test(value)) return `d${value}`;
   return value;
@@ -410,20 +407,21 @@ export function validation(
   if (!match.league) issues.push({ level: "error", message: "League is missing." });
   if (!match.season) issues.push({ level: "error", message: "Season is missing." });
   if (!match.division) issues.push({ level: "error", message: "Division is missing." });
-  if (!match.match_label?.trim())
-    issues.push({ level: "error", message: "Match label is missing." });
   const isPlayoff = match.match_type === "playoff";
   const teamCount = Object.keys(match.teams ?? {}).length;
-  if (!isPlayoff && (!Number.isInteger(match.week) || Number(match.week) < 1))
+  if (!isPlayoff && (!Number.isInteger(match.match_number) || Number(match.match_number) < 1))
     issues.push({
       level: "error",
-      message: "Week is required and must be a positive whole number.",
+      message: "Match number is required and must be a positive whole number.",
     });
   if (isPlayoff) {
     if (teamCount !== 2)
       issues.push({ level: "error", message: "A playoff match must contain exactly two teams." });
-    if (match.week !== undefined)
-      issues.push({ level: "error", message: "Playoff matches do not have a match week." });
+    if (match.match_number !== undefined)
+      issues.push({
+        level: "error",
+        message: "Playoff matches do not have a regular-season match number.",
+      });
     if (!match.playoff_format)
       issues.push({
         level: "error",

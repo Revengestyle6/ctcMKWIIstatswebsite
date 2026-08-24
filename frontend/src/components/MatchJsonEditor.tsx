@@ -39,6 +39,7 @@ import {
   expectedRoomSize,
   type MatchJson,
   type MatchPlayerJson,
+  normalizeMatchNumber,
   type RaceDraft,
   racesFromMatch,
   SCORE_TABLES,
@@ -465,8 +466,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
           match?: MatchJson;
         };
         if (draft.match && draft.submissionId) {
-          setMatch(draft.match);
-          setRaces(racesFromMatch(draft.match));
+          const normalizedMatch = normalizeMatchNumber(draft.match);
+          setMatch(normalizedMatch);
+          setRaces(racesFromMatch(normalizedMatch));
           setFileName(draft.filename || "Queued match JSON");
           setReviewSubmissionId(draft.submissionId);
         }
@@ -1208,8 +1210,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
       : mii;
   }
   function resetEditor(nextMatch: MatchJson, nextFileName: string): void {
-    setMatch(nextMatch);
-    setRaces(racesFromMatch(nextMatch));
+    const normalizedMatch = normalizeMatchNumber(nextMatch);
+    setMatch(normalizedMatch);
+    setRaces(racesFromMatch(normalizedMatch));
     setFileName(nextFileName);
     setIdentityStates({});
     setRaceView("one");
@@ -1621,7 +1624,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       : "Checking database..."}
               </span>
             </div>
-            {(["season", "division", "match_label"] as const).map((field) => {
+            {(["season", "division"] as const).map((field) => {
               const missing = !String(match[field] ?? "").trim();
               const valid =
                 field === "season" ? seasonValid : field === "division" ? divisionValid : null;
@@ -1637,7 +1640,6 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         (entry) => normalized(entry.value) === normalized(match.division)
                       )
                     : false;
-              const listId = field === "match_label" ? undefined : `${field}-options`;
               return (
                 <label key={field} className="text-sm font-semibold capitalize text-gray-200">
                   {field.replace("_", " ")}
@@ -1654,7 +1656,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                     </>
                   )}
                   <input
-                    list={listId}
+                    list={`${field}-options`}
                     value={String(match[field] ?? "")}
                     onChange={(e) => updateMatch({ [field]: metadataValue(field, e.target.value) })}
                     required
@@ -1678,6 +1680,19 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 </label>
               );
             })}
+            <div className="text-sm font-semibold text-gray-200">
+              <span>Match label</span>
+              <ReadOnlyControl
+                label="Match label"
+                locked
+                value={compiled.match_label || "Waiting for match number and teams"}
+              />
+              <span className="mt-1 block text-xs text-gray-400">
+                {match.match_label?.trim()
+                  ? "Preserved from the loaded JSON"
+                  : "Generated automatically from the match number and team tags"}
+              </span>
+            </div>
             <datalist id="season-options">
               {Array.from(
                 new Set(
@@ -1712,7 +1727,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   if (event.target.value === "playoff") {
                     updateMatch({
                       match_type: "playoff",
-                      week: undefined,
+                      match_number: undefined,
                       playoff_format:
                         playoffContext?.format?.code ?? match.playoff_format ?? "four_team",
                       playoff_stage: match.playoff_stage ?? "semifinals",
@@ -1739,8 +1754,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
             </label>
             {(match.match_type ?? "regular") === "regular" ? (
               <label className="text-sm font-semibold text-gray-200">
-                Week
-                {numberValue(match.week) === "" && (
+                Match number
+                {numberValue(match.match_number) === "" && (
                   <>
                     <span
                       aria-hidden="true"
@@ -1756,16 +1771,20 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   type="number"
                   min={1}
                   step={1}
-                  value={numberValue(match.week)}
+                  value={numberValue(match.match_number)}
                   onChange={(e) =>
-                    updateMatch({ week: e.target.value ? Number(e.target.value) : undefined })
+                    updateMatch({
+                      match_number: e.target.value ? Number(e.target.value) : undefined,
+                    })
                   }
                   required
                   aria-required="true"
                   aria-invalid={
-                    !Number.isInteger(match.week) || Number(match.week) < 1 || undefined
+                    !Number.isInteger(match.match_number) ||
+                    Number(match.match_number) < 1 ||
+                    undefined
                   }
-                  className={`${inputClass} ${!Number.isInteger(match.week) || Number(match.week) < 1 ? "border-red-400/70" : ""}`}
+                  className={`${inputClass} ${!Number.isInteger(match.match_number) || Number(match.match_number) < 1 ? "border-red-400/70" : ""}`}
                 />
               </label>
             ) : (

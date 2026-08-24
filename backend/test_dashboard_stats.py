@@ -175,14 +175,14 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.session.commit()
 
     def _add_match(self, spec, seasons, divisions, entries, players, track):
-        code, week, scores, roles, positions, raw, penalty, final, opponent = spec
+        code, match_number, scores, roles, positions, raw, penalty, final, opponent = spec
         season = next(item for item in seasons if item.season_code == code)
         source = SourceFile(
             season_id=season.season_id,
             division_id=divisions[code].division_id,
-            source_path=f"JSON/ctc/{code}/d1/w{week}.json",
-            source_filename=f"w{week}.json",
-            file_sha256=f"hash-{code}-{week}",
+            source_path=f"JSON/ctc/{code}/d1/w{match_number}.json",
+            source_filename=f"w{match_number}.json",
+            file_sha256=f"hash-{code}-{match_number}",
             json_shape="single",
         )
         self.session.add(source)
@@ -191,8 +191,8 @@ class DashboardRoleContractTests(unittest.TestCase):
             season_id=season.season_id,
             division_id=divisions[code].division_id,
             source_file_id=source.source_file_id,
-            week_number=week,
-            match_label=f"Week {week}",
+            match_number=match_number,
+            match_label=f"Match {match_number}",
             format="5v5",
             races_played=4,
         )
@@ -311,7 +311,7 @@ class DashboardRoleContractTests(unittest.TestCase):
                 )
 
     def test_reviewed_legacy_block_is_excluded_from_analytics_but_kept_in_raw_detail(self):
-        match = self.session.query(Match).filter_by(week_number=3).one()
+        match = self.session.query(Match).filter_by(match_number=3).one()
         exclusion = (
             {
                 "source_path": "JSON/ctc/s2/d1/w3.json",
@@ -365,7 +365,7 @@ class DashboardRoleContractTests(unittest.TestCase):
         match = (
             self.session.query(Match)
             .join(Season, Season.season_id == Match.season_id)
-            .filter(Season.season_code == "s2", Match.week_number == 2)
+            .filter(Season.season_code == "s2", Match.match_number == 2)
             .one()
         )
 
@@ -387,14 +387,14 @@ class DashboardRoleContractTests(unittest.TestCase):
         ]
         self.assertEqual(detail["differential"][0], first_race_totals[0] - first_race_totals[1])
 
-    def _selected_result(self, week, race_number):
+    def _selected_result(self, match_number, race_number):
         return (
             self.session.query(RacePlayerResult)
             .join(Race, Race.race_id == RacePlayerResult.race_id)
             .join(Match, Match.match_id == Race.match_id)
             .filter(
                 RacePlayerResult.player_id == self.player_id,
-                Match.week_number == week,
+                Match.match_number == match_number,
                 Race.race_number == race_number,
             )
             .one()
@@ -439,7 +439,7 @@ class DashboardRoleContractTests(unittest.TestCase):
             season_id=season.season_id,
             division_id=division.division_id,
             source_file_id=source.source_file_id,
-            week_number=1,
+            match_number=1,
             match_label="Close ranking",
             format="other",
             races_played=202,
@@ -917,8 +917,8 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.assertEqual(selected["matches"], 2)
         self.assertEqual(selected["metrics"]["total_points"], 7)
         self.assertEqual(selected["metrics"]["counterpart_races"], 4)
-        self.assertEqual(selected["first_appearance"]["week"], 2)
-        self.assertEqual(selected["last_appearance"]["week"], 3)
+        self.assertEqual(selected["first_appearance"]["match_number"], 2)
+        self.assertEqual(selected["last_appearance"]["match_number"], 3)
         self.assertEqual(bagger["role"], "bagger")
 
     def test_team_result_contracts_remain_role_independent(self):
@@ -966,7 +966,7 @@ class DashboardRoleContractTests(unittest.TestCase):
         roster = get_team_roster(self.alpha_id, role="runner", min_races=1, session=self.session)
         selected = next(row for row in roster["players"] if row["player_id"] == self.player_id)
         self.assertEqual(selected["metrics"]["races"], 7)
-        self.assertEqual(selected["last_appearance"]["week"], 3)
+        self.assertEqual(selected["last_appearance"]["match_number"], 3)
 
         empty.role = "unknown"
         empty.role_source = "unknown"

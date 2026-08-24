@@ -123,10 +123,10 @@ class PlayoffSupportTests(unittest.TestCase):
 
     def test_metadata_rejects_playoff_week_even_best_of_and_tie(self):
         match = self.metadata()
-        match["week"] = 4
-        with self.assertRaisesRegex(ValueError, "do not have a match week"):
+        match["match_number"] = 4
+        with self.assertRaisesRegex(ValueError, "do not have a regular-season match number"):
             validate_competition_metadata(match)
-        match.pop("week")
+        match.pop("match_number")
         match["best_of"] = 4
         with self.assertRaisesRegex(ValueError, "odd"):
             validate_competition_metadata(match)
@@ -238,7 +238,7 @@ class PlayoffSupportTests(unittest.TestCase):
                     division_id=self.division_id,
                     source_file_id=source.source_file_id,
                     match_type="regular",
-                    week_number=1,
+                    match_number=1,
                     match_label="W1 A B",
                     races_played=12,
                 )

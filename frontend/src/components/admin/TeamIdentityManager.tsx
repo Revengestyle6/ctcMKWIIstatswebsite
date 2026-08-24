@@ -6,6 +6,8 @@ type TeamIdentity = {
   id: number;
   canonical_name: string;
   canonical_tag: string;
+  canonical_identity_override: boolean;
+  canonical_league_preference: string | null;
 };
 
 type TeamSeasonIdentity = {
@@ -159,6 +161,13 @@ export default function TeamIdentityManager({
     canonicalName.trim() === detail?.team.canonical_name &&
     canonicalTag.trim() === detail?.team.canonical_tag;
 
+  const applyDetail = (response: TeamIdentityDetail) => {
+    setDetail(response);
+    setCanonicalName(response.team.canonical_name);
+    setCanonicalTag(response.team.canonical_tag);
+    onCanonicalSaved(response.team);
+  };
+
   const saveCanonical = async (event: React.FormEvent) => {
     event.preventDefault();
     if (canonicalUnchanged) return;
@@ -169,12 +178,41 @@ export default function TeamIdentityManager({
         canonical_name: canonicalName,
         canonical_tag: canonicalTag,
       });
-      setDetail(response);
-      setCanonicalName(response.team.canonical_name);
-      setCanonicalTag(response.team.canonical_tag);
-      onCanonicalSaved(response.team);
+      applyDetail(response);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not update team identity.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setCanonicalPreference = async (league: string) => {
+    setSaving(true);
+    setError("");
+    try {
+      const response = await patchJson<TeamIdentityDetail>(
+        `/api/admin/teams/${teamId}/canonical-league-preference`,
+        { league: league || null }
+      );
+      applyDetail(response);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update league preference.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setCanonicalOverride = async (enabled: boolean) => {
+    setSaving(true);
+    setError("");
+    try {
+      const response = await patchJson<TeamIdentityDetail>(
+        `/api/admin/teams/${teamId}/canonical-identity-override`,
+        { enabled }
+      );
+      applyDetail(response);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update identity override.");
     } finally {
       setSaving(false);
     }
@@ -229,9 +267,39 @@ export default function TeamIdentityManager({
       >
         <h3 className="text-lg font-bold text-blue-100">Conventional identity</h3>
         <p className="mt-1 text-sm text-gray-400">
-          This is the team&apos;s lasting name and tag across seasons. Season-specific identities
-          below override these labels when that season is displayed.
+          The canonical identity automatically follows the newest season identity. Choose a league
+          when simultaneous CTC and GSC identities should favor one competition.
         </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="text-sm font-bold text-gray-200">
+            Preferred league
+            <select
+              value={detail?.team.canonical_league_preference ?? ""}
+              disabled={saving}
+              onChange={(event) => void setCanonicalPreference(event.target.value)}
+              className="mt-2 min-h-11 w-full rounded border border-white/20 bg-black/50 px-3"
+            >
+              <option value="">Newest identity across all leagues</option>
+              <option value="ctc">Prefer newest CTC identity</option>
+              <option value="gsc">Prefer newest GSC identity</option>
+            </select>
+          </label>
+          <label className="flex items-start gap-3 rounded border border-white/10 bg-black/25 p-3 text-sm text-gray-200">
+            <input
+              type="checkbox"
+              checked={detail?.team.canonical_identity_override ?? false}
+              disabled={saving}
+              onChange={(event) => void setCanonicalOverride(event.target.checked)}
+              className="mt-1 h-4 w-4"
+            />
+            <span>
+              Keep canonical identity under manual control
+              <span className="mt-1 block text-xs text-gray-400">
+                Enabling this retains the current name and tag instead of following season entries.
+              </span>
+            </span>
+          </label>
+        </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,0.35fr)]">
           <label className="text-sm font-bold text-gray-200">
             Conventional name
@@ -239,6 +307,7 @@ export default function TeamIdentityManager({
               value={canonicalName}
               required
               maxLength={200}
+              disabled={!detail?.team.canonical_identity_override}
               onChange={(event) => setCanonicalName(event.target.value)}
               className="mt-2 min-h-11 w-full rounded border border-white/20 bg-black/50 px-3"
             />
@@ -249,6 +318,7 @@ export default function TeamIdentityManager({
               value={canonicalTag}
               required
               maxLength={64}
+              disabled={!detail?.team.canonical_identity_override}
               onChange={(event) => setCanonicalTag(event.target.value)}
               className="mt-2 min-h-11 w-full rounded border border-white/20 bg-black/50 px-3"
             />
@@ -257,7 +327,13 @@ export default function TeamIdentityManager({
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            disabled={saving || canonicalUnchanged || !canonicalName.trim() || !canonicalTag.trim()}
+            disabled={
+              saving ||
+              !detail?.team.canonical_identity_override ||
+              canonicalUnchanged ||
+              !canonicalName.trim() ||
+              !canonicalTag.trim()
+            }
             className="rounded bg-blue-500 px-4 py-2 font-bold text-white disabled:opacity-40"
           >
             {saving ? "Saving…" : "Save conventional identity"}

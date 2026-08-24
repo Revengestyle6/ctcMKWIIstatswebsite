@@ -131,7 +131,7 @@ effectiveness.
   final score.
 - Win rate is wins divided by wins, losses, and ties. Unknown results are not in
   the denominator.
-- Recent matches sort by season number, week number, then match ID because
+- Recent matches sort by season number, match number, then match ID because
   trusted historical dates are not consistently available.
 
 ## Team Track Statistics

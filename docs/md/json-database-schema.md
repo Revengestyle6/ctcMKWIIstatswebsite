@@ -46,13 +46,19 @@ Observed match-shaped file facts:
 Season and division are not present inside the JSON. They need to come from folder naming, filename metadata, an upload form, or a manual import manifest.
 
 Editor-generated regular-season JSON includes `league`, `season`, `division`,
-`match_type`, `week`, and `match_label`. Playoff JSON replaces `week` with
+`match_type`, `match_number`, and `match_label`. Playoff JSON omits
+`match_number` and provides
 `playoff_format`, `playoff_stage`, `playoff_series_number`,
 `series_match_number`, and odd `best_of` metadata. See
 [`playoff-support-implementation.md`](playoff-support-implementation.md). On
 confirmed upload, the backend archives the exact
 validated JSON under `backend/JSON/{league}/{season}/{division}/` and stores its
 path and SHA-256 in `source_files`.
+
+For new editor drafts, `match_label` is generated automatically. Regular labels
+use the match number and the first two team tags, for example `M4 CS vs SLAY`.
+Playoff labels use the stage, series, and series match number. A label already
+embedded in historical JSON is preserved.
 
 CTC matches should be modeled as two-team matches. If an imported JSON object has a third team, treat that as a data-quality issue rather than a true three-team match. The likely explanation is that a sub was parsed as a separate team by mistake and should be manually assigned to one of the two actual teams during import review.
 
@@ -109,7 +115,8 @@ Representative structure:
 | `tracks` | Ordered list of tracks | The array index maps to race number. |
 | `teams` | Team result object | Keys are raw team tags/names. |
 | `match_type` | Competition category | Optional; omitted means `regular`, or use `playoff`. |
-| `week` | Regular-season week | Required for new regular uploads; omitted for playoffs. |
+| `match_number` | Regular-season match number | Required for new regular uploads; omitted for playoffs. Legacy archived JSON may use `week`, which the importer translates. |
+| `match_label` | Stable operational label | Generated automatically for new editor drafts; preserved when supplied by historical JSON. |
 | `playoff_format` | Division bracket format | `three_team` or `four_team`; playoff only. |
 | `playoff_stage` | Series stage | `semifinals` or `finals`; playoff only. |
 | `playoff_series_number` | Series within the stage | Semifinals use 1 or 2 as allowed; finals use 1. |
@@ -243,9 +250,13 @@ Canonical team/clan identity.
 | `team_id` | integer primary key | Internal ID. |
 | `canonical_name` | text | Human-friendly name if known. |
 | `canonical_tag` | text | Stable clan tag if known. |
+| `canonical_identity_override` | boolean | When true, manual name/tag edits take priority over season identities. Defaults to false. |
+| `canonical_league_preference` | text nullable | Optional `ctc` or `gsc` preference for automatic canonical identity. |
 | `created_at` | timestamp | Audit. |
 
-This table should not be overtrusted early. Clan tags and names can be messy, so start with raw imported tags and allow manual merges later.
+Without an override, the newest season identity supplies the canonical name and tag,
+optionally limited to the preferred league. Administrators can review and merge
+duplicate global teams while retaining their distinct season identities.
 
 ### `team_season_entries`
 
@@ -339,10 +350,10 @@ One imported match/table.
 | `division_id` | foreign key to `divisions` | Manual/import metadata. |
 | `source_file_id` | foreign key to `source_files` | Audit. |
 | `match_type` | text | `regular` or `playoff`; defaults to regular. |
-| `week_number` | integer nullable | Historical imports may omit it; editor uploads require a positive whole number. Multiple matches may share a week. |
+| `match_number` | integer nullable | Historical imports may omit it; editor uploads require a positive whole number. It identifies match order rather than assuming one match per calendar week. |
 | `playoff_series_id` | foreign key nullable | Required for playoff matches and absent for regular matches. |
 | `series_match_number` | integer nullable | Positive and unique within a playoff series. |
-| `match_label` | text | Filename or friendly label. |
+| `match_label` | text | Automatically generated operational label, or the preserved historical source label. |
 | `title_str` | text nullable | Raw JSON title. |
 | `format` | text | Example `5v5`. |
 | `races_played` | integer | From JSON. |
@@ -515,7 +526,7 @@ For each match object:
 2. Create `source_files` row using file path and hash.
 3. For a playoff, validate/lock the division format and resolve or create the series
    and immutable participants.
-4. Create `matches` row with exclusive regular-week or playoff-series metadata.
+4. Create `matches` row with exclusive regular-match-number or playoff-series metadata.
 5. Insert each `rxx` value into `match_table_refs`.
 6. Insert or resolve each raw team into `teams` and `team_season_entries`.
 7. Insert `match_teams`, but require the match to resolve to exactly two real teams.

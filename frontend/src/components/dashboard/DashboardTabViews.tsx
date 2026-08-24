@@ -474,7 +474,9 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
                       <td className="px-4 py-3">
                         {row.last_appearance.season.toUpperCase()}{" "}
                         {row.last_appearance.division.toUpperCase()}{" "}
-                        {row.last_appearance.week ? `W${row.last_appearance.week}` : ""}
+                        {row.last_appearance.match_number
+                          ? `M${row.last_appearance.match_number}`
+                          : ""}
                       </td>
                     </tr>
                   )
@@ -537,7 +539,9 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
                       <td className="px-4 py-3">
                         {row.last_appearance.season.toUpperCase()}{" "}
                         {row.last_appearance.division.toUpperCase()}{" "}
-                        {row.last_appearance.week ? `W${row.last_appearance.week}` : ""}
+                        {row.last_appearance.match_number
+                          ? `M${row.last_appearance.match_number}`
+                          : ""}
                       </td>
                     </tr>
                   )

@@ -98,6 +98,63 @@ type PlayerMergeResponse = {
   match_players_updated: number;
   race_results_updated: number;
 };
+type TeamIdentitySnapshot = {
+  team: {
+    id: number;
+    canonical_name: string;
+    canonical_tag: string;
+    canonical_identity_override: boolean;
+    canonical_league_preference: string | null;
+  };
+  aliases: Array<{ id: number; value: string }>;
+  league_identities: Array<{ id: number; league: string; tag: string }>;
+  season_entries: Array<{
+    id: number;
+    season: {
+      id: number;
+      league: string;
+      code: string;
+      name: string;
+      season_number: number | null;
+    };
+    division: { id: number; code: string; name: string };
+    display_name: string;
+    clan_tag: string;
+  }>;
+};
+type TeamMergeComparison = {
+  source: TeamIdentitySnapshot;
+  target: TeamIdentitySnapshot;
+  impact: {
+    aliases: number;
+    league_identities: number;
+    season_entries: number;
+    overlapping_season_entries: number;
+    logos: number;
+    playoff_participants: number;
+    match_appearances: number;
+    player_memberships: number;
+  };
+  overlapping_matches: Array<{ id: number; label: string }>;
+  overlapping_series: Array<{ id: number; label: string }>;
+  blockers: string[];
+};
+type TeamMergeResponse = {
+  target: TeamIdentitySnapshot;
+  merged: { id: number; canonical_name: string; canonical_tag: string };
+  aliases_moved: number;
+  aliases_consolidated: number;
+  league_identities_moved: number;
+  league_identities_consolidated: number;
+  season_entries_moved: number;
+  season_entries_consolidated: number;
+  player_memberships_moved: number;
+  player_memberships_consolidated: number;
+  match_appearances_updated: number;
+  logos_moved: number;
+  logos_consolidated: number;
+  playoff_participants_updated: number;
+};
 type MkcRefreshResult = {
   player_id: number;
   canonical_name: string | null;
@@ -257,6 +314,69 @@ function PlayerComparisonCard({
   );
 }
 
+function TeamComparisonCard({
+  detail,
+  disposition,
+}: {
+  detail: TeamIdentitySnapshot;
+  disposition: "removed" | "kept";
+}): React.JSX.Element {
+  return (
+    <article className="rounded border border-white/15 bg-black/35 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+            {disposition === "removed" ? "Source team" : "Destination team"}
+          </p>
+          <h3 className="mt-1 text-xl font-bold text-white">
+            {detail.team.canonical_tag} — {detail.team.canonical_name}
+          </h3>
+          <p className="text-xs text-gray-400">Team ID {detail.team.id}</p>
+        </div>
+        <span
+          className={`rounded px-2 py-1 text-xs font-bold ${
+            disposition === "removed"
+              ? "bg-red-500/20 text-red-200"
+              : "bg-emerald-500/20 text-emerald-200"
+          }`}
+        >
+          {disposition === "removed" ? "Will be removed" : "Will remain"}
+        </span>
+      </div>
+      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-xs uppercase text-gray-500">League preference</dt>
+          <dd>{detail.team.canonical_league_preference?.toUpperCase() ?? "Newest overall"}</dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase text-gray-500">Manual override</dt>
+          <dd>{detail.team.canonical_identity_override ? "Enabled" : "Disabled"}</dd>
+        </div>
+      </dl>
+      <div className="mt-4">
+        <h4 className="text-xs font-bold uppercase text-gray-400">
+          Season identities ({detail.season_entries.length})
+        </h4>
+        <ul className="mt-1 space-y-1 text-sm text-gray-200">
+          {detail.season_entries.length ? (
+            detail.season_entries.map((entry) => (
+              <li key={entry.id}>
+                {entry.season.league.toUpperCase()} {entry.season.code.toUpperCase()} ·{" "}
+                {entry.clan_tag} — {entry.display_name}
+              </li>
+            ))
+          ) : (
+            <li>None recorded</li>
+          )}
+        </ul>
+      </div>
+      <p className="mt-4 text-sm text-gray-300">
+        {detail.league_identities.length} league links · {detail.aliases.length} aliases
+      </p>
+    </article>
+  );
+}
+
 export default function AdminAliasManagementPage(): React.JSX.Element {
   const auth = useAdminSession();
   const { league } = useLeague();
@@ -266,12 +386,16 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
   const [entities, setEntities] = useState<AliasEntity[]>([]);
   const [trackCandidates, setTrackCandidates] = useState<AliasEntity[]>([]);
   const [playerCandidates, setPlayerCandidates] = useState<AliasEntity[]>([]);
+  const [teamCandidates, setTeamCandidates] = useState<AliasEntity[]>([]);
   const [selected, setSelected] = useState<AliasDetail | null>(null);
   const [canonicalName, setCanonicalName] = useState("");
   const [mergeTargetId, setMergeTargetId] = useState("");
   const [playerMergeTargetId, setPlayerMergeTargetId] = useState("");
   const [playerMergeReview, setPlayerMergeReview] = useState<PlayerMergeComparison | null>(null);
   const [playerMergeLoading, setPlayerMergeLoading] = useState(false);
+  const [teamMergeTargetId, setTeamMergeTargetId] = useState("");
+  const [teamMergeReview, setTeamMergeReview] = useState<TeamMergeComparison | null>(null);
+  const [teamMergeLoading, setTeamMergeLoading] = useState(false);
   const [aliasType, setAliasType] = useState("alias");
   const [newAlias, setNewAlias] = useState("");
   const [newFriendCode, setNewFriendCode] = useState("");
@@ -347,6 +471,22 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
   }, [auth.session?.authenticated, entityType]);
 
   useEffect(() => {
+    if (!auth.session?.authenticated || entityType !== "teams") return;
+    let cancelled = false;
+    fetchJson<AliasEntity[]>("/api/admin/aliases/teams", { limit: 500 })
+      .then((response) => {
+        if (!cancelled) setTeamCandidates(response);
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled)
+          setError(caught instanceof Error ? caught.message : "Could not load team choices.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.session?.authenticated, entityType]);
+
+  useEffect(() => {
     setTrackLeague(league);
     setSelected(null);
   }, [league]);
@@ -390,6 +530,8 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     setMergeTargetId("");
     setPlayerMergeTargetId("");
     setPlayerMergeReview(null);
+    setTeamMergeTargetId("");
+    setTeamMergeReview(null);
     setAliasType(
       nextType === "players" ? "lounge_name" : nextType === "teams" ? "identity" : "alias"
     );
@@ -409,6 +551,8 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       setMergeTargetId("");
       setPlayerMergeTargetId("");
       setPlayerMergeReview(null);
+      setTeamMergeTargetId("");
+      setTeamMergeReview(null);
       setAliasType(entityType === "teams" ? "identity" : (detail.alias_types[0] ?? "alias"));
       setNewAlias("");
       setNewFriendCode("");
@@ -724,6 +868,77 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       setError(caught instanceof Error ? caught.message : "Could not merge player records.");
     } finally {
       setPlayerMergeLoading(false);
+    }
+  };
+
+  const reviewTeamMerge = async () => {
+    if (!selected || entityType !== "teams" || !teamMergeTargetId) return;
+    setTeamMergeLoading(true);
+    setError("");
+    setNotice("");
+    try {
+      const comparison = await fetchJson<TeamMergeComparison>(
+        `/api/admin/aliases/teams/${selected.id}/merge-comparison`,
+        { target_team_id: teamMergeTargetId }
+      );
+      setTeamMergeReview(comparison);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not compare team records.");
+    } finally {
+      setTeamMergeLoading(false);
+    }
+  };
+
+  const confirmTeamMerge = async () => {
+    if (!teamMergeReview || teamMergeReview.blockers.length) return;
+    const sourceId = teamMergeReview.source.team.id;
+    const targetId = teamMergeReview.target.team.id;
+    setTeamMergeLoading(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await postJson<TeamMergeResponse>(
+        `/api/admin/aliases/teams/${sourceId}/merge`,
+        { target_team_id: targetId }
+      );
+      const team = response.target.team;
+      const label = `${team.canonical_tag} — ${team.canonical_name}`;
+      const targetDetail: AliasDetail = {
+        id: team.id,
+        label,
+        canonical_name: null,
+        secondary: team.canonical_tag,
+        alias_types: ["alias"],
+        aliases: response.target.aliases.map((alias) => ({ ...alias, type: "alias" })),
+        friend_codes: [],
+        season_entries: [],
+      };
+      const updateTeams = (current: AliasEntity[]) =>
+        current
+          .filter((entity) => entity.id !== sourceId)
+          .map((entity) =>
+            entity.id === targetId
+              ? {
+                  ...entity,
+                  label,
+                  secondary: team.canonical_tag,
+                  alias_count: response.target.aliases.length,
+                }
+              : entity
+          );
+      setEntities(updateTeams);
+      setTeamCandidates(updateTeams);
+      setSelected(targetDetail);
+      setAliasType("identity");
+      setTeamMergeReview(null);
+      setTeamMergeTargetId("");
+      setNotice(
+        `Merged ${response.merged.canonical_tag} — ${response.merged.canonical_name} into ${label}. Preserved ${response.season_entries_moved} season identities and ${response.league_identities_moved} league links.`
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not merge team records.");
+    } finally {
+      setTeamMergeLoading(false);
     }
   };
 
@@ -1089,6 +1304,52 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                             className="rounded bg-amber-400 px-4 py-2 font-bold text-black disabled:opacity-40"
                           >
                             {playerMergeLoading ? "Loading comparison…" : "Review merge"}
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
+
+                    {entityType === "teams" ? (
+                      <form
+                        className="mt-5 rounded border border-amber-300/25 bg-amber-950/20 p-4"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void reviewTeamMerge();
+                        }}
+                      >
+                        <label
+                          htmlFor="team-merge-target"
+                          className="block text-sm font-bold text-amber-100"
+                        >
+                          Merge into an existing team
+                          <span className="mt-1 block text-xs font-normal text-gray-400">
+                            Moves league links, season identities, players, match history, playoff
+                            appearances, aliases, and logos to the destination. You will review both
+                            records before this team is permanently removed.
+                          </span>
+                        </label>
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                          <select
+                            id="team-merge-target"
+                            value={teamMergeTargetId}
+                            onChange={(event) => setTeamMergeTargetId(event.target.value)}
+                            className="min-h-11 flex-1 rounded border border-white/20 bg-black/50 px-3 text-white"
+                          >
+                            <option value="">Choose destination team</option>
+                            {teamCandidates
+                              .filter((candidate) => candidate.id !== selected.id)
+                              .map((candidate) => (
+                                <option key={candidate.id} value={candidate.id}>
+                                  {candidate.label} (ID {candidate.id})
+                                </option>
+                              ))}
+                          </select>
+                          <button
+                            type="submit"
+                            disabled={teamMergeLoading || !teamMergeTargetId}
+                            className="rounded bg-amber-400 px-4 py-2 font-bold text-black disabled:opacity-40"
+                          >
+                            {teamMergeLoading ? "Loading comparison…" : "Review merge"}
                           </button>
                         </div>
                       </form>
@@ -1535,6 +1796,85 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                 className="rounded bg-red-500 px-4 py-2 font-bold text-white disabled:opacity-40"
               >
                 {playerMergeLoading ? "Merging…" : "Confirm merge"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {teamMergeReview ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="team-merge-review-title"
+        >
+          <section className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded border border-amber-300/30 bg-zinc-950 p-5 shadow-2xl">
+            <h2 id="team-merge-review-title" className="text-2xl font-bold text-amber-100">
+              Review team merge
+            </h2>
+            <p className="mt-2 text-sm text-gray-300">
+              No changes have been made. The destination team&apos;s league preference and manual
+              override setting remain authoritative. All non-conflicting historical identities are
+              transferred before the source team is removed.
+            </p>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <TeamComparisonCard detail={teamMergeReview.source} disposition="removed" />
+              <TeamComparisonCard detail={teamMergeReview.target} disposition="kept" />
+            </div>
+
+            <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ["Aliases moved", teamMergeReview.impact.aliases],
+                ["League links moved", teamMergeReview.impact.league_identities],
+                ["Season identities moved", teamMergeReview.impact.season_entries],
+                ["Season identities combined", teamMergeReview.impact.overlapping_season_entries],
+                ["Player memberships preserved", teamMergeReview.impact.player_memberships],
+                ["Match appearances preserved", teamMergeReview.impact.match_appearances],
+                ["Logos moved", teamMergeReview.impact.logos],
+                ["Playoff entries updated", teamMergeReview.impact.playoff_participants],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded border border-white/10 bg-black/30 p-3">
+                  <dt className="text-xs uppercase text-gray-400">{label}</dt>
+                  <dd className="mt-1 text-2xl font-bold">{value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {teamMergeReview.blockers.length ? (
+              <div className="mt-5 rounded border border-red-500/40 bg-red-950/40 p-4 text-red-100">
+                <h3 className="font-bold">This merge cannot be completed</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                  {teamMergeReview.blockers.map((blocker) => (
+                    <li key={blocker}>{blocker}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {error ? (
+              <p className="mt-5 rounded border border-red-500/40 bg-red-950/40 p-3 text-red-100">
+                {error}
+              </p>
+            ) : null}
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-white/10 pt-4">
+              <button
+                type="button"
+                disabled={teamMergeLoading}
+                onClick={() => setTeamMergeReview(null)}
+                className="rounded border border-white/25 px-4 py-2 font-bold text-gray-100 disabled:opacity-40"
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                disabled={teamMergeLoading || teamMergeReview.blockers.length > 0}
+                onClick={() => void confirmTeamMerge()}
+                className="rounded bg-red-500 px-4 py-2 font-bold text-white disabled:opacity-40"
+              >
+                {teamMergeLoading ? "Merging…" : "Confirm merge"}
               </button>
             </div>
           </section>

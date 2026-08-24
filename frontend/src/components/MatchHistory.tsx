@@ -321,8 +321,8 @@ export default function MatchHistory(): React.JSX.Element {
                           ? ` / M${displayedMatchDetail.series_match_number}`
                           : ""}
                       </>
-                    ) : displayedMatchDetail.week ? (
-                      ` / Week ${displayedMatchDetail.week}`
+                    ) : displayedMatchDetail.match_number ? (
+                      ` / Match ${displayedMatchDetail.match_number}`
                     ) : (
                       ""
                     )}

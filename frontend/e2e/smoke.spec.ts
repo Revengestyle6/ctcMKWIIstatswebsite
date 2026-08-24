@@ -197,14 +197,14 @@ test("match history loads regular-season data directly after all matches", async
   const firstRegularMatchId = await firstRegularMatch.getAttribute("value");
   expect(firstRegularMatchId).not.toBeNull();
   await matchSelection.selectOption(firstRegularMatchId ?? "");
-  await expect(page.getByText(/S3 \/ D1 \/ Week \d+/)).toBeVisible();
+  await expect(page.getByText(/S3 \/ D1 \/ Match \d+/)).toBeVisible();
 
   await page.getByRole("button", { name: "Regular season", exact: true }).click();
 
   await expect(page).not.toHaveURL(/match_set=/);
   await expect(matchSelection).toBeEnabled();
   await expect(matchSelection.locator("option:checked")).toHaveText(/^W\d+ - /);
-  await expect(page.getByText(/S3 \/ D1 \/ Week \d+/)).toBeVisible();
+  await expect(page.getByText(/S3 \/ D1 \/ Match \d+/)).toBeVisible();
 });
 
 test("json editor changes a misplaced player's team and deletes the accidental team", async ({
@@ -219,7 +219,7 @@ test("json editor changes a misplaced player's team and deletes the accidental t
     league: "ctc",
     season: "s3",
     division: "d2",
-    week: 1,
+    match_number: 1,
     match_label: "Team deletion test",
     rxx: ["r12345678"],
     tracks: ["Luigi Circuit", "Moo Moo Meadows"],
@@ -294,7 +294,7 @@ test("json editor changes a misplaced player's team and deletes the accidental t
 });
 
 test("json editor flags missing required metadata before review", async ({ page }) => {
-  await page.goto("/json-editor");
+  await page.goto("/json-editor?league=ctc");
   await page.getByRole("button", { name: "No Thanks" }).click();
   const match = {
     title_str: "#title 2 races\n",
@@ -315,27 +315,23 @@ test("json editor flags missing required metadata before review", async ({ page 
     buffer: Buffer.from(JSON.stringify(match)),
   });
 
-  await expect(page.getByText("League is missing.")).toBeVisible();
   await expect(page.getByText("Season is missing.")).toBeVisible();
   await expect(page.getByText("Division is missing.")).toBeVisible();
-  await expect(page.getByText("Match label is missing.")).toBeVisible();
   await expect(
-    page.getByText("Week is required and must be a positive whole number.")
+    page.getByText("Match number is required and must be a positive whole number.")
   ).toBeVisible();
   await expect(
     page.getByText("This match contains 2 races instead of the usual 12.")
   ).toBeVisible();
-  await expect(page.locator('[data-required-marker="true"]')).toHaveCount(5);
+  await expect(page.locator('[data-required-marker="true"]')).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Review & Upload" }).first()).toBeDisabled();
 
   const metadata = page.locator("section").filter({ hasText: "Additional Metadata" });
-  await metadata.getByLabel(/league/i).fill("ctc");
-  await metadata.getByLabel(/season/i).fill("s3");
-  await metadata.getByLabel(/division/i).fill("d2");
-  await metadata.getByLabel(/match label/i).fill("Metadata validation test");
-  await metadata.getByLabel(/week/i).fill("1");
+  await metadata.getByRole("combobox", { name: /^season required/i }).fill("s3");
+  await metadata.getByRole("combobox", { name: /^division required/i }).fill("d2");
+  await metadata.getByRole("spinbutton", { name: /^match number required/i }).fill("1");
 
-  await expect(page.getByText("Match label is missing.")).not.toBeVisible();
+  await expect(metadata.getByLabel("Match label")).toHaveValue("M1");
   await expect(page.locator('[data-required-marker="true"]')).toHaveCount(0);
   await expect(
     page.getByText("This match contains 2 races instead of the usual 12.")
@@ -396,7 +392,7 @@ test("json editor ignores positionless substitution artifacts when every racer f
     league: "ctc",
     season: "s3",
     division: "d2",
-    week: 1,
+    match_number: 1,
     match_label: "Substitution artifact test",
     rxx: ["r12345678"],
     tracks: ["Substitution Test 1", "Substitution Test 2"],
@@ -472,7 +468,7 @@ test("json editor detects every positionless DC award in reduced rooms", async (
     league: "ctc",
     season: "s3",
     division: "d2",
-    week: 1,
+    match_number: 1,
     match_label: "Reduced-room DC test",
     rxx: ["r12345678"],
     tracks: ["Reduced Room 1", "Reduced Room 2"],

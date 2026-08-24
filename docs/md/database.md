@@ -111,9 +111,9 @@ JSON, import status/review notes, and creation time.
 Competition metadata is exclusive:
 
 - A regular match has `match_type = regular`, no playoff series, no series match
-  number, and normally a positive `week_number`. The database permits a null week
+  number, and normally a positive `match_number`. The database permits a null match number
   for legacy/repair records; new editor uploads require one.
-- A playoff match has `match_type = playoff`, a null week, a required
+- A playoff match has `match_type = playoff`, a null regular-season match number, a required
   `playoff_series_id`, and a positive `series_match_number`.
 
 `(source_file_id, match_index_in_source)` and
@@ -179,10 +179,13 @@ reason. Result type is `missing_player`; reason is `short_roster`,
 
 ### `teams`, `team_aliases`, `team_league_identities`, and `team_logos`
 
-`teams` is the global identity (`team_id`, canonical tag, canonical name, created
-time). Canonical tags are presentation metadata and may match across otherwise
-unlinked teams. `team_aliases` maps a globally unique administrator-managed
-alternate tag to a team.
+`teams` is the global identity (`team_id`, canonical tag, canonical name, automatic
+league preference, manual-override flag, and creation time). Unless overridden,
+the canonical name and tag follow the newest season entry, optionally restricted
+to CTC or GSC. Canonical tags are presentation metadata and may match across
+otherwise unlinked teams. `team_aliases` maps a globally unique
+administrator-managed alternate tag to a team. Duplicate global teams can be
+merged while their season entries and league links remain distinct.
 
 `team_league_identities` is the authoritative import boundary. Each row explicitly
 maps `(league_code, tag)` to a global team, with a case-insensitive unique index on
