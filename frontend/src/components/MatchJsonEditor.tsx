@@ -39,6 +39,7 @@ import {
   expectedRoomSize,
   type MatchJson,
   type MatchPlayerJson,
+  normalizeMatchNumber,
   type RaceDraft,
   racesFromMatch,
   SCORE_TABLES,
@@ -465,8 +466,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
           match?: MatchJson;
         };
         if (draft.match && draft.submissionId) {
-          setMatch(draft.match);
-          setRaces(racesFromMatch(draft.match));
+          const normalizedMatch = normalizeMatchNumber(draft.match);
+          setMatch(normalizedMatch);
+          setRaces(racesFromMatch(normalizedMatch));
           setFileName(draft.filename || "Queued match JSON");
           setReviewSubmissionId(draft.submissionId);
         }
@@ -1208,8 +1210,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
       : mii;
   }
   function resetEditor(nextMatch: MatchJson, nextFileName: string): void {
-    setMatch(nextMatch);
-    setRaces(racesFromMatch(nextMatch));
+    const normalizedMatch = normalizeMatchNumber(nextMatch);
+    setMatch(normalizedMatch);
+    setRaces(racesFromMatch(normalizedMatch));
     setFileName(nextFileName);
     setIdentityStates({});
     setRaceView("one");
@@ -1712,7 +1715,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   if (event.target.value === "playoff") {
                     updateMatch({
                       match_type: "playoff",
-                      week: undefined,
+                      match_number: undefined,
                       playoff_format:
                         playoffContext?.format?.code ?? match.playoff_format ?? "four_team",
                       playoff_stage: match.playoff_stage ?? "semifinals",
@@ -1739,8 +1742,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
             </label>
             {(match.match_type ?? "regular") === "regular" ? (
               <label className="text-sm font-semibold text-gray-200">
-                Week
-                {numberValue(match.week) === "" && (
+                Match number
+                {numberValue(match.match_number) === "" && (
                   <>
                     <span
                       aria-hidden="true"
@@ -1756,16 +1759,20 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   type="number"
                   min={1}
                   step={1}
-                  value={numberValue(match.week)}
+                  value={numberValue(match.match_number)}
                   onChange={(e) =>
-                    updateMatch({ week: e.target.value ? Number(e.target.value) : undefined })
+                    updateMatch({
+                      match_number: e.target.value ? Number(e.target.value) : undefined,
+                    })
                   }
                   required
                   aria-required="true"
                   aria-invalid={
-                    !Number.isInteger(match.week) || Number(match.week) < 1 || undefined
+                    !Number.isInteger(match.match_number) ||
+                    Number(match.match_number) < 1 ||
+                    undefined
                   }
-                  className={`${inputClass} ${!Number.isInteger(match.week) || Number(match.week) < 1 ? "border-red-400/70" : ""}`}
+                  className={`${inputClass} ${!Number.isInteger(match.match_number) || Number(match.match_number) < 1 ? "border-red-400/70" : ""}`}
                 />
               </label>
             ) : (

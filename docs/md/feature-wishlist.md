@@ -16,7 +16,7 @@ Basic flow:
 Possible filters:
 
 - team
-- week
+- match number
 - match date, if/when available
 - track
 - player
@@ -28,7 +28,7 @@ Possible filters:
 Each match page should include:
 
 - full war table
-- season, division, week, and match label
+- season, division, match number, and match label
 - teams, final scores, penalties, and score difference
 - track list in race order
 - player scores, GP scores, race scores, and total scores
@@ -88,7 +88,7 @@ Editable match fields:
 - league
 - season
 - division
-- week or match label
+- match number or match label
 - number of races
 - teams involved
 - team tags, names, colors, scores, and penalties
@@ -108,7 +108,7 @@ Editable match fields:
 Validation should catch:
 
 - missing required fields
-- missing or invalid week number
+- missing or invalid match number
 - malformed friend codes
 - duplicate friend codes in the same match
 - race count mismatches

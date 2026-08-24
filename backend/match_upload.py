@@ -77,7 +77,7 @@ def _archive_component(value: Any, label: str) -> str:
 
 def _archive_filename(match_data: dict[str, Any], fingerprint: str) -> str:
     label = str(match_data.get("match_label") or "").strip()
-    week = match_data.get("week")
+    match_number = match_data.get("match_number", match_data.get("week"))
     if str(match_data.get("match_type") or "regular").strip().lower() == "playoff":
         stage = str(match_data.get("playoff_stage") or "").strip().lower()
         series_number = match_data.get("playoff_series_number")
@@ -85,11 +85,11 @@ def _archive_filename(match_data: dict[str, Any], fingerprint: str) -> str:
         stage_label = f"Semifinals Series {series_number}" if stage == "semifinals" else "Finals"
         label = f"{stage_label} - Match {match_number}"
     elif (
-        isinstance(week, (int, float))
-        and int(week) > 0
-        and not re.match(r"^W\d+\b", label, re.IGNORECASE)
+        isinstance(match_number, (int, float))
+        and int(match_number) > 0
+        and not re.match(r"^M\d+\b", label, re.IGNORECASE)
     ):
-        label = f"W{int(week)} {label}".strip()
+        label = f"M{int(match_number)} {label}".strip()
     label = label.removesuffix(".json").removesuffix(".txt")
     label = UNSAFE_FILENAME_RE.sub(" ", label).strip(" .")
     label = re.sub(r"\s+", " ", label)

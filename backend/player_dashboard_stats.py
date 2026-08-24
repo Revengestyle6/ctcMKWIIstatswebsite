@@ -313,7 +313,7 @@ def _player_race_rows(session, player_id, scope, team_id=None, match_set="regula
             Match.match_id,
             Match.match_label,
             Match.format,
-            Match.week_number,
+            Match.match_number,
             Match.races_played,
             Season.season_id,
             Season.season_code,
@@ -524,7 +524,7 @@ def get_player_overview(
                 "season": first.season_code,
                 "season_number": first.season_number,
                 "division": first.division_code,
-                "week": first.week_number,
+                "match_number": first.match_number,
                 "team": {
                     "team_id": first.team_id,
                     "name": first.team_name,
@@ -553,7 +553,11 @@ def get_player_overview(
             match_scores.append(player_score)
 
     recent_matches.sort(
-        key=lambda row: (row["season_number"] or 0, row["week"] or 0, row["match_id"]),
+        key=lambda row: (
+            row["season_number"] or 0,
+            row["match_number"] or 0,
+            row["match_id"],
+        ),
         reverse=True,
     )
 

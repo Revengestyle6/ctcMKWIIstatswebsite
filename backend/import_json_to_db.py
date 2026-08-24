@@ -55,7 +55,7 @@ from team_identity_management import apply_canonical_identity_priority
 JSON_ROOT = BASE_DIR / "JSON"
 HISTORICAL_TEAM_CORRECTIONS_PATH = BASE_DIR / "data" / "team_aliases.csv"
 PLAYER_IDENTITY_PATH = BASE_DIR / "data" / "player_identities.csv"
-WEEK_RE = re.compile(r"\bW(\d+)\b", re.IGNORECASE)
+LEGACY_WEEK_RE = re.compile(r"\bW(\d+)\b", re.IGNORECASE)
 
 
 @dataclass
@@ -83,8 +83,9 @@ def division_name_from_code(division_code: str) -> str:
     return f"Division {suffix.replace('_', '-')}"
 
 
-def week_number_from_filename(path: Path) -> int | None:
-    match = WEEK_RE.search(path.stem)
+def match_number_from_filename(path: Path) -> int | None:
+    """Read match numbers from historical archive names such as W3."""
+    match = LEGACY_WEEK_RE.search(path.stem)
     return int(match.group(1)) if match else None
 
 
@@ -677,7 +678,7 @@ def import_match(
     season_code: str,
     division_code: str,
     match_label_override: str | None = None,
-    week_number_override: int | None = None,
+    match_number_override: int | None = None,
     player_identity_links: dict[str, int] | None = None,
     team_identity_links: dict[str, int] | None = None,
     player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
@@ -731,10 +732,10 @@ def import_match(
         )
 
     kind = match_type(match_data)
-    week_number = (
-        week_number_override
-        if week_number_override is not None
-        else week_number_from_filename(path)
+    match_number = (
+        match_number_override
+        if match_number_override is not None
+        else match_number_from_filename(path)
     )
     playoff_series = None
     series_match_number = None
@@ -746,11 +747,11 @@ def import_match(
             match_data,
             [resolved_teams[key][1].team_id for key in teams],
         )
-        week_number = None
+        match_number = None
         series_match_number = playoff_metadata["series_match_number"]
         match_label = f"{playoff_series.display_label} — Match {series_match_number}"
-    elif week_number is None:
-        raise ValueError("Regular-season matches require a match week.")
+    elif match_number is None:
+        raise ValueError("Regular-season matches require a match number.")
 
     match = Match(
         season_id=season.season_id,
@@ -758,7 +759,7 @@ def import_match(
         source_file_id=source_file.source_file_id,
         match_index_in_source=match_index,
         match_type=kind,
-        week_number=week_number,
+        match_number=match_number,
         playoff_series_id=(
             playoff_series.playoff_series_id if playoff_series is not None else None
         ),
@@ -1028,8 +1029,8 @@ def import_editor_match(
     session.flush()
 
     label = str(match_data.get("match_label") or "Match preview").strip() or "Match preview"
-    week = match_data.get("week")
-    week_number = int(week) if isinstance(week, (int, float)) else None
+    raw_match_number = match_data.get("match_number", match_data.get("week"))
+    match_number = int(raw_match_number) if isinstance(raw_match_number, (int, float)) else None
     return import_match(
         session,
         source_file,
@@ -1044,7 +1045,7 @@ def import_editor_match(
         season_code,
         division_code,
         match_label_override=label,
-        week_number_override=week_number,
+        match_number_override=match_number,
         player_identity_links=player_identity_links,
         team_identity_links=team_identity_links,
         player_mkc_profiles=player_mkc_profiles,

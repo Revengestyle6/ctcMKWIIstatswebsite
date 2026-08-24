@@ -44,7 +44,7 @@ export type MatchJson = {
   league?: string;
   season?: string;
   division?: string;
-  week?: number;
+  match_number?: number;
   match_type?: "regular" | "playoff";
   playoff_format?: "three_team" | "four_team";
   playoff_stage?: "semifinals" | "finals";
@@ -92,6 +92,16 @@ export function expectedRoomSize(format = "5v5"): number {
   const teamMatch = format.match(/^(\d+)v(\d+)$/i);
   if (teamMatch) return Number(teamMatch[1]) + Number(teamMatch[2]);
   return format.toLowerCase() === "ffa" ? 12 : 10;
+}
+
+export function normalizeMatchNumber(match: MatchJson): MatchJson {
+  const normalized = { ...match };
+  const legacyWeek = normalized.week;
+  if (normalized.match_number === undefined && typeof legacyWeek === "number") {
+    normalized.match_number = legacyWeek;
+  }
+  delete normalized.week;
+  return normalized;
 }
 
 export function defaultRoleForPosition(format: string | undefined, position: number): RaceRole {
@@ -235,9 +245,10 @@ function gpGroups(scores: Array<number | null>): Array<Array<number | null>> {
 }
 
 export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
+  const normalizedMatch = normalizeMatchNumber(match);
   const orderedRaces = [...races].sort((left, right) => left.raceNumber - right.raceNumber);
   const teams = Object.fromEntries(
-    Object.entries(match.teams ?? {}).map(([teamKey, team]) => {
+    Object.entries(normalizedMatch.teams ?? {}).map(([teamKey, team]) => {
       const tag = teamTag(teamKey, team);
       const color = teamColor(team);
       const players = Object.fromEntries(
@@ -329,8 +340,8 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
     })
   );
   return {
-    ...match,
-    rxx: (match.rxx ?? []).map((code) => code.trim()).filter(Boolean),
+    ...normalizedMatch,
+    rxx: (normalizedMatch.rxx ?? []).map((code) => code.trim()).filter(Boolean),
     title_str: `#title ${orderedRaces.length} races\n`,
     races_played: orderedRaces.length,
     tracks: orderedRaces.map((race) => race.trackName),

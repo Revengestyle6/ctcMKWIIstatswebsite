@@ -48,13 +48,13 @@ def _positive_int(value: Any, label: str, *, default: int | None = None) -> int:
 
 def validate_competition_metadata(match_data: dict[str, Any]) -> dict[str, Any]:
     kind = match_type(match_data)
-    week = match_data.get("week")
+    match_number = match_data.get("match_number", match_data.get("week"))
     if kind == "regular":
-        _positive_int(week, "Week")
-        return {"match_type": kind, "week_number": week}
+        _positive_int(match_number, "Match number")
+        return {"match_type": kind, "match_number": match_number}
 
-    if week is not None:
-        raise ValueError("Playoff matches do not have a match week.")
+    if match_number is not None:
+        raise ValueError("Playoff matches do not have a regular-season match number.")
     format_code = str(match_data.get("playoff_format") or "").strip().lower()
     definition = PLAYOFF_FORMATS.get(format_code)
     if definition is None:
@@ -93,7 +93,7 @@ def validate_competition_metadata(match_data: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "match_type": kind,
-        "week_number": None,
+        "match_number": None,
         "format": definition,
         "stage": stage,
         "series_number": series_number,

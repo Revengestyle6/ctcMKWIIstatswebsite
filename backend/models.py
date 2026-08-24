@@ -310,7 +310,7 @@ class Match(Base):
     source_file_id = Column(Integer, ForeignKey("source_files.source_file_id"), nullable=False)
     match_index_in_source = Column(Integer, nullable=False, default=0)
     match_type = Column(Text, nullable=False, default="regular")
-    week_number = Column(Integer)
+    match_number = Column(Integer)
     playoff_series_id = Column(Integer, ForeignKey("playoff_series.playoff_series_id"))
     series_match_number = Column(Integer)
     match_label = Column(Text, nullable=False)
@@ -331,7 +331,7 @@ class Match(Base):
         CheckConstraint(
             "(match_type = 'regular' AND playoff_series_id IS NULL "
             "AND series_match_number IS NULL) OR "
-            "(match_type = 'playoff' AND week_number IS NULL "
+            "(match_type = 'playoff' AND match_number IS NULL "
             "AND playoff_series_id IS NOT NULL AND series_match_number >= 1)",
             name="ck_match_competition_metadata",
         ),

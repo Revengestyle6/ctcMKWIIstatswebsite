@@ -469,7 +469,7 @@ export default function PlayerDashboard() {
                       <tr key={match.match_id} className="border-t border-white/10">
                         <td className="px-4 py-3 text-gray-300">
                           {match.season.toUpperCase()} {match.division.toUpperCase()}{" "}
-                          {match.week ? `W${match.week}` : ""}
+                          {match.match_number ? `M${match.match_number}` : ""}
                         </td>
                         <td className="px-4 py-3">
                           <Link

@@ -115,7 +115,7 @@ class AliasManagementTests(unittest.TestCase):
                 division_id=division.division_id,
                 source_file_id=source.source_file_id,
                 match_label="W1 Test",
-                week_number=1,
+                match_number=1,
                 races_played=2,
             )
             session.add(match)

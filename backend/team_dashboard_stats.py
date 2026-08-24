@@ -124,7 +124,7 @@ def _team_match_rows(session, team_id, scope, match_set="regular"):
         select(
             Match.match_id,
             Match.match_label,
-            Match.week_number,
+            Match.match_number,
             Match.races_played,
             MatchTeam.match_team_id,
             MatchTeam.final_score,
@@ -269,7 +269,7 @@ def get_team_overview(
                 "season": row.season_code,
                 "season_number": row.season_number,
                 "division": row.division_code,
-                "week": row.week_number,
+                "match_number": row.match_number,
                 "races": int(row.races_played or 0),
                 "score": own_final,
                 "opponent_score": opponent_final,
@@ -292,7 +292,11 @@ def get_team_overview(
             }
         )
     matches.sort(
-        key=lambda item: (item["season_number"] or 0, item["week"] or 0, item["match_id"]),
+        key=lambda item: (
+            item["season_number"] or 0,
+            item["match_number"] or 0,
+            item["match_id"],
+        ),
         reverse=True,
     )
 
@@ -485,7 +489,7 @@ def get_team_roster(
             Match.match_id,
             Match.match_label,
             Match.format,
-            Match.week_number,
+            Match.match_number,
             Season.season_code,
             Season.season_number,
             Division.division_code,
@@ -505,7 +509,7 @@ def get_team_roster(
             Match.match_id.in_(match_ids),
             TeamSeasonEntry.team_id == team_id,
         )
-        .order_by(Season.season_number, Match.week_number, Match.match_id, Race.race_number)
+        .order_by(Season.season_number, Match.match_number, Match.match_id, Race.race_number)
     )
     statement = apply_analytics_race_filter(statement, session)
     rows = session.execute(statement).all()
@@ -556,7 +560,7 @@ def get_team_roster(
             player_rows,
             key=lambda row: (
                 row.season_number or 0,
-                row.week_number or 0,
+                row.match_number or 0,
                 row.match_id,
                 row.race_number,
             ),
@@ -575,13 +579,13 @@ def get_team_roster(
                     "match_id": first.match_id,
                     "season": first.season_code,
                     "division": first.division_code,
-                    "week": first.week_number,
+                    "match_number": first.match_number,
                 },
                 "last_appearance": {
                     "match_id": last.match_id,
                     "season": last.season_code,
                     "division": last.division_code,
-                    "week": last.week_number,
+                    "match_number": last.match_number,
                 },
             }
         )

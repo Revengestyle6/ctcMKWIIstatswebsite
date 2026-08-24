@@ -90,14 +90,14 @@ Then update the API to filter by `season` and `division` instead of loading only
 
 ## Analytics Improvements To Consider
 
-- Overall player averages by season, division, team, and week range.
+- Overall player averages by season, division, team, and match-number range.
 - Track averages by player and team.
 - Head-to-head team matchup suggestions.
 - Minimum race controls that are consistent across pages.
 - Bagging-aware views instead of changing the player name.
 - Player aliases so duplicate names do not split stats.
 - Team aliases for renamed tags.
-- Match/week filters.
+- Match-number filters.
 - Trend lines over time for ongoing Season 3.
 
 ## Operational Requirements For Season 3

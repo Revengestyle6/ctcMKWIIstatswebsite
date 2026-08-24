@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 export type MatchSummary = {
   match_id: number;
   match_type: "regular" | "playoff";
-  week: number | null;
+  match_number: number | null;
   playoff_series_id: number | null;
   series_match_number: number | null;
   playoff_stage: "semifinals" | "finals" | null;
@@ -63,7 +63,7 @@ export type MatchDetail = {
   match_type: "regular" | "playoff";
   season: string;
   division: string;
-  week: number | null;
+  match_number: number | null;
   playoff_series_id: number | null;
   series_match_number: number | null;
   playoff_stage: "semifinals" | "finals" | null;
@@ -103,14 +103,14 @@ export function matchRoundLabel(
   match: Pick<
     MatchSummary,
     | "match_type"
-    | "week"
+    | "match_number"
     | "playoff_stage"
     | "playoff_series_number"
     | "playoff_semifinal_series_count"
     | "series_match_number"
   >
 ): string {
-  if (match.match_type === "regular") return match.week ? `W${match.week}` : "";
+  if (match.match_type === "regular") return match.match_number ? `M${match.match_number}` : "";
   const series = playoffSeriesAbbreviation(
     match.playoff_stage,
     match.playoff_series_number,

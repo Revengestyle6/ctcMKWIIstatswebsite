@@ -137,7 +137,7 @@ export interface PlayerRecentMatch {
   season: string;
   season_number: number | null;
   division: string;
-  week: number | null;
+  match_number: number | null;
   team: DashboardOpponent;
   opponents: DashboardOpponent[];
   result: "win" | "loss" | "tie" | "unknown";
@@ -162,7 +162,7 @@ export interface TeamRecentMatch {
   season: string;
   season_number: number | null;
   division: string;
-  week: number | null;
+  match_number: number | null;
   races: number;
   score: number;
   opponent_score: number | null;
@@ -266,8 +266,18 @@ export interface TeamRosterPlayer {
   matches: number;
   metrics: PlayerRoleMetrics;
   role_coverage: RoleCoverage;
-  first_appearance: { match_id: number; season: string; division: string; week: number | null };
-  last_appearance: { match_id: number; season: string; division: string; week: number | null };
+  first_appearance: {
+    match_id: number;
+    season: string;
+    division: string;
+    match_number: number | null;
+  };
+  last_appearance: {
+    match_id: number;
+    season: string;
+    division: string;
+    match_number: number | null;
+  };
 }
 
 export interface TeamRoster {

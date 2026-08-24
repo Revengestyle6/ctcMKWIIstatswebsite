@@ -414,16 +414,19 @@ export function validation(
     issues.push({ level: "error", message: "Match label is missing." });
   const isPlayoff = match.match_type === "playoff";
   const teamCount = Object.keys(match.teams ?? {}).length;
-  if (!isPlayoff && (!Number.isInteger(match.week) || Number(match.week) < 1))
+  if (!isPlayoff && (!Number.isInteger(match.match_number) || Number(match.match_number) < 1))
     issues.push({
       level: "error",
-      message: "Week is required and must be a positive whole number.",
+      message: "Match number is required and must be a positive whole number.",
     });
   if (isPlayoff) {
     if (teamCount !== 2)
       issues.push({ level: "error", message: "A playoff match must contain exactly two teams." });
-    if (match.week !== undefined)
-      issues.push({ level: "error", message: "Playoff matches do not have a match week." });
+    if (match.match_number !== undefined)
+      issues.push({
+        level: "error",
+        message: "Playoff matches do not have a regular-season match number.",
+      });
     if (!match.playoff_format)
       issues.push({
         level: "error",
