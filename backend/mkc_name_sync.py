@@ -7,13 +7,10 @@ from datetime import datetime, timedelta, timezone
 from mkc_registry import lookup_mkc_player
 from models import MkcRefreshPreview, Player, PlayerAlias, PlayerFriendCode
 from player_naming import (
+    CANONICAL_HISTORY_ALIAS_TYPE,
+    LOUNGE_ALIAS_TYPE,
     MKC_ALIAS_TYPE,
     MKC_ID_ALIAS_TYPE,
-    add_player_alias,
-    apply_shared_mkc_name_priorities,
-    latest_lounge_name,
-    latest_mkc_name,
-    set_player_canonical_name,
 )
 from sqlalchemy import desc, select
 
@@ -33,6 +30,24 @@ def canonical_name_options(mkc_name: str) -> list[str]:
         if name not in options:
             options.append(name)
     return options
+
+
+def _aliases_by_player(session, alias_types: tuple[str, ...]) -> dict[tuple[int, str], list]:
+    """Load ordered alias histories without one query per player."""
+    aliases = session.scalars(
+        select(PlayerAlias)
+        .where(PlayerAlias.alias_type.in_(alias_types))
+        .order_by(
+            PlayerAlias.player_id,
+            PlayerAlias.alias_type,
+            desc(PlayerAlias.last_observed_at),
+            desc(PlayerAlias.player_alias_id),
+        )
+    ).all()
+    grouped: dict[tuple[int, str], list] = {}
+    for alias in aliases:
+        grouped.setdefault((alias.player_id, alias.alias_type), []).append(alias)
+    return grouped
 
 
 def _player_snapshot(session, player_id: int | None = None) -> list[dict]:
@@ -57,54 +72,30 @@ def _player_snapshot(session, player_id: int | None = None) -> list[dict]:
             desc(PlayerFriendCode.player_friend_code_id),
         )
     ).all()
-    mkc_aliases = session.execute(
-        select(
-            PlayerAlias.player_id,
-            PlayerAlias.alias_value,
-            PlayerAlias.created_at,
-            PlayerAlias.last_observed_at,
-            PlayerAlias.player_alias_id,
-        )
-        .where(
-            PlayerAlias.player_id.in_(player_ids),
-            PlayerAlias.alias_type == MKC_ALIAS_TYPE,
-        )
-        .order_by(
-            PlayerAlias.player_id,
-            desc(PlayerAlias.last_observed_at),
-            desc(PlayerAlias.player_alias_id),
-        )
-    ).all()
-    mkc_id_aliases = session.execute(
-        select(PlayerAlias.player_id, PlayerAlias.alias_value)
-        .where(
-            PlayerAlias.player_id.in_(player_ids),
-            PlayerAlias.alias_type == MKC_ID_ALIAS_TYPE,
-        )
-        .order_by(
-            PlayerAlias.player_id,
-            desc(PlayerAlias.last_observed_at),
-            desc(PlayerAlias.player_alias_id),
-        )
-    ).all()
+    aliases = _aliases_by_player(session, (MKC_ALIAS_TYPE, MKC_ID_ALIAS_TYPE, LOUNGE_ALIAS_TYPE))
     codes_by_player: dict[int, list[str]] = {}
-    aliases_by_player: dict[int, list[str]] = {}
-    ids_by_player: dict[int, list[str]] = {}
     for row in codes:
         codes_by_player.setdefault(row.player_id, []).append(row.friend_code)
-    for row in mkc_aliases:
-        aliases_by_player.setdefault(row.player_id, []).append(row.alias_value)
-    for row in mkc_id_aliases:
-        ids_by_player.setdefault(row.player_id, []).append(row.alias_value)
     return [
         {
             "player_id": player.player_id,
             "canonical_name": player.canonical_name,
             "canonical_name_override": player.canonical_name_override,
             "friend_codes": codes_by_player.get(player.player_id, []),
-            "mkc_aliases": aliases_by_player.get(player.player_id, []),
-            "mkc_ids": ids_by_player.get(player.player_id, []),
-            "lounge_name": latest_lounge_name(session, player.player_id),
+            "mkc_aliases": [
+                alias.alias_value for alias in aliases.get((player.player_id, MKC_ALIAS_TYPE), [])
+            ],
+            "mkc_ids": [
+                alias.alias_value
+                for alias in aliases.get((player.player_id, MKC_ID_ALIAS_TYPE), [])
+            ],
+            "lounge_name": next(
+                (
+                    alias.alias_value
+                    for alias in aliases.get((player.player_id, LOUNGE_ALIAS_TYPE), [])
+                ),
+                None,
+            ),
         }
         for player in players
     ]
@@ -115,9 +106,10 @@ def _normalized_mkc_name(value: str | None) -> str:
 
 
 def _decorate_shared_mkc_names(session, results: list[dict]) -> None:
+    aliases = _aliases_by_player(session, (MKC_ALIAS_TYPE,))
     current_names = {
-        player_id: latest_mkc_name(session, player_id)
-        for player_id in session.scalars(select(Player.player_id))
+        player_id: player_aliases[0].alias_value
+        for (player_id, _alias_type), player_aliases in aliases.items()
     }
     for result in results:
         if result["status"] == "found":
@@ -293,56 +285,93 @@ def apply_refresh_preview(
             )
         validated_selections[player_key] = value
 
-    applied_aliases = 0
-    canonical_names_before = {
-        player.player_id: player.canonical_name for player in session.scalars(select(Player)).all()
-    }
-    applied_selections = {}
-    refreshed_mkc_names = set()
+    players = session.scalars(select(Player)).all()
+    players_by_id = {player.player_id: player for player in players}
+    aliases = _aliases_by_player(
+        session,
+        (
+            MKC_ALIAS_TYPE,
+            MKC_ID_ALIAS_TYPE,
+            LOUNGE_ALIAS_TYPE,
+            CANONICAL_HISTORY_ALIAS_TYPE,
+        ),
+    )
+
+    # Validate the whole preview before making any changes. Keeping this snapshot
+    # check in memory avoids several Cloud SQL round trips for every player.
     for result in results:
-        player = session.get(Player, result["player_id"])
+        player = players_by_id.get(result["player_id"])
         if player is None:
             raise ValueError(f"Player {result['player_id']} changed after the refresh preview.")
         current_aliases = [
-            value
-            for value in session.scalars(
-                select(PlayerAlias.alias_value)
-                .where(
-                    PlayerAlias.player_id == player.player_id,
-                    PlayerAlias.alias_type == MKC_ALIAS_TYPE,
-                )
-                .order_by(desc(PlayerAlias.last_observed_at), desc(PlayerAlias.player_alias_id))
-            )
+            alias.alias_value for alias in aliases.get((player.player_id, MKC_ALIAS_TYPE), [])
         ]
         current_mkc_ids = [
-            value
-            for value in session.scalars(
-                select(PlayerAlias.alias_value)
-                .where(
-                    PlayerAlias.player_id == player.player_id,
-                    PlayerAlias.alias_type == MKC_ID_ALIAS_TYPE,
-                )
-                .order_by(desc(PlayerAlias.last_observed_at), desc(PlayerAlias.player_alias_id))
-            )
+            alias.alias_value for alias in aliases.get((player.player_id, MKC_ID_ALIAS_TYPE), [])
         ]
+        current_lounge_name = next(
+            (alias.alias_value for alias in aliases.get((player.player_id, LOUNGE_ALIAS_TYPE), [])),
+            None,
+        )
         if (
             player.canonical_name != result["canonical_name"]
             or player.canonical_name_override != result["canonical_name_override"]
             or current_aliases != result["mkc_aliases"]
             or current_mkc_ids != result["mkc_ids"]
-            or latest_lounge_name(session, player.player_id) != result["lounge_name"]
+            or current_lounge_name != result["lounge_name"]
         ):
             raise ValueError(
                 f"Player {player.player_id} changed after this preview. Run the refresh again."
             )
+
+    alias_by_value = {
+        (player_id, alias_type, alias.alias_value): alias
+        for (player_id, alias_type), player_aliases in aliases.items()
+        for alias in player_aliases
+    }
+    observed_at = _utc_now()
+
+    def add_loaded_alias(player_id: int, alias_type: str, alias_value: str) -> bool:
+        key = (player_id, alias_type, alias_value)
+        existing = alias_by_value.get(key)
+        if existing is not None:
+            existing.last_observed_at = observed_at
+            player_aliases = aliases[(player_id, alias_type)]
+            player_aliases.remove(existing)
+            player_aliases.insert(0, existing)
+            return False
+        alias = PlayerAlias(
+            player_id=player_id,
+            alias_type=alias_type,
+            alias_value=alias_value,
+            last_observed_at=observed_at,
+        )
+        session.add(alias)
+        alias_by_value[key] = alias
+        aliases.setdefault((player_id, alias_type), []).insert(0, alias)
+        return True
+
+    def set_loaded_canonical_name(player, canonical_name: str) -> None:
+        value = str(canonical_name or "").strip()
+        if not value:
+            raise ValueError("Canonical name is required.")
+        if player.canonical_name == value:
+            return
+        if player.canonical_name:
+            add_loaded_alias(player.player_id, CANONICAL_HISTORY_ALIAS_TYPE, player.canonical_name)
+        player.canonical_name = value
+
+    applied_aliases = 0
+    canonical_names_before = {player.player_id: player.canonical_name for player in players}
+    applied_selections = {}
+    refreshed_mkc_names = set()
+    for result in results:
+        player = players_by_id[result["player_id"]]
         if result["status"] != "found":
             continue
-        _alias, created = add_player_alias(
-            session, player.player_id, MKC_ALIAS_TYPE, result["mkc_name"]
-        )
+        created = add_loaded_alias(player.player_id, MKC_ALIAS_TYPE, result["mkc_name"])
         applied_aliases += int(created)
-        _id_alias, id_created = add_player_alias(
-            session,
+        id_created = add_loaded_alias(
             player.player_id,
             MKC_ID_ALIAS_TYPE,
             str(result["mkc_player_id"]),
@@ -355,14 +384,39 @@ def apply_refresh_preview(
         if not player.canonical_name_override:
             applied_selections[str(player.player_id)] = selected_canonical
         if not player.canonical_name_override and player.canonical_name != selected_canonical:
-            set_player_canonical_name(session, player, selected_canonical)
+            set_loaded_canonical_name(player, selected_canonical)
 
+    # Reapply the shared-name rule in memory. The former implementation rescanned
+    # every player's aliases once per refreshed name, making bulk apply O(n²).
+    latest_mkc_names = {
+        player_id: player_aliases[0].alias_value
+        for (player_id, alias_type), player_aliases in aliases.items()
+        if alias_type == MKC_ALIAS_TYPE and player_aliases
+    }
+    shared_groups: dict[str, list[int]] = {}
+    for player_id, mkc_name in latest_mkc_names.items():
+        shared_groups.setdefault(_normalized_mkc_name(mkc_name), []).append(player_id)
     for mkc_name in refreshed_mkc_names:
-        apply_shared_mkc_name_priorities(session, mkc_name)
+        shared_player_ids = shared_groups.get(_normalized_mkc_name(mkc_name), [])
+        if len(shared_player_ids) < 2:
+            continue
+        for player_id in shared_player_ids:
+            player = players_by_id[player_id]
+            if player.canonical_name_override:
+                continue
+            lounge_name = next(
+                (alias.alias_value for alias in aliases.get((player_id, LOUNGE_ALIAS_TYPE), [])),
+                None,
+            )
+            options = canonical_name_options(mkc_name)
+            retained_combined_choice = len(options) > 1 and player.canonical_name in options
+            desired_name = lounge_name or (
+                player.canonical_name if retained_combined_choice else mkc_name
+            )
+            set_loaded_canonical_name(player, desired_name)
 
     canonical_changes = sum(
-        player.canonical_name != canonical_names_before.get(player.player_id)
-        for player in session.scalars(select(Player)).all()
+        player.canonical_name != canonical_names_before[player.player_id] for player in players
     )
 
     preview.status = "applied"
