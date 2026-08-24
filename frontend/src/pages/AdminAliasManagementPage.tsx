@@ -1557,6 +1557,15 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
               accept or reject the complete refresh.
             </p>
 
+            {error ? (
+              <div
+                role="alert"
+                className="mt-4 rounded border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-100"
+              >
+                {error}
+              </div>
+            ) : null}
+
             <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 ["New MKCentral names", mkcPreview.summary.new],
