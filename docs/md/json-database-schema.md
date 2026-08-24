@@ -243,9 +243,13 @@ Canonical team/clan identity.
 | `team_id` | integer primary key | Internal ID. |
 | `canonical_name` | text | Human-friendly name if known. |
 | `canonical_tag` | text | Stable clan tag if known. |
+| `canonical_identity_override` | boolean | When true, manual name/tag edits take priority over season identities. Defaults to false. |
+| `canonical_league_preference` | text nullable | Optional `ctc` or `gsc` preference for automatic canonical identity. |
 | `created_at` | timestamp | Audit. |
 
-This table should not be overtrusted early. Clan tags and names can be messy, so start with raw imported tags and allow manual merges later.
+Without an override, the newest season identity supplies the canonical name and tag,
+optionally limited to the preferred league. Administrators can review and merge
+duplicate global teams while retaining their distinct season identities.
 
 ### `team_season_entries`
 

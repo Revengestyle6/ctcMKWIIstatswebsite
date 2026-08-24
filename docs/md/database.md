@@ -179,10 +179,13 @@ reason. Result type is `missing_player`; reason is `short_roster`,
 
 ### `teams`, `team_aliases`, `team_league_identities`, and `team_logos`
 
-`teams` is the global identity (`team_id`, canonical tag, canonical name, created
-time). Canonical tags are presentation metadata and may match across otherwise
-unlinked teams. `team_aliases` maps a globally unique administrator-managed
-alternate tag to a team.
+`teams` is the global identity (`team_id`, canonical tag, canonical name, automatic
+league preference, manual-override flag, and creation time). Unless overridden,
+the canonical name and tag follow the newest season entry, optionally restricted
+to CTC or GSC. Canonical tags are presentation metadata and may match across
+otherwise unlinked teams. `team_aliases` maps a globally unique
+administrator-managed alternate tag to a team. Duplicate global teams can be
+merged while their season entries and league links remain distinct.
 
 `team_league_identities` is the authoritative import boundary. Each row explicitly
 maps `(league_code, tag)` to a global team, with a case-insensitive unique index on

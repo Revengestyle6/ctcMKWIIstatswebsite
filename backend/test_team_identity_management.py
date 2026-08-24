@@ -17,6 +17,7 @@ from models import (  # noqa: E402
     Team,
     TeamAlias,
     TeamLeagueIdentity,
+    TeamLogo,
     TeamSeasonEntry,
 )
 from player_dashboard_stats import DashboardScope  # noqa: E402
@@ -25,7 +26,11 @@ from team_identity_management import (  # noqa: E402
     add_league_identity,
     delete_league_identity,
     get_team_identity,
+    merge_team,
+    team_merge_comparison,
     update_canonical_identity,
+    update_canonical_override,
+    update_canonical_preference,
     update_season_identity,
 )
 
@@ -46,6 +51,7 @@ class TeamIdentityManagementTests(unittest.TestCase):
             session.query(AdminUser).delete()
             session.query(TeamAlias).delete()
             session.query(TeamLeagueIdentity).delete()
+            session.query(TeamLogo).delete()
             session.query(TeamSeasonEntry).delete()
             session.query(Division).delete()
             session.query(Season).delete()
@@ -113,6 +119,7 @@ class TeamIdentityManagementTests(unittest.TestCase):
 
     def test_canonical_update_preserves_previous_tag_as_alias(self):
         with self.SessionLocal.begin() as session:
+            update_canonical_override(session, self.team_id, {"enabled": True})
             detail, previous = update_canonical_identity(
                 session,
                 self.team_id,
@@ -128,6 +135,7 @@ class TeamIdentityManagementTests(unittest.TestCase):
 
     def test_canonical_tag_can_match_an_unlinked_team(self):
         with self.SessionLocal.begin() as session:
+            update_canonical_override(session, self.team_id, {"enabled": True})
             detail, _ = update_canonical_identity(
                 session,
                 self.team_id,
@@ -214,6 +222,7 @@ class TeamIdentityManagementTests(unittest.TestCase):
 
     def test_dashboard_falls_back_when_imported_season_name_is_only_the_tag(self):
         with self.SessionLocal.begin() as session:
+            update_canonical_override(session, self.team_id, {"enabled": True})
             update_canonical_identity(
                 session,
                 self.team_id,
@@ -242,6 +251,12 @@ class TeamIdentityManagementTests(unittest.TestCase):
             patch("routes.admin.stats.SessionLocal", self.SessionLocal),
             app.test_client() as client,
         ):
+            override_response = client.patch(
+                f"/api/admin/teams/{self.team_id}/canonical-identity-override",
+                json={"enabled": True},
+                headers=headers,
+            )
+            self.assertEqual(override_response.status_code, 200, override_response.get_json())
             response = client.patch(
                 f"/api/admin/teams/{self.team_id}/identity",
                 json={"canonical_name": "Cosmic Speed", "canonical_tag": "CSP"},
@@ -252,6 +267,147 @@ class TeamIdentityManagementTests(unittest.TestCase):
         with self.SessionLocal() as session:
             actions = [row.action for row in session.query(AdminAuditLog).all()]
             self.assertIn("team.identity_updated", actions)
+
+    def test_automatic_identity_uses_preferred_league_and_override(self):
+        with self.SessionLocal.begin() as session:
+            detail, _previous = update_canonical_preference(
+                session, self.team_id, {"league": "ctc"}
+            )
+            self.assertEqual(detail["team"]["canonical_name"], "Season Three Name")
+            self.assertEqual(detail["team"]["canonical_tag"], "CS3")
+
+            gsc_season = Season(
+                league_code="gsc",
+                season_code="s4",
+                season_number=4,
+                name="GSC Season 4",
+                status="complete",
+            )
+            session.add(gsc_season)
+            session.flush()
+            gsc_division = Division(
+                season_id=gsc_season.season_id,
+                division_code="d1",
+                division_name="Division 1",
+            )
+            session.add(gsc_division)
+            session.flush()
+            session.add(
+                TeamSeasonEntry(
+                    team_id=self.team_id,
+                    season_id=gsc_season.season_id,
+                    division_id=gsc_division.division_id,
+                    display_name="GSC Identity",
+                    clan_tag="GSC",
+                )
+            )
+            session.flush()
+
+            detail, _previous = update_canonical_preference(
+                session, self.team_id, {"league": "gsc"}
+            )
+            self.assertEqual(detail["team"]["canonical_name"], "GSC Identity")
+            update_canonical_override(session, self.team_id, {"enabled": True})
+            update_canonical_identity(
+                session,
+                self.team_id,
+                {"canonical_name": "Manual Team", "canonical_tag": "MAN"},
+            )
+            update_season_identity(
+                session,
+                self.team_id,
+                self.entry_two_id,
+                {"display_name": "Changed Old Identity", "clan_tag": "OLD"},
+            )
+            self.assertEqual(session.get(Team, self.team_id).canonical_name, "Manual Team")
+            detail, _previous = update_canonical_override(session, self.team_id, {"enabled": False})
+            self.assertEqual(detail["team"]["canonical_name"], "GSC Identity")
+
+    def test_manual_identity_requires_override(self):
+        with self.SessionLocal.begin() as session:
+            with self.assertRaisesRegex(ValueError, "Enable the canonical-identity override"):
+                update_canonical_identity(
+                    session,
+                    self.team_id,
+                    {"canonical_name": "Manual Team", "canonical_tag": "MAN"},
+                )
+
+    def test_team_merge_preserves_identities_and_reapplies_destination_preference(self):
+        with self.SessionLocal.begin() as session:
+            source = session.get(Team, self.other_team_id)
+            gsc_season = Season(
+                league_code="gsc",
+                season_code="s4",
+                season_number=4,
+                name="GSC Season 4",
+                status="complete",
+            )
+            session.add(gsc_season)
+            session.flush()
+            gsc_division = Division(
+                season_id=gsc_season.season_id,
+                division_code="d1",
+                division_name="Division 1",
+            )
+            session.add(gsc_division)
+            session.flush()
+            session.add_all(
+                (
+                    TeamSeasonEntry(
+                        team_id=source.team_id,
+                        season_id=gsc_season.season_id,
+                        division_id=gsc_division.division_id,
+                        display_name="Bird Team",
+                        clan_tag="BIRD",
+                    ),
+                    TeamLeagueIdentity(
+                        team_id=source.team_id,
+                        league_code="gsc",
+                        tag="BIRD",
+                    ),
+                    TeamAlias(team_id=source.team_id, alias_value="Fish"),
+                )
+            )
+            update_canonical_preference(session, self.team_id, {"league": "ctc"})
+            comparison = team_merge_comparison(session, source.team_id, self.team_id)
+            self.assertEqual(comparison["impact"]["season_entries"], 1)
+            self.assertFalse(comparison["blockers"])
+
+            result = merge_team(session, source.team_id, {"target_team_id": self.team_id})
+            self.assertEqual(result["season_entries_moved"], 1)
+            self.assertEqual(result["league_identities_moved"], 1)
+            self.assertEqual(result["target"]["team"]["canonical_name"], "Season Three Name")
+            self.assertIsNone(session.get(Team, self.other_team_id))
+            self.assertEqual(
+                {entry["season"]["league"] for entry in result["target"]["season_entries"]},
+                {"ctc", "gsc"},
+            )
+
+    def test_team_merge_routes_review_apply_and_audit(self):
+        headers = {"X-Dev-Admin-Email": "owner@example.com"}
+        with (
+            patch.dict(os.environ, {"APP_ENV": "test", "ALLOW_DEV_AUTH": "true"}),
+            patch("admin_auth.SessionLocal", self.SessionLocal),
+            patch("routes.admin.stats.SessionLocal", self.SessionLocal),
+            app.test_client() as client,
+        ):
+            comparison = client.get(
+                f"/api/admin/aliases/teams/{self.other_team_id}/merge-comparison",
+                query_string={"target_team_id": self.team_id},
+                headers=headers,
+            )
+            self.assertEqual(comparison.status_code, 200, comparison.get_json())
+            self.assertFalse(comparison.get_json()["blockers"])
+            response = client.post(
+                f"/api/admin/aliases/teams/{self.other_team_id}/merge",
+                json={"target_team_id": self.team_id},
+                headers=headers,
+            )
+            self.assertEqual(response.status_code, 200, response.get_json())
+            self.assertEqual(response.get_json()["target"]["team"]["id"], self.team_id)
+        with self.SessionLocal() as session:
+            self.assertIsNone(session.get(Team, self.other_team_id))
+            self.assertIn("team.merged", [row.action for row in session.query(AdminAuditLog)])
 
     def test_detail_includes_conventional_and_season_identities(self):
         with self.SessionLocal() as session:

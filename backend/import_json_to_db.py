@@ -50,6 +50,7 @@ from playoff_service import (
     validate_playoff_against_existing,
 )
 from sqlalchemy import func, or_, select, update
+from team_identity_management import apply_canonical_identity_priority
 
 JSON_ROOT = BASE_DIR / "JSON"
 HISTORICAL_TEAM_CORRECTIONS_PATH = BASE_DIR / "data" / "team_aliases.csv"
@@ -305,7 +306,11 @@ def get_or_create_team(
                     tag=canonical_tag,
                 )
             )
-        if display_name and team.canonical_name == team.canonical_tag:
+        if (
+            display_name
+            and not team.canonical_identity_override
+            and team.canonical_name == team.canonical_tag
+        ):
             team.canonical_name = display_name
         session.flush()
         return team
@@ -365,6 +370,8 @@ def get_or_create_team_entry(
         hex_color=hex_color,
     )
     session.add(entry)
+    session.flush()
+    apply_canonical_identity_priority(session, team)
     session.flush()
     return entry
 

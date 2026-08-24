@@ -168,6 +168,8 @@ class Team(Base):
     team_id = Column(Integer, primary_key=True)
     canonical_name = Column(Text, nullable=False)
     canonical_tag = Column(Text, nullable=False)
+    canonical_identity_override = Column(Boolean, nullable=False, default=False)
+    canonical_league_preference = Column(Text)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
 

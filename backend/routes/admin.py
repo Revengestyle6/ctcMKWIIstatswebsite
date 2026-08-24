@@ -441,6 +441,99 @@ def api_team_identity_update(team_id):
         return _team_identity_error(error)
 
 
+@admin_api.patch("/api/admin/teams/<int:team_id>/canonical-league-preference")
+@require_admin
+def api_team_canonical_league_preference_update(team_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, previous = team_identity_management.update_canonical_preference(
+                session, team_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team.canonical_league_preference_updated",
+                target_type="team",
+                target_id=team_id,
+                details={"previous": previous, "current": detail["team"]},
+            )
+        cache.clear()
+        return jsonify(detail)
+    except Exception as error:
+        return _team_identity_error(error)
+
+
+@admin_api.patch("/api/admin/teams/<int:team_id>/canonical-identity-override")
+@require_admin
+def api_team_canonical_identity_override_update(team_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            detail, previous = team_identity_management.update_canonical_override(
+                session, team_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team.canonical_identity_override_updated",
+                target_type="team",
+                target_id=team_id,
+                details={"previous": previous, "current": detail["team"]},
+            )
+        cache.clear()
+        return jsonify(detail)
+    except Exception as error:
+        return _team_identity_error(error)
+
+
+@admin_api.get("/api/admin/aliases/teams/<int:team_id>/merge-comparison")
+@require_admin
+def api_team_merge_comparison(team_id):
+    try:
+        target_team_id = int(request.args.get("target_team_id", ""))
+        with stats.SessionLocal() as session:
+            comparison = team_identity_management.team_merge_comparison(
+                session, team_id, target_team_id
+            )
+        return jsonify(comparison)
+    except Exception as error:
+        return _team_identity_error(error)
+
+
+@admin_api.post("/api/admin/aliases/teams/<int:team_id>/merge")
+@require_admin
+def api_team_merge(team_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            result = team_identity_management.merge_team(
+                session, team_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team.merged",
+                target_type="team",
+                target_id=result["target"]["team"]["id"],
+                details={
+                    "source_team": result["merged"],
+                    "target_team_id": result["target"]["team"]["id"],
+                    "aliases_moved": result["aliases_moved"],
+                    "aliases_consolidated": result["aliases_consolidated"],
+                    "league_identities_moved": result["league_identities_moved"],
+                    "season_entries_moved": result["season_entries_moved"],
+                    "season_entries_consolidated": result["season_entries_consolidated"],
+                    "match_appearances_updated": result["match_appearances_updated"],
+                    "player_memberships_moved": result["player_memberships_moved"],
+                    "player_memberships_consolidated": result["player_memberships_consolidated"],
+                    "logos_moved": result["logos_moved"],
+                    "playoff_participants_updated": result["playoff_participants_updated"],
+                },
+            )
+        cache.clear()
+        return jsonify(result)
+    except Exception as error:
+        return _team_identity_error(error)
+
+
 @admin_api.post("/api/admin/teams/<int:team_id>/league-identities")
 @require_admin
 def api_team_league_identity_add(team_id):
