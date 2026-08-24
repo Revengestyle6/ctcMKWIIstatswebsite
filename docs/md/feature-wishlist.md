@@ -28,7 +28,7 @@ Possible filters:
 Each match page should include:
 
 - full war table
-- season, division, match number, and match label
+- season, division, match number, and automatically generated match label
 - teams, final scores, penalties, and score difference
 - track list in race order
 - player scores, GP scores, race scores, and total scores
@@ -88,7 +88,7 @@ Editable match fields:
 - league
 - season
 - division
-- match number or match label
+- match number; the match label is generated from it and the team tags
 - number of races
 - teams involved
 - team tags, names, colors, scores, and penalties

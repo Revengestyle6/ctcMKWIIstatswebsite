@@ -217,10 +217,7 @@ export function playoffConsistencyIssues(
   }
   return issues;
 }
-export function metadataValue(
-  field: "league" | "season" | "division" | "match_label",
-  value: string
-): string {
+export function metadataValue(field: "league" | "season" | "division", value: string): string {
   if (field === "season" && /^\d+$/.test(value)) return `s${value}`;
   if (field === "division" && /^\d+$/.test(value)) return `d${value}`;
   return value;
@@ -410,8 +407,6 @@ export function validation(
   if (!match.league) issues.push({ level: "error", message: "League is missing." });
   if (!match.season) issues.push({ level: "error", message: "Season is missing." });
   if (!match.division) issues.push({ level: "error", message: "Division is missing." });
-  if (!match.match_label?.trim())
-    issues.push({ level: "error", message: "Match label is missing." });
   const isPlayoff = match.match_type === "playoff";
   const teamCount = Object.keys(match.teams ?? {}).length;
   if (!isPlayoff && (!Number.isInteger(match.match_number) || Number(match.match_number) < 1))

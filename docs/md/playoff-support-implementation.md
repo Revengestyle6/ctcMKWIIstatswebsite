@@ -51,7 +51,6 @@ An uploaded playoff JSON keeps its existing table data and adds top-level metada
   "playoff_series_number": 1,
   "series_match_number": 1,
   "best_of": 3,
-  "match_label": "uploaded source label",
   "format": "5v5",
   "races_played": 12,
   "tracks": [],
@@ -60,13 +59,15 @@ An uploaded playoff JSON keeps its existing table data and adds top-level metada
 ```
 
 `playoff_format` is `three_team` or `four_team`; `playoff_stage` is `semifinals`
-or `finals`. Playoff uploads omit `match_number`. The stored/displayed label is normalized
+or `finals`. Playoff uploads omit `match_number`. The label is generated automatically and
+the stored/displayed value is normalized
 to community wording such as `Semifinals Series 1 — Match 1` or
 `Finals — Match 1`.
 
 Regular JSON remains compatible. Omitting `match_type` means `regular`, and a new
 regular editor upload must provide a positive `match_number`. Historical archived
-JSON that uses `week` remains import-compatible.
+JSON that uses `week` remains import-compatible, and any historical
+`match_label` is preserved.
 
 ## Division format and series model
 

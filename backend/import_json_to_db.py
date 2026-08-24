@@ -43,6 +43,7 @@ from player_naming import (
     latest_mkc_name,
 )
 from playoff_service import (
+    ensure_match_label,
     match_type,
     playoff_format_new_entry,
     resolve_playoff_series,
@@ -1028,7 +1029,7 @@ def import_editor_match(
     session.add(source_file)
     session.flush()
 
-    label = str(match_data.get("match_label") or "Match preview").strip() or "Match preview"
+    label = ensure_match_label(match_data) or "Match preview"
     raw_match_number = match_data.get("match_number", match_data.get("week"))
     match_number = int(raw_match_number) if isinstance(raw_match_number, (int, float)) else None
     return import_match(

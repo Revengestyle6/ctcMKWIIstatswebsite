@@ -104,6 +104,32 @@ export function normalizeMatchNumber(match: MatchJson): MatchJson {
   return normalized;
 }
 
+export function automaticMatchLabel(match: MatchJson): string {
+  const existing = String(match.match_label ?? "").trim();
+  if (existing) return existing;
+  if (match.match_type === "playoff") {
+    const seriesLabel =
+      match.playoff_stage === "finals"
+        ? "Finals"
+        : match.playoff_stage === "semifinals" && match.playoff_series_number
+          ? `Semifinals Series ${match.playoff_series_number}`
+          : "Playoff";
+    return match.series_match_number
+      ? `${seriesLabel} — Match ${match.series_match_number}`
+      : seriesLabel;
+  }
+  const numberLabel =
+    Number.isInteger(match.match_number) && Number(match.match_number) > 0
+      ? `M${match.match_number}`
+      : "";
+  const matchup = Object.entries(match.teams ?? {})
+    .slice(0, 2)
+    .map(([teamKey, team]) => teamTag(teamKey, team))
+    .filter(Boolean)
+    .join(" vs ");
+  return [numberLabel, matchup].filter(Boolean).join(" ");
+}
+
 export function defaultRoleForPosition(format: string | undefined, position: number): RaceRole {
   if ((format ?? "").trim().toLowerCase() !== "5v5") return null;
   return position <= 8 ? "runner" : "bagger";
@@ -341,6 +367,7 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
   );
   return {
     ...normalizedMatch,
+    match_label: automaticMatchLabel(normalizedMatch),
     rxx: (normalizedMatch.rxx ?? []).map((code) => code.trim()).filter(Boolean),
     title_str: `#title ${orderedRaces.length} races\n`,
     races_played: orderedRaces.length,

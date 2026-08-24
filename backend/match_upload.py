@@ -28,7 +28,7 @@ from models import (
     Track,
     TrackAlias,
 )
-from playoff_service import validate_competition_metadata
+from playoff_service import ensure_match_label, validate_competition_metadata
 from sqlalchemy import event, select
 
 DEFAULT_JSON_ROOT = BASE_DIR / "JSON"
@@ -101,6 +101,7 @@ def _archive_filename(match_data: dict[str, Any], fingerprint: str) -> str:
 
 
 def prepare_upload_document(match_data: dict[str, Any]) -> UploadDocument:
+    ensure_match_label(match_data)
     league = _archive_component(match_data.get("league") or "ctc", "League")
     season = _archive_component(match_data.get("season"), "Season")
     division = _archive_component(match_data.get("division"), "Division")
@@ -113,8 +114,9 @@ def prepare_upload_document(match_data: dict[str, Any]) -> UploadDocument:
 
 
 def validate_committable_match(match_data: dict[str, Any]) -> None:
+    ensure_match_label(match_data)
     errors = []
-    for field in ("league", "season", "division", "match_label"):
+    for field in ("league", "season", "division"):
         if not str(match_data.get(field) or "").strip():
             errors.append(f"{field.replace('_', ' ').title()} is required.")
     try:

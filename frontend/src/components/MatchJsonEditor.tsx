@@ -1624,7 +1624,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       : "Checking database..."}
               </span>
             </div>
-            {(["season", "division", "match_label"] as const).map((field) => {
+            {(["season", "division"] as const).map((field) => {
               const missing = !String(match[field] ?? "").trim();
               const valid =
                 field === "season" ? seasonValid : field === "division" ? divisionValid : null;
@@ -1640,7 +1640,6 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         (entry) => normalized(entry.value) === normalized(match.division)
                       )
                     : false;
-              const listId = field === "match_label" ? undefined : `${field}-options`;
               return (
                 <label key={field} className="text-sm font-semibold capitalize text-gray-200">
                   {field.replace("_", " ")}
@@ -1657,7 +1656,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                     </>
                   )}
                   <input
-                    list={listId}
+                    list={`${field}-options`}
                     value={String(match[field] ?? "")}
                     onChange={(e) => updateMatch({ [field]: metadataValue(field, e.target.value) })}
                     required
@@ -1681,6 +1680,19 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 </label>
               );
             })}
+            <div className="text-sm font-semibold text-gray-200">
+              <span>Match label</span>
+              <ReadOnlyControl
+                label="Match label"
+                locked
+                value={compiled.match_label || "Waiting for match number and teams"}
+              />
+              <span className="mt-1 block text-xs text-gray-400">
+                {match.match_label?.trim()
+                  ? "Preserved from the loaded JSON"
+                  : "Generated automatically from the match number and team tags"}
+              </span>
+            </div>
             <datalist id="season-options">
               {Array.from(
                 new Set(

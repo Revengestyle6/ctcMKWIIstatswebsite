@@ -55,6 +55,11 @@ confirmed upload, the backend archives the exact
 validated JSON under `backend/JSON/{league}/{season}/{division}/` and stores its
 path and SHA-256 in `source_files`.
 
+For new editor drafts, `match_label` is generated automatically. Regular labels
+use the match number and the first two team tags, for example `M4 CS vs SLAY`.
+Playoff labels use the stage, series, and series match number. A label already
+embedded in historical JSON is preserved.
+
 CTC matches should be modeled as two-team matches. If an imported JSON object has a third team, treat that as a data-quality issue rather than a true three-team match. The likely explanation is that a sub was parsed as a separate team by mistake and should be manually assigned to one of the two actual teams during import review.
 
 ## Raw JSON Shape
@@ -111,6 +116,7 @@ Representative structure:
 | `teams` | Team result object | Keys are raw team tags/names. |
 | `match_type` | Competition category | Optional; omitted means `regular`, or use `playoff`. |
 | `match_number` | Regular-season match number | Required for new regular uploads; omitted for playoffs. Legacy archived JSON may use `week`, which the importer translates. |
+| `match_label` | Stable operational label | Generated automatically for new editor drafts; preserved when supplied by historical JSON. |
 | `playoff_format` | Division bracket format | `three_team` or `four_team`; playoff only. |
 | `playoff_stage` | Series stage | `semifinals` or `finals`; playoff only. |
 | `playoff_series_number` | Series within the stage | Semifinals use 1 or 2 as allowed; finals use 1. |
@@ -347,7 +353,7 @@ One imported match/table.
 | `match_number` | integer nullable | Historical imports may omit it; editor uploads require a positive whole number. It identifies match order rather than assuming one match per calendar week. |
 | `playoff_series_id` | foreign key nullable | Required for playoff matches and absent for regular matches. |
 | `series_match_number` | integer nullable | Positive and unique within a playoff series. |
-| `match_label` | text | Filename or friendly label. |
+| `match_label` | text | Automatically generated operational label, or the preserved historical source label. |
 | `title_str` | text nullable | Raw JSON title. |
 | `format` | text | Example `5v5`. |
 | `races_played` | integer | From JSON. |
