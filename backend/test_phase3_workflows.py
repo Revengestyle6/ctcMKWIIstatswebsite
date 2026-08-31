@@ -23,7 +23,7 @@ from import_json_to_db import detect_new_entries
 from match_upload import prepare_upload_document
 from models import AdminAuditLog, Match, ReviewSubmission, SourceFile
 from phase3_maintenance import repair_accepted_archives
-from review_queue import create_submission
+from review_queue import admin_submission, create_submission
 from sqlalchemy import func, select
 from test_support import PostgreSQLTestDatabase
 
@@ -113,6 +113,10 @@ class Phase3WorkflowTests(unittest.TestCase):
             self.assertEqual(session.scalar(select(func.count()).select_from(Match)), 0)
             stored = session.get(ReviewSubmission, receipt)
             self.assertEqual(stored.status, "pending")
+            self.assertEqual(stored.match_label, self.match_data["match_label"])
+            self.assertEqual(
+                admin_submission(stored)["match_label"], self.match_data["match_label"]
+            )
             self.assertEqual(
                 json.loads(self.storage.read(stored.queue_object_key)), self.match_data
             )

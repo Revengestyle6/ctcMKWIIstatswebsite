@@ -154,6 +154,8 @@ export interface TeamAppearance {
   tag: string;
   hex_color: string | null;
   logo_url: string;
+  competition_status: "active" | "dropped" | "disqualified";
+  competition_status_note: string | null;
 }
 
 export interface TeamRecentMatch {
@@ -185,6 +187,8 @@ export interface TeamOverview {
       name: string;
       tag: string;
       hex_color: string | null;
+      competition_status: "active" | "dropped" | "disqualified";
+      competition_status_note: string | null;
     } | null;
     appearances: TeamAppearance[];
   };

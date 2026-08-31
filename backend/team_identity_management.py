@@ -155,6 +155,8 @@ def get_team_identity(session, team_id):
                 },
                 "display_name": entry.display_name,
                 "clan_tag": entry.clan_tag,
+                "competition_status": entry.competition_status,
+                "competition_status_note": entry.competition_status_note,
             }
             for entry, season, division in rows
         ],

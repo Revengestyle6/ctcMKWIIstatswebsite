@@ -88,6 +88,7 @@ def review_receipt(submission_id):
 @reviews_api.get("/api/admin/review-submissions")
 @require_admin
 def list_review_submissions():
+    storage = get_archive_storage()
     status = request.args.get("status", "active").strip()
     limit = min(max(request.args.get("limit", type=int) or 100, 1), 250)
     query = select(ReviewSubmission).order_by(ReviewSubmission.submitted_at.desc()).limit(limit)
@@ -96,7 +97,18 @@ def list_review_submissions():
     elif status and status != "all":
         query = query.where(ReviewSubmission.status == status)
     with SessionLocal() as session:
-        return jsonify([admin_submission(row) for row in session.scalars(query).all()])
+        payloads = []
+        for row in session.scalars(query).all():
+            document = None
+            if not row.match_label:
+                try:
+                    document = json.loads(storage.read(row.queue_object_key))
+                except Exception:
+                    logger.exception(
+                        "Could not load legacy review submission label for %s", row.submission_id
+                    )
+            payloads.append(admin_submission(row, include_document=document))
+        return jsonify(payloads)
 
 
 @reviews_api.get("/api/admin/review-submissions/<submission_id>")

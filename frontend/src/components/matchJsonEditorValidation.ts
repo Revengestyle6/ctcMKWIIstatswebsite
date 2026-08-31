@@ -196,11 +196,7 @@ export function playoffConsistencyIssues(
   );
   const submittedIds = Object.entries(match.teams ?? {}).flatMap(([teamKey, team]) => {
     const tag = teamTag(teamKey, team);
-    const resolved = scopedTeams.find(
-      (scope) =>
-        normalized(scope.clan_tag) === normalized(tag) ||
-        normalized(scope.canonical_tag) === normalized(tag)
-    );
+    const resolved = findTeamScope(scopedTeams, tag);
     return resolved ? [resolved.team_id] : [];
   });
   const establishedIds = new Set(series.participants.map((participant) => participant.team_id));
@@ -225,6 +221,20 @@ export function metadataValue(field: "league" | "season" | "division", value: st
 
 export function normalized(value: string | undefined): string {
   return (value ?? "").trim().toLowerCase();
+}
+
+export function findTeamScope(scopes: TeamScope[], value: string): TeamScope | undefined {
+  const target = normalized(value);
+  if (!target) return undefined;
+  return (
+    scopes.find(
+      (scope) => normalized(scope.clan_tag) === target || normalized(scope.canonical_tag) === target
+    ) ??
+    scopes.find(
+      (scope) =>
+        normalized(scope.display_name) === target || normalized(scope.canonical_name) === target
+    )
+  );
 }
 
 const TRACK_IDENTIFIER_PATTERN = /^[0-9a-f]{40}$/i;
@@ -372,7 +382,8 @@ export function validation(
   compiledMatch: MatchJson = match
 ): Issue[] {
   const issues: Issue[] = [];
-  const players = allPlayers(match);
+  const isSpecial = match.result_type === "free_win" || match.result_type === "mutual_tie";
+  const players = isSpecial ? [] : allPlayers(match);
   const playersByKey = new Map(players.map((player) => [player.playerKey, player]));
   const friendCodes = new Map<string, string>();
   const playerIds = new Map<number, string>();
@@ -409,6 +420,24 @@ export function validation(
   if (!match.division) issues.push({ level: "error", message: "Division is missing." });
   const isPlayoff = match.match_type === "playoff";
   const teamCount = Object.keys(match.teams ?? {}).length;
+  if (isSpecial && teamCount !== 2)
+    issues.push({
+      level: "error",
+      field: "teams",
+      message: "A free win or mutual tie must contain exactly two teams.",
+    });
+  if (match.result_type === "free_win") {
+    const winner = match.free_win_winner;
+    const validWinner = Object.entries(match.teams ?? {}).some(
+      ([teamKey, team]) => winner === teamKey || winner === teamTag(teamKey, team)
+    );
+    if (!validWinner)
+      issues.push({
+        level: "error",
+        field: "teams",
+        message: "Select the team receiving the free win.",
+      });
+  }
   if (!isPlayoff && (!Number.isInteger(match.match_number) || Number(match.match_number) < 1))
     issues.push({
       level: "error",
@@ -508,12 +537,12 @@ export function validation(
       ...playoffConsistencyIssues(match, teamScopes, playoffContext, playoffContextLoaded)
     );
   }
-  if (races.length !== 12)
+  if (!isSpecial && races.length !== 12)
     issues.push({
       level: "warning",
       message: `This match contains ${races.length} races instead of the usual 12.`,
     });
-  if (normalized(match.format) === "5v5" && teamCount > 2)
+  if (!isSpecial && normalized(match.format) === "5v5" && teamCount > 2)
     issues.push({
       level: "error",
       message: `5v5 matches cannot have more than 2 teams (found ${teamCount}).`,
@@ -588,11 +617,7 @@ export function validation(
   if (teamsLoaded) {
     Object.entries(match.teams ?? {}).forEach(([teamKey, team]) => {
       const tag = teamTag(teamKey, team);
-      const resolved = selectedTeamScope.find(
-        (scope) =>
-          normalized(scope.clan_tag) === normalized(tag) ||
-          normalized(scope.canonical_tag) === normalized(tag)
-      );
+      const resolved = findTeamScope(selectedTeamScope, tag);
       if (!resolved) {
         const proposal = newEntries.find(
           (entry) => entry.type === "team" && normalized(entry.value) === normalized(tag)
@@ -616,7 +641,7 @@ export function validation(
         if (prior)
           issues.push({
             level: "error",
-            message: `Teams ${prior} and ${tag} resolve to the same database team.`,
+            message: `A team cannot play itself: ${prior} and ${tag} resolve to the same database team.`,
           });
         resolvedTeamIds.set(resolved.team_id, tag);
       }
@@ -703,94 +728,98 @@ export function validation(
       });
     }
   });
-  races.forEach((race) => {
-    const label =
-      Number.isInteger(race.raceNumber) && race.raceNumber > 0
-        ? `Race ${race.raceNumber}`
-        : "A race with an invalid number";
-    if (!Number.isInteger(race.raceNumber) || race.raceNumber < 1)
-      issues.push({
-        level: "error",
-        message: "Every race number must be a positive whole number.",
-      });
-    if (!SCORE_TABLES[race.roomSize])
-      issues.push({
-        level: "error",
-        message: `${label} has unsupported room size ${race.roomSize}.`,
-      });
-    if (!race.trackName.trim()) issues.push({ level: "error", message: `${label} needs a track.` });
-    else if (isTrackIdentifier(race.trackName))
-      issues.push({
-        level: "error",
-        message: `${label} track ${race.trackName.trim()} is an unresolved track identifier. Replace it with the track's proper name.`,
-      });
-    else if (tracksLoaded) {
-      const matchingTrack = trackOptions.find((track) => trackOptionMatches(track, race.trackName));
-      if (matchingTrack && normalized(matchingTrack.league) !== normalized(match.league)) {
+  if (!isSpecial)
+    races.forEach((race) => {
+      const label =
+        Number.isInteger(race.raceNumber) && race.raceNumber > 0
+          ? `Race ${race.raceNumber}`
+          : "A race with an invalid number";
+      if (!Number.isInteger(race.raceNumber) || race.raceNumber < 1)
         issues.push({
           level: "error",
-          message: `${label} track ${race.trackName} belongs to ${matchingTrack.league.toUpperCase()} and cannot be used in a ${String(match.league).toUpperCase()} match.`,
+          message: "Every race number must be a positive whole number.",
         });
-      } else if (!matchingTrack) {
-        const approved = approvedEntry(
-          "track",
-          (entry) => normalized(entry.value) === normalized(race.trackName)
+      if (!SCORE_TABLES[race.roomSize])
+        issues.push({
+          level: "error",
+          message: `${label} has unsupported room size ${race.roomSize}.`,
+        });
+      if (!race.trackName.trim())
+        issues.push({ level: "error", message: `${label} needs a track.` });
+      else if (isTrackIdentifier(race.trackName))
+        issues.push({
+          level: "error",
+          message: `${label} track ${race.trackName.trim()} is an unresolved track identifier. Replace it with the track's proper name.`,
+        });
+      else if (tracksLoaded) {
+        const matchingTrack = trackOptions.find((track) =>
+          trackOptionMatches(track, race.trackName)
         );
-        newEntryIssue(
-          approved,
-          `${label} track ${race.trackName} does not exist in the database.`,
-          `${label} uses new track ${race.trackName}, which is approved for database insertion.`
-        );
+        if (matchingTrack && normalized(matchingTrack.league) !== normalized(match.league)) {
+          issues.push({
+            level: "error",
+            message: `${label} track ${race.trackName} belongs to ${matchingTrack.league.toUpperCase()} and cannot be used in a ${String(match.league).toUpperCase()} match.`,
+          });
+        } else if (!matchingTrack) {
+          const approved = approvedEntry(
+            "track",
+            (entry) => normalized(entry.value) === normalized(race.trackName)
+          );
+          newEntryIssue(
+            approved,
+            `${label} track ${race.trackName} does not exist in the database.`,
+            `${label} uses new track ${race.trackName}, which is approved for database insertion.`
+          );
+        }
       }
-    }
-    const assigned = race.placements.filter(Boolean);
-    if (assigned.length !== race.roomSize)
-      issues.push({
-        level: "error",
-        message: `${label} has ${assigned.length} placements for a ${race.roomSize}-player room. Disconnection and missing-player awards do not occupy placement slots.`,
+      const assigned = race.placements.filter(Boolean);
+      if (assigned.length !== race.roomSize)
+        issues.push({
+          level: "error",
+          message: `${label} has ${assigned.length} placements for a ${race.roomSize}-player room. Disconnection and missing-player awards do not occupy placement slots.`,
+        });
+      const keys = assigned.map((placement) => placement?.playerKey);
+      if (new Set(keys).size !== keys.length)
+        issues.push({ level: "error", message: `${label} contains a player more than once.` });
+      if (assigned.some((placement) => !placement?.role))
+        issues.push({ level: "warning", message: `${label} has unconfirmed roles.` });
+      race.unplacedResults.forEach((result) => {
+        const player = players.find((entry) => entry.playerKey === result.playerKey);
+        const name = player
+          ? player.player.lounge_name || player.player.mii_name || player.friendCode
+          : result.playerKey;
+        if (!Number.isFinite(result.score) || result.score < 0 || result.score > 15)
+          issues.push({
+            level: "error",
+            message: `${label} has an invalid disconnected-player score for ${name}.`,
+          });
+        else
+          issues.push({
+            level: "warning",
+            message: `${label} gives ${name} ${result.score} disconnection points without a placement.`,
+          });
       });
-    const keys = assigned.map((placement) => placement?.playerKey);
-    if (new Set(keys).size !== keys.length)
-      issues.push({ level: "error", message: `${label} contains a player more than once.` });
-    if (assigned.some((placement) => !placement?.role))
-      issues.push({ level: "warning", message: `${label} has unconfirmed roles.` });
-    race.unplacedResults.forEach((result) => {
-      const player = players.find((entry) => entry.playerKey === result.playerKey);
-      const name = player
-        ? player.player.lounge_name || player.player.mii_name || player.friendCode
-        : result.playerKey;
-      if (!Number.isFinite(result.score) || result.score < 0 || result.score > 15)
-        issues.push({
-          level: "error",
-          message: `${label} has an invalid disconnected-player score for ${name}.`,
-        });
-      else
-        issues.push({
-          level: "warning",
-          message: `${label} gives ${name} ${result.score} disconnection points without a placement.`,
-        });
+      race.missingPlayerResults.forEach((result) => {
+        const tag = match.teams?.[result.teamKey]
+          ? teamTag(result.teamKey, match.teams[result.teamKey])
+          : result.teamKey;
+        if (!match.teams?.[result.teamKey])
+          issues.push({
+            level: "error",
+            message: `${label} assigns missing-player points to an unknown team.`,
+          });
+        if (!Number.isFinite(result.score) || result.score < 0)
+          issues.push({
+            level: "error",
+            message: `${label} has an invalid missing-player score for ${tag}.`,
+          });
+        else
+          issues.push({
+            level: "warning",
+            message: `${label} assigns ${result.score} missing-player points to ${tag} (${result.reason.replaceAll("_", " ")}).`,
+          });
+      });
     });
-    race.missingPlayerResults.forEach((result) => {
-      const tag = match.teams?.[result.teamKey]
-        ? teamTag(result.teamKey, match.teams[result.teamKey])
-        : result.teamKey;
-      if (!match.teams?.[result.teamKey])
-        issues.push({
-          level: "error",
-          message: `${label} assigns missing-player points to an unknown team.`,
-        });
-      if (!Number.isFinite(result.score) || result.score < 0)
-        issues.push({
-          level: "error",
-          message: `${label} has an invalid missing-player score for ${tag}.`,
-        });
-      else
-        issues.push({
-          level: "warning",
-          message: `${label} assigns ${result.score} missing-player points to ${tag} (${result.reason.replaceAll("_", " ")}).`,
-        });
-    });
-  });
   return issues;
 }
 

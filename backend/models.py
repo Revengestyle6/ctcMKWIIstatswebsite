@@ -223,10 +223,17 @@ class TeamSeasonEntry(Base):
     display_name = Column(Text, nullable=False)
     clan_tag = Column(Text, nullable=False)
     hex_color = Column(Text)
+    competition_status = Column(Text, nullable=False, default="active")
+    competition_status_note = Column(Text)
+    competition_status_updated_at = Column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint(
             "season_id", "division_id", "clan_tag", name="uq_team_entry_season_division_tag"
+        ),
+        CheckConstraint(
+            "competition_status IN ('active', 'dropped', 'disqualified')",
+            name="ck_team_season_entry_competition_status",
         ),
     )
 
@@ -310,6 +317,7 @@ class Match(Base):
     source_file_id = Column(Integer, ForeignKey("source_files.source_file_id"), nullable=False)
     match_index_in_source = Column(Integer, nullable=False, default=0)
     match_type = Column(Text, nullable=False, default="regular")
+    result_type = Column(Text, nullable=False, default="played")
     match_number = Column(Integer)
     playoff_series_id = Column(Integer, ForeignKey("playoff_series.playoff_series_id"))
     series_match_number = Column(Integer)
@@ -328,6 +336,13 @@ class Match(Base):
             "import_status IN ('imported', 'needs_review')", name="ck_match_import_status"
         ),
         CheckConstraint("match_type IN ('regular', 'playoff')", name="ck_match_type"),
+        CheckConstraint(
+            "result_type IN ('played', 'free_win', 'mutual_tie')", name="ck_match_result_type"
+        ),
+        CheckConstraint(
+            "(result_type = 'played') OR (match_type = 'regular' AND races_played = 0)",
+            name="ck_match_special_result",
+        ),
         CheckConstraint(
             "(match_type = 'regular' AND playoff_series_id IS NULL "
             "AND series_match_number IS NULL) OR "
@@ -539,6 +554,7 @@ class ReviewSubmission(Base):
     fingerprint = Column(Text, nullable=False)
     queue_object_key = Column(Text, nullable=False, unique=True)
     original_filename = Column(Text, nullable=False)
+    match_label = Column(Text)
     content_length = Column(Integer, nullable=False)
     validation_version = Column(Text, nullable=False)
     warnings_json = Column(Text, nullable=False, default="[]")

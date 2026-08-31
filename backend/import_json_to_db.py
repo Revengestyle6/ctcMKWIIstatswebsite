@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from database import BASE_DIR, get_session_factory
+from match_results import result_type
 from mkc_registry import lookup_mkc_player
 from models import (
     Division,
@@ -760,6 +761,7 @@ def import_match(
         source_file_id=source_file.source_file_id,
         match_index_in_source=match_index,
         match_type=kind,
+        result_type=result_type(match_data),
         match_number=match_number,
         playoff_series_id=(
             playoff_series.playoff_series_id if playoff_series is not None else None

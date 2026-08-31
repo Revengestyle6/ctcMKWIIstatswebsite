@@ -12,6 +12,7 @@ type Submission = {
   submission_id: string;
   status: string;
   original_filename: string;
+  match_label: string | null;
   submitted_at: string;
   warnings: string[];
   claimed_by_admin_user_id: number | null;
@@ -19,6 +20,10 @@ type Submission = {
   accepted_match_id: number | null;
   match?: Record<string, unknown>;
 };
+
+function submissionLabel(submission: Submission): string {
+  return submission.match_label?.trim() || "Unlabeled match";
+}
 
 export default function AdminReviewQueuePage(): React.JSX.Element {
   const auth = useAdminSession();
@@ -81,7 +86,6 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
       `/json-editor?review_submission=${encodeURIComponent(selected.submission_id)}&league=${league}`
     );
   };
-
   return (
     <main className="relative z-10 min-h-screen bg-black/85 px-5 py-8 text-white sm:px-8">
       <div className="mx-auto max-w-6xl space-y-5">
@@ -118,7 +122,7 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
                     onClick={() => void loadSubmission(entry.submission_id)}
                     className="block w-full border-t border-white/10 p-3 text-left hover:bg-white/5"
                   >
-                    <strong>{entry.original_filename}</strong>
+                    <strong>{submissionLabel(entry)}</strong>
                     <span className="float-right text-sm text-blue-200">{entry.status}</span>
                     <p className="text-xs text-gray-400">
                       {new Date(entry.submitted_at).toLocaleString()}
@@ -131,7 +135,7 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
               {selected ? (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-xl font-bold">{selected.original_filename}</h2>
+                    <h2 className="text-xl font-bold">{submissionLabel(selected)}</h2>
                     <p className="text-gray-400">{selected.submission_id}</p>
                   </div>
                   {selected.warnings.length ? (

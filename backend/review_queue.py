@@ -8,6 +8,7 @@ from pathlib import Path
 
 from archive_storage import ArchiveStorage
 from import_json_to_db import detect_new_entries
+from match_results import result_type
 from match_upload import canonical_json_bytes, validate_committable_match
 from models import ReviewSubmission, SubmissionRateLimit
 from sqlalchemy import select
@@ -32,7 +33,7 @@ def validate_submission(session, match_data: dict) -> tuple[bytes, str, list[str
     if new_entries:
         warnings.append(f"Administrators must review {len(new_entries)} new database entries.")
     tracks = match_data.get("tracks") or []
-    if len(tracks) != 12:
+    if result_type(match_data) == "played" and len(tracks) != 12:
         warnings.append(f"This match contains {len(tracks)} races instead of the usual 12.")
     if any((team.get("penalties") or 0) for team in (match_data.get("teams") or {}).values()):
         warnings.append("One or more teams has penalty points.")
@@ -110,6 +111,7 @@ def create_submission(
         fingerprint=fingerprint,
         queue_object_key=queue_key,
         original_filename=safe_filename,
+        match_label=str(match_data.get("match_label") or "").strip() or None,
         content_length=len(content),
         validation_version=VALIDATION_VERSION,
         warnings_json=json.dumps(warnings, ensure_ascii=False, separators=(",", ":")),
@@ -139,11 +141,17 @@ def public_receipt(submission: ReviewSubmission) -> dict:
 
 
 def admin_submission(submission: ReviewSubmission, *, include_document=None) -> dict:
+    document_match_label = (
+        str(include_document.get("match_label") or "").strip()
+        if isinstance(include_document, dict)
+        else ""
+    )
     payload = {
         **public_receipt(submission),
         "submission_id": submission.submission_id,
         "fingerprint": submission.fingerprint,
         "original_filename": submission.original_filename,
+        "match_label": submission.match_label or document_match_label or None,
         "content_length": submission.content_length,
         "warnings": json.loads(submission.warnings_json or "[]"),
         "warnings_acknowledged": submission.warnings_acknowledged,

@@ -5,6 +5,7 @@ import alias_management
 import database_health as database_health_service
 import mkc_name_sync
 import stats_db as stats
+import team_competition
 import team_identity_management
 import team_logo_management
 from acceptance_service import accept_match
@@ -60,6 +61,30 @@ def _team_identity_error(error):
         return jsonify({"error": str(error)}), 400
     logger.exception("Team identity management failed")
     return jsonify({"error": "Team identity management failed."}), 500
+
+
+@admin_api.patch("/api/admin/team-season-entries/<int:entry_id>/status")
+@require_admin
+def api_team_competition_status_update(entry_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            result, previous = team_competition.update_team_competition_status(
+                session, entry_id, request.get_json(silent=True) or {}
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team_season_entry.competition_status_updated",
+                target_type="team_season_entry",
+                target_id=entry_id,
+                details={"previous": previous, "current": result},
+            )
+        cache.clear()
+        return jsonify(result)
+    except LookupError as error:
+        return jsonify({"error": str(error)}), 404
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
 
 
 @admin_api.get("/api/admin/aliases/<entity_type>")

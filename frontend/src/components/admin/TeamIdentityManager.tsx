@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { deleteJson, fetchJson, patchJson, postJson } from "../../api";
+import TeamCompetitionStatusManager, {
+  type CompetitionStatusTeam,
+} from "../TeamCompetitionStatusManager";
+
+type CompetitionStatus = "active" | "dropped" | "disqualified";
 
 type TeamIdentity = {
   id: number;
@@ -16,6 +21,8 @@ type TeamSeasonIdentity = {
   division: { id: number; code: string; name: string };
   display_name: string;
   clan_tag: string;
+  competition_status: CompetitionStatus;
+  competition_status_note: string | null;
 };
 
 type TeamLeagueIdentity = {
@@ -160,6 +167,19 @@ export default function TeamIdentityManager({
   const canonicalUnchanged =
     canonicalName.trim() === detail?.team.canonical_name &&
     canonicalTag.trim() === detail?.team.canonical_tag;
+  const competitionStatusTeams = useMemo<CompetitionStatusTeam[]>(
+    () =>
+      detail?.season_entries.map((entry) => ({
+        team_season_entry_id: entry.id,
+        canonical_name: detail.team.canonical_name,
+        display_name: entry.display_name,
+        clan_tag: entry.clan_tag,
+        competition_status: entry.competition_status,
+        competition_status_note: entry.competition_status_note,
+        scope_label: `${entry.season.league.toUpperCase()} ${entry.season.code.toUpperCase()} ${entry.division.code.toUpperCase()}`,
+      })) ?? [],
+    [detail]
+  );
 
   const applyDetail = (response: TeamIdentityDetail) => {
     setDetail(response);
@@ -408,6 +428,30 @@ export default function TeamIdentityManager({
           )}
         </div>
       </section>
+
+      {competitionStatusTeams.length ? (
+        <TeamCompetitionStatusManager
+          teams={competitionStatusTeams}
+          onUpdated={(entryId, status, note) =>
+            setDetail((current) =>
+              current
+                ? {
+                    ...current,
+                    season_entries: current.season_entries.map((entry) =>
+                      entry.id === entryId
+                        ? {
+                            ...entry,
+                            competition_status: status,
+                            competition_status_note: note,
+                          }
+                        : entry
+                    ),
+                  }
+                : current
+            )
+          }
+        />
+      ) : null}
 
       <section>
         <h3 className="text-lg font-bold">Season identities</h3>
