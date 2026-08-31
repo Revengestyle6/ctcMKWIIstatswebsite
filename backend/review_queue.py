@@ -111,6 +111,7 @@ def create_submission(
         fingerprint=fingerprint,
         queue_object_key=queue_key,
         original_filename=safe_filename,
+        match_label=str(match_data.get("match_label") or "").strip() or None,
         content_length=len(content),
         validation_version=VALIDATION_VERSION,
         warnings_json=json.dumps(warnings, ensure_ascii=False, separators=(",", ":")),
@@ -140,11 +141,17 @@ def public_receipt(submission: ReviewSubmission) -> dict:
 
 
 def admin_submission(submission: ReviewSubmission, *, include_document=None) -> dict:
+    document_match_label = (
+        str(include_document.get("match_label") or "").strip()
+        if isinstance(include_document, dict)
+        else ""
+    )
     payload = {
         **public_receipt(submission),
         "submission_id": submission.submission_id,
         "fingerprint": submission.fingerprint,
         "original_filename": submission.original_filename,
+        "match_label": submission.match_label or document_match_label or None,
         "content_length": submission.content_length,
         "warnings": json.loads(submission.warnings_json or "[]"),
         "warnings_acknowledged": submission.warnings_acknowledged,

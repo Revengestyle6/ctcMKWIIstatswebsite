@@ -554,6 +554,7 @@ class ReviewSubmission(Base):
     fingerprint = Column(Text, nullable=False)
     queue_object_key = Column(Text, nullable=False, unique=True)
     original_filename = Column(Text, nullable=False)
+    match_label = Column(Text)
     content_length = Column(Integer, nullable=False)
     validation_version = Column(Text, nullable=False)
     warnings_json = Column(Text, nullable=False, default="[]")

@@ -53,6 +53,7 @@ import {
   type CommitResult,
   clone,
   download,
+  findTeamScope,
   type IdentityState,
   type Issue,
   type IssueField,
@@ -71,8 +72,8 @@ import {
   validation,
   validFriendCode,
 } from "./matchJsonEditorValidation";
-import TeamCompetitionStatusManager from "./TeamCompetitionStatusManager";
 import TeamRosterPool from "./TeamRosterPool";
+import TeamScopePool from "./TeamScopePool";
 
 const inputClass =
   "mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300";
@@ -289,11 +290,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
 
       const currentTeam = match.teams?.[entry.teamKey];
       const currentTag = currentTeam ? teamTag(entry.teamKey, currentTeam) : entry.teamKey;
-      const currentTeamScope = selectedTeamScopes.find(
-        (scope) =>
-          normalized(scope.clan_tag) === normalized(currentTag) ||
-          normalized(scope.canonical_tag) === normalized(currentTag)
-      );
+      const currentTeamScope = findTeamScope(selectedTeamScopes, currentTag);
       const recordedTeams = playerTeamMemberships[playerId] ?? [];
       if (
         !currentTeamScope ||
@@ -1520,11 +1517,25 @@ export default function MatchJsonEditor(): React.JSX.Element {
         normalized(scope.season) === normalized(match.season) &&
         normalized(scope.division) === normalized(match.division)
     );
-  const availableTeams = teamScopes.filter(
-    (scope) =>
-      normalized(scope.league) === normalized(match.league) &&
-      normalized(scope.season) === normalized(match.season) &&
-      normalized(scope.division) === normalized(match.division)
+  const availableTeams = useMemo(
+    () =>
+      teamScopes.filter(
+        (scope) =>
+          normalized(scope.league) === normalized(match.league) &&
+          normalized(scope.season) === normalized(match.season) &&
+          normalized(scope.division) === normalized(match.division)
+      ),
+    [match.division, match.league, match.season, teamScopes]
+  );
+  const assignedTeamIds = useMemo(
+    () =>
+      new Set(
+        Object.entries(match.teams ?? {}).flatMap(([teamKey, team]) => {
+          const resolved = findTeamScope(availableTeams, teamTag(teamKey, team));
+          return resolved ? [resolved.team_id] : [];
+        })
+      ),
+    [availableTeams, match.teams]
   );
   const isApprovedNewEntry = (type: NewEntry["type"], predicate: (entry: NewEntry) => boolean) =>
     newEntries.some(
@@ -2043,36 +2054,13 @@ export default function MatchJsonEditor(): React.JSX.Element {
           )}
         </section>
 
-        {auth.session?.authenticated && availableTeams.length > 0 ? (
-          <TeamCompetitionStatusManager
-            teams={availableTeams}
-            onUpdated={(entryId, status, note) =>
-              setTeamScopes((current) =>
-                current.map((team) =>
-                  team.team_season_entry_id === entryId
-                    ? {
-                        ...team,
-                        competition_status: status,
-                        competition_status_note: note,
-                      }
-                    : team
-                )
-              )
-            }
-          />
-        ) : null}
-
         <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
           <h2 className="mb-4 text-xl font-bold">Teams And Players</h2>
           <FieldIssues field="teams" issues={issues} />
           <div className="grid gap-5 xl:grid-cols-2">
             {Object.entries(match.teams ?? {}).map(([teamKey, team]) => {
               const currentTag = teamTag(teamKey, team);
-              const resolvedTeam = availableTeams.find(
-                (scope) =>
-                  normalized(scope.clan_tag) === normalized(currentTag) ||
-                  normalized(scope.canonical_tag) === normalized(currentTag)
-              );
+              const resolvedTeam = findTeamScope(availableTeams, currentTag);
               const proposedTeamEntry = newEntries.find(
                 (entry) =>
                   entry.type === "team" && normalized(entry.value) === normalized(currentTag)
@@ -2087,16 +2075,20 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 >
                   <div className="grid gap-3 sm:grid-cols-[1fr_8rem_8rem_auto]">
                     <label className={smallLabel}>
-                      Team tag
+                      Team name or tag
                       <input
                         list="team-scope-options"
+                        aria-label="Team name or tag"
                         value={currentTag}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const entered = e.target.value;
+                          const selected = findTeamScope(availableTeams, entered);
                           updateTeam(teamKey, (current) => ({
                             ...current,
-                            table_tag_str: `${e.target.value} ${teamColor(current)}`,
-                          }))
-                        }
+                            table_tag_str: `${selected?.clan_tag ?? entered} ${teamColor(current)}`,
+                          }));
+                        }}
+                        placeholder="Enter a team name or tag"
                         className={`${inputClass} ${resolvedTeam ? "border-emerald-400/70" : approvedTeam ? "border-amber-300/70" : teamsLoaded ? "border-red-400/70" : ""}`}
                       />
                       <span
@@ -2161,6 +2153,19 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       Delete team
                     </button>
                   </div>
+                  {availableTeams.length > 0 ? (
+                    <TeamScopePool
+                      teams={availableTeams}
+                      selectedTeamId={resolvedTeam?.team_id}
+                      assignedTeamIds={assignedTeamIds}
+                      onSelect={(selected) =>
+                        updateTeam(teamKey, (current) => ({
+                          ...current,
+                          table_tag_str: `${selected.clan_tag} ${teamColor(current)}`,
+                        }))
+                      }
+                    />
+                  ) : null}
                   {!specialResult ? (
                     <div className="mt-4 space-y-3">
                       {Object.entries(team.players ?? {}).map(([code, player]) => {
@@ -2332,11 +2337,14 @@ export default function MatchJsonEditor(): React.JSX.Element {
             })}
           </div>
           <datalist id="team-scope-options">
-            {availableTeams.map((team) => (
-              <option key={`${team.team_id}-${team.clan_tag}`} value={team.clan_tag}>
+            {availableTeams.flatMap((team) => [
+              <option key={`${team.team_id}-tag-${team.clan_tag}`} value={team.clan_tag}>
                 {team.display_name || team.canonical_name}
-              </option>
-            ))}
+              </option>,
+              <option key={`${team.team_id}-name-${team.display_name}`} value={team.display_name}>
+                {team.clan_tag}
+              </option>,
+            ])}
           </datalist>
         </section>
 

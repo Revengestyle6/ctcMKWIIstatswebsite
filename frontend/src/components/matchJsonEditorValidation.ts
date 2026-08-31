@@ -196,11 +196,7 @@ export function playoffConsistencyIssues(
   );
   const submittedIds = Object.entries(match.teams ?? {}).flatMap(([teamKey, team]) => {
     const tag = teamTag(teamKey, team);
-    const resolved = scopedTeams.find(
-      (scope) =>
-        normalized(scope.clan_tag) === normalized(tag) ||
-        normalized(scope.canonical_tag) === normalized(tag)
-    );
+    const resolved = findTeamScope(scopedTeams, tag);
     return resolved ? [resolved.team_id] : [];
   });
   const establishedIds = new Set(series.participants.map((participant) => participant.team_id));
@@ -225,6 +221,20 @@ export function metadataValue(field: "league" | "season" | "division", value: st
 
 export function normalized(value: string | undefined): string {
   return (value ?? "").trim().toLowerCase();
+}
+
+export function findTeamScope(scopes: TeamScope[], value: string): TeamScope | undefined {
+  const target = normalized(value);
+  if (!target) return undefined;
+  return (
+    scopes.find(
+      (scope) => normalized(scope.clan_tag) === target || normalized(scope.canonical_tag) === target
+    ) ??
+    scopes.find(
+      (scope) =>
+        normalized(scope.display_name) === target || normalized(scope.canonical_name) === target
+    )
+  );
 }
 
 const TRACK_IDENTIFIER_PATTERN = /^[0-9a-f]{40}$/i;
@@ -607,11 +617,7 @@ export function validation(
   if (teamsLoaded) {
     Object.entries(match.teams ?? {}).forEach(([teamKey, team]) => {
       const tag = teamTag(teamKey, team);
-      const resolved = selectedTeamScope.find(
-        (scope) =>
-          normalized(scope.clan_tag) === normalized(tag) ||
-          normalized(scope.canonical_tag) === normalized(tag)
-      );
+      const resolved = findTeamScope(selectedTeamScope, tag);
       if (!resolved) {
         const proposal = newEntries.find(
           (entry) => entry.type === "team" && normalized(entry.value) === normalized(tag)
@@ -635,7 +641,7 @@ export function validation(
         if (prior)
           issues.push({
             level: "error",
-            message: `Teams ${prior} and ${tag} resolve to the same database team.`,
+            message: `A team cannot play itself: ${prior} and ${tag} resolve to the same database team.`,
           });
         resolvedTeamIds.set(resolved.team_id, tag);
       }

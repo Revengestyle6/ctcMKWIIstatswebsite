@@ -177,7 +177,102 @@ test("alias manager updates a selected team season entry through the shared stat
   expect(submittedStatus).toBe("disqualified");
 });
 
+test("review queue uses the match label instead of the uploaded filename", async ({ page }) => {
+  const submission = {
+    submission_id: "submission-1",
+    status: "pending",
+    original_filename: "uploaded-table.json",
+    match_label: "M7 Alpha vs Beta",
+    submitted_at: "2026-08-30T12:00:00Z",
+    warnings: [],
+    claimed_by_admin_user_id: null,
+    decision_note: null,
+    accepted_match_id: null,
+  };
+  await page.route("**/api/auth/session", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        authenticated: true,
+        admin: { admin_user_id: 1, email: "admin@example.com", role: "admin" },
+      }),
+    })
+  );
+  await page.route("**/api/admin/review-submissions/submission-1", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...submission,
+        match: { league: "gsc", match_label: submission.match_label },
+      }),
+    })
+  );
+  await page.route("**/api/admin/review-submissions", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([submission]),
+    })
+  );
+
+  await page.goto("/admin/review-queue?league=gsc");
+  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
+  await expect(page.getByText("uploaded-table.json")).toHaveCount(0);
+  await page.getByRole("button", { name: /M7 Alpha vs Beta/ }).click();
+  await expect(page.getByRole("heading", { name: "M7 Alpha vs Beta" })).toBeVisible();
+  await expect(page.getByText("uploaded-table.json")).toHaveCount(0);
+});
+
 test("json editor creates a metadata-only free win", async ({ page }) => {
+  await page.route("**/api/team-scopes", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          league: "gsc",
+          season: "s15",
+          division: "d1",
+          team_id: 11,
+          canonical_name: "Eleven Stars",
+          canonical_tag: "XI",
+          display_name: "Eleven Stars",
+          clan_tag: "XI",
+          team_season_entry_id: 111,
+          competition_status: "active",
+          competition_status_note: null,
+        },
+        {
+          league: "gsc",
+          season: "s15",
+          division: "d1",
+          team_id: 12,
+          canonical_name: "Yellow Star League",
+          canonical_tag: "YSL",
+          display_name: "Yellow Star League",
+          clan_tag: "YSL",
+          team_season_entry_id: 112,
+          competition_status: "active",
+          competition_status_note: null,
+        },
+        {
+          league: "gsc",
+          season: "s15",
+          division: "d1",
+          team_id: 13,
+          canonical_name: "Nova Racing",
+          canonical_tag: "NR",
+          display_name: "Nova Racing",
+          clan_tag: "NR",
+          team_season_entry_id: 113,
+          competition_status: "active",
+          competition_status_note: null,
+        },
+      ]),
+    })
+  );
   await page.goto("/json-editor?league=gsc");
   const dismissWelcome = page.getByRole("button", { name: "No Thanks", exact: true });
   await dismissWelcome.click();
@@ -210,6 +305,21 @@ test("json editor creates a metadata-only free win", async ({ page }) => {
   await expect(page.getByLabel("Result entry")).toHaveValue("free_win");
   await expect(page.getByRole("heading", { name: "Race Entry" })).toHaveCount(0);
   await expect(page.getByLabel("Penalty", { exact: true })).toHaveCount(0);
+  const xiTeam = page.locator('[data-team-key="XI"]');
+  const xiTeamIdentity = xiTeam.locator('input[list="team-scope-options"]');
+  await xiTeamIdentity.fill("Eleven Stars");
+  await expect(xiTeamIdentity).toHaveValue("XI");
+  const yslTeam = page.locator('[data-team-key="YSL"]');
+  await yslTeam.getByRole("button", { name: "Season team pool" }).click();
+  await yslTeam
+    .locator('[data-team-scope-id="113"]')
+    .getByRole("button", { name: "Use team" })
+    .click();
+  await expect(yslTeam.locator('input[list="team-scope-options"]')).toHaveValue("NR");
+  await xiTeam.getByRole("button", { name: "Season team pool" }).click();
+  await expect(
+    xiTeam.locator('[data-team-scope-id="113"]').getByRole("button", { name: "In match" })
+  ).toBeDisabled();
   await page.getByText("Generated JSON Preview").click();
   const compiled = JSON.parse((await page.locator("details pre").textContent()) ?? "{}");
   expect(compiled.races_played).toBe(0);
@@ -217,7 +327,7 @@ test("json editor creates a metadata-only free win", async ({ page }) => {
   expect(compiled.teams.XI.total_score).toBe(150);
   expect(compiled.teams.XI.penalties).toBe(0);
   expect(compiled.teams.XI.table_penalty_str).toBeUndefined();
-  expect(compiled.teams.YSL.total_score).toBe(0);
+  expect(compiled.teams.NR.total_score).toBe(0);
   expect(compiled.teams.XI.players).toEqual({});
 });
 
@@ -368,6 +478,7 @@ test("authorized JSON editor users can upload directly or submit to the review q
   });
   await page.goto("/json-editor?league=ctc");
   await page.getByRole("button", { name: "No Thanks", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Team Competition Status" })).toHaveCount(0);
   await page
     .locator('input[type="file"]')
     .setInputFiles("../backend/JSON/ctc/s3/d2/W11 [M11] sts 366 - 356 CS.json");
