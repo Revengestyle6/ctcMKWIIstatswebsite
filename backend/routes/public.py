@@ -9,6 +9,7 @@ from match_editor_catalog import list_player_team_memberships, list_team_roster_
 from media_storage import get_media_storage
 from mkc_registry import lookup_mkc_player
 from models import TeamLogo
+from standings_service import get_division_standings
 
 from routes.common import (
     division_arg,
@@ -378,6 +379,23 @@ def api_matches():
         )
     except Exception as error:
         logger.exception("Failed to list matches")
+        return error_response(error)
+
+
+@public_api.get("/api/standings")
+def api_standings():
+    try:
+        with stats.SessionLocal() as session:
+            return jsonify(
+                get_division_standings(
+                    session,
+                    league=league_arg(),
+                    season=season_arg(),
+                    division=division_arg(),
+                )
+            )
+    except Exception as error:
+        logger.exception("Failed to build divisional standings")
         return error_response(error)
 
 

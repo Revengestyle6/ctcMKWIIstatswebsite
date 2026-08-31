@@ -3,48 +3,90 @@ import { Link } from "react-router-dom";
 import { HomeLeagueSelector } from "../components/LeagueSwitcher";
 import { useLeague } from "../context/LeagueContext";
 
-const analyticsLinks = [
+const navigationSections = [
   {
-    to: "/matches",
-    title: "Match History",
-    description: "Browse complete war tables, race results, tracks, and score progression.",
+    id: "competition",
+    eyebrow: "Competition",
+    title: "Follow the season",
+    description: "Standings, completed matches, and the teams and players competing in the league.",
+    links: [
+      {
+        to: "/standings",
+        title: "Divisional Standings",
+        description: "View league tables, head-to-head results, GP averages, and playoff brackets.",
+        featured: true,
+      },
+      {
+        to: "/matches",
+        title: "Match History",
+        description: "Browse complete war tables, race results, tracks, and score progression.",
+      },
+      {
+        to: "/players",
+        title: "Player Dashboards",
+        description: "Browse players and open complete career and season analytics.",
+      },
+      {
+        to: "/teams",
+        title: "Team Dashboards",
+        description: "Browse teams, rosters, records, tracks, and match history.",
+      },
+    ],
   },
   {
-    to: "/players",
-    title: "Player Dashboards",
-    description: "Browse players and open complete career and season analytics.",
+    id: "analytics",
+    eyebrow: "Analytics",
+    title: "Explore performance",
+    description: "Compare results across players, teams, tracks, and head-to-head matchups.",
+    links: [
+      {
+        to: "/stats",
+        title: "Player Statistics",
+        description: "Review player averages, race counts, and track performance.",
+      },
+      {
+        to: "/top-team-players",
+        title: "Team Statistics",
+        description: "Compare player production and track results for a selected team.",
+      },
+      {
+        to: "/top-tracks",
+        title: "Track Averages",
+        description: "Find the strongest player and team results by track.",
+      },
+      {
+        to: "/best-matchups",
+        title: "Team Matchups",
+        description: "Compare head-to-head team and track performance.",
+      },
+    ],
   },
   {
-    to: "/teams",
-    title: "Team Dashboards",
-    description: "Browse teams, rosters, records, tracks, and match history.",
+    id: "management",
+    eyebrow: "Data & administration",
+    title: "Manage the archive",
+    description:
+      "Tools for maintaining match data, checking archive quality, and reviewing uploads.",
+    links: [
+      {
+        to: "/database-health",
+        title: "Database Health",
+        description:
+          "Monitor additions, record counts, archive integrity, and data-quality findings.",
+      },
+      {
+        to: "/json-editor",
+        title: "Match JSON Editor",
+        description: "Create, validate, preview, and upload match data.",
+      },
+      {
+        to: "/admin/access",
+        title: "Administrator Access",
+        description: "Sign in, review queued JSON, and view database and repository onboarding.",
+      },
+    ],
   },
-  {
-    to: "/stats",
-    title: "Player Statistics",
-    description: "Review player averages, race counts, and track performance.",
-  },
-  {
-    to: "/top-team-players",
-    title: "Team Statistics",
-    description: "Compare player production and track results for a selected team.",
-  },
-  {
-    to: "/top-tracks",
-    title: "Track Averages",
-    description: "Find the strongest player and team results by track.",
-  },
-  {
-    to: "/best-matchups",
-    title: "Team Matchups",
-    description: "Compare head-to-head team and track performance.",
-  },
-  {
-    to: "/database-health",
-    title: "Database Health",
-    description: "Monitor additions, record counts, archive integrity, and data-quality findings.",
-  },
-];
+] as const;
 
 export default function HomePage(): React.JSX.Element {
   const { config, leaguePath } = useLeague();
@@ -60,40 +102,56 @@ export default function HomePage(): React.JSX.Element {
             {config.description}
           </p>
 
-          <nav
-            className="mx-auto mt-9 grid max-w-5xl gap-3 text-left sm:grid-cols-2 lg:grid-cols-3"
-            aria-label="Statistics pages"
-          >
-            {analyticsLinks.map((link, index) => (
-              <Link
-                key={link.to}
-                to={leaguePath(link.to)}
-                className={`rounded-md border px-4 py-4 transition hover:-translate-y-0.5 hover:border-blue-300/70 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-blue-300 ${index === 0 ? "border-blue-300/50 bg-blue-950/80" : "border-white/15 bg-black/65"}`}
+          <nav className="mx-auto mt-10 max-w-6xl space-y-7 text-left" aria-label="Site pages">
+            {navigationSections.map((section) => (
+              <section
+                key={section.id}
+                aria-labelledby={`${section.id}-navigation-heading`}
+                className="rounded-xl border border-white/10 bg-black/35 p-4 shadow-lg sm:p-6"
               >
-                <span className="block text-lg font-bold text-white">{link.title}</span>
-                <span className="mt-1 block text-sm leading-5 text-gray-300">
-                  {link.description}
-                </span>
-              </Link>
+                <div className="mb-4 sm:flex sm:items-end sm:justify-between sm:gap-6">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] league-accent-text">
+                      {section.eyebrow}
+                    </p>
+                    <h2
+                      id={`${section.id}-navigation-heading`}
+                      className="mt-1 text-xl font-bold text-white"
+                    >
+                      {section.title}
+                    </h2>
+                  </div>
+                  <p className="mt-2 max-w-xl text-sm leading-5 text-gray-300 sm:mt-0 sm:text-right">
+                    {section.description}
+                  </p>
+                </div>
+
+                <div
+                  className={`grid gap-3 sm:grid-cols-2 ${section.links.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}
+                >
+                  {section.links.map((link) => (
+                    <Link
+                      key={link.to}
+                      to={leaguePath(link.to)}
+                      className={`group rounded-lg border px-4 py-4 transition hover:-translate-y-0.5 hover:bg-black/80 focus:outline-none league-focus-ring ${"featured" in link && link.featured ? "league-accent-border bg-white/10" : "border-white/15 bg-black/55 hover:border-white/35"}`}
+                    >
+                      <span className="flex items-center justify-between gap-3 text-base font-bold text-white">
+                        {link.title}
+                        <span
+                          aria-hidden="true"
+                          className="league-accent-text transition-transform group-hover:translate-x-0.5"
+                        >
+                          →
+                        </span>
+                      </span>
+                      <span className="mt-2 block text-sm leading-5 text-gray-300">
+                        {link.description}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
             ))}
-            <Link
-              to={leaguePath("/json-editor")}
-              className="rounded-md border border-emerald-300/40 bg-emerald-950/75 px-4 py-4 transition hover:-translate-y-0.5 hover:border-emerald-200/70 hover:bg-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-            >
-              <span className="block text-lg font-bold text-white">Match JSON Editor</span>
-              <span className="mt-1 block text-sm leading-5 text-gray-300">
-                Create, validate, preview, and upload match data.
-              </span>
-            </Link>
-            <Link
-              to={leaguePath("/admin/access")}
-              className="rounded-md border border-amber-300/30 bg-amber-950/65 px-4 py-4 transition hover:-translate-y-0.5 hover:border-amber-200/60 hover:bg-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-300"
-            >
-              <span className="block text-lg font-bold text-white">Administrator Access</span>
-              <span className="mt-1 block text-sm leading-5 text-gray-300">
-                Sign in, review queued JSON, and view database and repository onboarding.
-              </span>
-            </Link>
           </nav>
         </div>
       </section>

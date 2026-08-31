@@ -54,6 +54,8 @@ def _team_identity(session, team, scope):
             TeamSeasonEntry.display_name,
             TeamSeasonEntry.clan_tag,
             TeamSeasonEntry.hex_color,
+            TeamSeasonEntry.competition_status,
+            TeamSeasonEntry.competition_status_note,
             TeamSeasonEntry.team_season_entry_id,
         )
         .join(Season, Season.season_id == TeamSeasonEntry.season_id)
@@ -100,6 +102,8 @@ def _team_identity(session, team, scope):
                 ),
                 "tag": scoped_entry.clan_tag,
                 "hex_color": scoped_entry.hex_color,
+                "competition_status": scoped_entry.competition_status,
+                "competition_status_note": scoped_entry.competition_status_note,
             }
             if scoped_entry
             else None
@@ -112,6 +116,8 @@ def _team_identity(session, team, scope):
                 "name": _team_display_name(row.display_name, row.clan_tag, team.canonical_name),
                 "tag": row.clan_tag,
                 "hex_color": row.hex_color,
+                "competition_status": row.competition_status,
+                "competition_status_note": row.competition_status_note,
                 "logo_url": _team_logo_url(session, team.team_id, row.season_id),
             }
             for row in entries

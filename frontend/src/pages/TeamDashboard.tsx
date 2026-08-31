@@ -312,6 +312,14 @@ export default function TeamDashboard() {
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="text-3xl font-bold text-white">{identity.display_name}</h2>
               <span className="text-xl font-bold text-blue-300">{displayTag}</span>
+              {currentEntry && currentEntry.competition_status !== "active" ? (
+                <span
+                  title={currentEntry.competition_status_note || undefined}
+                  className={`rounded-full border px-2.5 py-1 text-xs font-bold uppercase ${currentEntry.competition_status === "disqualified" ? "border-red-300/40 bg-red-950/70 text-red-200" : "border-amber-300/40 bg-amber-950/70 text-amber-200"}`}
+                >
+                  {currentEntry.competition_status}
+                </span>
+              ) : null}
             </div>
             {showConventionalIdentity ? (
               <p className="mt-1 text-sm text-gray-300">
@@ -343,6 +351,7 @@ export default function TeamDashboard() {
                   >
                     {entry.season.toUpperCase()} {entry.division.toUpperCase()}: {entry.name} (
                     {entry.tag})
+                    {entry.competition_status !== "active" ? ` — ${entry.competition_status}` : ""}
                   </span>
                 ))}
               </div>

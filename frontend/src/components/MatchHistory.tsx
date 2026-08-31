@@ -246,6 +246,16 @@ export default function MatchHistory(): React.JSX.Element {
                   <option key={match.match_id} value={match.match_id}>
                     {roundLabel ? `${roundLabel} - ` : ""}
                     {match.teams} ({match.scores})
+                    {match.result_type === "free_win"
+                      ? " — Free win"
+                      : match.result_type === "mutual_tie"
+                        ? " — Mutual tie"
+                        : ""}
+                    {match.team_statuses.some((status) => status === "disqualified")
+                      ? " — DQ"
+                      : match.team_statuses.some((status) => status === "dropped")
+                        ? " — Dropped"
+                        : ""}
                   </option>
                 );
               })}
@@ -330,8 +340,25 @@ export default function MatchHistory(): React.JSX.Element {
                   <h2 className="mt-1 text-3xl font-bold">
                     {selectedSummary?.teams || displayedMatchDetail.label}
                   </h2>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {displayedMatchDetail.teams
+                      .filter((team) => team.competition_status !== "active")
+                      .map((team) => (
+                        <span
+                          key={team.match_team_id}
+                          title={team.competition_status_note || undefined}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-bold uppercase ${team.competition_status === "disqualified" ? "border-red-300/40 bg-red-950/70 text-red-200" : "border-amber-300/40 bg-amber-950/70 text-amber-200"}`}
+                        >
+                          {team.tag}: {team.competition_status}
+                        </span>
+                      ))}
+                  </div>
                   <p className="mt-1 text-gray-300">
-                    {displayedMatchDetail.races_played} races
+                    {displayedMatchDetail.result_type === "free_win"
+                      ? "Free win · standings score 150–0"
+                      : displayedMatchDetail.result_type === "mutual_tie"
+                        ? "Mutual tie · standings score 0–0"
+                        : `${displayedMatchDetail.races_played} races`}
                     {displayedMatchDetail.format ? ` / ${displayedMatchDetail.format}` : ""}
                     {selectedSummary?.scores ? ` / ${selectedSummary.scores}` : ""}
                   </p>

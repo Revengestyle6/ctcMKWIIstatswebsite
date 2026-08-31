@@ -483,6 +483,9 @@ def list_team_scopes():
                 Team.canonical_tag,
                 TeamSeasonEntry.display_name,
                 TeamSeasonEntry.clan_tag,
+                TeamSeasonEntry.team_season_entry_id,
+                TeamSeasonEntry.competition_status,
+                TeamSeasonEntry.competition_status_note,
             )
             .join(Division, Division.season_id == Season.season_id)
             .join(TeamSeasonEntry, TeamSeasonEntry.division_id == Division.division_id)
@@ -504,6 +507,9 @@ def list_team_scopes():
                 "canonical_tag": row.canonical_tag,
                 "display_name": row.display_name,
                 "clan_tag": row.clan_tag,
+                "team_season_entry_id": row.team_season_entry_id,
+                "competition_status": row.competition_status,
+                "competition_status_note": row.competition_status_note,
             }
             for row in rows
         ]
@@ -584,6 +590,7 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
             select(
                 Match.match_id,
                 Match.match_type,
+                Match.result_type,
                 Match.match_number,
                 Match.playoff_series_id,
                 Match.series_match_number,
@@ -622,6 +629,7 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
                     MatchTeam.match_id,
                     MatchTeam.final_score,
                     TeamSeasonEntry.clan_tag,
+                    TeamSeasonEntry.competition_status,
                 )
                 .join(
                     TeamSeasonEntry,
@@ -637,15 +645,18 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
 
         teams_by_match = {match_id: [] for match_id in match_ids}
         scores_by_match = {match_id: [] for match_id in match_ids}
+        statuses_by_match = {match_id: [] for match_id in match_ids}
         for row in team_rows:
             teams_by_match.setdefault(row.match_id, []).append(row.clan_tag)
             scores_by_match.setdefault(row.match_id, []).append(str(row.final_score))
+            statuses_by_match.setdefault(row.match_id, []).append(row.competition_status)
 
         team_query = team.strip().lower() if team else ""
         matches = [
             {
                 "match_id": row.match_id,
                 "match_type": row.match_type,
+                "result_type": row.result_type,
                 "match_number": row.match_number,
                 "playoff_series_id": row.playoff_series_id,
                 "series_match_number": row.series_match_number,
@@ -666,6 +677,7 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
                 "races": row.races_played,
                 "teams": " vs ".join(teams_by_match.get(row.match_id, [])),
                 "scores": " - ".join(scores_by_match.get(row.match_id, [])),
+                "team_statuses": statuses_by_match.get(row.match_id, []),
                 "import_status": row.import_status,
                 "review_notes": row.review_notes,
             }
@@ -676,8 +688,17 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
         return matches
 
 
-def list_playoff_series(season=None, division=None, team=None, league_code="ctc"):
-    with SessionLocal() as session:
+def list_playoff_series(season=None, division=None, team=None, league_code="ctc", session=None):
+    if session is None:
+        with SessionLocal() as owned_session:
+            return list_playoff_series(
+                season=season,
+                division=division,
+                team=team,
+                league_code=league_code,
+                session=owned_session,
+            )
+    if session is not None:
         scope = _get_scope(session, season=season, division=division, league_code=league_code)
         config = session.get(DivisionPlayoffConfig, scope.division_id)
         series_rows = session.scalars(
@@ -774,6 +795,21 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
                                 row.series_match_number,
                                 config,
                             ),
+                            "teams": [
+                                {
+                                    "team_id": score.team_id,
+                                    "tag": next(
+                                        (
+                                            participant.clan_tag
+                                            for participant in participants
+                                            if participant.team_id == score.team_id
+                                        ),
+                                        "",
+                                    ),
+                                    "score": score.final_score,
+                                }
+                                for score in scores_by_match.get(row.match_id, [])
+                            ],
                         }
                         for row in matches
                     ],
@@ -860,6 +896,8 @@ def get_match_detail(match_id, session=None):
                 Team.team_id,
                 TeamSeasonEntry.clan_tag,
                 TeamSeasonEntry.display_name,
+                TeamSeasonEntry.competition_status,
+                TeamSeasonEntry.competition_status_note,
             )
             .join(
                 TeamSeasonEntry,
@@ -989,6 +1027,8 @@ def get_match_detail(match_id, session=None):
                     "team_id": row.team_id,
                     "tag": row.clan_tag,
                     "name": row.display_name,
+                    "competition_status": row.competition_status,
+                    "competition_status_note": row.competition_status_note,
                     "raw_team_key": row.raw_team_key,
                     "hex_color": row.hex_color or "#3b82f6",
                     "raw_total_score": row.raw_total_score,
@@ -1029,6 +1069,7 @@ def get_match_detail(match_id, session=None):
         return {
             "match_id": match.match_id,
             "match_type": match.match_type,
+            "result_type": match.result_type,
             "season": season.season_code if season else "",
             "division": division.division_code if division else "",
             "match_number": match.match_number,

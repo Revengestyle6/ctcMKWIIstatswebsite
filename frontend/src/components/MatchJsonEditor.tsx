@@ -71,6 +71,7 @@ import {
   validation,
   validFriendCode,
 } from "./matchJsonEditorValidation";
+import TeamCompetitionStatusManager from "./TeamCompetitionStatusManager";
 import TeamRosterPool from "./TeamRosterPool";
 
 const inputClass =
@@ -230,6 +231,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     return counts;
   }, [players]);
   const compiled = useMemo(() => compileMatch(match, races), [match, races]);
+  const specialResult = match.result_type === "free_win" || match.result_type === "mutual_tie";
   const selectedPlayoffSeries = useMemo(
     () =>
       playoffContext?.series.find(
@@ -1727,6 +1729,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   if (event.target.value === "playoff") {
                     updateMatch({
                       match_type: "playoff",
+                      result_type: "played",
                       match_number: undefined,
                       playoff_format:
                         playoffContext?.format?.code ?? match.playoff_format ?? "four_team",
@@ -1752,6 +1755,56 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 <option value="playoff">Playoff</option>
               </select>
             </label>
+            {(match.match_type ?? "regular") === "regular" ? (
+              <label className="text-sm font-semibold text-gray-200">
+                Result entry
+                <select
+                  value={match.result_type ?? "played"}
+                  onChange={(event) => {
+                    const resultType = event.target.value as "played" | "free_win" | "mutual_tie";
+                    const firstTeam = Object.keys(match.teams ?? {})[0];
+                    updateMatch({
+                      result_type: resultType,
+                      free_win_winner:
+                        resultType === "free_win"
+                          ? (match.free_win_winner ?? firstTeam)
+                          : undefined,
+                      teams:
+                        resultType === "played"
+                          ? match.teams
+                          : Object.fromEntries(
+                              Object.entries(match.teams ?? {}).map(([teamKey, team]) => [
+                                teamKey,
+                                { ...team, penalties: 0, table_penalty_str: "" },
+                              ])
+                            ),
+                    });
+                  }}
+                  className={inputClass}
+                >
+                  <option value="played">Played match</option>
+                  <option value="free_win">Free win (150–0)</option>
+                  <option value="mutual_tie">Mutual tie (0–0)</option>
+                </select>
+              </label>
+            ) : null}
+            {match.result_type === "free_win" ? (
+              <label className="text-sm font-semibold text-gray-200">
+                Free-win recipient
+                <select
+                  value={match.free_win_winner ?? ""}
+                  onChange={(event) => updateMatch({ free_win_winner: event.target.value })}
+                  className={inputClass}
+                >
+                  <option value="">Select a team</option>
+                  {Object.entries(match.teams ?? {}).map(([teamKey, team]) => (
+                    <option key={teamKey} value={teamKey}>
+                      {teamTag(teamKey, team)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             {(match.match_type ?? "regular") === "regular" ? (
               <label className="text-sm font-semibold text-gray-200">
                 Match number
@@ -1908,28 +1961,32 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 </div>
               </>
             )}
-            <label className="text-sm font-semibold text-gray-200">
-              Format
-              <select
-                value={match.format ?? "5v5"}
-                onChange={(e) => updateMatch({ format: e.target.value })}
-                className={inputClass}
-              >
-                <option>5v5</option>
-                <option>4v4</option>
-                <option>FFA</option>
-              </select>
-            </label>
-            <label className="text-sm font-semibold text-gray-200">
-              Races
-              <input
-                type="number"
-                min={1}
-                value={races.length}
-                onChange={(e) => resizeRaces(Number(e.target.value))}
-                className={inputClass}
-              />
-            </label>
+            {!specialResult ? (
+              <label className="text-sm font-semibold text-gray-200">
+                Format
+                <select
+                  value={match.format ?? "5v5"}
+                  onChange={(e) => updateMatch({ format: e.target.value })}
+                  className={inputClass}
+                >
+                  <option>5v5</option>
+                  <option>4v4</option>
+                  <option>FFA</option>
+                </select>
+              </label>
+            ) : null}
+            {!specialResult ? (
+              <label className="text-sm font-semibold text-gray-200">
+                Races
+                <input
+                  type="number"
+                  min={1}
+                  value={races.length}
+                  onChange={(e) => resizeRaces(Number(e.target.value))}
+                  className={inputClass}
+                />
+              </label>
+            ) : null}
             <label className="text-sm font-semibold text-gray-200">
               Review Notes
               <input
@@ -1939,45 +1996,71 @@ export default function MatchJsonEditor(): React.JSX.Element {
               />
             </label>
           </div>
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-bold">Room Codes</h3>
-              <button
-                type="button"
-                onClick={addRoomCode}
-                className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm font-semibold hover:bg-white/15"
-              >
-                Add room code
-              </button>
+          {!specialResult ? (
+            <div className="mt-4 border-t border-white/10 pt-4">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h3 className="text-sm font-bold">Room Codes</h3>
+                <button
+                  type="button"
+                  onClick={addRoomCode}
+                  className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm font-semibold hover:bg-white/15"
+                >
+                  Add room code
+                </button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {(match.rxx?.length ? match.rxx : [""]).map((code, index) => (
+                  <div key={index} className="grid grid-cols-[1fr_auto] items-end gap-2">
+                    <label className={smallLabel}>
+                      Room code {index + 1}
+                      <input
+                        value={code}
+                        onChange={(e) => updateRoomCode(index, e.target.value)}
+                        className={inputClass}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      title="Remove room code"
+                      onClick={() => removeRoomCode(index)}
+                      className="mb-0.5 h-10 px-3 text-red-300 hover:bg-red-950/40"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-gray-400">
+                Add a code only when the room resets or changes host. Codes are kept in
+                chronological order.
+              </p>
             </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              {(match.rxx?.length ? match.rxx : [""]).map((code, index) => (
-                <div key={index} className="grid grid-cols-[1fr_auto] items-end gap-2">
-                  <label className={smallLabel}>
-                    Room code {index + 1}
-                    <input
-                      value={code}
-                      onChange={(e) => updateRoomCode(index, e.target.value)}
-                      className={inputClass}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    title="Remove room code"
-                    onClick={() => removeRoomCode(index)}
-                    className="mb-0.5 h-10 px-3 text-red-300 hover:bg-red-950/40"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-xs text-gray-400">
-              Add a code only when the room resets or changes host. Codes are kept in chronological
-              order.
+          ) : (
+            <p className="mt-4 rounded-md border border-sky-300/25 bg-sky-950/30 px-4 py-3 text-sm text-sky-100">
+              Metadata-only result: standings will use the fixed score, and no players, room codes,
+              tracks, or race results will be stored.
             </p>
-          </div>
+          )}
         </section>
+
+        {auth.session?.authenticated && availableTeams.length > 0 ? (
+          <TeamCompetitionStatusManager
+            teams={availableTeams}
+            onUpdated={(entryId, status, note) =>
+              setTeamScopes((current) =>
+                current.map((team) =>
+                  team.team_season_entry_id === entryId
+                    ? {
+                        ...team,
+                        competition_status: status,
+                        competition_status_note: note,
+                      }
+                    : team
+                )
+              )
+            }
+          />
+        ) : null}
 
         <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
           <h2 className="mb-4 text-xl font-bold">Teams And Players</h2>
@@ -2053,20 +2136,22 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         className={`${inputClass} text-center uppercase`}
                       />
                     </label>
-                    <label className={smallLabel}>
-                      Penalty
-                      <input
-                        type="number"
-                        value={team.penalties ?? 0}
-                        onChange={(e) =>
-                          updateTeam(teamKey, (current) => ({
-                            ...current,
-                            penalties: Number(e.target.value) || 0,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </label>
+                    {!specialResult ? (
+                      <label className={smallLabel}>
+                        Penalty
+                        <input
+                          type="number"
+                          value={team.penalties ?? 0}
+                          onChange={(e) =>
+                            updateTeam(teamKey, (current) => ({
+                              ...current,
+                              penalties: Number(e.target.value) || 0,
+                            }))
+                          }
+                          className={inputClass}
+                        />
+                      </label>
+                    ) : null}
                     <button
                       type="button"
                       title={`Delete team ${currentTag || teamKey}`}
@@ -2076,149 +2161,152 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       Delete team
                     </button>
                   </div>
-                  <div className="mt-4 space-y-3">
-                    {Object.entries(team.players ?? {}).map(([code, player]) => {
-                      const key = `${teamKey}::${code}`;
-                      const state = identityStates[key];
-                      const proposedPlayerEntry = newEntries.find(
-                        (entry) => entry.type === "player" && entry.friend_code === code
-                      );
-                      const approvedPlayerEntry =
-                        proposedPlayerEntry &&
-                        approvalDecisions[proposedPlayerEntry.key] === "approved";
-                      const duplicatePlayerLabel = duplicatePlayerLabels.get(key);
-                      const cardDisplayName =
-                        state?.identity?.canonical_name ||
-                        (proposedPlayerEntry?.kind === "existing_player_new_friend_code"
-                          ? proposedPlayerEntry.proposed_player?.canonical_name
-                          : null) ||
-                        player.lounge_name ||
-                        player.table_name ||
-                        player.mii_name ||
-                        code;
-                      return (
-                        <div
-                          key={key}
-                          data-player-key={key}
-                          className="border-t border-white/10 pt-3"
-                        >
-                          <div className="mb-2">
-                            <span className="text-sm font-semibold text-gray-200">
-                              {cardDisplayName}
-                            </span>
-                          </div>
-                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[11rem_repeat(4,minmax(0,1fr))_auto]">
-                            <label className={smallLabel}>
-                              Friend code
-                              <input
-                                defaultValue={code.startsWith("NEW-") ? "" : code}
-                                onBlur={(e) => renamePlayer(teamKey, code, e.target.value.trim())}
-                                className={inputClass}
-                                placeholder="0000-0000-0000"
-                              />
-                            </label>
-                            {(["lounge_name", "table_name", "mii_name", "flag"] as const).map(
-                              (field) => (
-                                <label key={field} className={smallLabel}>
-                                  {field.replace("_", " ")}
-                                  <input
-                                    value={String(player[field] ?? "")}
-                                    onChange={(e) =>
-                                      updatePlayer(teamKey, code, (current) => ({
-                                        ...current,
-                                        [field]: e.target.value,
-                                      }))
-                                    }
-                                    className={inputClass}
-                                  />
-                                </label>
-                              )
-                            )}
-                            <div className="mt-5 grid gap-1 lg:row-span-2">
-                              <button
-                                type="button"
-                                title="Remove player"
-                                onClick={() => removePlayer(teamKey, code)}
-                                className="h-10 px-3 text-red-300 hover:bg-red-950/40"
-                              >
-                                Remove
-                              </button>
-                              <details className="relative">
-                                <summary className="flex h-10 cursor-pointer list-none items-center justify-center px-3 text-blue-300 hover:bg-blue-950/40">
-                                  Change Team
-                                </summary>
-                                <div className="absolute right-0 z-20 mt-1 min-w-36 rounded border border-white/15 bg-zinc-950 p-1 shadow-xl">
-                                  {Object.entries(match.teams ?? {})
-                                    .filter(([targetTeamKey]) => targetTeamKey !== teamKey)
-                                    .map(([targetTeamKey, targetTeam]) => (
-                                      <button
-                                        key={targetTeamKey}
-                                        type="button"
-                                        onClick={() => movePlayer(key, targetTeamKey)}
-                                        className="block w-full rounded px-3 py-2 text-left text-sm text-gray-200 hover:bg-white/10"
-                                      >
-                                        {teamTag(targetTeamKey, targetTeam)}
-                                      </button>
-                                    ))}
-                                </div>
-                              </details>
+                  {!specialResult ? (
+                    <div className="mt-4 space-y-3">
+                      {Object.entries(team.players ?? {}).map(([code, player]) => {
+                        const key = `${teamKey}::${code}`;
+                        const state = identityStates[key];
+                        const proposedPlayerEntry = newEntries.find(
+                          (entry) => entry.type === "player" && entry.friend_code === code
+                        );
+                        const approvedPlayerEntry =
+                          proposedPlayerEntry &&
+                          approvalDecisions[proposedPlayerEntry.key] === "approved";
+                        const duplicatePlayerLabel = duplicatePlayerLabels.get(key);
+                        const cardDisplayName =
+                          state?.identity?.canonical_name ||
+                          (proposedPlayerEntry?.kind === "existing_player_new_friend_code"
+                            ? proposedPlayerEntry.proposed_player?.canonical_name
+                            : null) ||
+                          player.lounge_name ||
+                          player.table_name ||
+                          player.mii_name ||
+                          code;
+                        return (
+                          <div
+                            key={key}
+                            data-player-key={key}
+                            className="border-t border-white/10 pt-3"
+                          >
+                            <div className="mb-2">
+                              <span className="text-sm font-semibold text-gray-200">
+                                {cardDisplayName}
+                              </span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-3 text-sm sm:col-span-2 lg:col-span-5">
-                              {state?.status === "checking" ? (
-                                <span className="text-gray-400">Checking database…</span>
-                              ) : null}
-                              {duplicatePlayerLabel ? (
-                                <span className="text-red-300">
-                                  Duplicate player: this resolves to the same database player as{" "}
-                                  {duplicatePlayerLabel}.
-                                </span>
-                              ) : state?.status === "confirmed" ? (
-                                <span className="text-emerald-300">
-                                  Confirmed:{" "}
-                                  {state.identity?.canonical_name ||
-                                    `Player ${state.identity?.player_id}`}
-                                </span>
-                              ) : null}
-                              {state?.status === "new" && (
-                                <span className="text-amber-300">
-                                  {approvedPlayerEntry
-                                    ? proposedPlayerEntry.kind === "existing_player_new_friend_code"
-                                      ? `Approved for player ID ${proposedPlayerEntry.proposed_player_id}`
-                                      : "Approved as a new player"
-                                    : state.message || "New friend code: approval required"}
-                                </span>
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[11rem_repeat(4,minmax(0,1fr))_auto]">
+                              <label className={smallLabel}>
+                                Friend code
+                                <input
+                                  defaultValue={code.startsWith("NEW-") ? "" : code}
+                                  onBlur={(e) => renamePlayer(teamKey, code, e.target.value.trim())}
+                                  className={inputClass}
+                                  placeholder="0000-0000-0000"
+                                />
+                              </label>
+                              {(["lounge_name", "table_name", "mii_name", "flag"] as const).map(
+                                (field) => (
+                                  <label key={field} className={smallLabel}>
+                                    {field.replace("_", " ")}
+                                    <input
+                                      value={String(player[field] ?? "")}
+                                      onChange={(e) =>
+                                        updatePlayer(teamKey, code, (current) => ({
+                                          ...current,
+                                          [field]: e.target.value,
+                                        }))
+                                      }
+                                      className={inputClass}
+                                    />
+                                  </label>
+                                )
                               )}
-                              {state?.status === "conflict" && (
-                                <span className="text-red-300">{state.message}</span>
-                              )}
-                              {isFfa(match.format) && (
-                                <label className="flex items-center gap-2">
-                                  Player penalty
-                                  <input
-                                    type="number"
-                                    value={player.penalties ?? 0}
-                                    onChange={(e) =>
-                                      updatePlayer(teamKey, code, (current) => ({
-                                        ...current,
-                                        penalties: Number(e.target.value) || 0,
-                                      }))
-                                    }
-                                    className="w-20 rounded border border-white/15 bg-black/40 p-1"
-                                  />
-                                </label>
-                              )}
-                              {!isFfa(match.format) && (player.penalties ?? 0) !== 0 && (
-                                <span className="text-amber-300">
-                                  Legacy player penalty: {player.penalties}
-                                </span>
-                              )}
+                              <div className="mt-5 grid gap-1 lg:row-span-2">
+                                <button
+                                  type="button"
+                                  title="Remove player"
+                                  onClick={() => removePlayer(teamKey, code)}
+                                  className="h-10 px-3 text-red-300 hover:bg-red-950/40"
+                                >
+                                  Remove
+                                </button>
+                                <details className="relative">
+                                  <summary className="flex h-10 cursor-pointer list-none items-center justify-center px-3 text-blue-300 hover:bg-blue-950/40">
+                                    Change Team
+                                  </summary>
+                                  <div className="absolute right-0 z-20 mt-1 min-w-36 rounded border border-white/15 bg-zinc-950 p-1 shadow-xl">
+                                    {Object.entries(match.teams ?? {})
+                                      .filter(([targetTeamKey]) => targetTeamKey !== teamKey)
+                                      .map(([targetTeamKey, targetTeam]) => (
+                                        <button
+                                          key={targetTeamKey}
+                                          type="button"
+                                          onClick={() => movePlayer(key, targetTeamKey)}
+                                          className="block w-full rounded px-3 py-2 text-left text-sm text-gray-200 hover:bg-white/10"
+                                        >
+                                          {teamTag(targetTeamKey, targetTeam)}
+                                        </button>
+                                      ))}
+                                  </div>
+                                </details>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-3 text-sm sm:col-span-2 lg:col-span-5">
+                                {state?.status === "checking" ? (
+                                  <span className="text-gray-400">Checking database…</span>
+                                ) : null}
+                                {duplicatePlayerLabel ? (
+                                  <span className="text-red-300">
+                                    Duplicate player: this resolves to the same database player as{" "}
+                                    {duplicatePlayerLabel}.
+                                  </span>
+                                ) : state?.status === "confirmed" ? (
+                                  <span className="text-emerald-300">
+                                    Confirmed:{" "}
+                                    {state.identity?.canonical_name ||
+                                      `Player ${state.identity?.player_id}`}
+                                  </span>
+                                ) : null}
+                                {state?.status === "new" && (
+                                  <span className="text-amber-300">
+                                    {approvedPlayerEntry
+                                      ? proposedPlayerEntry.kind ===
+                                        "existing_player_new_friend_code"
+                                        ? `Approved for player ID ${proposedPlayerEntry.proposed_player_id}`
+                                        : "Approved as a new player"
+                                      : state.message || "New friend code: approval required"}
+                                  </span>
+                                )}
+                                {state?.status === "conflict" && (
+                                  <span className="text-red-300">{state.message}</span>
+                                )}
+                                {isFfa(match.format) && (
+                                  <label className="flex items-center gap-2">
+                                    Player penalty
+                                    <input
+                                      type="number"
+                                      value={player.penalties ?? 0}
+                                      onChange={(e) =>
+                                        updatePlayer(teamKey, code, (current) => ({
+                                          ...current,
+                                          penalties: Number(e.target.value) || 0,
+                                        }))
+                                      }
+                                      className="w-20 rounded border border-white/15 bg-black/40 p-1"
+                                    />
+                                  </label>
+                                )}
+                                {!isFfa(match.format) && (player.penalties ?? 0) !== 0 && (
+                                  <span className="text-amber-300">
+                                    Legacy player penalty: {player.penalties}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {resolvedTeam && leagueValid && seasonValid && divisionValid ? (
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                  {!specialResult && resolvedTeam && leagueValid && seasonValid && divisionValid ? (
                     <TeamRosterPool
                       key={`${match.league}:${match.season}:${match.division}:${resolvedTeam.team_id}`}
                       league={match.league ?? ""}
@@ -2230,13 +2318,15 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       onAdd={(player) => addRosterPlayer(teamKey, player)}
                     />
                   ) : null}
-                  <button
-                    type="button"
-                    onClick={() => addPlayer(teamKey)}
-                    className="mt-4 rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold"
-                  >
-                    Add Player
-                  </button>
+                  {!specialResult ? (
+                    <button
+                      type="button"
+                      onClick={() => addPlayer(teamKey)}
+                      className="mt-4 rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold"
+                    >
+                      Add Player
+                    </button>
+                  ) : null}
                 </article>
               );
             })}
@@ -2250,520 +2340,525 @@ export default function MatchJsonEditor(): React.JSX.Element {
           </datalist>
         </section>
 
-        <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-bold">Race Entry</h2>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setRaceView("one")}
-                className={`rounded px-3 py-2 ${raceView === "one" ? "bg-blue-500" : "bg-white/10"}`}
-              >
-                One Race
-              </button>
-              <button
-                type="button"
-                onClick={() => setRaceView("all")}
-                className={`rounded px-3 py-2 ${raceView === "all" ? "bg-blue-500" : "bg-white/10"}`}
-              >
-                All Races
-              </button>
+        {!specialResult ? (
+          <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl font-bold">Race Entry</h2>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRaceView("one")}
+                  className={`rounded px-3 py-2 ${raceView === "one" ? "bg-blue-500" : "bg-white/10"}`}
+                >
+                  One Race
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRaceView("all")}
+                  className={`rounded px-3 py-2 ${raceView === "all" ? "bg-blue-500" : "bg-white/10"}`}
+                >
+                  All Races
+                </button>
+              </div>
             </div>
-          </div>
-          {raceView === "one" && (
-            <div className="mb-4 flex items-center justify-between">
-              <button
-                type="button"
-                disabled={activeRace === 0}
-                onClick={() => setActiveRace((r) => r - 1)}
-                className="rounded bg-white/10 px-3 py-2 disabled:opacity-30"
-              >
-                Previous
-              </button>
-              <select
-                value={activeRace}
-                onChange={(e) => setActiveRace(Number(e.target.value))}
-                className="rounded border border-white/15 bg-zinc-900 px-4 py-2"
-              >
-                {races.map((race, index) => (
-                  <option key={index} value={index}>
-                    Race {race.raceNumber}
-                  </option>
+            {raceView === "one" && (
+              <div className="mb-4 flex items-center justify-between">
+                <button
+                  type="button"
+                  disabled={activeRace === 0}
+                  onClick={() => setActiveRace((r) => r - 1)}
+                  className="rounded bg-white/10 px-3 py-2 disabled:opacity-30"
+                >
+                  Previous
+                </button>
+                <select
+                  value={activeRace}
+                  onChange={(e) => setActiveRace(Number(e.target.value))}
+                  className="rounded border border-white/15 bg-zinc-900 px-4 py-2"
+                >
+                  {races.map((race, index) => (
+                    <option key={index} value={index}>
+                      Race {race.raceNumber}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={activeRace === races.length - 1}
+                  onClick={() => setActiveRace((r) => r + 1)}
+                  className="rounded bg-white/10 px-3 py-2 disabled:opacity-30"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+            <datalist id="track-options">
+              {trackOptions
+                .filter((track) => normalized(track.league) === league)
+                .map((track) => (
+                  <option key={track.track_id} value={track.name} />
                 ))}
-              </select>
-              <button
-                type="button"
-                disabled={activeRace === races.length - 1}
-                onClick={() => setActiveRace((r) => r + 1)}
-                className="rounded bg-white/10 px-3 py-2 disabled:opacity-30"
-              >
-                Next
-              </button>
-            </div>
-          )}
-          <datalist id="track-options">
-            {trackOptions
-              .filter((track) => normalized(track.league) === league)
-              .map((track) => (
-                <option key={track.track_id} value={track.name} />
-              ))}
-          </datalist>
-          <div className="space-y-5">
-            {raceIndexes.map((raceIndex) => {
-              const race = races[raceIndex];
-              const assigned = new Set([
-                ...race.placements.flatMap((placement) => (placement ? [placement.playerKey] : [])),
-                ...race.unplacedResults.map((result) => result.playerKey),
-              ]);
-              const matchingTrack = trackOptions.find((track) =>
-                trackOptionMatches(track, race.trackName)
-              );
-              const identifierTrack = isTrackIdentifier(race.trackName);
-              const resolvedTrack =
-                !identifierTrack && matchingTrack && normalized(matchingTrack.league) === league
-                  ? matchingTrack
-                  : undefined;
-              const conflictingTrack =
-                !identifierTrack && matchingTrack && normalized(matchingTrack.league) !== league
-                  ? matchingTrack
-                  : undefined;
-              const approvedTrack = isApprovedNewEntry(
-                "track",
-                (entry) => normalized(entry.value) === normalized(race.trackName)
-              );
-              return (
-                <article key={raceIndex} className="border border-white/10 bg-black/25 p-4">
-                  <div className="mb-4 grid gap-3 sm:grid-cols-[7rem_minmax(15rem,1fr)_10rem_auto_auto]">
-                    <label className={smallLabel}>
-                      Race number
-                      <input
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={race.raceNumber}
-                        onChange={(e) =>
-                          setRace(raceIndex, (current) => ({
-                            ...current,
-                            raceNumber: Number(e.target.value),
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </label>
-                    <label className={smallLabel}>
-                      Race {race.raceNumber} track
-                      <input
-                        list="track-options"
-                        value={race.trackName}
-                        onChange={(e) =>
-                          setRace(raceIndex, (current) => ({
-                            ...current,
-                            trackName: e.target.value,
-                          }))
-                        }
-                        className={`${inputClass} ${resolvedTrack ? "border-emerald-400/70" : identifierTrack || conflictingTrack ? "border-red-400/70" : approvedTrack ? "border-amber-300/70" : tracksLoaded ? "border-red-400/70" : ""}`}
-                      />
-                      <span
-                        className={`mt-1 block text-xs normal-case ${resolvedTrack ? "text-emerald-300" : identifierTrack || conflictingTrack ? "text-red-300" : approvedTrack ? "text-amber-300" : tracksLoaded ? "text-red-300" : "text-gray-400"}`}
-                      >
-                        {resolvedTrack
-                          ? `Confirmed as a ${league.toUpperCase()} track`
-                          : identifierTrack
-                            ? "Unresolved track identifier; replace it with the proper track name"
-                            : conflictingTrack
-                              ? `Registered for ${conflictingTrack.league.toUpperCase()}; not allowed in ${league.toUpperCase()}`
-                              : approvedTrack
-                                ? "Approved as a new track"
-                                : tracksLoaded
-                                  ? "No matching database track"
-                                  : "Checking database..."}
-                      </span>
-                    </label>
-                    <label className={smallLabel}>
-                      Room size
-                      <select
-                        value={race.roomSize}
-                        onChange={(e) => setRoomSize(raceIndex, Number(e.target.value))}
-                        className={inputClass}
-                      >
-                        {Object.keys(SCORE_TABLES).map((size) => (
-                          <option key={size}>{size}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <span className="self-end pb-2 text-sm text-gray-300">
-                      {race.placements.filter(Boolean).length} / {race.roomSize} placed
-                      {race.unplacedResults.length
-                        ? `; ${race.unplacedResults.length} DC award`
-                        : ""}
-                      {race.missingPlayerResults.length
-                        ? `; ${race.missingPlayerResults.length} team missing`
-                        : ""}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={!race.placements.some(Boolean)}
-                      onClick={() =>
-                        setRace(raceIndex, (current) => ({
-                          ...current,
-                          placements: Array(current.roomSize).fill(null),
-                        }))
-                      }
-                      className="self-end rounded-md border border-red-400/30 bg-red-950/30 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Clear all positions
-                    </button>
-                  </div>
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => insertRace(raceIndex, "before")}
-                      className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"
-                    >
-                      Insert race before
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => insertRace(raceIndex, "after")}
-                      className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"
-                    >
-                      Insert race after
-                    </button>
-                    <button
-                      type="button"
-                      disabled={races.length <= 1}
-                      onClick={() => deleteRace(raceIndex)}
-                      className="rounded-md border border-red-400/30 bg-red-950/30 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Delete race
-                    </button>
-                    <span className="self-center text-xs text-gray-400">
-                      Subsequent race numbers will shift automatically.
-                    </span>
-                  </div>
-                  <div className="mb-4 border border-amber-400/30 bg-amber-950/25 p-3">
-                    <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase text-amber-200">
-                          Player Disconnect: Points Without Placement
-                        </p>
-                        <p className="mt-1 text-xs text-amber-100/80">
-                          Use this when a configured player misses the finish but receives
-                          disconnection points.
-                        </p>
-                      </div>
+            </datalist>
+            <div className="space-y-5">
+              {raceIndexes.map((raceIndex) => {
+                const race = races[raceIndex];
+                const assigned = new Set([
+                  ...race.placements.flatMap((placement) =>
+                    placement ? [placement.playerKey] : []
+                  ),
+                  ...race.unplacedResults.map((result) => result.playerKey),
+                ]);
+                const matchingTrack = trackOptions.find((track) =>
+                  trackOptionMatches(track, race.trackName)
+                );
+                const identifierTrack = isTrackIdentifier(race.trackName);
+                const resolvedTrack =
+                  !identifierTrack && matchingTrack && normalized(matchingTrack.league) === league
+                    ? matchingTrack
+                    : undefined;
+                const conflictingTrack =
+                  !identifierTrack && matchingTrack && normalized(matchingTrack.league) !== league
+                    ? matchingTrack
+                    : undefined;
+                const approvedTrack = isApprovedNewEntry(
+                  "track",
+                  (entry) => normalized(entry.value) === normalized(race.trackName)
+                );
+                return (
+                  <article key={raceIndex} className="border border-white/10 bg-black/25 p-4">
+                    <div className="mb-4 grid gap-3 sm:grid-cols-[7rem_minmax(15rem,1fr)_10rem_auto_auto]">
                       <label className={smallLabel}>
-                        Add disconnected player
-                        <select
-                          value=""
-                          onChange={(event) =>
-                            addDisconnectedPlayerResult(raceIndex, event.target.value)
+                        Race number
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={race.raceNumber}
+                          onChange={(e) =>
+                            setRace(raceIndex, (current) => ({
+                              ...current,
+                              raceNumber: Number(e.target.value),
+                            }))
                           }
                           className={inputClass}
+                        />
+                      </label>
+                      <label className={smallLabel}>
+                        Race {race.raceNumber} track
+                        <input
+                          list="track-options"
+                          value={race.trackName}
+                          onChange={(e) =>
+                            setRace(raceIndex, (current) => ({
+                              ...current,
+                              trackName: e.target.value,
+                            }))
+                          }
+                          className={`${inputClass} ${resolvedTrack ? "border-emerald-400/70" : identifierTrack || conflictingTrack ? "border-red-400/70" : approvedTrack ? "border-amber-300/70" : tracksLoaded ? "border-red-400/70" : ""}`}
+                        />
+                        <span
+                          className={`mt-1 block text-xs normal-case ${resolvedTrack ? "text-emerald-300" : identifierTrack || conflictingTrack ? "text-red-300" : approvedTrack ? "text-amber-300" : tracksLoaded ? "text-red-300" : "text-gray-400"}`}
                         >
-                          <option value="">Select player</option>
-                          {players
-                            .filter((player) => !assigned.has(player.playerKey))
-                            .map((player) => (
-                              <option key={player.playerKey} value={player.playerKey}>
-                                {displayName(player.playerKey)}
-                              </option>
-                            ))}
+                          {resolvedTrack
+                            ? `Confirmed as a ${league.toUpperCase()} track`
+                            : identifierTrack
+                              ? "Unresolved track identifier; replace it with the proper track name"
+                              : conflictingTrack
+                                ? `Registered for ${conflictingTrack.league.toUpperCase()}; not allowed in ${league.toUpperCase()}`
+                                : approvedTrack
+                                  ? "Approved as a new track"
+                                  : tracksLoaded
+                                    ? "No matching database track"
+                                    : "Checking database..."}
+                        </span>
+                      </label>
+                      <label className={smallLabel}>
+                        Room size
+                        <select
+                          value={race.roomSize}
+                          onChange={(e) => setRoomSize(raceIndex, Number(e.target.value))}
+                          className={inputClass}
+                        >
+                          {Object.keys(SCORE_TABLES).map((size) => (
+                            <option key={size}>{size}</option>
+                          ))}
                         </select>
                       </label>
-                    </div>
-                    {race.unplacedResults.length > 0 && (
-                      <div className="space-y-2">
-                        {race.unplacedResults.map((result) => (
-                          <div
-                            key={result.playerKey}
-                            className="grid gap-2 border border-amber-300/20 bg-black/20 px-3 py-2 text-sm sm:grid-cols-[minmax(12rem,1fr)_8rem_auto]"
-                          >
-                            <span className="self-center">
-                              <strong>{displayName(result.playerKey)}</strong> has no finishing
-                              position.
-                            </span>
-                            <label className={smallLabel}>
-                              DC points
-                              <input
-                                type="number"
-                                min={0}
-                                max={15}
-                                value={result.score}
-                                onChange={(event) =>
-                                  updateDisconnectedPlayerResult(
-                                    raceIndex,
-                                    result.playerKey,
-                                    Number(event.target.value)
-                                  )
-                                }
-                                className={inputClass}
-                              />
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => releaseUnplacedResult(raceIndex, result.playerKey)}
-                              className="self-end rounded-md border border-amber-300/30 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-900/30"
-                            >
-                              Release to player pool
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="mb-4 border border-white/10 bg-black/20 p-3">
-                    <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase text-gray-300">
-                          Team Missing Player
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          Use this when a team starts short or continues short after an unreplaced
-                          disconnect. This result does not occupy a finishing position.
-                        </p>
-                      </div>
+                      <span className="self-end pb-2 text-sm text-gray-300">
+                        {race.placements.filter(Boolean).length} / {race.roomSize} placed
+                        {race.unplacedResults.length
+                          ? `; ${race.unplacedResults.length} DC award`
+                          : ""}
+                        {race.missingPlayerResults.length
+                          ? `; ${race.missingPlayerResults.length} team missing`
+                          : ""}
+                      </span>
                       <button
                         type="button"
-                        onClick={() => addMissingPlayerResult(raceIndex)}
-                        className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"
+                        disabled={!race.placements.some(Boolean)}
+                        onClick={() =>
+                          setRace(raceIndex, (current) => ({
+                            ...current,
+                            placements: Array(current.roomSize).fill(null),
+                          }))
+                        }
+                        className="self-end rounded-md border border-red-400/30 bg-red-950/30 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        Add missing player points
+                        Clear all positions
                       </button>
                     </div>
-                    {race.missingPlayerResults.length > 0 && (
-                      <div className="space-y-2">
-                        {race.missingPlayerResults.map((result, resultIndex) => (
-                          <div
-                            key={resultIndex}
-                            className="grid gap-2 border border-white/10 bg-zinc-900/60 p-2 sm:grid-cols-[minmax(10rem,1fr)_minmax(13rem,1fr)_8rem_auto]"
-                          >
-                            <label className={smallLabel}>
-                              Team
-                              <select
-                                value={result.teamKey}
-                                onChange={(event) =>
-                                  updateMissingPlayerResult(raceIndex, resultIndex, {
-                                    teamKey: event.target.value,
-                                  })
-                                }
-                                className={inputClass}
-                              >
-                                {Object.entries(match.teams ?? {}).map(([teamKey, team]) => (
-                                  <option key={teamKey} value={teamKey}>
-                                    {teamTag(teamKey, team)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className={smallLabel}>
-                              Reason
-                              <select
-                                value={result.reason}
-                                onChange={(event) =>
-                                  updateMissingPlayerResult(raceIndex, resultIndex, {
-                                    reason: event.target
-                                      .value as RaceDraft["missingPlayerResults"][number]["reason"],
-                                  })
-                                }
-                                className={inputClass}
-                              >
-                                <option value="short_roster">Started with four players</option>
-                                <option value="unreplaced_disconnect">
-                                  Disconnect/sub not replaced
-                                </option>
-                                <option value="unknown">Unknown / legacy source</option>
-                              </select>
-                            </label>
-                            <label className={smallLabel}>
-                              Points
-                              <input
-                                type="number"
-                                min={0}
-                                value={result.score}
-                                onChange={(event) =>
-                                  updateMissingPlayerResult(raceIndex, resultIndex, {
-                                    score: Number(event.target.value),
-                                  })
-                                }
-                                className={inputClass}
-                              />
-                            </label>
-                            <div className="flex flex-wrap items-end gap-1 sm:col-span-4">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  applyMissingPlayerResult(raceIndex, resultIndex, "all")
-                                }
-                                className="rounded border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10"
-                              >
-                                Apply to all races
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  applyMissingPlayerResult(raceIndex, resultIndex, "remaining")
-                                }
-                                className="rounded border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10"
-                              >
-                                Apply from this race onward
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => removeMissingPlayerResult(raceIndex, resultIndex)}
-                                className="ml-auto px-3 py-2 text-sm text-red-300 hover:bg-red-950/40"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={() => {
-                      if (draggedPlayer) removePlayerFromRace(raceIndex, draggedPlayer);
-                      setDraggedPlayer(null);
-                    }}
-                    className="mb-4 min-h-[6rem] border border-dashed border-white/20 bg-black/20 p-3"
-                  >
-                    <p className="mb-2 text-xs font-semibold uppercase text-gray-400">
-                      Player Pool
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {players
-                        .filter((player) => !assigned.has(player.playerKey))
-                        .map(({ playerKey, teamKey }) => (
-                          <button
-                            key={playerKey}
-                            type="button"
-                            draggable
-                            onDragStart={() => setDraggedPlayer(playerKey)}
-                            onDragEnd={() => setDraggedPlayer(null)}
-                            onClick={() => {
-                              const empty = race.placements.findIndex((slot) => !slot);
-                              if (empty >= 0) assignPlayer(raceIndex, empty, playerKey);
-                            }}
-                            style={{ borderColor: teamColor(match.teams?.[teamKey] ?? {}) }}
-                            className="min-w-[8rem] cursor-grab rounded border-2 bg-zinc-900 px-3 py-2 text-center text-sm active:cursor-grabbing"
-                          >
-                            {displayName(playerKey)}
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                  <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                    {race.placements.map((placement, positionIndex) => (
-                      <div
-                        key={positionIndex}
-                        draggable={Boolean(placement)}
-                        onDragStart={() => {
-                          if (placement) setDraggedPlayer(placement.playerKey);
-                        }}
-                        onDragEnd={() => setDraggedPlayer(null)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={() => {
-                          if (draggedPlayer) assignPlayer(raceIndex, positionIndex, draggedPlayer);
-                          setDraggedPlayer(null);
-                        }}
-                        className={`grid min-h-[7.5rem] grid-cols-[3rem_1fr] border border-white/10 bg-zinc-900/70 ${placement ? "cursor-grab active:cursor-grabbing" : ""}`}
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => insertRace(raceIndex, "before")}
+                        className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"
                       >
-                        <div className="flex flex-col items-center justify-center border-r border-white/10">
-                          <strong>{positionIndex + 1}</strong>
-                          <span className="text-sm text-blue-300">
-                            {scoreForPosition(positionIndex + 1, race.roomSize)} pts
-                          </span>
+                        Insert race before
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertRace(raceIndex, "after")}
+                        className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"
+                      >
+                        Insert race after
+                      </button>
+                      <button
+                        type="button"
+                        disabled={races.length <= 1}
+                        onClick={() => deleteRace(raceIndex)}
+                        className="rounded-md border border-red-400/30 bg-red-950/30 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Delete race
+                      </button>
+                      <span className="self-center text-xs text-gray-400">
+                        Subsequent race numbers will shift automatically.
+                      </span>
+                    </div>
+                    <div className="mb-4 border border-amber-400/30 bg-amber-950/25 p-3">
+                      <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase text-amber-200">
+                            Player Disconnect: Points Without Placement
+                          </p>
+                          <p className="mt-1 text-xs text-amber-100/80">
+                            Use this when a configured player misses the finish but receives
+                            disconnection points.
+                          </p>
                         </div>
-                        <div className="p-2">
+                        <label className={smallLabel}>
+                          Add disconnected player
                           <select
-                            value={placement?.playerKey ?? ""}
-                            onChange={(e) =>
-                              e.target.value
-                                ? assignPlayer(raceIndex, positionIndex, e.target.value)
-                                : setRace(raceIndex, (current) => ({
-                                    ...current,
-                                    placements: current.placements.map((slot, index) =>
-                                      index === positionIndex ? null : slot
-                                    ),
-                                  }))
+                            value=""
+                            onChange={(event) =>
+                              addDisconnectedPlayerResult(raceIndex, event.target.value)
                             }
-                            className="w-full rounded border border-white/15 bg-black/40 p-2 text-sm"
+                            className={inputClass}
                           >
                             <option value="">Select player</option>
                             {players
-                              .filter(
-                                (player) =>
-                                  !assigned.has(player.playerKey) ||
-                                  player.playerKey === placement?.playerKey
-                              )
+                              .filter((player) => !assigned.has(player.playerKey))
                               .map((player) => (
                                 <option key={player.playerKey} value={player.playerKey}>
                                   {displayName(player.playerKey)}
                                 </option>
                               ))}
                           </select>
-                          {placement && (
-                            <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-1">
+                        </label>
+                      </div>
+                      {race.unplacedResults.length > 0 && (
+                        <div className="space-y-2">
+                          {race.unplacedResults.map((result) => (
+                            <div
+                              key={result.playerKey}
+                              className="grid gap-2 border border-amber-300/20 bg-black/20 px-3 py-2 text-sm sm:grid-cols-[minmax(12rem,1fr)_8rem_auto]"
+                            >
+                              <span className="self-center">
+                                <strong>{displayName(result.playerKey)}</strong> has no finishing
+                                position.
+                              </span>
+                              <label className={smallLabel}>
+                                DC points
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={15}
+                                  value={result.score}
+                                  onChange={(event) =>
+                                    updateDisconnectedPlayerResult(
+                                      raceIndex,
+                                      result.playerKey,
+                                      Number(event.target.value)
+                                    )
+                                  }
+                                  className={inputClass}
+                                />
+                              </label>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  setRace(raceIndex, (current) => ({
-                                    ...current,
-                                    placements: current.placements.map((slot, index) =>
-                                      index === positionIndex && slot
-                                        ? { ...slot, role: "runner" }
-                                        : slot
-                                    ),
-                                  }))
-                                }
-                                className={`rounded px-2 py-1 text-xs ${placement.role === "runner" ? "bg-blue-500" : "bg-white/10"}`}
+                                onClick={() => releaseUnplacedResult(raceIndex, result.playerKey)}
+                                className="self-end rounded-md border border-amber-300/30 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-900/30"
                               >
-                                Runner
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setRace(raceIndex, (current) => ({
-                                    ...current,
-                                    placements: current.placements.map((slot, index) =>
-                                      index === positionIndex && slot
-                                        ? { ...slot, role: "bagger" }
-                                        : slot
-                                    ),
-                                  }))
-                                }
-                                className={`rounded px-2 py-1 text-xs ${placement.role === "bagger" ? "bg-amber-500 text-black" : "bg-white/10"}`}
-                              >
-                                Bagger
-                              </button>
-                              <button
-                                type="button"
-                                title="Clear position"
-                                onClick={() =>
-                                  setRace(raceIndex, (current) => ({
-                                    ...current,
-                                    placements: current.placements.map((slot, index) =>
-                                      index === positionIndex ? null : slot
-                                    ),
-                                  }))
-                                }
-                                className="px-2 text-red-300"
-                              >
-                                Clear
+                                Release to player pool
                               </button>
                             </div>
-                          )}
+                          ))}
                         </div>
+                      )}
+                    </div>
+                    <div className="mb-4 border border-white/10 bg-black/20 p-3">
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase text-gray-300">
+                            Team Missing Player
+                          </p>
+                          <p className="mt-1 text-xs text-gray-400">
+                            Use this when a team starts short or continues short after an unreplaced
+                            disconnect. This result does not occupy a finishing position.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addMissingPlayerResult(raceIndex)}
+                          className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"
+                        >
+                          Add missing player points
+                        </button>
                       </div>
-                    ))}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
+                      {race.missingPlayerResults.length > 0 && (
+                        <div className="space-y-2">
+                          {race.missingPlayerResults.map((result, resultIndex) => (
+                            <div
+                              key={resultIndex}
+                              className="grid gap-2 border border-white/10 bg-zinc-900/60 p-2 sm:grid-cols-[minmax(10rem,1fr)_minmax(13rem,1fr)_8rem_auto]"
+                            >
+                              <label className={smallLabel}>
+                                Team
+                                <select
+                                  value={result.teamKey}
+                                  onChange={(event) =>
+                                    updateMissingPlayerResult(raceIndex, resultIndex, {
+                                      teamKey: event.target.value,
+                                    })
+                                  }
+                                  className={inputClass}
+                                >
+                                  {Object.entries(match.teams ?? {}).map(([teamKey, team]) => (
+                                    <option key={teamKey} value={teamKey}>
+                                      {teamTag(teamKey, team)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className={smallLabel}>
+                                Reason
+                                <select
+                                  value={result.reason}
+                                  onChange={(event) =>
+                                    updateMissingPlayerResult(raceIndex, resultIndex, {
+                                      reason: event.target
+                                        .value as RaceDraft["missingPlayerResults"][number]["reason"],
+                                    })
+                                  }
+                                  className={inputClass}
+                                >
+                                  <option value="short_roster">Started with four players</option>
+                                  <option value="unreplaced_disconnect">
+                                    Disconnect/sub not replaced
+                                  </option>
+                                  <option value="unknown">Unknown / legacy source</option>
+                                </select>
+                              </label>
+                              <label className={smallLabel}>
+                                Points
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={result.score}
+                                  onChange={(event) =>
+                                    updateMissingPlayerResult(raceIndex, resultIndex, {
+                                      score: Number(event.target.value),
+                                    })
+                                  }
+                                  className={inputClass}
+                                />
+                              </label>
+                              <div className="flex flex-wrap items-end gap-1 sm:col-span-4">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    applyMissingPlayerResult(raceIndex, resultIndex, "all")
+                                  }
+                                  className="rounded border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10"
+                                >
+                                  Apply to all races
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    applyMissingPlayerResult(raceIndex, resultIndex, "remaining")
+                                  }
+                                  className="rounded border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10"
+                                >
+                                  Apply from this race onward
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeMissingPlayerResult(raceIndex, resultIndex)}
+                                  className="ml-auto px-3 py-2 text-sm text-red-300 hover:bg-red-950/40"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={() => {
+                        if (draggedPlayer) removePlayerFromRace(raceIndex, draggedPlayer);
+                        setDraggedPlayer(null);
+                      }}
+                      className="mb-4 min-h-[6rem] border border-dashed border-white/20 bg-black/20 p-3"
+                    >
+                      <p className="mb-2 text-xs font-semibold uppercase text-gray-400">
+                        Player Pool
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {players
+                          .filter((player) => !assigned.has(player.playerKey))
+                          .map(({ playerKey, teamKey }) => (
+                            <button
+                              key={playerKey}
+                              type="button"
+                              draggable
+                              onDragStart={() => setDraggedPlayer(playerKey)}
+                              onDragEnd={() => setDraggedPlayer(null)}
+                              onClick={() => {
+                                const empty = race.placements.findIndex((slot) => !slot);
+                                if (empty >= 0) assignPlayer(raceIndex, empty, playerKey);
+                              }}
+                              style={{ borderColor: teamColor(match.teams?.[teamKey] ?? {}) }}
+                              className="min-w-[8rem] cursor-grab rounded border-2 bg-zinc-900 px-3 py-2 text-center text-sm active:cursor-grabbing"
+                            >
+                              {displayName(playerKey)}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                      {race.placements.map((placement, positionIndex) => (
+                        <div
+                          key={positionIndex}
+                          draggable={Boolean(placement)}
+                          onDragStart={() => {
+                            if (placement) setDraggedPlayer(placement.playerKey);
+                          }}
+                          onDragEnd={() => setDraggedPlayer(null)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => {
+                            if (draggedPlayer)
+                              assignPlayer(raceIndex, positionIndex, draggedPlayer);
+                            setDraggedPlayer(null);
+                          }}
+                          className={`grid min-h-[7.5rem] grid-cols-[3rem_1fr] border border-white/10 bg-zinc-900/70 ${placement ? "cursor-grab active:cursor-grabbing" : ""}`}
+                        >
+                          <div className="flex flex-col items-center justify-center border-r border-white/10">
+                            <strong>{positionIndex + 1}</strong>
+                            <span className="text-sm text-blue-300">
+                              {scoreForPosition(positionIndex + 1, race.roomSize)} pts
+                            </span>
+                          </div>
+                          <div className="p-2">
+                            <select
+                              value={placement?.playerKey ?? ""}
+                              onChange={(e) =>
+                                e.target.value
+                                  ? assignPlayer(raceIndex, positionIndex, e.target.value)
+                                  : setRace(raceIndex, (current) => ({
+                                      ...current,
+                                      placements: current.placements.map((slot, index) =>
+                                        index === positionIndex ? null : slot
+                                      ),
+                                    }))
+                              }
+                              className="w-full rounded border border-white/15 bg-black/40 p-2 text-sm"
+                            >
+                              <option value="">Select player</option>
+                              {players
+                                .filter(
+                                  (player) =>
+                                    !assigned.has(player.playerKey) ||
+                                    player.playerKey === placement?.playerKey
+                                )
+                                .map((player) => (
+                                  <option key={player.playerKey} value={player.playerKey}>
+                                    {displayName(player.playerKey)}
+                                  </option>
+                                ))}
+                            </select>
+                            {placement && (
+                              <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setRace(raceIndex, (current) => ({
+                                      ...current,
+                                      placements: current.placements.map((slot, index) =>
+                                        index === positionIndex && slot
+                                          ? { ...slot, role: "runner" }
+                                          : slot
+                                      ),
+                                    }))
+                                  }
+                                  className={`rounded px-2 py-1 text-xs ${placement.role === "runner" ? "bg-blue-500" : "bg-white/10"}`}
+                                >
+                                  Runner
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setRace(raceIndex, (current) => ({
+                                      ...current,
+                                      placements: current.placements.map((slot, index) =>
+                                        index === positionIndex && slot
+                                          ? { ...slot, role: "bagger" }
+                                          : slot
+                                      ),
+                                    }))
+                                  }
+                                  className={`rounded px-2 py-1 text-xs ${placement.role === "bagger" ? "bg-amber-500 text-black" : "bg-white/10"}`}
+                                >
+                                  Bagger
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Clear position"
+                                  onClick={() =>
+                                    setRace(raceIndex, (current) => ({
+                                      ...current,
+                                      placements: current.placements.map((slot, index) =>
+                                        index === positionIndex ? null : slot
+                                      ),
+                                    }))
+                                  }
+                                  className="px-2 text-red-300"
+                                >
+                                  Clear
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         <section className="grid gap-5 lg:grid-cols-2">
           <div className="rounded-lg border border-white/10 bg-zinc-950/85 p-4">

@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 const routes = [
   "/",
   "/stats",
+  "/standings",
   "/top-team-players",
   "/top-tracks",
   "/best-matchups",
@@ -15,6 +16,210 @@ const routes = [
   "/admin/aliases",
   "/admin/review-queue",
 ];
+
+test("standings renders the synchronized competition sections", async ({ page }) => {
+  await page.goto("/standings?league=gsc&season=s15&division=d1");
+  await expect(page.getByRole("heading", { name: "League Table" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Player GP Average" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Head-to-Head Results" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Playoff Bracket" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Eligible players" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "All players" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Running points" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Bagging points" })).toBeVisible();
+  await expect(page.getByTitle("Player GPs played / team GPs played")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Team Competition Status" })).toHaveCount(0);
+});
+
+test("signed-in administrators can update a team competition status from standings", async ({
+  page,
+}) => {
+  let submittedStatus = "";
+  await page.route("**/api/auth/session", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        authenticated: true,
+        admin: { admin_user_id: 1, email: "admin@example.com", role: "admin" },
+      }),
+    })
+  );
+  await page.route("**/api/admin/team-season-entries/*/status", async (route) => {
+    const payload = route.request().postDataJSON() as { status: string; note: string };
+    submittedStatus = payload.status;
+    const entryId = Number(
+      route
+        .request()
+        .url()
+        .match(/entries\/(\d+)\/status/)?.[1] ?? 0
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        team_season_entry_id: entryId,
+        status: payload.status,
+        note: payload.note || null,
+      }),
+    });
+  });
+
+  await page.goto("/standings?league=gsc&season=s15&division=d1");
+  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Team Competition Status" })).toBeVisible();
+  await page.getByLabel("Status").selectOption("dropped");
+  await page.getByRole("button", { name: "Save status" }).click();
+  await expect(page.getByText("Competition status saved")).toBeVisible();
+  expect(submittedStatus).toBe("dropped");
+});
+
+test("alias manager updates a selected team season entry through the shared status control", async ({
+  page,
+}) => {
+  let submittedStatus = "";
+  await page.route("**/api/auth/session", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        authenticated: true,
+        admin: { admin_user_id: 1, email: "admin@example.com", role: "admin" },
+      }),
+    })
+  );
+  await page.route("**/api/admin/aliases/tracks*", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" })
+  );
+  await page.route("**/api/admin/aliases/teams*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([{ id: 1, label: "TT — Test Team", secondary: "TT", alias_count: 0 }]),
+    })
+  );
+  await page.route("**/api/admin/aliases/teams/1", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: 1,
+        label: "TT — Test Team",
+        canonical_name: null,
+        secondary: "TT",
+        alias_types: ["alias"],
+        aliases: [],
+        friend_codes: [],
+        season_entries: [],
+      }),
+    })
+  );
+  await page.route("**/api/admin/teams/1/identity", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        team: {
+          id: 1,
+          canonical_name: "Test Team",
+          canonical_tag: "TT",
+          canonical_identity_override: false,
+          canonical_league_preference: null,
+        },
+        league_identities: [],
+        season_entries: [
+          {
+            id: 12,
+            season: {
+              id: 3,
+              league: "gsc",
+              code: "s3",
+              name: "Season 3",
+              season_number: 3,
+            },
+            division: { id: 4, code: "d1", name: "Division 1" },
+            display_name: "Test Team",
+            clan_tag: "TT",
+            competition_status: "active",
+            competition_status_note: null,
+          },
+        ],
+      }),
+    })
+  );
+  await page.route("**/api/admin/team-season-entries/12/status", async (route) => {
+    const payload = route.request().postDataJSON() as { status: string; note: string };
+    submittedStatus = payload.status;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        team_season_entry_id: 12,
+        status: payload.status,
+        note: payload.note || null,
+      }),
+    });
+  });
+
+  await page.goto("/admin/aliases?league=gsc");
+  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
+  await page.getByRole("tab", { name: "Teams" }).click();
+  await page.getByRole("button", { name: /TT — Test Team/ }).click();
+  const statusPanel = page
+    .getByRole("heading", { name: "Team Competition Status", exact: true })
+    .locator("xpath=ancestor::section[1]");
+  await expect(statusPanel).toBeVisible();
+  const statusSelects = statusPanel.locator("select");
+  await expect(statusSelects.first().locator("option:checked")).toHaveText(/GSC S3 D1/);
+  await statusSelects.nth(1).selectOption("disqualified");
+  await statusPanel.getByRole("button", { name: "Save status" }).click();
+  await expect(page.getByText("Competition status saved")).toBeVisible();
+  expect(submittedStatus).toBe("disqualified");
+});
+
+test("json editor creates a metadata-only free win", async ({ page }) => {
+  await page.goto("/json-editor?league=gsc");
+  const dismissWelcome = page.getByRole("button", { name: "No Thanks", exact: true });
+  await dismissWelcome.click();
+  const match = {
+    league: "gsc",
+    season: "s15",
+    division: "d1",
+    match_type: "regular",
+    result_type: "free_win",
+    free_win_winner: "XI",
+    match_number: 99,
+    races_played: 0,
+    tracks: [],
+    teams: {
+      XI: {
+        table_tag_str: "XI #ffffff",
+        table_penalty_str: "Penalty -10",
+        hex_color: "#ffffff",
+        penalties: 10,
+        players: {},
+      },
+      YSL: { table_tag_str: "YSL #eeee00", hex_color: "#eeee00", players: {} },
+    },
+  };
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "free-win.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(match)),
+  });
+  await expect(page.getByLabel("Result entry")).toHaveValue("free_win");
+  await expect(page.getByRole("heading", { name: "Race Entry" })).toHaveCount(0);
+  await expect(page.getByLabel("Penalty", { exact: true })).toHaveCount(0);
+  await page.getByText("Generated JSON Preview").click();
+  const compiled = JSON.parse((await page.locator("details pre").textContent()) ?? "{}");
+  expect(compiled.races_played).toBe(0);
+  expect(compiled.tracks).toEqual([]);
+  expect(compiled.teams.XI.total_score).toBe(150);
+  expect(compiled.teams.XI.penalties).toBe(0);
+  expect(compiled.teams.XI.table_penalty_str).toBeUndefined();
+  expect(compiled.teams.YSL.total_score).toBe(0);
+  expect(compiled.teams.XI.players).toEqual({});
+});
 
 test("GSC receives the correct favicon before React boots", async ({ page }) => {
   await page.route("**/src/index.tsx", (route) => route.abort());

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 export type MatchSummary = {
   match_id: number;
   match_type: "regular" | "playoff";
+  result_type: "played" | "free_win" | "mutual_tie";
   match_number: number | null;
   playoff_series_id: number | null;
   series_match_number: number | null;
@@ -14,6 +15,7 @@ export type MatchSummary = {
   races: number;
   teams: string;
   scores: string;
+  team_statuses: Array<"active" | "dropped" | "disqualified">;
   import_status: string;
   review_notes: string | null;
 };
@@ -42,6 +44,8 @@ export type MatchTeam = {
   team_id: number;
   tag: string;
   name: string;
+  competition_status: "active" | "dropped" | "disqualified";
+  competition_status_note: string | null;
   hex_color: string;
   raw_total_score: number;
   team_penalties: number;
@@ -61,6 +65,7 @@ export type MatchTeam = {
 export type MatchDetail = {
   match_id: number;
   match_type: "regular" | "playoff";
+  result_type: "played" | "free_win" | "mutual_tie";
   season: string;
   division: string;
   match_number: number | null;

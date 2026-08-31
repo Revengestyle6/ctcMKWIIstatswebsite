@@ -46,6 +46,8 @@ export type MatchJson = {
   division?: string;
   match_number?: number;
   match_type?: "regular" | "playoff";
+  result_type?: "played" | "free_win" | "mutual_tie";
+  free_win_winner?: string;
   playoff_format?: "three_team" | "four_team";
   playoff_stage?: "semifinals" | "finals";
   playoff_series_number?: number;
@@ -127,7 +129,15 @@ export function automaticMatchLabel(match: MatchJson): string {
     .map(([teamKey, team]) => teamTag(teamKey, team))
     .filter(Boolean)
     .join(" vs ");
-  return [numberLabel, matchup].filter(Boolean).join(" ");
+  const resultLabel =
+    match.result_type === "free_win"
+      ? "Free win"
+      : match.result_type === "mutual_tie"
+        ? "Mutual tie"
+        : "";
+  return [[numberLabel, matchup].filter(Boolean).join(" "), resultLabel]
+    .filter(Boolean)
+    .join(" — ");
 }
 
 export function defaultRoleForPosition(format: string | undefined, position: number): RaceRole {
@@ -272,6 +282,40 @@ function gpGroups(scores: Array<number | null>): Array<Array<number | null>> {
 
 export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
   const normalizedMatch = normalizeMatchNumber(match);
+  const specialResult =
+    normalizedMatch.result_type === "free_win" || normalizedMatch.result_type === "mutual_tie";
+  if (specialResult) {
+    const teams = Object.fromEntries(
+      Object.entries(normalizedMatch.teams ?? {}).map(([teamKey, team]) => {
+        const tag = teamTag(teamKey, team);
+        const color = teamColor(team);
+        const winner =
+          normalizedMatch.result_type === "free_win" &&
+          (normalizedMatch.free_win_winner === teamKey || normalizedMatch.free_win_winner === tag);
+        return [
+          tag,
+          {
+            table_tag_str: `${tag} ${color}`,
+            hex_color: color,
+            total_score: winner ? 150 : 0,
+            penalties: 0,
+            players: {},
+          },
+        ];
+      })
+    );
+    return {
+      ...normalizedMatch,
+      match_type: "regular",
+      match_label: automaticMatchLabel(normalizedMatch),
+      format: "5v5",
+      title_str: "#title 0 races\n",
+      races_played: 0,
+      rxx: [],
+      tracks: [],
+      teams,
+    };
+  }
   const orderedRaces = [...races].sort((left, right) => left.raceNumber - right.raceNumber);
   const teams = Object.fromEntries(
     Object.entries(normalizedMatch.teams ?? {}).map(([teamKey, team]) => {
@@ -384,6 +428,7 @@ export const blankMatch: MatchJson = {
   season: "",
   division: "",
   match_label: "",
+  result_type: "played",
   rxx: [""],
   tracks: Array(12).fill(""),
   review_notes: "",

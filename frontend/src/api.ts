@@ -251,6 +251,9 @@ export interface TeamScope {
   canonical_tag: string;
   display_name: string;
   clan_tag: string;
+  team_season_entry_id: number;
+  competition_status: "active" | "dropped" | "disqualified";
+  competition_status_note: string | null;
 }
 
 export function fetchTeamScopes(): Promise<TeamScope[]> {

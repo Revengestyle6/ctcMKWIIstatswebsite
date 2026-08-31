@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from database import BASE_DIR
+from match_results import validate_result_metadata
 from models import (
     DatabaseAdditionLog,
     Division,
@@ -123,6 +124,15 @@ def validate_committable_match(match_data: dict[str, Any]) -> None:
         validate_competition_metadata(match_data)
     except ValueError as error:
         errors.append(str(error))
+    try:
+        kind = validate_result_metadata(match_data)
+    except ValueError as error:
+        errors.append(str(error))
+        kind = "played"
+    if kind != "played":
+        if errors:
+            raise ValueError(" ".join(dict.fromkeys(errors)))
+        return
     tracks = match_data.get("tracks") or []
     if not tracks:
         errors.append("At least one race track is required.")

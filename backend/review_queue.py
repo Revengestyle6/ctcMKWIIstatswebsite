@@ -8,6 +8,7 @@ from pathlib import Path
 
 from archive_storage import ArchiveStorage
 from import_json_to_db import detect_new_entries
+from match_results import result_type
 from match_upload import canonical_json_bytes, validate_committable_match
 from models import ReviewSubmission, SubmissionRateLimit
 from sqlalchemy import select
@@ -32,7 +33,7 @@ def validate_submission(session, match_data: dict) -> tuple[bytes, str, list[str
     if new_entries:
         warnings.append(f"Administrators must review {len(new_entries)} new database entries.")
     tracks = match_data.get("tracks") or []
-    if len(tracks) != 12:
+    if result_type(match_data) == "played" and len(tracks) != 12:
         warnings.append(f"This match contains {len(tracks)} races instead of the usual 12.")
     if any((team.get("penalties") or 0) for team in (match_data.get("teams") or {}).values()):
         warnings.append("One or more teams has penalty points.")

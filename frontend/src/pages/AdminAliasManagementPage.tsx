@@ -120,6 +120,8 @@ type TeamIdentitySnapshot = {
     division: { id: number; code: string; name: string };
     display_name: string;
     clan_tag: string;
+    competition_status: "active" | "dropped" | "disqualified";
+    competition_status_note: string | null;
   }>;
 };
 type TeamMergeComparison = {

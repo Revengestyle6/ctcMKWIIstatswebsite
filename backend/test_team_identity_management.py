@@ -264,9 +264,17 @@ class TeamIdentityManagementTests(unittest.TestCase):
             )
             self.assertEqual(response.status_code, 200, response.get_json())
             self.assertEqual(response.get_json()["team"]["canonical_name"], "Cosmic Speed")
+            status_response = client.patch(
+                f"/api/admin/team-season-entries/{self.entry_two_id}/status",
+                json={"status": "dropped", "note": "Season withdrawal"},
+                headers=headers,
+            )
+            self.assertEqual(status_response.status_code, 200, status_response.get_json())
+            self.assertEqual(status_response.get_json()["status"], "dropped")
         with self.SessionLocal() as session:
             actions = [row.action for row in session.query(AdminAuditLog).all()]
             self.assertIn("team.identity_updated", actions)
+            self.assertIn("team_season_entry.competition_status_updated", actions)
 
     def test_automatic_identity_uses_preferred_league_and_override(self):
         with self.SessionLocal.begin() as session:
@@ -410,6 +418,11 @@ class TeamIdentityManagementTests(unittest.TestCase):
             self.assertIn("team.merged", [row.action for row in session.query(AdminAuditLog)])
 
     def test_detail_includes_conventional_and_season_identities(self):
+        with self.SessionLocal.begin() as session:
+            entry = session.get(TeamSeasonEntry, self.entry_two_id)
+            entry.competition_status = "disqualified"
+            entry.competition_status_note = "Administrative ruling"
+
         with self.SessionLocal() as session:
             detail = get_team_identity(session, self.team_id)
             self.assertEqual(detail["team"]["canonical_tag"], "CS")
@@ -417,6 +430,11 @@ class TeamIdentityManagementTests(unittest.TestCase):
                 [entry["season"]["code"] for entry in detail["season_entries"]],
                 ["s3", "s2"],
             )
+            entry = next(
+                item for item in detail["season_entries"] if item["id"] == self.entry_two_id
+            )
+            self.assertEqual(entry["competition_status"], "disqualified")
+            self.assertEqual(entry["competition_status_note"], "Administrative ruling")
 
 
 if __name__ == "__main__":
