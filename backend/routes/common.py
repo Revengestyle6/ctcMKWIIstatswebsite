@@ -1,6 +1,6 @@
 from dashboard_stats import DashboardError
 from flask import jsonify, request
-from import_json_to_db import detect_new_entries
+from import_json_to_db import CREATE_PLAYER_IDENTITY, detect_new_entries
 from match_sets import normalize_match_set
 from models import Match, PlayerFriendCode
 from player_role_analytics import normalize_role
@@ -122,6 +122,16 @@ def unapproved_entries(
         for entry in new_entries
         if entry["key"] in approved_keys and entry.get("kind") == "existing_player_new_friend_code"
     }
+    player_identity_links.update(
+        {
+            entry["friend_code"]: CREATE_PLAYER_IDENTITY
+            for entry in new_entries
+            if entry["key"] in approved_keys
+            and entry.get("kind") == "new_player_identity"
+            and (requested_player_identity_links or {}).get(entry.get("friend_code"))
+            == CREATE_PLAYER_IDENTITY
+        }
+    )
     team_identity_links = {
         entry["value"].casefold(): entry["resolution"]["team_id"]
         for entry in new_entries
@@ -143,7 +153,7 @@ def unapproved_entries(
     configured_players = {}
     for friend_code in friend_codes:
         player_id = existing_links.get(friend_code) or player_identity_links.get(friend_code)
-        if player_id is None:
+        if not isinstance(player_id, int):
             continue
         prior_code = configured_players.get(player_id)
         if prior_code and prior_code != friend_code:

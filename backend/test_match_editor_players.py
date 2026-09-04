@@ -271,6 +271,54 @@ class MatchEditorPlayerTests(unittest.TestCase):
                 ),
                 2,
             )
+
+            separate_friend_code = "8888-8888-8888"
+            separate_match = {
+                **match_data,
+                "teams": {
+                    "CS": {
+                        "players": {
+                            separate_friend_code: {
+                                **player_data,
+                                "lounge_name": "June New",
+                            }
+                        }
+                    }
+                },
+            }
+            create_resolution = {separate_friend_code: import_json_to_db.CREATE_PLAYER_IDENTITY}
+            create_entries = import_json_to_db.detect_new_entries(
+                session,
+                separate_match,
+                player_identity_links=create_resolution,
+            )
+            create_entry = next(entry for entry in create_entries if entry["type"] == "player")
+            self.assertEqual(create_entry["kind"], "new_player_identity")
+
+            _entries, unapproved, approved_creations, _team_links = unapproved_entries(
+                session,
+                separate_match,
+                {create_entry["key"]},
+                create_resolution,
+            )
+            self.assertEqual(unapproved, [])
+            self.assertEqual(approved_creations, create_resolution)
+
+            forced_identities = PlayerIdentities(
+                friend_code_to_canonical={separate_friend_code: "1111-1111-1111"},
+                canonical_to_friend_codes={
+                    "1111-1111-1111": {"1111-1111-1111", separate_friend_code}
+                },
+            )
+            separate_player = import_json_to_db.get_or_create_player(
+                session,
+                separate_friend_code,
+                separate_match["teams"]["CS"]["players"][separate_friend_code],
+                forced_identities,
+                approved_creations,
+            )
+            self.assertNotEqual(separate_player.player_id, player.player_id)
+            self.assertEqual(separate_player.primary_friend_code, separate_friend_code)
             player_id = player.player_id
 
         with patch.object(stats_queries, "SessionLocal", self.SessionLocal):

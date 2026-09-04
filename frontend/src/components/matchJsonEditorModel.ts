@@ -61,6 +61,45 @@ export type MatchJson = {
   [key: string]: unknown;
 };
 
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function parseMatchJson(rawJson: string): MatchJson {
+  const parsed: unknown = JSON.parse(rawJson);
+  if (!isJsonObject(parsed)) throw new Error("Match JSON must be a single JSON object.");
+  if (parsed.tracks !== undefined && !Array.isArray(parsed.tracks)) {
+    throw new Error('Match JSON field "tracks" must be an array.');
+  }
+  if (parsed.rxx !== undefined && !Array.isArray(parsed.rxx)) {
+    throw new Error('Match JSON field "rxx" must be an array.');
+  }
+  if (
+    parsed.races_played !== undefined &&
+    (!Number.isInteger(parsed.races_played) || Number(parsed.races_played) < 0)
+  ) {
+    throw new Error('Match JSON field "races_played" must be a non-negative whole number.');
+  }
+  if (parsed.teams !== undefined) {
+    if (!isJsonObject(parsed.teams)) {
+      throw new Error('Match JSON field "teams" must be an object.');
+    }
+    for (const [teamKey, team] of Object.entries(parsed.teams)) {
+      if (!isJsonObject(team)) throw new Error(`Team "${teamKey}" must be a JSON object.`);
+      if (team.players === undefined) continue;
+      if (!isJsonObject(team.players)) {
+        throw new Error(`Team "${teamKey}" field "players" must be an object.`);
+      }
+      for (const [friendCode, player] of Object.entries(team.players)) {
+        if (!isJsonObject(player)) {
+          throw new Error(`Player "${friendCode}" on team "${teamKey}" must be a JSON object.`);
+        }
+      }
+    }
+  }
+  return parsed as MatchJson;
+}
+
 export type PlacementDraft = { playerKey: string; role: RaceRole };
 export type UnplacedResultDraft = { playerKey: string; score: number; role: RaceRole };
 export type MissingPlayerResultDraft = {

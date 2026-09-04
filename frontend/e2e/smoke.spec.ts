@@ -331,6 +331,36 @@ test("json editor creates a metadata-only free win", async ({ page }) => {
   expect(compiled.teams.XI.players).toEqual({});
 });
 
+test("json editor validates and loads pasted raw JSON", async ({ page }) => {
+  await page.goto("/json-editor?league=ctc");
+  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
+
+  await page.getByRole("button", { name: "Paste JSON", exact: true }).click();
+  const pastedJson = page.getByLabel("Raw match JSON");
+  await pastedJson.fill("[]");
+  await page.getByRole("button", { name: "Load pasted JSON" }).click();
+  await expect(page.getByText("Match JSON must be a single JSON object.")).toBeVisible();
+  await expect(page.getByText("New match JSON", { exact: true })).toBeVisible();
+
+  await pastedJson.fill(
+    JSON.stringify({
+      league: "ctc",
+      season: "s3",
+      division: "",
+      match_type: "regular",
+      result_type: "played",
+      races_played: 2,
+      tracks: ["Luigi Circuit", "Moo Moo Meadows"],
+      teams: {},
+    })
+  );
+  await page.getByRole("button", { name: "Load pasted JSON" }).click();
+
+  await expect(page.getByText("Pasted JSON", { exact: true })).toBeVisible();
+  await expect(page.getByText("Division is missing.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review & Upload" }).first()).toBeDisabled();
+});
+
 test("GSC receives the correct favicon before React boots", async ({ page }) => {
   await page.route("**/src/index.tsx", (route) => route.abort());
   await page.goto("/?league=gsc");

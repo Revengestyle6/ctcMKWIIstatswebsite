@@ -304,7 +304,11 @@ function MatchupMatrix({ standings, matches }: { standings: Standing[]; matches:
                             {result.perspective.adjusted_score}–
                             {result.perspective.adjusted_opponent_score}
                             <span className="ml-1 text-[0.6rem] opacity-75">
-                              ({result.perspective.standings_points} pts)
+                              {`(${
+                                result.result_type === "mutual_tie"
+                                  ? 0
+                                  : result.perspective.standings_points
+                              } pts)`}
                             </span>
                             {result.standings_adjusted ? <span className="ml-1">*</span> : null}
                           </Link>
