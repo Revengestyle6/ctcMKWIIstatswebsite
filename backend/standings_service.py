@@ -36,8 +36,10 @@ def _empty_record(entry, team, logo_url):
     }
 
 
-def _adjusted_match(team_rows, records):
+def _adjusted_match(team_rows, records, result_type):
     left, right = team_rows
+    if result_type == "mutual_tie":
+        return {left.team_season_entry_id: 0, right.team_season_entry_id: 0}, False, False
     left_inactive = records[left.team_season_entry_id]["status"] in INACTIVE_STATUSES
     right_inactive = records[right.team_season_entry_id]["status"] in INACTIVE_STATUSES
     if left_inactive and right_inactive:
@@ -56,7 +58,7 @@ def _adjusted_match(team_rows, records):
     )
 
 
-def _apply_result(records, team_rows, scores, both_inactive):
+def _apply_result(records, team_rows, scores, both_inactive, result_type):
     left, right = team_rows
     left_id = left.team_season_entry_id
     right_id = right.team_season_entry_id
@@ -70,6 +72,10 @@ def _apply_result(records, team_rows, scores, both_inactive):
         record["points_for"] += score_for
         record["points_against"] += score_against
 
+    if result_type == "mutual_tie":
+        left_record["ties"] += 1
+        right_record["ties"] += 1
+        return {left_id: 0, right_id: 0}, {left_id: "tie", right_id: "tie"}
     if both_inactive:
         left_record["losses"] += 1
         right_record["losses"] += 1
@@ -346,9 +352,13 @@ def get_division_standings(session, *, league, season, division):
         if len(teams) != 2:
             continue
         original_scores = {team.team_season_entry_id: int(team.final_score or 0) for team in teams}
-        adjusted_scores, adjusted, both_inactive = _adjusted_match(teams, records)
-        awarded, outcomes = _apply_result(records, teams, adjusted_scores, both_inactive)
         metadata = match_metadata[match_id]
+        adjusted_scores, adjusted, both_inactive = _adjusted_match(
+            teams, records, metadata.result_type
+        )
+        awarded, outcomes = _apply_result(
+            records, teams, adjusted_scores, both_inactive, metadata.result_type
+        )
         match_teams = []
         for team, opponent in ((teams[0], teams[1]), (teams[1], teams[0])):
             entry_id = team.team_season_entry_id

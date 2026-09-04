@@ -58,6 +58,7 @@ JSON_ROOT = BASE_DIR / "JSON"
 HISTORICAL_TEAM_CORRECTIONS_PATH = BASE_DIR / "data" / "team_aliases.csv"
 PLAYER_IDENTITY_PATH = BASE_DIR / "data" / "player_identities.csv"
 LEGACY_WEEK_RE = re.compile(r"\bW(\d+)\b", re.IGNORECASE)
+CREATE_PLAYER_IDENTITY = "create"
 
 
 @dataclass
@@ -439,7 +440,7 @@ def get_or_create_player(
     friend_code: str,
     player_data: dict[str, Any],
     identities: PlayerIdentities,
-    player_identity_links: dict[str, int] | None = None,
+    player_identity_links: dict[str, int | str] | None = None,
     player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
 ) -> Player:
     canonical_friend_code = identities.friend_code_to_canonical.get(friend_code, friend_code)
@@ -457,7 +458,11 @@ def get_or_create_player(
         return player
 
     linked_player_id = (player_identity_links or {}).get(friend_code)
-    if linked_player_id is not None:
+    force_create = linked_player_id == CREATE_PLAYER_IDENTITY
+    if force_create:
+        canonical_friend_code = friend_code
+        identity_friend_codes = {friend_code}
+    if linked_player_id is not None and not force_create:
         player = session.get(Player, linked_player_id)
         if player is None:
             raise ValueError(
@@ -469,20 +474,21 @@ def get_or_create_player(
         session.flush()
         return player
 
-    identity_friend_code_row = session.scalar(
-        select(PlayerFriendCode).where(PlayerFriendCode.friend_code.in_(identity_friend_codes))
-    )
-    if identity_friend_code_row:
-        player = session.get(Player, identity_friend_code_row.player_id)
-        if player:
-            session.add(PlayerFriendCode(player_id=player.player_id, friend_code=friend_code))
-            if canonical_friend_code != player.primary_friend_code:
-                player.primary_friend_code = canonical_friend_code
-            canonical_name = identities.canonical_names.get(canonical_friend_code)
-            if canonical_name:
-                player.canonical_name = canonical_name
-            session.flush()
-        return player
+    if not force_create:
+        identity_friend_code_row = session.scalar(
+            select(PlayerFriendCode).where(PlayerFriendCode.friend_code.in_(identity_friend_codes))
+        )
+        if identity_friend_code_row:
+            player = session.get(Player, identity_friend_code_row.player_id)
+            if player:
+                session.add(PlayerFriendCode(player_id=player.player_id, friend_code=friend_code))
+                if canonical_friend_code != player.primary_friend_code:
+                    player.primary_friend_code = canonical_friend_code
+                canonical_name = identities.canonical_names.get(canonical_friend_code)
+                if canonical_name:
+                    player.canonical_name = canonical_name
+                session.flush()
+            return player
 
     mkc_profile = (player_mkc_profiles or {}).get(friend_code) or {}
     mkc_name = mkc_profile.get("mkc_name") if mkc_profile.get("status") == "found" else None
@@ -681,7 +687,7 @@ def import_match(
     division_code: str,
     match_label_override: str | None = None,
     match_number_override: int | None = None,
-    player_identity_links: dict[str, int] | None = None,
+    player_identity_links: dict[str, int | str] | None = None,
     team_identity_links: dict[str, int] | None = None,
     player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
 ):
@@ -978,7 +984,7 @@ def import_match(
 def import_preview_match(
     session,
     match_data: dict[str, Any],
-    player_identity_links: dict[str, int] | None = None,
+    player_identity_links: dict[str, int | str] | None = None,
     team_identity_links: dict[str, int] | None = None,
     player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
 ) -> Match:
@@ -1004,7 +1010,7 @@ def import_editor_match(
     source_filename: str,
     file_sha256: str,
     json_shape: str = "single_match",
-    player_identity_links: dict[str, int] | None = None,
+    player_identity_links: dict[str, int | str] | None = None,
     team_identity_links: dict[str, int] | None = None,
     player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
     source_metadata: dict[str, Any] | None = None,
@@ -1069,7 +1075,7 @@ def _validated_player_identity_links(
     session,
     match_data: dict[str, Any],
     player_identity_links: dict[str, Any] | None,
-) -> dict[str, int]:
+) -> dict[str, int | str]:
     if not player_identity_links:
         return {}
     if not isinstance(player_identity_links, dict):
@@ -1084,6 +1090,16 @@ def _validated_player_identity_links(
     for friend_code, raw_player_id in player_identity_links.items():
         if friend_code not in match_friend_codes:
             raise ValueError(f"Player identity link {friend_code} is not present in this match.")
+        existing = session.scalar(
+            select(PlayerFriendCode).where(PlayerFriendCode.friend_code == friend_code)
+        )
+        if raw_player_id == CREATE_PLAYER_IDENTITY:
+            if existing is not None:
+                raise ValueError(
+                    f"Friend code {friend_code} already belongs to player ID {existing.player_id}."
+                )
+            validated[friend_code] = CREATE_PLAYER_IDENTITY
+            continue
         if isinstance(raw_player_id, bool):
             raise ValueError(f"Player identity link {friend_code} has an invalid player ID.")
         try:
@@ -1094,9 +1110,6 @@ def _validated_player_identity_links(
             ) from error
         if player_id < 1 or session.get(Player, player_id) is None:
             raise ValueError(f"Player ID {player_id} does not exist.")
-        existing = session.scalar(
-            select(PlayerFriendCode).where(PlayerFriendCode.friend_code == friend_code)
-        )
         if existing is not None and existing.player_id != player_id:
             raise ValueError(
                 f"Friend code {friend_code} already belongs to player ID {existing.player_id}."
@@ -1339,10 +1352,11 @@ def detect_new_entries(
                 candidate_ids: set[int] = set()
                 match_reasons: list[str] = []
                 requested_player_id = requested_identity_links.get(friend_code)
-                if requested_player_id is not None:
+                force_create = requested_player_id == CREATE_PLAYER_IDENTITY
+                if requested_player_id is not None and not force_create:
                     candidate_ids.add(requested_player_id)
                     match_reasons.append("administrator selection")
-                else:
+                elif not force_create:
                     canonical_friend_code = identities.friend_code_to_canonical.get(friend_code)
                     if canonical_friend_code:
                         identity_codes = identities.canonical_to_friend_codes.get(

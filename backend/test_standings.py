@@ -176,6 +176,29 @@ class StandingsServiceTests(unittest.TestCase):
         self.assertEqual(restored_rows["B"]["standings_points"], 3)
         self.assertFalse(restored["matches"][0]["standings_adjusted"])
 
+    def test_mutual_tie_counts_as_tie_without_score_or_standings_points(self):
+        self.add_match(1, "A", 0, "B", 0, "mutual_tie")
+
+        data = self.standings()
+        rows = {row["tag"]: row for row in data["standings"]}
+        for tag in ("A", "B"):
+            self.assertEqual(rows[tag]["ties"], 1)
+            self.assertEqual(rows[tag]["standings_points"], 0)
+            self.assertEqual(rows[tag]["points_for"], 0)
+            self.assertEqual(rows[tag]["points_against"], 0)
+            self.assertEqual(rows[tag]["point_differential"], 0)
+
+        match = data["matches"][0]
+        self.assertEqual(match["result_type"], "mutual_tie")
+        self.assertFalse(match["standings_adjusted"])
+        self.assertEqual(
+            [
+                (team["adjusted_score"], team["standings_points"], team["outcome"])
+                for team in match["teams"]
+            ],
+            [(0, 0, "tie"), (0, 0, "tie")],
+        )
+
 
 class SpecialResultValidationTests(unittest.TestCase):
     def test_metadata_only_free_win_is_valid(self):

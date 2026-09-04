@@ -40,6 +40,7 @@ import {
   type MatchJson,
   type MatchPlayerJson,
   normalizeMatchNumber,
+  parseMatchJson,
   type RaceDraft,
   racesFromMatch,
   SCORE_TABLES,
@@ -174,6 +175,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [raceView, setRaceView] = useState<"one" | "all">("one");
   const [activeRace, setActiveRace] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [pastePanelOpen, setPastePanelOpen] = useState(false);
+  const [pastedJson, setPastedJson] = useState("");
   const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
   const [tablePreview, setTablePreview] = useState<MatchDetail | null>(null);
   const [previewMetadata, setPreviewMetadata] = useState<PreviewMetadata | null>(null);
@@ -186,7 +189,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [previewGroupByGp, setPreviewGroupByGp] = useState(true);
   const [newEntries, setNewEntries] = useState<NewEntry[]>([]);
   const [approvalDecisions, setApprovalDecisions] = useState<Record<string, ApprovalDecision>>({});
-  const [playerIdentityLinks, setPlayerIdentityLinks] = useState<Record<string, number>>({});
+  const [playerIdentityLinks, setPlayerIdentityLinks] = useState<Record<string, number | "create">>(
+    {}
+  );
   const [teamIdentityResolutions, setTeamIdentityResolutions] = useState<
     Record<string, TeamIdentityResolution>
   >({});
@@ -258,7 +263,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 identityStates[player.playerKey]?.identity?.player_id ??
                 playerIdentityLinks[player.friendCode]
             )
-            .filter((playerId): playerId is number => playerId !== undefined)
+            .filter((playerId): playerId is number => typeof playerId === "number")
         )
       ),
     [players, identityStates, playerIdentityLinks]
@@ -286,7 +291,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       const playerId =
         identityStates[entry.playerKey]?.identity?.player_id ??
         playerIdentityLinks[entry.friendCode];
-      if (playerId === undefined || warnedPlayerIds.has(playerId)) return [];
+      if (typeof playerId !== "number" || warnedPlayerIds.has(playerId)) return [];
 
       const currentTeam = match.teams?.[entry.teamKey];
       const currentTag = currentTeam ? teamTag(entry.teamKey, currentTeam) : entry.teamKey;
@@ -378,7 +383,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       const playerId =
         identityStates[player.playerKey]?.identity?.player_id ??
         playerIdentityLinks[player.friendCode];
-      if (playerId === undefined) return;
+      if (typeof playerId !== "number") return;
       const group = playersByIdentity.get(playerId) ?? [];
       group.push(player);
       playersByIdentity.set(playerId, group);
@@ -1217,6 +1222,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setRaceView("one");
     setActiveRace(0);
     setLoadError(null);
+    setPastePanelOpen(false);
+    setPastedJson("");
     setDraggedPlayer(null);
     setTablePreview(null);
     setPreviewMetadata(null);
@@ -1242,20 +1249,34 @@ export default function MatchJsonEditor(): React.JSX.Element {
     scrollToPreviewAfterReview.current = false;
     sessionStorage.removeItem("ctc-review-draft");
   }
+  function loadJsonText(rawJson: string, sourceName: string, requestVersion: number): void {
+    if (editorVersion.current !== requestVersion) return;
+    try {
+      const parsed = parseMatchJson(rawJson);
+      resetEditor({ ...parsed, league }, sourceName);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Could not parse JSON");
+    }
+  }
   function loadFile(file: File): void {
     if (previewLoading || commitLoading) return;
     const requestVersion = ++editorVersion.current;
     const reader = new FileReader();
     reader.onload = () => {
-      if (editorVersion.current !== requestVersion) return;
-      try {
-        const parsed = JSON.parse(String(reader.result)) as MatchJson;
-        resetEditor({ ...parsed, league }, file.name);
-      } catch (error) {
-        setLoadError(error instanceof Error ? error.message : "Could not parse JSON");
-      }
+      loadJsonText(String(reader.result), file.name, requestVersion);
+    };
+    reader.onerror = () => {
+      if (editorVersion.current === requestVersion) setLoadError("Could not read the JSON file.");
     };
     reader.readAsText(file);
+  }
+  function loadPastedJson(): void {
+    if (previewLoading || commitLoading) return;
+    if (!pastedJson.trim()) {
+      setLoadError("Paste match JSON before loading it.");
+      return;
+    }
+    loadJsonText(pastedJson, "Pasted JSON", ++editorVersion.current);
   }
   function clearEditor(): void {
     if (previewLoading || commitLoading) return;
@@ -1446,12 +1467,13 @@ export default function MatchJsonEditor(): React.JSX.Element {
   }
   async function updatePlayerIdentityLink(
     entry: NewEntry,
-    player: PlayerIdentity | null
+    player: PlayerIdentity | "create" | null
   ): Promise<void> {
     const friendCode = entry.friend_code;
     if (!friendCode || identityMappingLoading) return;
     const nextLinks = { ...playerIdentityLinks };
-    if (player) nextLinks[friendCode] = player.player_id;
+    if (player === "create") nextLinks[friendCode] = "create";
+    else if (player) nextLinks[friendCode] = player.player_id;
     else delete nextLinks[friendCode];
 
     setIdentityMappingLoading(true);
@@ -1577,6 +1599,19 @@ export default function MatchJsonEditor(): React.JSX.Element {
             <button
               type="button"
               disabled={previewLoading || commitLoading}
+              onClick={() => {
+                setPastePanelOpen((current) => !current);
+                setLoadError(null);
+              }}
+              aria-expanded={pastePanelOpen}
+              aria-controls="paste-json-panel"
+              className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Paste JSON
+            </button>
+            <button
+              type="button"
+              disabled={previewLoading || commitLoading}
               onClick={clearEditor}
               title={
                 previewLoading || commitLoading
@@ -1613,6 +1648,52 @@ export default function MatchJsonEditor(): React.JSX.Element {
             </button>
           </div>
         </header>
+        {pastePanelOpen ? (
+          <section
+            id="paste-json-panel"
+            aria-label="Paste match JSON"
+            className="mb-4 rounded-lg border border-blue-300/25 bg-zinc-950/90 p-4 shadow-2xl"
+          >
+            <label htmlFor="raw-match-json" className="text-sm font-semibold text-gray-200">
+              Raw match JSON
+            </label>
+            <p className="mt-1 text-xs text-gray-400">
+              The pasted value must be one match object. It will receive the same editor validation
+              as an uploaded file before preview or upload.
+            </p>
+            <textarea
+              id="raw-match-json"
+              value={pastedJson}
+              onChange={(event) => setPastedJson(event.target.value)}
+              disabled={previewLoading || commitLoading}
+              spellCheck={false}
+              rows={12}
+              placeholder='{"season":"s3","division":"d1","teams":{},"tracks":[]}'
+              className={`${inputClass} resize-y font-mono text-xs`}
+            />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={previewLoading || commitLoading}
+                onClick={loadPastedJson}
+                className="rounded-md bg-blue-500 px-4 py-2 font-bold hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Load pasted JSON
+              </button>
+              <button
+                type="button"
+                disabled={previewLoading || commitLoading}
+                onClick={() => {
+                  setPastePanelOpen(false);
+                  setLoadError(null);
+                }}
+                className="rounded-md border border-white/20 px-4 py-2 font-semibold text-gray-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Cancel
+              </button>
+            </div>
+          </section>
+        ) : null}
         {loadError && (
           <p className="mb-4 rounded-md border border-red-400/40 bg-red-950/70 p-3 text-red-100">
             {loadError}
@@ -3194,7 +3275,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   const teamResolution = teamIdentityResolutions[entry.key];
                   const playerIdentityEntry = entry.type === "player" && Boolean(entry.friend_code);
                   const explicitlyMapped = Boolean(
-                    entry.friend_code && playerIdentityLinks[entry.friend_code]
+                    entry.friend_code && typeof playerIdentityLinks[entry.friend_code] === "number"
+                  );
+                  const creatingPlayer = Boolean(
+                    entry.friend_code && playerIdentityLinks[entry.friend_code] === "create"
                   );
                   const approveLabel =
                     entry.kind === "new_league"
@@ -3285,11 +3369,13 @@ export default function MatchJsonEditor(): React.JSX.Element {
                               : "Map to existing player"}
                           </button>
                         ) : null}
-                        {auth.session?.authenticated && explicitlyMapped ? (
+                        {auth.session?.authenticated &&
+                        !creatingPlayer &&
+                        (explicitlyMapped || entry.kind === "existing_player_new_friend_code") ? (
                           <button
                             type="button"
                             disabled={identityMappingLoading}
-                            onClick={() => void updatePlayerIdentityLink(entry, null)}
+                            onClick={() => void updatePlayerIdentityLink(entry, "create")}
                             className="rounded border border-amber-400/40 px-3 py-1.5 text-sm font-semibold text-amber-200 hover:bg-amber-950/40 disabled:opacity-40"
                           >
                             Create new player instead
