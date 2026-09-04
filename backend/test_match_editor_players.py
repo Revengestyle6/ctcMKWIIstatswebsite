@@ -286,9 +286,7 @@ class MatchEditorPlayerTests(unittest.TestCase):
                     }
                 },
             }
-            create_resolution = {
-                separate_friend_code: import_json_to_db.CREATE_PLAYER_IDENTITY
-            }
+            create_resolution = {separate_friend_code: import_json_to_db.CREATE_PLAYER_IDENTITY}
             create_entries = import_json_to_db.detect_new_entries(
                 session,
                 separate_match,
