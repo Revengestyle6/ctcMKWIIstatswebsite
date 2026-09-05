@@ -328,10 +328,15 @@ def resolve_playoff_series(
         raise ValueError(
             f"Match {metadata['series_match_number']} already exists in this playoff series."
         )
-    expected_number = len(existing_numbers) + 1
+    expected_number = next(
+        number for number in range(1, metadata["best_of"] + 1) if number not in existing_numbers
+    )
     if metadata["series_match_number"] != expected_number:
         raise ValueError(f"The next match in this series must be Match {expected_number}.")
-    if _series_winner(session, series) is not None:
+    filling_earlier_gap = any(
+        number > metadata["series_match_number"] for number in existing_numbers
+    )
+    if _series_winner(session, series) is not None and not filling_earlier_gap:
         raise ValueError("This playoff series has already been clinched.")
     return series, metadata
 
@@ -386,10 +391,15 @@ def validate_playoff_against_existing(
         raise ValueError(
             f"Match {metadata['series_match_number']} already exists in this playoff series."
         )
-    expected_number = len(existing_numbers) + 1
+    expected_number = next(
+        number for number in range(1, metadata["best_of"] + 1) if number not in existing_numbers
+    )
     if metadata["series_match_number"] != expected_number:
         raise ValueError(f"The next match in this series must be Match {expected_number}.")
-    if _series_winner(session, series) is not None:
+    filling_earlier_gap = any(
+        number > metadata["series_match_number"] for number in existing_numbers
+    )
+    if _series_winner(session, series) is not None and not filling_earlier_gap:
         raise ValueError("This playoff series has already been clinched.")
 
 

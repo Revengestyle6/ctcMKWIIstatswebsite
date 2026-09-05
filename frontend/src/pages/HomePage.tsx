@@ -69,12 +69,6 @@ const navigationSections = [
       "Tools for maintaining match data, checking archive quality, and reviewing uploads.",
     links: [
       {
-        to: "/database-health",
-        title: "Database Health",
-        description:
-          "Monitor additions, record counts, archive integrity, and data-quality findings.",
-      },
-      {
         to: "/json-editor",
         title: "Match JSON Editor",
         description: "Create, validate, preview, and upload match data.",
@@ -82,7 +76,8 @@ const navigationSections = [
       {
         to: "/admin/access",
         title: "Administrator Access",
-        description: "Sign in, review queued JSON, and view database and repository onboarding.",
+        description:
+          "Sign in to access database health, database management, review tools, and onboarding.",
       },
     ],
   },
@@ -127,7 +122,7 @@ export default function HomePage(): React.JSX.Element {
                 </div>
 
                 <div
-                  className={`grid gap-3 sm:grid-cols-2 ${section.links.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}
+                  className={`grid gap-3 sm:grid-cols-2 ${section.links.length === 2 ? "lg:grid-cols-2" : "lg:grid-cols-4"}`}
                 >
                   {section.links.map((link) => (
                     <Link

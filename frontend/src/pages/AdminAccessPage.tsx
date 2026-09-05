@@ -21,6 +21,24 @@ type Instructions = {
   repository: { summary: string; commands: string[] };
 };
 
+const administratorTools = [
+  {
+    to: "/database-health",
+    title: "Database Health",
+    description: "Review integrity checks, archive status, additions, counts, and data findings.",
+  },
+  {
+    to: "/admin/database",
+    title: "Database Management",
+    description: "Manage player, team, and track aliases, plus edit or delete uploaded matches.",
+  },
+  {
+    to: "/admin/review-queue",
+    title: "Review Queue",
+    description: "Review submitted match JSON and approve validated uploads into the database.",
+  },
+] as const;
+
 export default function AdminAccessPage(): React.JSX.Element {
   const auth = useAdminSession();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -81,21 +99,48 @@ export default function AdminAccessPage(): React.JSX.Element {
             <p className="text-sm uppercase text-blue-200">Restricted administration</p>
             <h1 className="text-3xl font-bold">Administrator Access</h1>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-4">
-            <nav className="flex gap-3">
-              <Link to="/admin/aliases" className="text-blue-300 hover:text-blue-200">
-                Alias management
-              </Link>
-              <Link to="/admin/review-queue" className="text-blue-300 hover:text-blue-200">
-                Review queue
-              </Link>
-            </nav>
-            <LeagueHeaderControls />
-          </div>
+          <LeagueHeaderControls />
         </header>
         <section className="border border-white/15 bg-zinc-950/90 p-5">
           <AdminSessionPanel {...auth} />
         </section>
+        {auth.session?.authenticated ? (
+          <section
+            aria-labelledby="administrator-tools-heading"
+            className="rounded-xl border border-white/10 bg-black/35 p-5 shadow-lg"
+          >
+            <div className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">
+                Restricted tools
+              </p>
+              <h2 id="administrator-tools-heading" className="mt-1 text-xl font-bold">
+                Administration
+              </h2>
+            </div>
+            <nav className="grid gap-3 md:grid-cols-3" aria-label="Administrator tools">
+              {administratorTools.map((tool) => (
+                <Link
+                  key={tool.to}
+                  to={tool.to}
+                  className="group rounded-lg border border-white/15 bg-black/55 px-4 py-4 transition hover:-translate-y-0.5 hover:border-white/35 hover:bg-black/80 focus:outline-none league-focus-ring"
+                >
+                  <span className="flex items-center justify-between gap-3 text-base font-bold">
+                    {tool.title}
+                    <span
+                      aria-hidden="true"
+                      className="league-accent-text transition-transform group-hover:translate-x-0.5"
+                    >
+                      →
+                    </span>
+                  </span>
+                  <span className="mt-2 block text-sm leading-5 text-gray-300">
+                    {tool.description}
+                  </span>
+                </Link>
+              ))}
+            </nav>
+          </section>
+        ) : null}
         {auth.session?.authenticated && instructions ? (
           <section className="grid gap-5 lg:grid-cols-2">
             {(["database", "repository"] as const).map((key) => (

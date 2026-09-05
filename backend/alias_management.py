@@ -332,7 +332,7 @@ def add_player_friend_code(session, player_id, payload):
         if existing.player_id == player_id:
             raise ValueError("That friend code is already assigned to this player.")
         raise ValueError(f"That friend code is already assigned to player ID {existing.player_id}.")
-    friend_code_row = PlayerFriendCode(player_id=player_id, friend_code=friend_code)
+    friend_code_row = PlayerFriendCode(player_id=player_id, friend_code=friend_code, origin="admin")
     session.add(friend_code_row)
     if not player.primary_friend_code:
         player.primary_friend_code = friend_code
@@ -842,6 +842,7 @@ def add_alias(session, entity_type, entity_id, payload):
     values = {alias_identity.key: entity_id, "alias_value": value}
     if entity_type == "players":
         values["alias_type"] = alias_type
+        values["origin"] = "admin"
     alias = alias_model(**values)
     session.add(alias)
     session.flush()

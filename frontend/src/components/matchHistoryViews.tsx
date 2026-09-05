@@ -18,6 +18,7 @@ export type MatchSummary = {
   team_statuses: Array<"active" | "dropped" | "disqualified">;
   import_status: string;
   review_notes: string | null;
+  last_update_at?: string | null;
 };
 
 export type Track = {
@@ -27,7 +28,6 @@ export type Track = {
 };
 
 export type MatchPlayer = {
-  match_player_id: number;
   player_id: number;
   name: string;
   friend_code: string;
@@ -40,7 +40,6 @@ export type MatchPlayer = {
 };
 
 export type MatchTeam = {
-  match_team_id: number;
   team_id: number;
   tag: string;
   name: string;
@@ -157,7 +156,7 @@ function teamShade(hexColor: string, fallback: string): string {
 }
 
 export function teamColor(team: MatchTeam, teamColors: TeamColors, fallback: string): string {
-  return teamColors[team.match_team_id] || teamShade(team.hex_color, fallback);
+  return teamColors[team.team_id] || teamShade(team.hex_color, fallback);
 }
 
 export function normalizeHexColor(value: string): string | null {
@@ -548,7 +547,7 @@ export function TraditionalTable({
             {match.teams.map((team, teamIndex) => {
               const color = teamColor(team, teamColors, teamIndex === 0 ? "#1d4ed8" : "#be185d");
               return (
-                <React.Fragment key={team.match_team_id}>
+                <React.Fragment key={team.team_id}>
                   <tr style={{ backgroundColor: `${color}80` }}>
                     <td
                       className="sticky left-0 z-10 px-3 py-3 text-[1.6rem] font-bold leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
@@ -583,7 +582,7 @@ export function TraditionalTable({
                     const playerDiff = counterpartDiff(teamIndex, playerIndex);
                     return (
                       <tr
-                        key={player.match_player_id}
+                        key={player.player_id}
                         className={playerIndex % 2 === 0 ? "bg-white/5" : "bg-white/[.025]"}
                       >
                         <th className="sticky left-0 z-10 bg-zinc-950 px-3 py-2 text-left font-semibold text-white">
@@ -605,7 +604,7 @@ export function TraditionalTable({
                               );
                           return (
                             <td
-                              key={`${player.match_player_id}-${column.key}`}
+                              key={`${player.player_id}-${column.key}`}
                               title={
                                 groupByGp && hasDisconnectedResult
                                   ? "Includes disconnection points without a placement"
@@ -651,7 +650,7 @@ export function TraditionalTable({
                         const value = scoreArrayColumnValue(team.missing_player.scores, column);
                         return (
                           <td
-                            key={`missing-${team.match_team_id}-${column.key}`}
+                            key={`missing-${team.team_id}-${column.key}`}
                             title={missingReasonTitle(team, column.indexes)}
                             className={`${raceColumnClass} border-l border-white/10 px-2 py-2 text-center text-[1.05rem] font-semibold text-amber-300`}
                           >
@@ -886,11 +885,7 @@ export function VerticalScorecard({
           <tr className="bg-zinc-950 text-xs text-gray-200">
             <th className="px-3 py-2"></th>
             {leftPlayers.map((player, playerIndex) => (
-              <VerticalPlayerHeader
-                key={player.match_player_id}
-                player={player}
-                rank={playerIndex + 1}
-              />
+              <VerticalPlayerHeader key={player.player_id} player={player} rank={playerIndex + 1} />
             ))}
             {leftHasMissing && (
               <th className="w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-amber-300/20 px-1 py-2 text-center text-[11px] font-semibold leading-tight text-amber-200">
@@ -904,11 +899,7 @@ export function VerticalScorecard({
               </th>
             )}
             {rightPlayers.map((player, playerIndex) => (
-              <VerticalPlayerHeader
-                key={player.match_player_id}
-                player={player}
-                rank={playerIndex + 1}
-              />
+              <VerticalPlayerHeader key={player.player_id} player={player} rank={playerIndex + 1} />
             ))}
           </tr>
         </thead>
@@ -921,7 +912,7 @@ export function VerticalScorecard({
               </th>
               {leftPlayers.map((player, playerIndex) => (
                 <td
-                  key={`${player.match_player_id}-${track.race_number}`}
+                  key={`${player.player_id}-${track.race_number}`}
                   className={`w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-white/10 px-2 py-2 text-center text-[1.05rem] font-semibold ${raceResultClass(player.scores[raceIndex], player.positions[raceIndex])} ${playerIndex % 2 === 0 ? "bg-white/5" : "bg-white/[.025]"}`}
                 >
                   {raceResultValue(player.scores[raceIndex], player.positions[raceIndex])}
@@ -958,7 +949,7 @@ export function VerticalScorecard({
               )}
               {rightPlayers.map((player, playerIndex) => (
                 <td
-                  key={`${player.match_player_id}-${track.race_number}`}
+                  key={`${player.player_id}-${track.race_number}`}
                   className={`w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] border-l border-white/10 px-2 py-2 text-center text-[1.05rem] font-semibold ${raceResultClass(player.scores[raceIndex], player.positions[raceIndex])} ${playerIndex % 2 === 0 ? "bg-white/5" : "bg-white/[.025]"}`}
                 >
                   {raceResultValue(player.scores[raceIndex], player.positions[raceIndex])}
@@ -969,7 +960,7 @@ export function VerticalScorecard({
           <tr className="bg-black/90 text-white">
             <th className="px-3 py-3 text-left">Final</th>
             {leftPlayers.map((player) => (
-              <td key={player.match_player_id} className="px-2 py-3 text-center font-bold">
+              <td key={player.player_id} className="px-2 py-3 text-center font-bold">
                 {player.total}
               </td>
             ))}
@@ -985,7 +976,7 @@ export function VerticalScorecard({
               </td>
             )}
             {rightPlayers.map((player) => (
-              <td key={player.match_player_id} className="px-2 py-3 text-center font-bold">
+              <td key={player.player_id} className="px-2 py-3 text-center font-bold">
                 {player.total}
               </td>
             ))}
@@ -998,7 +989,7 @@ export function VerticalScorecard({
               const diff = leftPlayerDiff(playerIndex);
               return (
                 <td
-                  key={player.match_player_id}
+                  key={player.player_id}
                   className={`px-2 py-2.5 text-center text-sm font-bold ${diffTextClass(diff)}`}
                 >
                   {signedValue(diff)}
@@ -1012,7 +1003,7 @@ export function VerticalScorecard({
               const diff = rightPlayerDiff(playerIndex);
               return (
                 <td
-                  key={player.match_player_id}
+                  key={player.player_id}
                   className={`px-2 py-2.5 text-center text-sm font-bold ${diffTextClass(diff)}`}
                 >
                   {signedValue(diff)}

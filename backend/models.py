@@ -23,6 +23,10 @@ def utc_now():
     return datetime.now(timezone.utc)
 
 
+def last_update_column():
+    return Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+
 class Season(Base):
     __tablename__ = "seasons"
 
@@ -35,6 +39,7 @@ class Season(Base):
     starts_on = Column(Date)
     ends_on = Column(Date)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
     divisions = relationship("Division", back_populates="season")
 
@@ -48,6 +53,7 @@ class Division(Base):
     season_id = Column(Integer, ForeignKey("seasons.season_id"), nullable=False)
     division_code = Column(Text, nullable=False)
     division_name = Column(Text, nullable=False)
+    last_update_at = last_update_column()
 
     season = relationship("Season", back_populates="divisions")
 
@@ -66,6 +72,7 @@ class DivisionPlayoffConfig(Base):
     finals_bye_count = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         CheckConstraint("playoff_team_count >= 2", name="ck_playoff_config_team_count"),
@@ -85,6 +92,7 @@ class PlayoffSeries(Base):
     best_of = Column(Integer, nullable=False, default=3)
     display_label = Column(Text)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint(
@@ -106,6 +114,7 @@ class PlayoffSeriesParticipant(Base):
     )
     team_id = Column(Integer, ForeignKey("teams.team_id"), nullable=False)
     participant_slot = Column(Integer, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint("playoff_series_id", "team_id", name="uq_playoff_series_participant_team"),
@@ -123,6 +132,11 @@ class SourceFile(Base):
     season_id = Column(Integer, ForeignKey("seasons.season_id"), nullable=False)
     division_id = Column(Integer, ForeignKey("divisions.division_id"), nullable=False)
     source_path = Column(Text, nullable=False)
+    original_source_path = Column(
+        Text,
+        nullable=False,
+        default=lambda context: context.get_current_parameters().get("source_path"),
+    )
     source_filename = Column(Text, nullable=False)
     file_sha256 = Column(Text, nullable=False)
     json_shape = Column(Text, nullable=False)
@@ -136,6 +150,7 @@ class SourceFile(Base):
     archive_attempts = Column(Integer, nullable=False, default=0)
     last_archive_error_code = Column(Text)
     imported_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint("source_path", name="uq_source_file_path"),
@@ -155,11 +170,18 @@ class DatabaseAdditionLog(Base):
 
     addition_log_id = Column(Integer, primary_key=True)
     match_id = Column(Integer, ForeignKey("matches.match_id"), index=True)
+    operation_type = Column(Text, nullable=False, default="addition")
+    admin_user_id = Column(Integer, ForeignKey("admin_users.admin_user_id"))
+    admin_email = Column(Text)
     entity_type = Column(Text, nullable=False, index=True)
     entity_id = Column(Integer, nullable=False)
     summary = Column(Text, nullable=False)
     details_json = Column(Text, nullable=False, default="{}")
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+
+    __table_args__ = (
+        CheckConstraint("operation_type IN ('addition', 'edit')", name="ck_addition_log_operation"),
+    )
 
 
 class Team(Base):
@@ -171,6 +193,7 @@ class Team(Base):
     canonical_identity_override = Column(Boolean, nullable=False, default=False)
     canonical_league_preference = Column(Text)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
 
 class TeamLeagueIdentity(Base):
@@ -185,6 +208,7 @@ class TeamLeagueIdentity(Base):
     league_code = Column(Text, nullable=False)
     tag = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         Index(
@@ -207,6 +231,7 @@ class TeamLogo(Base):
     priority = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint("team_id", "season_id", "asset_path", name="uq_team_logo_asset"),
@@ -226,6 +251,7 @@ class TeamSeasonEntry(Base):
     competition_status = Column(Text, nullable=False, default="active")
     competition_status_note = Column(Text)
     competition_status_updated_at = Column(DateTime(timezone=True))
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint(
@@ -244,6 +270,7 @@ class TeamAlias(Base):
     team_alias_id = Column(Integer, primary_key=True)
     team_id = Column(Integer, ForeignKey("teams.team_id"), nullable=False)
     alias_value = Column(Text, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (UniqueConstraint("alias_value", name="uq_team_alias_value"),)
 
@@ -256,6 +283,7 @@ class Player(Base):
     canonical_name_override = Column(Boolean, nullable=False, default=False)
     primary_friend_code = Column(Text)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
 
 class PlayerFriendCode(Base):
@@ -266,8 +294,13 @@ class PlayerFriendCode(Base):
     friend_code = Column(Text, nullable=False)
     first_seen_match_id = Column(Integer, ForeignKey("matches.match_id"))
     last_seen_match_id = Column(Integer, ForeignKey("matches.match_id"))
+    origin = Column(Text, nullable=False, default="admin")
+    last_update_at = last_update_column()
 
-    __table_args__ = (UniqueConstraint("friend_code", name="uq_player_friend_code"),)
+    __table_args__ = (
+        UniqueConstraint("friend_code", name="uq_player_friend_code"),
+        CheckConstraint("origin IN ('match_import', 'admin')", name="ck_player_friend_code_origin"),
+    )
 
 
 class PlayerAlias(Base):
@@ -281,9 +314,12 @@ class PlayerAlias(Base):
     last_seen_match_id = Column(Integer, ForeignKey("matches.match_id"))
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     last_observed_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    origin = Column(Text, nullable=False, default="admin")
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint("player_id", "alias_type", "alias_value", name="uq_player_alias_value"),
+        CheckConstraint("origin IN ('match_import', 'admin')", name="ck_player_alias_origin"),
     )
 
 
@@ -302,6 +338,7 @@ class PlayerSeasonEntry(Base):
     flag = Column(Text)
     first_seen_match_id = Column(Integer, ForeignKey("matches.match_id"))
     last_seen_match_id = Column(Integer, ForeignKey("matches.match_id"))
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint("player_id", "team_season_entry_id", name="uq_player_entry_team"),
@@ -329,6 +366,7 @@ class Match(Base):
     import_status = Column(Text, nullable=False, default="imported")
     review_notes = Column(Text)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint("source_file_id", "match_index_in_source", name="uq_match_source_index"),
@@ -364,6 +402,7 @@ class MatchTableRef(Base):
     match_id = Column(Integer, ForeignKey("matches.match_id"), nullable=False)
     ref_value = Column(Text, nullable=False)
     ref_order = Column(Integer, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (UniqueConstraint("match_id", "ref_order", name="uq_match_ref_order"),)
 
@@ -383,6 +422,7 @@ class MatchTeam(Base):
     team_penalty_points = Column(Integer, nullable=False, default=0)
     table_penalty_str = Column(Text)
     final_score = Column(Integer)
+    last_update_at = last_update_column()
 
     __table_args__ = (UniqueConstraint("match_id", "raw_team_key", name="uq_match_team_key"),)
 
@@ -408,6 +448,7 @@ class MatchPlayer(Base):
     had_penalties = Column(Boolean, nullable=False, default=False)
     subbed_out = Column(Boolean, nullable=False, default=False)
     gp_scores_json = Column(Text)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint("match_team_id", "friend_code_raw", name="uq_match_player_friend_code"),
@@ -421,6 +462,7 @@ class Track(Base):
     league_code = Column(Text, nullable=False, default="ctc", index=True)
     canonical_name = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint("league_code", "canonical_name", name="uq_track_league_name"),
@@ -433,6 +475,7 @@ class TrackAlias(Base):
     track_alias_id = Column(Integer, primary_key=True)
     track_id = Column(Integer, ForeignKey("tracks.track_id"), nullable=False)
     alias_value = Column(Text, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (UniqueConstraint("track_id", "alias_value", name="uq_track_alias_value"),)
 
@@ -446,6 +489,7 @@ class Race(Base):
     track_id = Column(Integer, ForeignKey("tracks.track_id"), nullable=False)
     track_name_raw = Column(Text, nullable=False)
     has_penalty = Column(Boolean, nullable=False, default=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (UniqueConstraint("match_id", "race_number", name="uq_race_match_number"),)
 
@@ -459,6 +503,7 @@ class RaceTeamResult(Base):
     score = Column(Integer, nullable=False)
     result_type = Column(Text, nullable=False, default="missing_player")
     reason = Column(Text, nullable=False, default="unknown")
+    last_update_at = last_update_column()
 
     __table_args__ = (
         CheckConstraint("result_type IN ('missing_player')", name="ck_team_result_type"),
@@ -485,6 +530,7 @@ class RacePlayerResult(Base):
     role = Column(Text, nullable=False, default="unknown")
     role_source = Column(Text, nullable=False, default="unknown")
     is_subbed_out_result = Column(Boolean, nullable=False, default=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         UniqueConstraint("race_id", "match_player_id", name="uq_race_player_result"),
@@ -507,6 +553,7 @@ class Penalty(Base):
     penalty_points = Column(Integer, nullable=False)
     raw_penalty_text = Column(Text)
     source_field = Column(Text, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         CheckConstraint(
@@ -532,6 +579,7 @@ class AdminUser(Base):
     activated_at = Column(DateTime(timezone=True))
     revoked_at = Column(DateTime(timezone=True))
     last_login_at = Column(DateTime(timezone=True))
+    last_update_at = last_update_column()
 
     __table_args__ = (
         CheckConstraint("role IN ('owner', 'admin')", name="ck_admin_user_role"),
@@ -576,6 +624,7 @@ class ReviewSubmission(Base):
     submitted_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         CheckConstraint(
@@ -612,6 +661,7 @@ class HealthIssueReview(Base):
         Integer, ForeignKey("admin_users.admin_user_id"), nullable=False
     )
     reviewed_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_update_at = last_update_column()
 
     __table_args__ = (
         CheckConstraint("status IN ('open', 'dismissed')", name="ck_health_issue_review_status"),
@@ -645,6 +695,7 @@ class MkcRefreshPreview(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
     expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
     decided_at = Column(DateTime(timezone=True))
+    last_update_at = last_update_column()
 
     __table_args__ = (
         CheckConstraint("scope IN ('bulk', 'individual')", name="ck_mkc_refresh_preview_scope"),

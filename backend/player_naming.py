@@ -17,6 +17,7 @@ def add_player_alias(
     *,
     first_seen_match_id: int | None = None,
     last_seen_match_id: int | None = None,
+    origin: str = "admin",
 ) -> tuple[PlayerAlias, bool]:
     value = str(alias_value or "").strip()
     if not value:
@@ -42,6 +43,7 @@ def add_player_alias(
         alias_value=value,
         first_seen_match_id=first_seen_match_id,
         last_seen_match_id=last_seen_match_id,
+        origin=origin,
     )
     session.add(alias)
     session.flush()

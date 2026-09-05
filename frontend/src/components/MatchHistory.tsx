@@ -345,7 +345,7 @@ export default function MatchHistory(): React.JSX.Element {
                       .filter((team) => team.competition_status !== "active")
                       .map((team) => (
                         <span
-                          key={team.match_team_id}
+                          key={team.team_id}
                           title={team.competition_status_note || undefined}
                           className={`rounded-full border px-2.5 py-1 text-xs font-bold uppercase ${team.competition_status === "disqualified" ? "border-red-300/40 bg-red-950/70 text-red-200" : "border-amber-300/40 bg-amber-950/70 text-amber-200"}`}
                         >
@@ -428,12 +428,9 @@ export default function MatchHistory(): React.JSX.Element {
                         {displayedMatchDetail.teams.map((team, teamIndex) => {
                           const fallback = teamIndex === 0 ? "#1d4ed8" : "#be185d";
                           const color = teamColor(team, teamColors, fallback);
-                          const colorInput = teamColorInputs[team.match_team_id] ?? color;
+                          const colorInput = teamColorInputs[team.team_id] ?? color;
                           return (
-                            <label
-                              key={team.match_team_id}
-                              className="contents text-sm text-gray-200"
-                            >
+                            <label key={team.team_id} className="contents text-sm text-gray-200">
                               <span className="max-w-48 justify-self-end whitespace-normal break-words text-right text-sm text-gray-200">
                                 {team.tag}
                               </span>
@@ -445,11 +442,11 @@ export default function MatchHistory(): React.JSX.Element {
                                   const nextColor = event.target.value.toUpperCase();
                                   setTeamColorInputs((current) => ({
                                     ...current,
-                                    [team.match_team_id]: nextColor,
+                                    [team.team_id]: nextColor,
                                   }));
                                   setTeamColors((current) => ({
                                     ...current,
-                                    [team.match_team_id]: nextColor,
+                                    [team.team_id]: nextColor,
                                   }));
                                 }}
                               />
@@ -461,20 +458,20 @@ export default function MatchHistory(): React.JSX.Element {
                                   const nextValue = event.target.value.toUpperCase();
                                   setTeamColorInputs((current) => ({
                                     ...current,
-                                    [team.match_team_id]: nextValue,
+                                    [team.team_id]: nextValue,
                                   }));
                                   const normalized = normalizeHexColor(nextValue);
                                   if (!normalized) return;
                                   setTeamColors((current) => ({
                                     ...current,
-                                    [team.match_team_id]: normalized,
+                                    [team.team_id]: normalized,
                                   }));
                                 }}
                                 onBlur={() => {
                                   const normalized = normalizeHexColor(colorInput) ?? color;
                                   setTeamColorInputs((current) => ({
                                     ...current,
-                                    [team.match_team_id]: normalized,
+                                    [team.team_id]: normalized,
                                   }));
                                 }}
                                 aria-label={`${team.tag} hex color`}
