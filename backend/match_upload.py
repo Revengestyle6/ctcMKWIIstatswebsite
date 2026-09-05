@@ -425,20 +425,61 @@ def _addition_data(instance: Any) -> tuple[str, int, str, dict[str, Any]]:
     raise TypeError(f"Unsupported addition type: {type(instance).__name__}")
 
 
-def record_addition_logs(session, additions: list[Any], match_id: int) -> list[DatabaseAdditionLog]:
+def _actor_fields(actor) -> dict[str, Any]:
+    if actor is None:
+        return {"admin_user_id": None, "admin_email": None}
+    return {
+        "admin_user_id": actor.admin_user_id,
+        "admin_email": actor.email,
+    }
+
+
+def record_database_log(
+    session,
+    *,
+    match_id: int | None,
+    operation_type: str,
+    entity_type: str,
+    entity_id: int,
+    summary: str,
+    details: dict[str, Any],
+    actor=None,
+) -> DatabaseAdditionLog:
+    log = DatabaseAdditionLog(
+        match_id=match_id,
+        operation_type=operation_type,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        summary=summary,
+        details_json=json.dumps(details, ensure_ascii=False, separators=(",", ":")),
+        **_actor_fields(actor),
+    )
+    session.add(log)
+    session.flush()
+    return log
+
+
+def record_addition_logs(
+    session,
+    additions: list[Any],
+    match_id: int,
+    *,
+    actor=None,
+) -> list[DatabaseAdditionLog]:
     logs = []
     for instance in additions:
         entity_type, entity_id, summary, details = _addition_data(instance)
-        log = DatabaseAdditionLog(
+        log = record_database_log(
+            session,
             match_id=match_id,
+            operation_type="addition",
             entity_type=entity_type,
             entity_id=entity_id,
             summary=summary,
-            details_json=json.dumps(details, ensure_ascii=False, separators=(",", ":")),
+            details=details,
+            actor=actor,
         )
-        session.add(log)
         logs.append(log)
-    session.flush()
     return logs
 
 
@@ -446,6 +487,8 @@ def serialize_addition_log(log: DatabaseAdditionLog) -> dict[str, Any]:
     return {
         "id": log.addition_log_id,
         "match_id": log.match_id,
+        "operation_type": log.operation_type,
+        "admin_email": log.admin_email,
         "entity_type": log.entity_type,
         "entity_id": log.entity_id,
         "summary": log.summary,

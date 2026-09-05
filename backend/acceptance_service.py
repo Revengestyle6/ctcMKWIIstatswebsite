@@ -197,7 +197,12 @@ def accept_match(
         source_file_id = match.source_file_id
         detail = stats.get_match_detail(match.match_id, session=session)
         additions = capture.stop()
-        log_rows = record_addition_logs(session, additions, match.match_id)
+        log_rows = record_addition_logs(
+            session,
+            additions,
+            match.match_id,
+            actor=actor,
+        )
         serialized_logs = [serialize_addition_log(log) for log in log_rows]
         if submission:
             submission.reviewed_by_admin_user_id = actor.admin_user_id

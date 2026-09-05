@@ -97,8 +97,8 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
           </div>
           <div className="flex flex-wrap items-center justify-end gap-4">
             <nav className="flex gap-3">
-              <Link to="/admin/aliases" className="text-blue-300">
-                Alias management
+              <Link to="/admin/database" className="text-blue-300">
+                Database management
               </Link>
               <Link to="/admin/access" className="text-blue-300">
                 Access

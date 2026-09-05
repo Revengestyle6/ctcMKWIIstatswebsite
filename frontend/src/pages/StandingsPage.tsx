@@ -456,7 +456,7 @@ function PlayerLeaderboard({
                   </td>
                   <td
                     className="whitespace-nowrap border-l border-white/[0.08] px-2 py-2 text-center text-gray-200"
-                    title={`${roleGpsPlayed} GPs with at least half the races as ${role}; ${player.required_gps} required for eligibility`}
+                    title={`${roleGpsPlayed} race-equivalent GPs as ${role} (4 races = 1 GP); ${player.required_gps} required for eligibility`}
                   >
                     <span className="font-bold text-white">{roleGpsPlayed}</span>
                     <span className="text-gray-500">/{player.team_gps}</span>
@@ -494,8 +494,8 @@ function PlayerLeaderboard({
         </button>
       </div>
       <p className="mt-3 text-xs leading-5 text-gray-400">
-        A GP counts when at least half of its races are played in the selected role. Eligibility
-        requires those qualifying GPs in at least two-thirds of an active team’s total GPs.
+        Four races in the selected role count as one GP, with partial GPs included. Eligibility
+        requires race-equivalent GPs in at least two-thirds of an active team’s total GPs.
       </p>
     </div>
   );

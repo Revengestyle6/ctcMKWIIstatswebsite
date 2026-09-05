@@ -1,8 +1,11 @@
+import json
 import logging
 import uuid
+from datetime import datetime, timezone
 
 import alias_management
 import database_health as database_health_service
+import match_management
 import mkc_name_sync
 import stats_db as stats
 import team_competition
@@ -10,7 +13,7 @@ import team_identity_management
 import team_logo_management
 from acceptance_service import accept_match
 from admin_auth import record_audit, require_admin
-from archive_storage import get_archive_storage
+from archive_storage import accepted_object_key, get_archive_storage
 from database_health_reviews import set_issue_review
 from extensions import cache
 from flask import Blueprint, g, jsonify, request
@@ -20,8 +23,8 @@ from match_upload import (
     serialize_addition_log,
     validate_committable_match,
 )
-from models import DatabaseAdditionLog
-from sqlalchemy import select
+from models import DatabaseAdditionLog, Match, SourceFile
+from sqlalchemy import func, select
 
 from routes.common import (
     error_response,
@@ -767,6 +770,334 @@ def api_match_preview():
         return jsonify({"error": "Preview import failed database validation."}), 400
     finally:
         session.close()
+
+
+def _match_management_error(error):
+    if isinstance(error, LookupError):
+        return jsonify({"error": str(error)}), 404
+    if isinstance(error, ValueError):
+        return error_response(error)
+    logger.exception("Match management failed")
+    return jsonify({"error": "Match management failed before the operation completed."}), 500
+
+
+@admin_api.get("/api/admin/matches")
+@require_admin
+def api_admin_matches():
+    try:
+        limit = min(max(request.args.get("limit", type=int) or 500, 1), 500)
+        with stats.SessionLocal() as session:
+            return jsonify(
+                match_management.list_matches(
+                    session,
+                    league_code=request.args.get("league", ""),
+                    season_code=request.args.get("season", ""),
+                    division_code=request.args.get("division", ""),
+                    query=request.args.get("query", ""),
+                    limit=limit,
+                )
+            )
+    except Exception as error:
+        return _match_management_error(error)
+
+
+@admin_api.get("/api/admin/matches/<int:match_id>/management")
+@require_admin
+def api_admin_match_management(match_id):
+    try:
+        with stats.SessionLocal() as session:
+            manifest = match_management.match_inventory(session, match_id)
+            return jsonify(
+                {
+                    "match": manifest["original_json"],
+                    "manifest": manifest,
+                    "source_fingerprint": manifest["source"]["fingerprint"],
+                }
+            )
+    except Exception as error:
+        return _match_management_error(error)
+
+
+@admin_api.get("/api/admin/matches/<int:match_id>/delete-manifest")
+@require_admin
+def api_admin_match_delete_manifest(match_id):
+    try:
+        with stats.SessionLocal() as session:
+            manifest = match_management.match_inventory(session, match_id)
+        response = jsonify(manifest)
+        response.headers["Content-Disposition"] = (
+            f'attachment; filename="match-{match_id}-deletion-manifest.json"'
+        )
+        return response
+    except Exception as error:
+        return _match_management_error(error)
+
+
+@admin_api.post("/api/admin/matches/<int:match_id>/new-entries")
+@require_admin
+def api_admin_match_edit_new_entries(match_id):
+    match_data, _approved_keys, payload = match_request_payload()
+    if not isinstance(match_data, dict):
+        return jsonify({"error": "A match JSON object is required."}), 400
+    session = stats.SessionLocal()
+    transaction = session.begin()
+    try:
+        entries = match_management.detect_edit_entries(
+            session,
+            match_id,
+            match_data,
+            requested_player_identity_links=player_identity_links_from_payload(payload),
+            requested_team_identity_resolutions=team_identity_resolutions_from_payload(payload),
+        )
+        transaction.rollback()
+        return jsonify({"new_entries": entries})
+    except Exception as error:
+        if transaction.is_active:
+            transaction.rollback()
+        return _match_management_error(error)
+    finally:
+        session.close()
+
+
+@admin_api.post("/api/admin/matches/<int:match_id>/preview")
+@require_admin
+def api_admin_match_edit_preview(match_id):
+    match_data, approved_keys, payload = match_request_payload()
+    if not isinstance(match_data, dict):
+        return jsonify({"error": "A match JSON object is required."}), 400
+    session = stats.SessionLocal()
+    transaction = session.begin()
+    try:
+        match, document, summary = match_management.replace_match(
+            session,
+            match_id,
+            match_data,
+            approved_keys=approved_keys,
+            requested_player_identity_links=player_identity_links_from_payload(payload),
+            requested_team_identity_resolutions=team_identity_resolutions_from_payload(payload),
+            expected_source_fingerprint=payload.get("expected_source_fingerprint"),
+        )
+        detail = stats.get_match_detail(match.match_id, session=session)
+        transaction.rollback()
+        return jsonify(
+            {
+                "match": detail,
+                "preview": {
+                    "fingerprint": document.fingerprint,
+                    "archive_path": document.display_path,
+                    "new_entries": summary["new_entries"],
+                    "edit_summary": match_management.edit_preview_summary(summary),
+                    "expected_source_fingerprint": payload.get("expected_source_fingerprint"),
+                },
+            }
+        )
+    except Exception as error:
+        if transaction.is_active:
+            transaction.rollback()
+        return _match_management_error(error)
+    finally:
+        session.close()
+
+
+@admin_api.patch("/api/admin/matches/<int:match_id>")
+@require_admin
+def api_admin_match_edit(match_id):
+    match_data, approved_keys, payload = match_request_payload()
+    if not isinstance(match_data, dict):
+        return jsonify({"error": "A match JSON object is required."}), 400
+    storage = get_archive_storage()
+    temporary_key = f"queue/admin-edit/{uuid.uuid4()}.json"
+    old_key = None
+    try:
+        document = prepare_upload_document(match_data)
+        if payload.get("expected_preview_fingerprint") != document.fingerprint:
+            raise ValueError(
+                "The match changed after preview. Generate a new preview before saving."
+            )
+        with stats.SessionLocal() as session:
+            old_match = session.get(Match, match_id)
+            if old_match is None:
+                raise LookupError("Match was not found.")
+            source = session.get(SourceFile, old_match.source_file_id)
+            old_key = source.storage_object_key
+            old_fingerprint = source.file_sha256
+            old_filename = source.source_filename
+            old_content = (old_match.raw_json or "{}").encode("utf-8")
+            if old_key:
+                try:
+                    old_content = storage.read(old_key)
+                except Exception:
+                    old_content = (old_match.raw_json or "{}").encode("utf-8")
+        replaced_key = match_management.replacement_archive_key(
+            match_id, old_fingerprint, old_filename
+        )
+        storage.put_temporary(replaced_key, old_content)
+        storage.put_temporary(temporary_key, document.content)
+        accepted_key = accepted_object_key(document)
+        with stats.SessionLocal.begin() as session:
+            match, _document, summary = match_management.replace_match(
+                session,
+                match_id,
+                match_data,
+                approved_keys=approved_keys,
+                requested_player_identity_links=player_identity_links_from_payload(payload),
+                requested_team_identity_resolutions=team_identity_resolutions_from_payload(payload),
+                expected_source_fingerprint=payload.get("expected_source_fingerprint"),
+                actor=g.admin_actor,
+            )
+            source = session.get(SourceFile, match.source_file_id)
+            source.storage_provider = storage.provider
+            source.storage_object_key = accepted_key
+            source.accepted_by_admin_user_id = g.admin_actor.admin_user_id
+            detail = stats.get_match_detail(match_id, session=session)
+        try:
+            stored = storage.promote(temporary_key, accepted_key, document.fingerprint)
+        except Exception as archive_error:
+            with stats.SessionLocal.begin() as session:
+                source = session.scalar(
+                    select(SourceFile).join(Match).where(Match.match_id == match_id)
+                )
+                source.archive_status = "repair_required"
+                source.archive_attempts += 1
+                source.last_archive_error_code = type(archive_error).__name__[:80]
+            cache.clear()
+            return (
+                jsonify(
+                    {
+                        "status": "updated",
+                        "message": "Match updated; its archive requires repair.",
+                        "match_id": match_id,
+                        "match": detail,
+                        "archive_path": accepted_key,
+                        "archive_status": "repair_required",
+                        "fingerprint": document.fingerprint,
+                        "additions": summary["additions"],
+                        "edit_summary": summary,
+                        "replaced_archive_path": replaced_key,
+                    }
+                ),
+                202,
+            )
+        with stats.SessionLocal.begin() as session:
+            source = session.scalar(
+                select(SourceFile).join(Match).where(Match.match_id == match_id)
+            )
+            source.archive_status = "complete"
+            source.storage_generation = stored.generation
+            source.archived_at = datetime.now(timezone.utc)
+            source.archive_attempts += 1
+            source.last_archive_error_code = None
+        old_archive_cleanup = "not_needed"
+        if old_key and old_key != accepted_key:
+            old_archive_cleanup = match_management.delete_archive_best_effort(storage, old_key)
+            if old_archive_cleanup == "pending":
+                logger.warning(
+                    "Match %s was updated, but old archive %s could not be removed",
+                    match_id,
+                    old_key,
+                )
+        cache.clear()
+        return jsonify(
+            {
+                "status": "updated",
+                "message": "Match updated successfully.",
+                "match_id": match_id,
+                "match": detail,
+                "archive_path": accepted_key,
+                "archive_status": "complete",
+                "fingerprint": document.fingerprint,
+                "additions": summary["additions"],
+                "edit_summary": summary,
+                "replaced_archive_path": replaced_key,
+                "old_archive_cleanup": old_archive_cleanup,
+            }
+        )
+    except Exception as error:
+        try:
+            storage.delete(temporary_key)
+        except Exception:
+            pass
+        return _match_management_error(error)
+
+
+@admin_api.delete("/api/admin/matches/<int:match_id>")
+@require_admin
+def api_admin_match_delete(match_id):
+    payload = request.get_json(silent=True) or {}
+    storage = get_archive_storage()
+    old_key = None
+    try:
+        with stats.SessionLocal() as session:
+            manifest = match_management.match_inventory(session, match_id)
+            if payload.get("confirmation", "").strip() != manifest["match"]["label"]:
+                raise ValueError("Confirmation must exactly match the match label.")
+            if payload.get("expected_source_fingerprint") != manifest["source"]["fingerprint"]:
+                raise ValueError("The match changed after the deletion preview. Reload it first.")
+            old_key = manifest["source"]["storage_object_key"]
+            content = json.dumps(
+                manifest["original_json"], ensure_ascii=False, indent=2, sort_keys=True
+            ).encode("utf-8")
+            if old_key and manifest["source"]["match_count"] == 1:
+                try:
+                    content = storage.read(old_key)
+                except Exception:
+                    pass
+        deleted_key = match_management.deleted_archive_key(match_id, manifest["source"])
+        stored = storage.put_temporary(deleted_key, content)
+        archive_details = {
+            "storage_provider": storage.provider,
+            "storage_object_key": deleted_key,
+            "storage_generation": stored.generation,
+            "sha256": stored.sha256,
+        }
+        with stats.SessionLocal.begin() as session:
+            locked_match = session.scalar(
+                select(Match).where(Match.match_id == match_id).with_for_update()
+            )
+            if locked_match is None:
+                raise LookupError("Match was not found.")
+            source = session.get(SourceFile, locked_match.source_file_id)
+            if source.file_sha256 != payload.get("expected_source_fingerprint"):
+                raise ValueError("The match changed after the deletion preview. Reload it first.")
+            sole_source_match = (
+                session.scalar(
+                    select(func.count())
+                    .select_from(Match)
+                    .where(Match.source_file_id == source.source_file_id)
+                )
+                == 1
+            )
+            deleted_manifest = match_management.delete_match_from_database(
+                session,
+                match_id,
+                g.admin_actor,
+                payload.get("confirmation", ""),
+                archive_details,
+            )
+            if sole_source_match:
+                # The audit entry and deleted archive retain the source history. Removing the
+                # now-unreferenced source row is what makes a corrected upload at the same logical
+                # path possible, including a missing Match 1 after Matches 2 and 3 already exist.
+                session.delete(source)
+        old_archive_cleanup = "not_needed"
+        if old_key and old_key != deleted_key and manifest["source"]["match_count"] == 1:
+            old_archive_cleanup = match_management.delete_archive_best_effort(storage, old_key)
+            if old_archive_cleanup == "pending":
+                logger.warning(
+                    "Match %s was deleted, but old archive %s could not be removed",
+                    match_id,
+                    old_key,
+                )
+        cache.clear()
+        return jsonify(
+            {
+                "status": "deleted",
+                "manifest": deleted_manifest,
+                "old_archive_cleanup": old_archive_cleanup,
+            }
+        )
+    except Exception as error:
+        return _match_management_error(error)
 
 
 @admin_api.post("/api/matches/new-entries")

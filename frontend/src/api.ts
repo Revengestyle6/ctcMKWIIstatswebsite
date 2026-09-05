@@ -113,8 +113,13 @@ export async function patchJson<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
-export async function deleteJson<T>(path: string): Promise<T> {
-  return requestJson<T>(path, { method: "DELETE" });
+export async function deleteJson<T>(path: string, body?: unknown): Promise<T> {
+  return requestJson<T>(path, {
+    method: "DELETE",
+    ...(body === undefined
+      ? {}
+      : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+  });
 }
 
 export function fetchSeasons(league: string): Promise<SeasonOption[]> {
@@ -308,6 +313,8 @@ export function fetchPlayerTeamMemberships(params: {
 export interface DatabaseAddition {
   id: number;
   match_id: number | null;
+  operation_type: "addition" | "edit";
+  admin_email: string | null;
   entity_type: string;
   entity_id: number;
   summary: string;

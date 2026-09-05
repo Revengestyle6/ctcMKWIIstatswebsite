@@ -997,7 +997,6 @@ def get_match_detail(match_id, session=None):
         for row in player_rows:
             players_by_team.setdefault(row.match_team_id, []).append(
                 {
-                    "match_player_id": row.match_player_id,
                     "player_id": row.player_id,
                     "name": display_names.get(row.player_id)
                     or row.lounge_name_raw
@@ -1022,7 +1021,6 @@ def get_match_detail(match_id, session=None):
             )
             teams.append(
                 {
-                    "match_team_id": row.match_team_id,
                     "team_season_entry_id": row.team_season_entry_id,
                     "team_id": row.team_id,
                     "tag": row.clan_tag,
@@ -1091,6 +1089,7 @@ def get_match_detail(match_id, session=None):
             "races_played": match.races_played,
             "import_status": match.import_status,
             "review_notes": match.review_notes,
+            "last_update_at": (match.last_update_at.isoformat() if match.last_update_at else None),
             "tracks": [
                 {
                     "race_number": row.race_number,

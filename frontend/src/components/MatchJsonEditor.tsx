@@ -1,9 +1,10 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   type DatabaseAddition,
   fetchDatabaseAdditions,
+  fetchJson,
   fetchMatchScopes,
   fetchPlayerIdentity,
   fetchPlayerTeamMemberships,
@@ -13,6 +14,7 @@ import {
   type PlayerIdentity,
   type PlayerTeamMembership,
   type PlayoffSeriesResponse,
+  patchJson,
   postJson,
   searchTracks,
   type TeamRosterPlayer,
@@ -54,6 +56,7 @@ import {
   type CommitResult,
   clone,
   download,
+  type EditSummary,
   findTeamScope,
   type IdentityState,
   type Issue,
@@ -155,7 +158,15 @@ function FieldIssues({
 
 export default function MatchJsonEditor(): React.JSX.Element {
   const auth = useAdminSession();
+  const canViewDatabaseLog =
+    auth.session?.authenticated === true &&
+    (auth.session.admin?.role === "admin" || auth.session.admin?.role === "owner");
   const { league } = useLeague();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editMatchIdValue = Number(searchParams.get("edit_match"));
+  const editMatchId =
+    Number.isInteger(editMatchIdValue) && editMatchIdValue > 0 ? editMatchIdValue : null;
   const [match, setMatch] = useState<MatchJson>(() => ({ ...clone(blankMatch), league }));
   const [races, setRaces] = useState<RaceDraft[]>(() =>
     racesFromMatch({ ...clone(blankMatch), league })
@@ -209,6 +220,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [commitAction, setCommitAction] = useState<"upload" | "review" | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [commitResult, setCommitResult] = useState<CommitResult | null>(null);
+  const [sourceFingerprint, setSourceFingerprint] = useState<string | null>(null);
+  const [editSummary, setEditSummary] = useState<EditSummary | null>(null);
+  const [editSummaryOpen, setEditSummaryOpen] = useState(false);
+  const [editReloading, setEditReloading] = useState(false);
   const [submissionReceipt, setSubmissionReceipt] = useState<ReviewSubmissionReceipt | null>(null);
   const [warningsAcknowledged, setWarningsAcknowledged] = useState(false);
   const [reviewSubmissionId, setReviewSubmissionId] = useState<string | null>(null);
@@ -248,7 +263,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
     [match.playoff_series_number, match.playoff_stage, playoffContext]
   );
   const deterministicSeriesMatchNumber = selectedPlayoffSeries
-    ? selectedPlayoffSeries.matches.length + 1
+    ? (Array.from({ length: selectedPlayoffSeries.best_of }, (_, index) => index + 1).find(
+        (number) =>
+          !selectedPlayoffSeries.matches.some((entry) => entry.series_match_number === number)
+      ) ?? selectedPlayoffSeries.best_of)
     : 1;
   const playoffSeriesNumberLocked =
     match.playoff_stage === "finals" ||
@@ -489,6 +507,37 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setApprovalModalOpen(false);
   }, []);
 
+  // resetEditor intentionally is not a dependency: this load is keyed only by the requested
+  // match and authenticated session, and resetEditor has no captured server state.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see above
+  useEffect(() => {
+    if (!editMatchId || !auth.session?.authenticated) return;
+    let cancelled = false;
+    setLoadError(null);
+    fetchJson<{
+      match: MatchJson;
+      source_fingerprint: string;
+      manifest: { match: { label: string } };
+    }>(`/api/admin/matches/${editMatchId}/management`)
+      .then((response) => {
+        if (cancelled) return;
+        resetEditor(
+          response.match,
+          `Editing match ${editMatchId}: ${response.manifest.match.label}`
+        );
+        setSourceFingerprint(response.source_fingerprint);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled)
+          setLoadError(
+            error instanceof Error ? error.message : "Could not load match for editing."
+          );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.session?.authenticated, editMatchId]);
+
   useEffect(() => {
     setMatch((current) =>
       normalized(current.league) === league ? current : { ...current, league }
@@ -504,7 +553,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
   }, [tablePreview]);
 
   useEffect(() => {
-    if (!auth.session?.authenticated) return;
+    if (!canViewDatabaseLog) return;
     let cancelled = false;
     const mergeLogs = (incoming: DatabaseAddition[]) =>
       setAdditionLogs((current) => {
@@ -535,7 +584,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [auth.session?.authenticated]);
+  }, [canViewDatabaseLog]);
 
   useEffect(() => {
     let cancelled = false;
@@ -598,7 +647,18 @@ export default function MatchJsonEditor(): React.JSX.Element {
     fetchPlayoffSeries(match.league ?? "ctc", match.season, match.division)
       .then((context) => {
         if (cancelled) return;
-        setPlayoffContext(context);
+        const editingContext = editMatchId
+          ? {
+              ...context,
+              series: context.series.map((series) => {
+                const matches = series.matches.filter((entry) => entry.match_id !== editMatchId);
+                return matches.length === series.matches.length
+                  ? series
+                  : { ...series, matches, status: "in_progress" as const, winner_team_id: null };
+              }),
+            }
+          : context;
+        setPlayoffContext(editingContext);
         setPlayoffContextStatus("loaded");
         const lockedFormat = context.format?.code;
         if (lockedFormat) {
@@ -617,7 +677,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [match.division, match.league, match.season]);
+  }, [editMatchId, match.division, match.league, match.season]);
 
   useEffect(() => {
     if (match.match_type !== "playoff" || playoffContextStatus !== "loaded") return;
@@ -1243,6 +1303,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setCommitAction(null);
     setCommitError(null);
     setCommitResult(null);
+    setEditSummary(null);
+    setEditSummaryOpen(false);
     setSubmissionReceipt(null);
     setWarningsAcknowledged(false);
     setReviewSubmissionId(null);
@@ -1291,6 +1353,81 @@ export default function MatchJsonEditor(): React.JSX.Element {
     editorVersion.current += 1;
     resetEditor({ ...clone(blankMatch), league }, "New match JSON");
   }
+  function exitEditMode(): void {
+    if (previewLoading || commitLoading || editReloading) return;
+    if (
+      !commitResult &&
+      !window.confirm("Exit edit mode? Any unsaved changes in the editor will be cleared.")
+    ) {
+      return;
+    }
+
+    editorVersion.current += 1;
+    setSourceFingerprint(null);
+    resetEditor({ ...clone(blankMatch), league }, "New match JSON");
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("edit_match");
+    navigate({ pathname: "/json-editor", search: nextParams.toString() }, { replace: true });
+  }
+  async function reloadEditedMatch(): Promise<void> {
+    if (!editMatchId || editReloading) return;
+    const requestVersion = ++editorVersion.current;
+    setEditReloading(true);
+    setLoadError(null);
+    try {
+      const response = await fetchJson<{
+        match: MatchJson;
+        source_fingerprint: string;
+        manifest: { match: { label: string } };
+      }>(`/api/admin/matches/${editMatchId}/management`);
+      if (editorVersion.current !== requestVersion) return;
+      resetEditor(response.match, `Editing match ${editMatchId}: ${response.manifest.match.label}`);
+      setSourceFingerprint(response.source_fingerprint);
+    } catch (error) {
+      if (editorVersion.current !== requestVersion) return;
+      setLoadError(error instanceof Error ? error.message : "Could not reload the edited match.");
+    } finally {
+      if (editorVersion.current === requestVersion) setEditReloading(false);
+    }
+  }
+  function downloadEditReport(): void {
+    if (!editSummary || !editMatchId) return;
+    const report = {
+      schema_version: 1,
+      report_type: "match_edit_review",
+      generated_at: new Date().toISOString(),
+      match: {
+        match_id: editMatchId,
+        label: compiled.match_label ?? fileName,
+        source_name: fileName,
+      },
+      operation: {
+        description: "Transactionally replace match-owned records while retaining the match ID.",
+        shared_entities_preserved:
+          "Teams, players, tracks, memberships, and playoff setup are not deleted by the replacement.",
+        previous_source_archive: "The previous source is retained in the replaced archive.",
+        identifier_policy:
+          "Existing record IDs are listed for review. Replacement IDs are assigned only when the edit is saved and are intentionally excluded from this preview report.",
+      },
+      preview: previewMetadata
+        ? {
+            fingerprint: previewMetadata.fingerprint,
+            archive_path: previewMetadata.archive_path,
+            expected_source_fingerprint: previewMetadata.expected_source_fingerprint,
+          }
+        : null,
+      summary: editSummary,
+      proposed_match_json: compiled,
+    };
+    const url = URL.createObjectURL(
+      new Blob([`${JSON.stringify(report, null, 2)}\n`], { type: "application/json" })
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `match-${editMatchId}-edit-review.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
   async function generateTablePreview(
     entries: NewEntry[],
     requestVersion = editorVersion.current
@@ -1299,17 +1436,25 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setPreviewError(null);
     setCommitError(null);
     try {
-      const response = await postJson<PreviewResponse>("/api/matches/preview", {
-        match: compiled,
-        player_identity_links: playerIdentityLinks,
-        team_identity_resolutions: teamIdentityResolutions,
-        approved_new_entries: entries
-          .filter((entry) => approvalDecisions[entry.key] === "approved")
-          .map((entry) => entry.key),
-      });
+      const response = await postJson<PreviewResponse>(
+        editMatchId ? `/api/admin/matches/${editMatchId}/preview` : "/api/matches/preview",
+        {
+          match: compiled,
+          player_identity_links: playerIdentityLinks,
+          team_identity_resolutions: teamIdentityResolutions,
+          approved_new_entries: entries
+            .filter((entry) => approvalDecisions[entry.key] === "approved")
+            .map((entry) => entry.key),
+          expected_source_fingerprint: sourceFingerprint,
+        }
+      );
       if (editorVersion.current !== requestVersion) return;
       setTablePreview(response.match);
       setPreviewMetadata(response.preview);
+      if (editMatchId && response.preview.edit_summary) {
+        setEditSummary(response.preview.edit_summary);
+        setEditSummaryOpen(true);
+      }
     } catch (error) {
       if (editorVersion.current !== requestVersion) return;
       scrollToPreviewAfterReview.current = false;
@@ -1364,7 +1509,14 @@ export default function MatchJsonEditor(): React.JSX.Element {
     if (!previewFingerprint || finalSubmissionBlocked() || auth.session?.authenticated !== true) {
       return;
     }
-    if (!window.confirm("Confirm that you want to upload this match?")) return;
+    if (
+      !window.confirm(
+        editMatchId
+          ? "Apply the reviewed changes to this match? The match-owned records will be replaced."
+          : "Confirm that you want to upload this match?"
+      )
+    )
+      return;
     const requestVersion = editorVersion.current;
     setCommitLoading(true);
     setCommitAction("upload");
@@ -1372,8 +1524,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
     try {
       const endpoint = reviewSubmissionId
         ? `/api/admin/review-submissions/${reviewSubmissionId}/accept`
-        : "/api/matches/commit";
-      const result = await postJson<CommitResult>(endpoint, {
+        : editMatchId
+          ? `/api/admin/matches/${editMatchId}`
+          : "/api/matches/commit";
+      const body = {
         match: compiled,
         player_identity_links: playerIdentityLinks,
         team_identity_resolutions: teamIdentityResolutions,
@@ -1382,7 +1536,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
           .filter((entry) => approvalDecisions[entry.key] === "approved")
           .map((entry) => entry.key),
         expected_preview_fingerprint: previewFingerprint,
-      });
+        expected_source_fingerprint: sourceFingerprint,
+      };
+      const result = editMatchId
+        ? await patchJson<CommitResult>(endpoint, body)
+        : await postJson<CommitResult>(endpoint, body);
       if (editorVersion.current !== requestVersion) return;
       setCommitResult(result);
       if (reviewSubmissionId) sessionStorage.removeItem("ctc-review-draft");
@@ -1429,19 +1587,24 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setPreviewMetadata(null);
     setPreviewError(null);
     setCommitError(null);
+    setEditSummary(null);
+    setEditSummaryOpen(false);
   }
   async function requestTablePreview(): Promise<void> {
-    if (membershipStatus === "loading") return;
+    if (membershipStatus === "loading" || (editMatchId && !sourceFingerprint)) return;
     const requestVersion = editorVersion.current;
     scrollToPreviewAfterReview.current = true;
     setPreviewLoading(true);
     setPreviewError(null);
     try {
-      const result = await postJson<{ new_entries: NewEntry[] }>("/api/matches/new-entries", {
-        match: compiled,
-        player_identity_links: playerIdentityLinks,
-        team_identity_resolutions: teamIdentityResolutions,
-      });
+      const result = await postJson<{ new_entries: NewEntry[] }>(
+        editMatchId ? `/api/admin/matches/${editMatchId}/new-entries` : "/api/matches/new-entries",
+        {
+          match: compiled,
+          player_identity_links: playerIdentityLinks,
+          team_identity_resolutions: teamIdentityResolutions,
+        }
+      );
       if (editorVersion.current !== requestVersion) return;
       setNewEntries(result.new_entries);
       if (
@@ -1521,6 +1684,15 @@ export default function MatchJsonEditor(): React.JSX.Element {
 
   const raceIndexes = raceView === "all" ? races.map((_, index) => index) : [activeRace];
   const errorCount = issues.filter((issue) => issue.level === "error").length;
+  const reviewButtonLabel = commitResult
+    ? editMatchId
+      ? "Saved"
+      : "Uploaded"
+    : previewLoading
+      ? "Preparing review..."
+      : editMatchId
+        ? "Review Changes"
+        : "Review & Upload";
   const leagueValid =
     scopesLoaded &&
     matchScopes.some((scope) => normalized(scope.league) === normalized(match.league));
@@ -1571,11 +1743,13 @@ export default function MatchJsonEditor(): React.JSX.Element {
         <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
             <BackToHomeLink className="-ml-2" />
-            <h1 className="mt-2 text-3xl font-bold">Match JSON Editor</h1>
+            <h1 className="mt-2 text-3xl font-bold">
+              {editMatchId ? `Edit Match ${editMatchId}` : "Match JSON Editor"}
+            </h1>
             <p className="text-sm text-gray-300">{fileName}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <LeagueHeaderControls className="mr-1" />
+            {!editMatchId ? <LeagueHeaderControls className="mr-1" /> : null}
             <input
               ref={fileInput}
               type="file"
@@ -1588,40 +1762,53 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 event.currentTarget.value = "";
               }}
             />
-            <button
-              type="button"
-              disabled={previewLoading || commitLoading}
-              onClick={() => fileInput.current?.click()}
-              className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Upload JSON
-            </button>
-            <button
-              type="button"
-              disabled={previewLoading || commitLoading}
-              onClick={() => {
-                setPastePanelOpen((current) => !current);
-                setLoadError(null);
-              }}
-              aria-expanded={pastePanelOpen}
-              aria-controls="paste-json-panel"
-              className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Paste JSON
-            </button>
-            <button
-              type="button"
-              disabled={previewLoading || commitLoading}
-              onClick={clearEditor}
-              title={
-                previewLoading || commitLoading
-                  ? "Wait for the current preview or upload to finish before clearing."
-                  : undefined
-              }
-              className="rounded-md border border-red-400/40 bg-red-950/30 px-4 py-2 font-semibold text-red-100 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Clear
-            </button>
+            {editMatchId ? (
+              <button
+                type="button"
+                disabled={previewLoading || commitLoading || editReloading}
+                onClick={exitEditMode}
+                className="rounded-md border border-amber-300/40 bg-amber-950/30 px-4 py-2 font-semibold text-amber-100 hover:bg-amber-950/50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Exit edit mode
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={previewLoading || commitLoading}
+                  onClick={() => fileInput.current?.click()}
+                  className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Upload JSON
+                </button>
+                <button
+                  type="button"
+                  disabled={previewLoading || commitLoading}
+                  onClick={() => {
+                    setPastePanelOpen((current) => !current);
+                    setLoadError(null);
+                  }}
+                  aria-expanded={pastePanelOpen}
+                  aria-controls="paste-json-panel"
+                  className="rounded-md border border-white/20 bg-white/10 px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Paste JSON
+                </button>
+                <button
+                  type="button"
+                  disabled={previewLoading || commitLoading}
+                  onClick={clearEditor}
+                  title={
+                    previewLoading || commitLoading
+                      ? "Wait for the current preview or upload to finish before clearing."
+                      : undefined
+                  }
+                  className="rounded-md border border-red-400/40 bg-red-950/30 px-4 py-2 font-semibold text-red-100 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Clear
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => download(compiled)}
@@ -1629,23 +1816,22 @@ export default function MatchJsonEditor(): React.JSX.Element {
             >
               Download JSON
             </button>
-            <button
-              type="button"
-              disabled={
-                previewLoading ||
-                membershipStatus === "loading" ||
-                errorCount > 0 ||
-                Boolean(commitResult)
-              }
-              onClick={requestTablePreview}
-              className="rounded-md bg-emerald-500 px-4 py-2 font-bold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {commitResult
-                ? "Uploaded"
-                : previewLoading
-                  ? "Preparing review..."
-                  : "Review & Upload"}
-            </button>
+            {!(editMatchId && commitResult) ? (
+              <button
+                type="button"
+                disabled={
+                  previewLoading ||
+                  (Boolean(editMatchId) && !sourceFingerprint) ||
+                  membershipStatus === "loading" ||
+                  errorCount > 0 ||
+                  Boolean(commitResult)
+                }
+                onClick={requestTablePreview}
+                className="rounded-md bg-emerald-500 px-4 py-2 font-bold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {reviewButtonLabel}
+              </button>
+            ) : null}
           </div>
         </header>
         {pastePanelOpen ? (
@@ -1699,6 +1885,116 @@ export default function MatchJsonEditor(): React.JSX.Element {
             {loadError}
           </p>
         )}
+        {editSummaryOpen && editSummary ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="edit-summary-title"
+              className="max-h-[90vh] w-full max-w-4xl overflow-auto border border-blue-300/35 bg-zinc-950 p-6 shadow-2xl"
+            >
+              <h2 id="edit-summary-title" className="text-2xl font-bold">
+                Review every match change
+              </h2>
+              <p className="mt-2 text-gray-300">
+                Saving will transactionally replace this match&apos;s owned rows while retaining
+                match ID {editMatchId}. Shared teams, players, tracks, memberships, and playoff
+                setup are preserved.
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {Object.keys(editSummary.records_before).map((recordType) => (
+                  <div key={recordType} className="border-b border-white/10 py-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>{recordType.replaceAll("_", " ")}</span>
+                      <span>
+                        {editSummary.records_before[recordType] ?? 0} →{" "}
+                        {editSummary.records_after[recordType] ?? 0}
+                      </span>
+                    </div>
+                    <details className="text-xs text-gray-500">
+                      <summary className="cursor-pointer">Existing database record IDs</summary>
+                      <p className="break-all">
+                        Current:{" "}
+                        {(editSummary.record_ids_before[recordType] ?? []).join(", ") || "none"}
+                      </p>
+                    </details>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Replacement record IDs are assigned only when the edit is saved. Temporary IDs used
+                to validate this rolled-back preview are not shown.
+              </p>
+              <details className="mt-4 border border-white/10 p-3 text-sm">
+                <summary className="cursor-pointer font-bold">
+                  Provenance and audit references recalculated
+                </summary>
+                {Object.keys(editSummary.references_before).map((recordType) => (
+                  <p key={recordType} className="mt-1 break-all text-xs text-gray-400">
+                    {recordType.replaceAll("_", " ")}: before [
+                    {(editSummary.references_before[recordType] ?? []).join(", ") || "none"}] ·
+                    after [{(editSummary.references_after[recordType] ?? []).join(", ") || "none"}]
+                  </p>
+                ))}
+              </details>
+              <h3 className="mt-5 font-bold">
+                Field and result changes ({editSummary.changes.length})
+              </h3>
+              <div className="mt-2 max-h-72 overflow-auto border border-white/10">
+                {editSummary.changes.length === 0 ? (
+                  <p className="p-3 text-sm text-gray-400">No JSON values changed.</p>
+                ) : (
+                  editSummary.changes.map((change, index) => (
+                    <div
+                      key={`${change.path}:${index}`}
+                      className="border-b border-white/10 p-3 text-sm last:border-0"
+                    >
+                      <p className="font-mono text-blue-200">{change.path}</p>
+                      <div className="mt-1 grid gap-2 text-xs sm:grid-cols-2">
+                        <pre className="overflow-auto whitespace-pre-wrap text-red-200">
+                          Before: {JSON.stringify(change.before)}
+                        </pre>
+                        <pre className="overflow-auto whitespace-pre-wrap text-emerald-200">
+                          After: {JSON.stringify(change.after)}
+                        </pre>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <p className="mt-4 text-sm text-gray-400">
+                {editSummary.new_entries.length} new database entries require the same explicit
+                approvals as a new upload. The old source is retained under the replaced archive.
+              </p>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={downloadEditReport}
+                  className="rounded border border-blue-300/40 bg-blue-950/40 px-4 py-2 font-semibold text-blue-100 hover:bg-blue-900/50"
+                >
+                  Download review report
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditSummaryOpen(false);
+                    discardPreview();
+                  }}
+                  className="rounded border border-white/20 px-4 py-2"
+                >
+                  Revise changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditSummaryOpen(false)}
+                  className="rounded bg-blue-500 px-4 py-2 font-bold"
+                >
+                  Continue to final preview
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
 
         <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
           <h2 className="mb-3 text-xl font-bold">Additional Metadata</h2>
@@ -2958,24 +3254,23 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   {errorCount} errors / {issues.length - errorCount} warnings
                 </p>
               </div>
-              <button
-                type="button"
-                disabled={
-                  previewLoading ||
-                  membershipStatus === "loading" ||
-                  playoffContextStatus === "loading" ||
-                  errorCount > 0 ||
-                  Boolean(commitResult)
-                }
-                onClick={requestTablePreview}
-                className="rounded-md bg-emerald-500 px-4 py-2 font-bold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {commitResult
-                  ? "Uploaded"
-                  : previewLoading
-                    ? "Preparing review..."
-                    : "Review & Upload"}
-              </button>
+              {!(editMatchId && commitResult) ? (
+                <button
+                  type="button"
+                  disabled={
+                    previewLoading ||
+                    (Boolean(editMatchId) && !sourceFingerprint) ||
+                    membershipStatus === "loading" ||
+                    playoffContextStatus === "loading" ||
+                    errorCount > 0 ||
+                    Boolean(commitResult)
+                  }
+                  onClick={requestTablePreview}
+                  className="rounded-md bg-emerald-500 px-4 py-2 font-bold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {reviewButtonLabel}
+                </button>
+              ) : null}
             </div>
             {errorCount > 0 && (
               <p className="mb-3 text-sm font-semibold text-red-300">
@@ -3086,6 +3381,24 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 <p className="mt-1 text-sm">
                   Match ID {commitResult.match_id} · {commitResult.archive_path}
                 </p>
+                {editMatchId ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={editReloading}
+                      onClick={() => void reloadEditedMatch()}
+                      className="rounded bg-emerald-500 px-4 py-2 font-bold text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {editReloading ? "Reloading…" : "Edit this match again"}
+                    </button>
+                    <Link
+                      to={`/admin/database?league=${encodeURIComponent(league)}`}
+                      className="rounded border border-white/20 px-4 py-2 font-semibold text-white hover:bg-white/10"
+                    >
+                      Return to Database Management
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             )}
             {submissionReceipt && (
@@ -3104,9 +3417,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   </p>
                   <p className="text-sm text-gray-400">
                     {auth.session?.authenticated
-                      ? reviewSubmissionId
-                        ? "Confirming reruns validation and commits the database before promoting the accepted archive object."
-                        : "Upload this match now, or submit it to the review queue without changing analytics."
+                      ? editMatchId
+                        ? "Saving reruns validation, replaces only match-owned records in one transaction, and archives the previous source."
+                        : reviewSubmissionId
+                          ? "Confirming reruns validation and commits the database before promoting the accepted archive object."
+                          : "Upload this match now, or submit it to the review queue without changing analytics."
                       : "You can submit this cleaned JSON to the administrator review queue; it will not change analytics yet."}
                   </p>
                 </div>
@@ -3129,7 +3444,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   >
                     Discard preview
                   </button>
-                  {auth.session?.authenticated && !reviewSubmissionId ? (
+                  {auth.session?.authenticated && !reviewSubmissionId && !editMatchId ? (
                     <button
                       type="button"
                       disabled={
@@ -3159,9 +3474,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         ? "Submitting..."
                         : "Uploading..."
                       : auth.session?.authenticated
-                        ? reviewSubmissionId
-                          ? "Accept reviewed match"
-                          : "Confirm upload"
+                        ? editMatchId
+                          ? "Save match changes"
+                          : reviewSubmissionId
+                            ? "Accept reviewed match"
+                            : "Confirm upload"
                         : "Submit for admin review"}
                   </button>
                 </div>
@@ -3194,13 +3511,14 @@ export default function MatchJsonEditor(): React.JSX.Element {
           </section>
         )}
 
-        {auth.session?.authenticated ? (
+        {canViewDatabaseLog ? (
           <section className="mt-5 border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-bold">Database Addition Log</h2>
                 <p className="mt-1 text-sm text-gray-400">
-                  Committed catalog additions only; previews and failed uploads never appear.
+                  Committed additions and match edits only; previews and failed changes never
+                  appear.
                 </p>
               </div>
               <span
@@ -3220,12 +3538,23 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 additionLogs.map((entry) => (
                   <div
                     key={entry.id}
-                    className="grid gap-1 border-b border-white/10 py-2 text-sm sm:grid-cols-[10rem_1fr_auto] sm:items-center"
+                    className="grid gap-1 border-b border-white/10 py-2 text-sm sm:grid-cols-[6rem_10rem_1fr_15rem_auto] sm:items-center"
                   >
+                    <span
+                      className={`w-fit rounded px-2 py-0.5 text-xs font-bold uppercase ${entry.operation_type === "edit" ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-300"}`}
+                    >
+                      {entry.operation_type}
+                    </span>
                     <span className="font-semibold text-blue-300">
                       {entry.entity_type.replaceAll("_", " ")}
                     </span>
                     <span>{entry.summary}</span>
+                    <span
+                      className="truncate text-xs text-gray-400"
+                      title={entry.admin_email ?? ""}
+                    >
+                      {entry.admin_email ?? "Legacy import (email unavailable)"}
+                    </span>
                     <span className="text-xs text-gray-500">
                       {entry.created_at
                         ? new Date(entry.created_at).toLocaleString()

@@ -3,7 +3,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from models import Match, Race, SourceFile
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 DEFAULT_EXCLUSION_PATH = (
     Path(__file__).resolve().parent / "data" / "analytics_excluded_race_blocks.json"
@@ -60,11 +60,15 @@ def analytics_excluded_race_ids(session, exclusions=None):
             Race.race_id,
             Race.race_number,
             Match.match_index_in_source,
-            SourceFile.source_path,
+            func.coalesce(SourceFile.original_source_path, SourceFile.source_path),
         )
         .join(Match, Match.match_id == Race.match_id)
         .join(SourceFile, SourceFile.source_file_id == Match.source_file_id)
-        .where(SourceFile.source_path.in_(entries_by_source))
+        .where(
+            func.coalesce(SourceFile.original_source_path, SourceFile.source_path).in_(
+                entries_by_source
+            )
+        )
     ).all()
     excluded_ids = set()
     for race_id, race_number, match_index, source_path in rows:

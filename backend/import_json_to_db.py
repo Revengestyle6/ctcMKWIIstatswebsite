@@ -468,7 +468,13 @@ def get_or_create_player(
             raise ValueError(
                 f"Approved player {linked_player_id} no longer exists for friend code {friend_code}."
             )
-        session.add(PlayerFriendCode(player_id=player.player_id, friend_code=friend_code))
+        session.add(
+            PlayerFriendCode(
+                player_id=player.player_id,
+                friend_code=friend_code,
+                origin="match_import",
+            )
+        )
         if not player.primary_friend_code:
             player.primary_friend_code = friend_code
         session.flush()
@@ -481,7 +487,13 @@ def get_or_create_player(
         if identity_friend_code_row:
             player = session.get(Player, identity_friend_code_row.player_id)
             if player:
-                session.add(PlayerFriendCode(player_id=player.player_id, friend_code=friend_code))
+                session.add(
+                    PlayerFriendCode(
+                        player_id=player.player_id,
+                        friend_code=friend_code,
+                        origin="match_import",
+                    )
+                )
                 if canonical_friend_code != player.primary_friend_code:
                     player.primary_friend_code = canonical_friend_code
                 canonical_name = identities.canonical_names.get(canonical_friend_code)
@@ -504,11 +516,23 @@ def get_or_create_player(
     session.add(player)
     session.flush()
 
-    session.add(PlayerFriendCode(player_id=player.player_id, friend_code=friend_code))
+    session.add(
+        PlayerFriendCode(
+            player_id=player.player_id,
+            friend_code=friend_code,
+            origin="match_import",
+        )
+    )
     if mkc_name:
-        add_player_alias(session, player.player_id, MKC_ALIAS_TYPE, mkc_name)
+        add_player_alias(session, player.player_id, MKC_ALIAS_TYPE, mkc_name, origin="match_import")
     if mkc_player_id is not None:
-        add_player_alias(session, player.player_id, MKC_ID_ALIAS_TYPE, str(mkc_player_id))
+        add_player_alias(
+            session,
+            player.player_id,
+            MKC_ID_ALIAS_TYPE,
+            str(mkc_player_id),
+            origin="match_import",
+        )
     session.flush()
     return player
 
@@ -525,6 +549,7 @@ def add_player_aliases(session, player: Player, player_data: dict[str, Any], mat
             alias_value,
             first_seen_match_id=match_id,
             last_seen_match_id=match_id,
+            origin="match_import",
         )
 
 
@@ -690,6 +715,7 @@ def import_match(
     player_identity_links: dict[str, int | str] | None = None,
     team_identity_links: dict[str, int] | None = None,
     player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
+    match_id_override: int | None = None,
 ):
     teams = match_data.get("teams") or {}
     tracks = match_data.get("tracks") or []
@@ -761,7 +787,12 @@ def import_match(
     elif match_number is None:
         raise ValueError("Regular-season matches require a match number.")
 
+    explicit_review_notes = str(match_data.get("review_notes") or "").strip()
+    combined_review_notes = [explicit_review_notes] if explicit_review_notes else []
+    combined_review_notes.extend(note for note in review_notes if note not in explicit_review_notes)
+
     match = Match(
+        match_id=match_id_override,
         season_id=season.season_id,
         division_id=division.division_id,
         source_file_id=source_file.source_file_id,
@@ -781,7 +812,7 @@ def import_match(
         import_status="needs_review"
         if len(set(resolved_team_keys)) != 2 or match_data.get("races_played") != len(tracks)
         else "imported",
-        review_notes=" ".join(review_notes) if review_notes else None,
+        review_notes=" ".join(combined_review_notes) if combined_review_notes else None,
     )
     session.add(match)
     session.flush()
@@ -1014,6 +1045,8 @@ def import_editor_match(
     team_identity_links: dict[str, int] | None = None,
     player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
     source_metadata: dict[str, Any] | None = None,
+    existing_source_file: SourceFile | None = None,
+    match_id_override: int | None = None,
 ) -> Match:
     validate_competition_metadata(match_data)
     league_code = str(match_data.get("league") or "ctc").strip().lower()
@@ -1025,16 +1058,17 @@ def import_editor_match(
     season = get_or_create_season(session, league_code, season_code)
     division = get_or_create_division(session, season, division_code)
 
-    source_file = SourceFile(
-        season_id=season.season_id,
-        division_id=division.division_id,
-        source_path=source_path,
-        source_filename=source_filename,
-        file_sha256=file_sha256,
-        json_shape=json_shape,
-        **(source_metadata or {}),
-    )
-    session.add(source_file)
+    source_file = existing_source_file or SourceFile()
+    source_file.season_id = season.season_id
+    source_file.division_id = division.division_id
+    source_file.source_path = source_path
+    source_file.source_filename = source_filename
+    source_file.file_sha256 = file_sha256
+    source_file.json_shape = json_shape
+    for key, value in (source_metadata or {}).items():
+        setattr(source_file, key, value)
+    if existing_source_file is None:
+        session.add(source_file)
     session.flush()
 
     label = ensure_match_label(match_data) or "Match preview"
@@ -1058,6 +1092,7 @@ def import_editor_match(
         player_identity_links=player_identity_links,
         team_identity_links=team_identity_links,
         player_mkc_profiles=player_mkc_profiles,
+        match_id_override=match_id_override,
     )
 
 

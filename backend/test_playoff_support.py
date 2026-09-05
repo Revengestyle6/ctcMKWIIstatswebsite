@@ -215,6 +215,22 @@ class PlayoffSupportTests(unittest.TestCase):
                     self.team_ids[:2],
                 )
 
+    def test_missing_earlier_series_match_can_be_reuploaded_after_later_matches(self):
+        with self.SessionLocal.begin() as session:
+            division = session.get(Division, self.division_id)
+            series, _ = resolve_playoff_series(
+                session, self.season_id, division, self.metadata(), self.team_ids[:2]
+            )
+            self.add_series_match(session, series, 2, 101, 99)
+            self.add_series_match(session, series, 3, 105, 95)
+
+            resolved, metadata = resolve_playoff_series(
+                session, self.season_id, division, self.metadata(), self.team_ids[:2]
+            )
+
+            self.assertEqual(resolved.playoff_series_id, series.playoff_series_id)
+            self.assertEqual(metadata["series_match_number"], 1)
+
     def test_match_set_defaults_can_separate_regular_playoff_and_all(self):
         with self.SessionLocal.begin() as session:
             division = session.get(Division, self.division_id)

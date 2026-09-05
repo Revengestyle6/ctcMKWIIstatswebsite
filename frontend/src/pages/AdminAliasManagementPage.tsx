@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { deleteJson, fetchJson, patchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
+import AdminMatchManager from "../components/admin/AdminMatchManager";
 import TeamIdentityManager from "../components/admin/TeamIdentityManager";
 import TeamLogoManager from "../components/admin/TeamLogoManager";
 import { BackToHomeLink } from "../components/BackToHomeLink";
@@ -1051,17 +1052,13 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
           <div>
             <BackToHomeLink className="-ml-2 mb-1" />
             <p className="text-sm uppercase text-blue-200">Restricted administration</p>
-            <h1 className="text-3xl font-bold">Alias Management</h1>
+            <h1 className="text-3xl font-bold">Database Management</h1>
             <p className="mt-2 max-w-3xl text-gray-300">
-              Search canonical objects, inspect their known names, and maintain the aliases used
-              during match imports and statistics searches.
+              Maintain canonical records and aliases, or safely edit and delete uploaded match data.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-4">
             <nav className="flex flex-wrap gap-3">
-              <Link to="/admin/review-queue" className="text-blue-300 hover:text-blue-200">
-                Review queue
-              </Link>
               <Link to="/admin/access" className="text-blue-300 hover:text-blue-200">
                 Admin access
               </Link>
@@ -1076,7 +1073,34 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
 
         {auth.session?.authenticated ? (
           <>
-            <section className="border border-white/15 bg-zinc-950/90 p-4">
+            <section id="match-data-management" aria-labelledby="match-data-management-heading">
+              <div className="mb-3">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">
+                  Match records
+                </p>
+                <h2 id="match-data-management-heading" className="mt-1 text-2xl font-bold">
+                  Match Data Management
+                </h2>
+              </div>
+              <AdminMatchManager />
+            </section>
+            <section
+              id="alias-management"
+              aria-labelledby="alias-management-heading"
+              className="border border-white/15 bg-zinc-950/90 p-4"
+            >
+              <div className="mb-4">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">
+                  Canonical records
+                </p>
+                <h2 id="alias-management-heading" className="mt-1 text-2xl font-bold">
+                  Alias Management
+                </h2>
+                <p className="mt-1 text-sm text-gray-400">
+                  Search players, teams, and tracks and maintain the identities used by imports and
+                  statistics.
+                </p>
+              </div>
               <div className="flex flex-wrap gap-2" role="tablist" aria-label="Alias object type">
                 {(Object.keys(entityLabels) as EntityType[]).map((type) => (
                   <button

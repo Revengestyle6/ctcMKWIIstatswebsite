@@ -17,29 +17,31 @@ from models import (  # noqa: E402
 )
 from review_queue import validate_submission  # noqa: E402
 from sqlalchemy import select  # noqa: E402
-from standings_service import _qualifying_role_gp_counts, get_division_standings  # noqa: E402
+from standings_service import (  # noqa: E402
+    _race_equivalent_gps,
+    _role_eligibility,
+    _role_gp_average,
+    get_division_standings,
+)
 from team_competition import update_team_competition_status  # noqa: E402
 
 
 class RoleGpEligibilityTests(unittest.TestCase):
-    def test_counts_gps_when_at_least_half_the_races_match_the_role(self):
-        team_gp_races = {
-            (1, 1): {1, 2, 3, 4},
-            (1, 2): {5, 6, 7, 8},
-            (1, 3): {9, 10, 11, 12},
-            (2, 1): {13, 14, 15, 16},
-        }
-        player_gp_roles = {
-            (1, 1): {1: "runner", 2: "runner", 3: "bagger", 4: "bagger"},
-            (1, 2): {5: "bagger", 6: "bagger", 7: "bagger", 8: "runner"},
-            (1, 3): {9: "runner", 10: "bagger", 11: "unknown", 12: "unknown"},
-            (2, 1): {13: "runner", 14: "runner"},
-        }
+    def test_role_gp_count_uses_fractional_race_equivalents(self):
+        self.assertEqual(_race_equivalent_gps(11), 2.75)
+        self.assertEqual(_race_equivalent_gps(12), 3)
 
-        self.assertEqual(
-            _qualifying_role_gp_counts(team_gp_races, player_gp_roles),
-            {"runner": 2, "bagger": 2},
-        )
+    def test_fractional_role_gps_control_eligibility(self):
+        eligible, reason = _role_eligibility("active", "runner", 2.75, 3)
+        self.assertFalse(eligible)
+        self.assertIn("2.75 of 3", reason)
+        self.assertEqual(_role_eligibility("active", "runner", 3, 3), (True, None))
+
+    def test_role_average_treats_each_four_role_races_as_one_gp(self):
+        self.assertEqual(_role_gp_average(1088, 132), 32.97)
+        self.assertEqual(_role_gp_average(30, 11), 10.91)
+        self.assertEqual(_role_gp_average(30, 12), 10.0)
+        self.assertIsNone(_role_gp_average(0, 0))
 
 
 class StandingsServiceTests(unittest.TestCase):

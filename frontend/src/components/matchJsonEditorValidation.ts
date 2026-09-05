@@ -90,10 +90,22 @@ export type PreviewMetadata = {
   fingerprint: string;
   archive_path: string;
   new_entries: NewEntry[];
+  expected_source_fingerprint?: string;
+  edit_summary?: EditSummary;
+};
+export type EditSummary = {
+  changes: Array<{ path: string; before: unknown; after: unknown }>;
+  records_before: Record<string, number>;
+  records_after: Record<string, number>;
+  record_ids_before: Record<string, number[]>;
+  references_before: Record<string, Array<number | string>>;
+  references_after: Record<string, Array<number | string>>;
+  shared_records_preserved: Record<string, unknown[]>;
+  new_entries: NewEntry[];
 };
 export type PreviewResponse = { match: MatchDetail; preview: PreviewMetadata };
 export type CommitResult = {
-  status: "committed" | "duplicate";
+  status: "committed" | "duplicate" | "updated";
   match_id: number;
   archive_path: string;
   fingerprint: string;
@@ -101,6 +113,7 @@ export type CommitResult = {
   message: string;
   match?: MatchDetail;
   archive_status?: "pending" | "complete" | "repair_required";
+  edit_summary?: EditSummary;
 };
 export type ReviewSubmissionReceipt = {
   receipt: string;

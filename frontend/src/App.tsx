@@ -1,5 +1,5 @@
 import { type JSX, lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import { LeagueProvider } from "./context/LeagueContext";
@@ -64,7 +64,8 @@ export default function App(): JSX.Element {
             <Route path="/json-editor" element={<MatchJsonEditor />} />
             <Route path="/database-health" element={<DatabaseHealthDashboard />} />
             <Route path="/admin/access" element={<AdminAccessPage />} />
-            <Route path="/admin/aliases" element={<AdminAliasManagementPage />} />
+            <Route path="/admin/database" element={<AdminAliasManagementPage />} />
+            <Route path="/admin/aliases" element={<Navigate to="/admin/database" replace />} />
             <Route path="/admin/review-queue" element={<AdminReviewQueuePage />} />
           </Routes>
         </Suspense>

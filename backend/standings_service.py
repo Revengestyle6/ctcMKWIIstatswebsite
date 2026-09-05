@@ -155,22 +155,8 @@ def _rank_records(records, matches):
     return ordered
 
 
-def _qualifying_role_gp_counts(team_gp_races, player_gp_roles):
-    counts = {role: 0 for role in LEADERBOARD_ROLES}
-    for gp_key, team_race_ids in team_gp_races.items():
-        if not team_race_ids:
-            continue
-        roles_by_race = player_gp_roles.get(gp_key, {})
-        required_role_races = math.ceil(len(team_race_ids) / 2)
-        for role in LEADERBOARD_ROLES:
-            role_races = sum(
-                1
-                for race_id, classified_role in roles_by_race.items()
-                if race_id in team_race_ids and classified_role == role
-            )
-            if role_races >= required_role_races:
-                counts[role] += 1
-    return counts
+def _race_equivalent_gps(race_count):
+    return race_count / 4
 
 
 def _role_eligibility(status, role, role_gp_count, required_gps):
@@ -179,9 +165,14 @@ def _role_eligibility(status, role, role_gp_count, required_gps):
     if required_gps <= 0 or role_gp_count < required_gps:
         return (
             False,
-            f"Completed {role_gp_count} of {required_gps} required GPs at least half as {role}",
+            f"Completed {role_gp_count:g} of {required_gps} required race-equivalent GPs as {role}",
         )
     return True, None
+
+
+def _role_gp_average(points, role_race_count):
+    role_gps = _race_equivalent_gps(role_race_count)
+    return round(points / role_gps, 2) if role_gps else None
 
 
 def _player_leaderboard(session, scope, records):
@@ -235,7 +226,6 @@ def _player_leaderboard(session, scope, records):
                 "team_tag": row.clan_tag,
                 "team_status": row.competition_status,
                 "gp_keys": set(),
-                "roles_by_gp_race": defaultdict(dict),
                 "runner_points": 0,
                 "runner_races": 0,
                 "bagger_points": 0,
@@ -246,10 +236,10 @@ def _player_leaderboard(session, scope, records):
         role = classification.get(result.race_player_result_id, "unknown")
         if participated:
             data["gp_keys"].add(gp_key)
-            data["roles_by_gp_race"][gp_key][result.race_id] = role
+            if role in LEADERBOARD_ROLES:
+                data[f"{role}_races"] += 1
         if role in {"runner", "bagger"} and valid_race_score(result.score):
             data[f"{role}_points"] += int(result.score)
-            data[f"{role}_races"] += 1
         canonical_names[result.player_id] = row.canonical_name
 
     display_names = _display_names_for_players(session, canonical_names.keys(), canonical_names)
@@ -258,7 +248,9 @@ def _player_leaderboard(session, scope, records):
         entry_gp_races = team_gp_races[data["team_season_entry_id"]]
         team_gp_count = len(entry_gp_races)
         played_gps = len(data.pop("gp_keys"))
-        role_gp_counts = _qualifying_role_gp_counts(entry_gp_races, data.pop("roles_by_gp_race"))
+        role_gp_counts = {
+            role: _race_equivalent_gps(data[f"{role}_races"]) for role in LEADERBOARD_ROLES
+        }
         required_gps = math.ceil(team_gp_count * 2 / 3)
         status_eligible = data["team_status"] not in INACTIVE_STATUSES
         participation_eligible = played_gps >= required_gps and required_gps > 0
@@ -286,12 +278,8 @@ def _player_leaderboard(session, scope, records):
                 "bagger_gps_played": role_gp_counts["bagger"],
                 "bagger_eligible": role_eligibility["bagger"][0],
                 "bagger_eligibility_reason": role_eligibility["bagger"][1],
-                "runner_gp_average": (
-                    round(data["runner_points"] / played_gps, 2) if played_gps else None
-                ),
-                "bagger_gp_average": (
-                    round(data["bagger_points"] / played_gps, 2) if played_gps else None
-                ),
+                "runner_gp_average": _role_gp_average(data["runner_points"], data["runner_races"]),
+                "bagger_gp_average": _role_gp_average(data["bagger_points"], data["bagger_races"]),
             }
         )
         leaderboard.append(data)

@@ -12,6 +12,7 @@ const LEAGUE_SCOPED_PARAMS = [
   "opponent_team_id",
   "track",
   "track_id",
+  "edit_match",
 ];
 
 interface LeagueContextValue {
