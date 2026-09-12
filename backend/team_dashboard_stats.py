@@ -68,7 +68,6 @@ def _team_identity(session, team, scope):
         key=lambda row: (row.season_number or 0, row.team_season_entry_id),
         reverse=True,
     )
-    latest = entries[0] if entries else None
     scoped_entry = (
         next(
             (
@@ -80,7 +79,7 @@ def _team_identity(session, team, scope):
             None,
         )
         if scope.season_id is not None
-        else latest
+        else None
     )
     return {
         "team_id": team.team_id,
