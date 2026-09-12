@@ -8,6 +8,8 @@ const routes = [
   "/top-tracks",
   "/best-matchups",
   "/matches",
+  "/players",
+  "/teams",
   "/players/180",
   "/teams/41",
   "/json-editor",
@@ -16,6 +18,113 @@ const routes = [
   "/admin/aliases",
   "/admin/review-queue",
 ];
+
+test("navigation supports keyboard menus and preserves league context", async ({ page }) => {
+  await page.goto("/players?league=ctc&season=s2&division=d4");
+  const navigation = page.getByRole("navigation", { name: "Primary navigation" });
+  await expect(navigation.getByRole("link", { name: "Players", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
+  const analytics = navigation.locator("summary").filter({ hasText: "Analytics" });
+  await analytics.focus();
+  await page.keyboard.press("Enter");
+  await expect(navigation.getByRole("link", { name: /Track averages/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(analytics).toBeFocused();
+  await expect(navigation.getByRole("link", { name: /Track averages/ })).not.toBeVisible();
+  await analytics.click();
+  await navigation.getByRole("link", { name: /Track averages/ }).click();
+  await expect(page).toHaveURL(/top-tracks\?league=ctc/);
+  await expect(page.getByRole("heading", { name: "Track Averages", exact: true })).toBeVisible();
+  await expect(navigation.locator("details[open]")).toHaveCount(0);
+});
+
+test("music is optional and its controls work with keyboard input", async ({ page }) => {
+  await page.goto("/?league=ctc");
+  await expect(page.getByText("Start background music?")).toHaveCount(0);
+  await expect(page.locator("audio")).not.toHaveAttribute("src", /.+/);
+  const music = page.locator(".music-trigger");
+  await music.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Play music", exact: true })).toBeVisible();
+  await page.getByLabel("Volume", { exact: true }).fill("0.5");
+  await expect(page.getByLabel("Volume", { exact: true })).toHaveValue("0.5");
+  await page.keyboard.press("Escape");
+  await expect(music).toBeFocused();
+});
+
+test("administrative dialogs cover the navigation and retain confirmation controls", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/session", (route) =>
+    route.fulfill({
+      json: {
+        authenticated: true,
+        admin: { admin_user_id: 1, email: "owner@example.com", role: "owner" },
+      },
+    })
+  );
+  await page.route("**/api/admin/aliases/tracks*", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/admin/matches?*", (route) =>
+    route.fulfill({
+      json: [
+        {
+          match_id: 1,
+          label: "M1 Test match",
+          league: "ctc",
+          season: "s3",
+          division: "d1",
+          match_type: "regular",
+          result_type: "played",
+          match_number: 1,
+          series_match_number: null,
+        },
+      ],
+    })
+  );
+  await page.route("**/api/admin/matches/1/management", (route) =>
+    route.fulfill({
+      json: {
+        source_fingerprint: "test-only",
+        manifest: {
+          match: { match_id: 1, label: "M1 Test match" },
+          records_deleted: {},
+          record_ids_deleted: {},
+          references_updated_not_deleted: {},
+          shared_records_preserved: { teams: [], players: [], tracks: [] },
+          database_additions_from_upload: [],
+        },
+      },
+    })
+  );
+  await page.goto("/admin/database?league=ctc");
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete M1 Test match?" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Delete match", exact: true })).toBeDisabled();
+  // The full-screen backdrop, not the persistent header, must receive pointer input.
+  expect(
+    await page.evaluate(() => {
+      const overlay = document.querySelector('[role="dialog"]')?.parentElement;
+      return overlay?.contains(document.elementFromPoint(8, 8));
+    })
+  ).toBeTruthy();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+});
+
+test("standings fits the viewport and offers direct section links", async ({ page }) => {
+  await page.goto("/standings?league=ctc&season=s3&division=d1");
+  await expect(page.getByRole("heading", { name: "League Table", exact: true })).toBeVisible();
+  const sections = page.getByRole("navigation", { name: "Standings sections" });
+  await sections.getByRole("link", { name: "Playoffs", exact: true }).click();
+  await expect(page).toHaveURL(/#playoffs$/);
+  await expect(page.locator("#playoffs")).toBeInViewport();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+  ).toBeTruthy();
+});
 
 test("standings renders the synchronized competition sections", async ({ page }) => {
   await page.goto("/standings?league=gsc&season=s15&division=d1");
@@ -66,7 +175,6 @@ test("signed-in administrators can update a team competition status from standin
   });
 
   await page.goto("/standings?league=gsc&season=s15&division=d1");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Team Competition Status" })).toBeVisible();
   await page.getByLabel("Status").selectOption("dropped");
   await page.getByRole("button", { name: "Save status" }).click();
@@ -162,7 +270,6 @@ test("alias manager updates a selected team season entry through the shared stat
   });
 
   await page.goto("/admin/aliases?league=gsc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   await page.getByRole("tab", { name: "Teams" }).click();
   await page.getByRole("button", { name: /TT — Test Team/ }).click();
   const statusPanel = page
@@ -218,7 +325,6 @@ test("review queue uses the match label instead of the uploaded filename", async
   );
 
   await page.goto("/admin/review-queue?league=gsc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   await expect(page.getByText("uploaded-table.json")).toHaveCount(0);
   await page.getByRole("button", { name: /M7 Alpha vs Beta/ }).click();
   await expect(page.getByRole("heading", { name: "M7 Alpha vs Beta" })).toBeVisible();
@@ -274,8 +380,6 @@ test("json editor creates a metadata-only free win", async ({ page }) => {
     })
   );
   await page.goto("/json-editor?league=gsc");
-  const dismissWelcome = page.getByRole("button", { name: "No Thanks", exact: true });
-  await dismissWelcome.click();
   const match = {
     league: "gsc",
     season: "s15",
@@ -333,7 +437,6 @@ test("json editor creates a metadata-only free win", async ({ page }) => {
 
 test("json editor validates and loads pasted raw JSON", async ({ page }) => {
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
 
   await page.getByRole("button", { name: "Paste JSON", exact: true }).click();
   const pastedJson = page.getByLabel("Raw match JSON");
@@ -376,7 +479,7 @@ test("a new visit defaults to GSC", async ({ page }) => {
   await page.goto("/");
 
   await expect(page).toHaveURL(/\?league=gsc$/);
-  const selector = page.getByRole("group", { name: "Select league" });
+  const selector = page.getByRole("group", { name: "League", exact: true });
   await expect(selector.locator("button").first()).toHaveAttribute("aria-label", "GSC");
   await expect(page.getByRole("button", { name: "GSC", exact: true })).toHaveAttribute(
     "aria-pressed",
@@ -386,30 +489,21 @@ test("a new visit defaults to GSC", async ({ page }) => {
 
 test("league switch replaces the browser-tab icon", async ({ page }) => {
   await page.goto("/?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   const ctcSelector = page.getByRole("button", { name: "CTC", exact: true });
   const gscSelector = page.getByRole("button", { name: "GSC", exact: true });
   await expect(
-    page.getByRole("group", { name: "Select league" }).locator("button").first()
+    page.getByRole("group", { name: "League", exact: true }).locator("button").first()
   ).toHaveAttribute("aria-label", "GSC");
-  await expect(ctcSelector.getByRole("img")).toHaveAttribute(
-    "src",
-    "/media/leagues/ctc/branding/logo.webp"
-  );
-  await expect(gscSelector.getByRole("img")).toHaveAttribute(
-    "src",
-    "/media/leagues/gsc/branding/logo.webp"
-  );
-  await expect(ctcSelector).toHaveClass(/opacity-100/);
-  await expect(gscSelector).toHaveClass(/opacity-35/);
+  await expect(ctcSelector).toHaveAttribute("aria-pressed", "true");
+  await expect(gscSelector).toHaveAttribute("aria-pressed", "false");
 
   const ctcFavicon = page.locator("#league-favicon");
   await expect(ctcFavicon).toHaveAttribute("data-league", "ctc");
   await expect(ctcFavicon).toHaveAttribute("href", /\/media\/leagues\/ctc\/branding\/logo\.webp$/);
 
   await gscSelector.click();
-  await expect(ctcSelector).toHaveClass(/opacity-35/);
-  await expect(gscSelector).toHaveClass(/opacity-100/);
+  await expect(ctcSelector).toHaveAttribute("aria-pressed", "false");
+  await expect(gscSelector).toHaveAttribute("aria-pressed", "true");
   const gscFavicon = page.locator("#league-favicon");
   await expect(gscFavicon).toHaveAttribute("data-league", "gsc");
   await expect(gscFavicon).toHaveAttribute(
@@ -431,14 +525,17 @@ test("inner-page league switch is placed beside the active league logo", async (
   await expect(switcher.locator("..").getByRole("link", { name: "CTC home" })).toBeVisible();
 });
 
-test("administrator access has a league-themed Back link", async ({ page }) => {
+test("administrator access keeps league-aware navigation available", async ({ page }) => {
   await page.goto("/admin/access?league=gsc");
-
-  const backLink = page.getByRole("link", { name: "Back", exact: true });
-  await expect(backLink).toBeVisible();
-  await expect(backLink).toHaveAttribute("href", "/?league=gsc");
-  await expect(backLink).toHaveClass(/league-accent-text/);
-  await expect(backLink).toHaveCSS("color", "rgb(251, 191, 36)");
+  const home = page
+    .getByRole("navigation", { name: "Primary navigation" })
+    .getByRole("link", { name: "Home", exact: true });
+  await expect(home).toHaveAttribute("href", "/?league=gsc");
+  const admin = page.getByRole("navigation", { name: "Administration", exact: true });
+  await expect(admin.getByRole("link", { name: "Database management" })).toHaveAttribute(
+    "href",
+    "/admin/database?league=gsc"
+  );
 });
 
 for (const route of routes) {
@@ -507,7 +604,6 @@ test("authorized JSON editor users can upload directly or submit to the review q
     });
   });
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Team Competition Status" })).toHaveCount(0);
   await page
     .locator('input[type="file"]')
@@ -531,14 +627,12 @@ test("authorized JSON editor users can upload directly or submit to the review q
 
 test("match history loads regular-season data directly after all matches", async ({ page }) => {
   await page.goto("/matches?league=ctc&season=s3&division=d1&match_set=all");
-  const dismissWelcome = page.getByRole("button", { name: "No Thanks", exact: true });
-  await dismissWelcome.click();
 
   const matchSelection = page.getByLabel("Match", { exact: true });
   await expect(matchSelection).toBeEnabled();
   const firstRegularMatch = matchSelection
     .locator("option")
-    .filter({ hasText: /^W\d+ - / })
+    .filter({ hasText: /^(?:W|M)\d+ - / })
     .first();
   const firstRegularMatchId = await firstRegularMatch.getAttribute("value");
   expect(firstRegularMatchId).not.toBeNull();
@@ -549,7 +643,7 @@ test("match history loads regular-season data directly after all matches", async
 
   await expect(page).not.toHaveURL(/match_set=/);
   await expect(matchSelection).toBeEnabled();
-  await expect(matchSelection.locator("option:checked")).toHaveText(/^W\d+ - /);
+  await expect(matchSelection.locator("option:checked")).toHaveText(/^(?:W|M)\d+ - /);
   await expect(page.getByText(/S3 \/ D1 \/ Match \d+/)).toBeVisible();
 });
 
@@ -557,7 +651,6 @@ test("json editor changes a misplaced player's team and deletes the accidental t
   page,
 }) => {
   await page.goto("/json-editor");
-  await page.getByRole("button", { name: "No Thanks" }).click();
   const match = {
     title_str: "#title 2 races\n",
     format: "5v5",
@@ -641,7 +734,6 @@ test("json editor changes a misplaced player's team and deletes the accidental t
 
 test("json editor flags missing required metadata before review", async ({ page }) => {
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks" }).click();
   const match = {
     title_str: "#title 2 races\n",
     format: "5v5",
@@ -688,7 +780,6 @@ test("json editor ignores positionless substitution artifacts when every racer f
   page,
 }) => {
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
 
   const scoreByPosition = [15, 12, 10, 8, 6, 4, 3, 2, 1, 0];
   const player = (name: string, positions: Array<number | null>, scores: number[]) => ({
@@ -775,7 +866,6 @@ test("json editor ignores positionless substitution artifacts when every racer f
 
 test("json editor detects every positionless DC award in reduced rooms", async ({ page }) => {
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
 
   const scoresByRoomSize = {
     8: [15, 11, 8, 6, 4, 2, 1, 0],
@@ -854,7 +944,6 @@ test("json editor detects every positionless DC award in reduced rooms", async (
 
 test("json editor locks a three-team semifinal to Series 1", async ({ page }) => {
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
 
   const match = {
     title_str: "#title 1 races\n",

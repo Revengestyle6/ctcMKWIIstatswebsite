@@ -5,8 +5,8 @@ import { fetchCachedJson, fetchJson, fetchTeamScopes, prefetchMatchSetVariants }
 import { useLeague } from "../context/LeagueContext";
 import type { LegacyTeamRosterPlayer, LegacyTeamTrackRow, PlayerRoleMode } from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
-import { LegacyStatHeader } from "./LegacyStatHeader";
 import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
+import { PageHeader } from "./PageHeader";
 import { RoleModeToggle } from "./RoleModeToggle";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
@@ -203,15 +203,14 @@ export default function TopTeamPlayers(): React.JSX.Element {
 
   return (
     <div className="relative min-h-screen p-6 font-sans text-white">
-      <LegacyStatHeader title="Team Statistics" />
-
-      <div className="mx-auto max-w-6xl pt-24">
+      <div className="mx-auto max-w-6xl pt-0">
+        <PageHeader title="Team Statistics" />
         {(scopeError || playersError || tracksError) && (
           <p className="mb-4 text-center text-red-400">
             {scopeError || playersError || tracksError}
           </p>
         )}
-        <div className="mb-6 rounded-xl border border-white/15 bg-black/45 p-5 shadow-lg backdrop-blur-sm">
+        <div className="filter-panel mb-6">
           <p className="mb-4 text-sm text-gray-300">
             Compare a team&apos;s player production and strongest tracks.
           </p>
@@ -330,7 +329,7 @@ function PlayerTable({
         Top {role === "runner" ? "Runners" : "Baggers"}
       </h2>
       <div className="overflow-x-auto rounded-lg border border-white/10 shadow-lg">
-        <table className="min-w-full bg-black/70 text-sm tabular-nums backdrop-blur-sm">
+        <table className="min-w-full ui-surface text-sm tabular-nums backdrop-blur-sm">
           <thead className="bg-black/90">
             <tr>
               <th scope="col" className="px-4 py-3 text-left">
@@ -387,7 +386,7 @@ function PlayerTable({
               return (
                 <tr
                   key={row.player_id}
-                  className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}
+                  className={`${index % 2 === 0 ? "bg-black/50" : "ui-surface"} transition-colors hover:bg-blue-950/40`}
                 >
                   <td className="whitespace-nowrap px-4 py-3 font-semibold">
                     <Link
@@ -440,7 +439,7 @@ function TeamTrackTable({ rows }: { rows: LegacyTeamTrackRow[] }) {
     <section className="mb-8">
       <h2 className="mb-4 text-center text-2xl font-bold">Top Team Tracks</h2>
       <div className="overflow-x-auto rounded-lg border border-white/10 shadow-lg">
-        <table className="min-w-full bg-black/70 text-sm tabular-nums backdrop-blur-sm">
+        <table className="min-w-full ui-surface text-sm tabular-nums backdrop-blur-sm">
           <thead className="bg-black/90">
             <tr>
               <th scope="col" className="px-4 py-3 text-left">
@@ -458,7 +457,7 @@ function TeamTrackTable({ rows }: { rows: LegacyTeamTrackRow[] }) {
             {rows.map((row, index) => (
               <tr
                 key={row.track}
-                className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}
+                className={`${index % 2 === 0 ? "bg-black/50" : "ui-surface"} transition-colors hover:bg-blue-950/40`}
               >
                 <td className="px-4 py-3 font-semibold text-blue-200">{row.track}</td>
                 <td className="px-4 py-3 text-right">{value(row.average)}</td>

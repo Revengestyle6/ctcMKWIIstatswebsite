@@ -23,9 +23,7 @@ import {
 } from "../api";
 import { useLeague } from "../context/LeagueContext";
 import { useAdminSession } from "../hooks/useAdminSession";
-import { BackToHomeLink } from "./BackToHomeLink";
 import ExistingPlayerPicker from "./ExistingPlayerPicker";
-import { LeagueHeaderControls } from "./LeagueHeaderControls";
 import {
   type ChartMode,
   type MatchDetail,
@@ -1742,14 +1740,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
       <div className="mx-auto max-w-[92rem]">
         <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <BackToHomeLink className="-ml-2" />
             <h1 className="mt-2 text-3xl font-bold">
               {editMatchId ? `Edit Match ${editMatchId}` : "Match JSON Editor"}
             </h1>
             <p className="text-sm text-gray-300">{fileName}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {!editMatchId ? <LeagueHeaderControls className="mr-1" /> : null}
             <input
               ref={fileInput}
               type="file"
@@ -1838,7 +1834,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
           <section
             id="paste-json-panel"
             aria-label="Paste match JSON"
-            className="mb-4 rounded-lg border border-blue-300/25 bg-zinc-950/90 p-4 shadow-2xl"
+            className="mb-4 rounded-lg border border-blue-300/25 ui-surface p-4 shadow-2xl"
           >
             <label htmlFor="raw-match-json" className="text-sm font-semibold text-gray-200">
               Raw match JSON

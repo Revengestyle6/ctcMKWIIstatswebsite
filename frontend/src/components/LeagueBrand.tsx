@@ -19,7 +19,7 @@ export function LeagueLogoImage({
       <span
         role="img"
         aria-label={`${config.name} logo placeholder`}
-        className={`${className} inline-flex items-center justify-center rounded-md border border-white/20 bg-black/70 text-xs font-black tracking-tight league-accent-text`}
+        className={`${className} inline-flex items-center justify-center rounded-md border border-white/20 ui-surface text-xs font-black tracking-tight league-accent-text`}
       >
         {config.shortName}
       </span>

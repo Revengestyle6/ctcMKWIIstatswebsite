@@ -4,8 +4,6 @@ import { useSearchParams } from "react-router-dom";
 import { fetchCachedJson, fetchJson, fetchPlayoffSeries, type PlayoffSeriesSummary } from "../api";
 import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
-import { BackToHomeLink } from "./BackToHomeLink";
-import { LeagueHeaderControls } from "./LeagueHeaderControls";
 import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
 import {
   type ChartMode,
@@ -21,6 +19,7 @@ import {
   teamColor,
   VerticalScorecard,
 } from "./matchHistoryViews";
+import { PageHeader } from "./PageHeader";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
 export {
@@ -175,18 +174,11 @@ export default function MatchHistory(): React.JSX.Element {
 
   return (
     <div className="relative min-h-screen text-white font-sans p-6">
-      <div className="fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-sm p-4 z-50">
-        <div className="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-2">
-          <BackToHomeLink />
-          <h1 className="text-center text-xl font-bold sm:text-3xl">Match History</h1>
-          <LeagueHeaderControls logoClassName="h-12 w-12" />
-        </div>
-      </div>
-
-      <div className="pt-24 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto">
+        <PageHeader title="Match History" />
         {combinedError && <p className="mb-4 text-center text-red-300">{combinedError}</p>}
 
-        <div className="mb-6 flex flex-col gap-4 rounded-md border border-white/10 bg-black/55 p-4 md:flex-row md:items-end">
+        <div className="filter-panel mb-6 flex flex-col flex-wrap gap-4 md:flex-row md:items-end">
           <SeasonDivisionSelector
             season={season}
             division={division}
@@ -264,7 +256,7 @@ export default function MatchHistory(): React.JSX.Element {
         </div>
 
         {selectedSummary?.match_type === "playoff" && playoffSeries.length > 0 && (
-          <section className="mb-6 rounded-md border border-white/10 bg-black/65 p-4">
+          <section className="mb-6 rounded-md border border-white/10 ui-surface p-4">
             <h2 className="text-lg font-bold">Playoff series</h2>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               {playoffSeries.map((series) => (
@@ -372,17 +364,17 @@ export default function MatchHistory(): React.JSX.Element {
                       <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-300">
                         Table format
                       </span>
-                      <div className="inline-flex overflow-hidden rounded-md border border-white/20 bg-black/40">
+                      <div className="segmented-control">
                         <button
                           type="button"
-                          className={`px-3 py-1.5 text-sm font-semibold ${tableMode === "traditional" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
+                          aria-pressed={tableMode === "traditional"}
                           onClick={() => setTableMode("traditional")}
                         >
                           Traditional
                         </button>
                         <button
                           type="button"
-                          className={`px-3 py-1.5 text-sm font-semibold ${tableMode === "vertical" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
+                          aria-pressed={tableMode === "vertical"}
                           onClick={() => setTableMode("vertical")}
                         >
                           Vertical
@@ -393,17 +385,17 @@ export default function MatchHistory(): React.JSX.Element {
                       <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-300">
                         Diff chart
                       </span>
-                      <div className="inline-flex overflow-hidden rounded-md border border-white/20 bg-black/40">
+                      <div className="segmented-control">
                         <button
                           type="button"
-                          className={`px-3 py-1.5 text-sm font-semibold ${chartMode === "cumulative" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
+                          aria-pressed={chartMode === "cumulative"}
                           onClick={() => setChartMode("cumulative")}
                         >
                           Cumulative
                         </button>
                         <button
                           type="button"
-                          className={`px-3 py-1.5 text-sm font-semibold ${chartMode === "perRace" ? "bg-blue-500 text-white" : "text-gray-200 hover:bg-white/10"}`}
+                          aria-pressed={chartMode === "perRace"}
                           onClick={() => setChartMode("perRace")}
                         >
                           Per race

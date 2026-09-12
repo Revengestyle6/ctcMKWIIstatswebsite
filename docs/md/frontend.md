@@ -34,8 +34,11 @@ is in the [local development startup runbook](local-development-startup.md).
 - `/json-editor`: match entry, validation, preview, and upload
 - `/database-health`: integrity and review dashboard
 
-`BackgroundSlideshow` and `MusicPlayer` render globally. Public media remains an
-intentional product asset and is not duplicated in source.
+`SiteHeader` provides persistent league-aware navigation and optional `MusicPlayer`
+controls. `LeagueBackdrop` uses a quiet, static image from the existing media assets.
+Public media remains an intentional product asset and is not duplicated in source.
+See the [design audit and UI conventions](design-audit.md) for the navigation catalog,
+shared presentation components, and guidelines for extending analytics.
 
 ## API Client
 

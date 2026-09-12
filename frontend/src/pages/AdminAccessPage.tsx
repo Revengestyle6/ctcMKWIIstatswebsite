@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 
 import { fetchJson, patchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
-import { BackToHomeLink } from "../components/BackToHomeLink";
-import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import { useAdminSession } from "../hooks/useAdminSession";
 
 type AdminUser = {
@@ -91,17 +89,15 @@ export default function AdminAccessPage(): React.JSX.Element {
   };
 
   return (
-    <main className="relative z-10 min-h-screen bg-black/85 px-5 py-8 text-white sm:px-8">
+    <main className="relative min-h-screen px-5 py-8 text-white sm:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <BackToHomeLink className="-ml-2 mb-1" />
             <p className="text-sm uppercase text-blue-200">Restricted administration</p>
             <h1 className="text-3xl font-bold">Administrator Access</h1>
           </div>
-          <LeagueHeaderControls />
         </header>
-        <section className="border border-white/15 bg-zinc-950/90 p-5">
+        <section className="border border-white/15 ui-surface p-5">
           <AdminSessionPanel {...auth} />
         </section>
         {auth.session?.authenticated ? (
@@ -144,7 +140,7 @@ export default function AdminAccessPage(): React.JSX.Element {
         {auth.session?.authenticated && instructions ? (
           <section className="grid gap-5 lg:grid-cols-2">
             {(["database", "repository"] as const).map((key) => (
-              <article key={key} className="border border-white/15 bg-zinc-950/90 p-5">
+              <article key={key} className="border border-white/15 ui-surface p-5">
                 <h2 className="text-xl font-bold capitalize">{key} onboarding</h2>
                 <p className="mt-2 text-gray-300">{instructions[key].summary}</p>
                 <ol className="mt-4 space-y-2">
@@ -161,7 +157,7 @@ export default function AdminAccessPage(): React.JSX.Element {
           </section>
         ) : null}
         {isOwner ? (
-          <section className="border border-white/15 bg-zinc-950/90 p-5">
+          <section className="border border-white/15 ui-surface p-5">
             <h2 className="text-xl font-bold">Application administrators</h2>
             <div className="mt-4 flex flex-wrap gap-2">
               <input

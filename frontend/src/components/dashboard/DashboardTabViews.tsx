@@ -10,12 +10,22 @@ function value(value: number | null, suffix = ""): string {
 export function TabState({ loading, error }: { loading: boolean; error: string }) {
   if (error)
     return (
-      <div className="rounded-md border border-rose-400/40 bg-rose-950/80 px-4 py-5 text-rose-100">
+      <div
+        role="alert"
+        className="rounded-md border border-rose-400/40 bg-rose-950/80 px-4 py-5 text-rose-100"
+      >
         {error}
       </div>
     );
   if (loading)
-    return <div className="h-48 animate-pulse rounded-md border border-white/10 bg-white/5" />;
+    return (
+      <div
+        role="status"
+        className="h-48 animate-pulse rounded-md border border-white/10 bg-white/5"
+      >
+        <span className="sr-only">Loading results…</span>
+      </div>
+    );
   return null;
 }
 
@@ -92,7 +102,7 @@ export function PlayerPerformanceView({ data }: { data: PlayerPerformance }) {
       <MetricGrid items={metricItems} />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-md border border-white/10 bg-black/70 p-5">
+        <section className="rounded-md border border-white/10 ui-surface p-5">
           <h3 className="text-lg font-bold">Role coverage</h3>
           <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <div className="flex justify-between border-b border-white/10 pb-2">
@@ -132,7 +142,7 @@ export function PlayerPerformanceView({ data }: { data: PlayerPerformance }) {
           </details>
         </section>
 
-        <section className="rounded-md border border-white/10 bg-black/70 p-5">
+        <section className="rounded-md border border-white/10 ui-surface p-5">
           <h3 className="mb-4 text-lg font-bold">
             {isRunner ? "Runner" : "Bagger"} score distribution
           </h3>
@@ -147,7 +157,7 @@ export function PlayerPerformanceView({ data }: { data: PlayerPerformance }) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
+        <section className="overflow-hidden rounded-md border border-white/10 ui-surface">
           <h3 className="border-b border-white/10 px-5 py-4 text-lg font-bold">
             {isRunner ? "Runner" : "Bagger"} scoring by race number
           </h3>
@@ -172,7 +182,7 @@ export function PlayerPerformanceView({ data }: { data: PlayerPerformance }) {
             </table>
           </div>
         </section>
-        <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
+        <section className="overflow-hidden rounded-md border border-white/10 ui-surface">
           <h3 className="border-b border-white/10 px-5 py-4 text-lg font-bold">
             {isRunner ? "Runner" : "Bagger"} scoring by GP
           </h3>
@@ -230,7 +240,7 @@ export function PlayerTracksView({ data }: { data: PlayerTracks }) {
   }, [data.tracks, query, sort]);
   const isRunner = data.role === "runner";
   return (
-    <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
+    <section className="overflow-hidden rounded-md border border-white/10 ui-surface">
       <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row">
         <input
           className="min-h-10 flex-1 rounded-md border border-white/20 bg-zinc-950 px-3 text-white"
@@ -258,7 +268,7 @@ export function PlayerTracksView({ data }: { data: PlayerTracks }) {
         <div className="overflow-x-auto">
           {isRunner ? (
             <table className="min-w-[820px] w-full text-sm">
-              <thead className="bg-black/70 text-left text-gray-400">
+              <thead className="ui-surface text-left text-gray-400">
                 <tr>
                   <th className="px-4 py-3">Track</th>
                   <th className="px-4 py-3 text-right">Points/race</th>
@@ -292,7 +302,7 @@ export function PlayerTracksView({ data }: { data: PlayerTracks }) {
             </table>
           ) : (
             <table className="min-w-[880px] w-full text-sm">
-              <thead className="bg-black/70 text-left text-gray-400">
+              <thead className="ui-surface text-left text-gray-400">
                 <tr>
                   <th className="px-4 py-3">Track</th>
                   <th className="px-4 py-3 text-right">Points/bagging race</th>
@@ -388,7 +398,7 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
   };
 
   return (
-    <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
+    <section className="overflow-hidden rounded-md border border-white/10 ui-surface">
       <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-gray-300">
         <p>
           <span className="font-semibold text-white">{roleLabel} role coverage:</span>{" "}
@@ -436,7 +446,7 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
       ) : isRunner ? (
         <div className="overflow-x-auto">
           <table className="min-w-[940px] w-full text-sm">
-            <thead className="bg-black/70 text-left text-gray-400">
+            <thead className="ui-surface text-left text-gray-400">
               <tr>
                 <th className="px-4 py-3">Player</th>
                 <th className="px-4 py-3">Friend codes</th>
@@ -487,7 +497,7 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-[1160px] w-full text-sm">
-            <thead className="bg-black/70 text-left text-gray-400">
+            <thead className="ui-surface text-left text-gray-400">
               <tr>
                 <th className="px-4 py-3">Player</th>
                 <th className="px-4 py-3">Friend codes</th>
@@ -572,7 +582,7 @@ export function TeamTracksView({ data }: { data: TeamTracks }) {
     );
   }, [data.tracks, query, sort]);
   return (
-    <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
+    <section className="overflow-hidden rounded-md border border-white/10 ui-surface">
       <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row">
         <input
           className="min-h-10 flex-1 rounded-md border border-white/20 bg-zinc-950 px-3 text-white"
@@ -598,7 +608,7 @@ export function TeamTracksView({ data }: { data: TeamTracks }) {
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-[640px] w-full text-sm">
-            <thead className="bg-black/70 text-left text-gray-400">
+            <thead className="ui-surface text-left text-gray-400">
               <tr>
                 <th className="px-4 py-3">Track</th>
                 <th className="px-4 py-3 text-right">Team average</th>

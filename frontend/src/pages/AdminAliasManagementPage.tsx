@@ -6,8 +6,6 @@ import AdminSessionPanel from "../components/AdminSessionPanel";
 import AdminMatchManager from "../components/admin/AdminMatchManager";
 import TeamIdentityManager from "../components/admin/TeamIdentityManager";
 import TeamLogoManager from "../components/admin/TeamLogoManager";
-import { BackToHomeLink } from "../components/BackToHomeLink";
-import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import { useLeague } from "../context/LeagueContext";
 import { useAdminSession } from "../hooks/useAdminSession";
 
@@ -1046,11 +1044,10 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
   };
 
   return (
-    <main className="relative z-10 min-h-screen bg-black/85 px-5 py-8 text-white sm:px-8">
+    <main className="relative min-h-screen px-5 py-8 text-white sm:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <BackToHomeLink className="-ml-2 mb-1" />
             <p className="text-sm uppercase text-blue-200">Restricted administration</p>
             <h1 className="text-3xl font-bold">Database Management</h1>
             <p className="mt-2 max-w-3xl text-gray-300">
@@ -1063,11 +1060,10 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                 Admin access
               </Link>
             </nav>
-            <LeagueHeaderControls />
           </div>
         </header>
 
-        <section className="border border-white/15 bg-zinc-950/90 p-5">
+        <section className="border border-white/15 ui-surface p-5">
           <AdminSessionPanel {...auth} />
         </section>
 
@@ -1087,7 +1083,7 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
             <section
               id="alias-management"
               aria-labelledby="alias-management-heading"
-              className="border border-white/15 bg-zinc-950/90 p-4"
+              className="border border-white/15 ui-surface p-4"
             >
               <div className="mb-4">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">
@@ -1138,7 +1134,7 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
             </section>
 
             <div className="grid gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.4fr)]">
-              <section className="border border-white/15 bg-zinc-950/90 p-4">
+              <section className="border border-white/15 ui-surface p-4">
                 {entityType === "tracks" ? (
                   <fieldset className="mb-4">
                     <legend className="mb-2 text-sm font-bold text-gray-200">Track league</legend>
@@ -1200,7 +1196,7 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                 </div>
               </section>
 
-              <section className="border border-white/15 bg-zinc-950/90 p-5">
+              <section className="border border-white/15 ui-surface p-5">
                 {selected ? (
                   <>
                     <div className="flex flex-wrap items-center gap-3">

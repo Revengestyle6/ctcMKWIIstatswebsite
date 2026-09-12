@@ -31,8 +31,13 @@ function DirectoryTable({
       title={title}
       identity={
         <div>
-          <h2 className="text-3xl font-bold">{title}</h2>
-          <p className="mt-1 text-sm text-gray-400">{count} entries in the selected scope</p>
+          <p className="text-sm text-gray-300">
+            Choose a season and division, then open a dashboard to explore career and season
+            results.
+          </p>
+          <p role="status" className="mt-1 text-sm text-gray-400">
+            {loading ? "Loading entries…" : `${count} entries in the selected scope`}
+          </p>
         </div>
       }
       controls={controls}
@@ -103,6 +108,8 @@ export function PlayerDirectory() {
         Search
         <input
           className="min-h-10 rounded-md border border-white/20 bg-zinc-950 px-3 text-white"
+          type="search"
+          placeholder="Name, friend code, or team tag"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -118,24 +125,36 @@ export function PlayerDirectory() {
       count={filtered.length}
       controls={controls}
     >
-      <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
+      <section className="overflow-hidden rounded-md border border-white/10 ui-surface">
         {filtered.length === 0 ? (
           <p className="p-8 text-center text-gray-400">No players found.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-[640px] w-full text-sm">
-              <thead className="bg-black/70 text-left text-gray-400">
+            <table className="w-full text-sm">
+              <thead className="ui-surface text-left text-gray-400">
                 <tr>
                   <th className="px-4 py-3">Player</th>
                   <th className="px-4 py-3">Teams</th>
-                  <th className="px-4 py-3">Primary friend code</th>
+                  <th className="hidden px-4 py-3 sm:table-cell">Primary friend code</th>
                   <th className="px-4 py-3 text-right">Dashboard</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((player) => (
                   <tr key={player.player_id} className="border-t border-white/10">
-                    <td className="px-4 py-3 font-semibold">{player.name}</td>
+                    <td className="px-4 py-3">
+                      <Link
+                        to={leaguePath(
+                          `/players/${player.player_id}?season=${scope.season}&division=${scope.division}`
+                        )}
+                        className="font-semibold hover:underline"
+                      >
+                        {player.name}
+                      </Link>
+                      <span className="mt-1 block text-xs text-gray-400 sm:hidden">
+                        {player.primary_friend_code ?? "No friend code"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       {player.teams.map((team) => (
                         <Link
@@ -149,13 +168,16 @@ export function PlayerDirectory() {
                         </Link>
                       ))}
                     </td>
-                    <td className="px-4 py-3 text-gray-400">{player.primary_friend_code ?? "-"}</td>
+                    <td className="hidden px-4 py-3 text-gray-400 sm:table-cell">
+                      {player.primary_friend_code ?? "-"}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         to={leaguePath(
                           `/players/${player.player_id}?season=${scope.season}&division=${scope.division}`
                         )}
-                        className="font-semibold text-blue-300 hover:text-blue-200"
+                        aria-label={`Open ${player.name} dashboard`}
+                        className="directory-open league-accent-text"
                       >
                         Open &rarr;
                       </Link>
@@ -215,6 +237,8 @@ export function TeamDirectory() {
         Search
         <input
           className="min-h-10 rounded-md border border-white/20 bg-zinc-950 px-3 text-white"
+          type="search"
+          placeholder="Team name or tag"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -230,13 +254,13 @@ export function TeamDirectory() {
       count={teams.length}
       controls={controls}
     >
-      <section className="overflow-hidden rounded-md border border-white/10 bg-black/70">
+      <section className="overflow-hidden rounded-md border border-white/10 ui-surface">
         {teams.length === 0 ? (
           <p className="p-8 text-center text-gray-400">No teams found.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-[560px] w-full text-sm">
-              <thead className="bg-black/70 text-left text-gray-400">
+            <table className="w-full text-sm">
+              <thead className="ui-surface text-left text-gray-400">
                 <tr>
                   <th className="px-4 py-3">Tag</th>
                   <th className="px-4 py-3">Team</th>
@@ -247,13 +271,23 @@ export function TeamDirectory() {
                 {teams.map((team) => (
                   <tr key={team.team_id} className="border-t border-white/10">
                     <td className="px-4 py-3 text-xl font-bold text-blue-300">{team.clan_tag}</td>
-                    <td className="px-4 py-3 font-semibold">{team.display_name}</td>
+                    <td className="px-4 py-3 font-semibold">
+                      <Link
+                        to={leaguePath(
+                          `/teams/${team.team_id}?season=${scope.season}&division=${scope.division}`
+                        )}
+                        className="hover:underline"
+                      >
+                        {team.display_name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         to={leaguePath(
                           `/teams/${team.team_id}?season=${scope.season}&division=${scope.division}`
                         )}
-                        className="font-semibold text-blue-300 hover:text-blue-200"
+                        aria-label={`Open ${team.display_name} dashboard`}
+                        className="directory-open league-accent-text"
                       >
                         Open &rarr;
                       </Link>

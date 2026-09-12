@@ -203,7 +203,7 @@ export default function PlayerDashboard() {
         identity={<div className="h-24 animate-pulse rounded-md bg-white/5" />}
         controls={<div className="h-16 animate-pulse rounded-md bg-white/5" />}
       >
-        <div className="rounded-md border border-white/10 bg-black/70 p-8 text-center text-gray-300">
+        <div className="rounded-md border border-white/10 ui-surface p-8 text-center text-gray-300">
           {error || "Loading player dashboard..."}
         </div>
       </DashboardShell>
@@ -392,7 +392,7 @@ export default function PlayerDashboard() {
           <MetricGrid items={metricItems} />
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
-            <section className="rounded-md border border-white/10 bg-black/70 p-5 backdrop-blur-sm">
+            <section className="rounded-md border border-white/10 ui-surface p-5 backdrop-blur-sm">
               <h3 className="text-lg font-bold">Match record</h3>
               <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                 <div>
@@ -426,7 +426,7 @@ export default function PlayerDashboard() {
               )}
             </section>
 
-            <section className="rounded-md border border-white/10 bg-black/70 p-5 backdrop-blur-sm">
+            <section className="rounded-md border border-white/10 ui-surface p-5 backdrop-blur-sm">
               <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-lg font-bold">Recent {roleLabel} scoring</h3>
                 <p className="text-xs text-gray-500">
@@ -443,7 +443,7 @@ export default function PlayerDashboard() {
             </section>
           </div>
 
-          <section className="mt-6 overflow-hidden rounded-md border border-white/10 bg-black/70 backdrop-blur-sm">
+          <section className="mt-6 overflow-hidden rounded-md border border-white/10 ui-surface backdrop-blur-sm">
             <div className="border-b border-white/10 px-5 py-4">
               <h3 className="text-lg font-bold">Recent matches</h3>
             </div>
@@ -452,7 +452,7 @@ export default function PlayerDashboard() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-[760px] w-full text-sm">
-                  <thead className="bg-black/70 text-left text-gray-400">
+                  <thead className="ui-surface text-left text-gray-400">
                     <tr>
                       <th className="px-4 py-3">Scope</th>
                       <th className="px-4 py-3">Match</th>

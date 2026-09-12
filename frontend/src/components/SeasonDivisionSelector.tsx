@@ -1,4 +1,5 @@
 import type React from "react";
+import { useId } from "react";
 import { type DivisionOption, formatDivisionName, type SeasonOption } from "../api";
 
 interface SeasonDivisionSelectorProps {
@@ -22,15 +23,16 @@ export default function SeasonDivisionSelector({
   onDivisionChange,
   className = "",
 }: SeasonDivisionSelectorProps): React.JSX.Element {
+  const id = useId();
   return (
-    <div className={`flex flex-col sm:flex-row gap-4 ${className}`}>
+    <div className={`scope-selector ${className}`}>
       <div>
-        <label htmlFor="season-selector" className="block font-semibold mb-1">
+        <label htmlFor={`${id}-season`} className="block text-sm font-semibold mb-1 text-gray-300">
           Season
         </label>
         <select
-          id="season-selector"
-          className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-40"
+          id={`${id}-season`}
+          className="ui-input w-full"
           value={season}
           onChange={(event) => onSeasonChange(event.target.value)}
           disabled={disabled || seasons.length === 0}
@@ -44,12 +46,15 @@ export default function SeasonDivisionSelector({
       </div>
 
       <div>
-        <label htmlFor="division-selector" className="block font-semibold mb-1">
+        <label
+          htmlFor={`${id}-division`}
+          className="block text-sm font-semibold mb-1 text-gray-300"
+        >
           Division
         </label>
         <select
-          id="division-selector"
-          className="px-4 py-2 rounded-md border border-gray-400 bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-40"
+          id={`${id}-division`}
+          className="ui-input w-full"
           value={division}
           onChange={(event) => onDivisionChange(event.target.value)}
           disabled={disabled || divisions.length === 0}

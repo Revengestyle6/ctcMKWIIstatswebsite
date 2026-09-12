@@ -59,7 +59,7 @@ export default function TeamCompetitionStatusManager({
   }
 
   return (
-    <section className="mb-5 rounded-lg border border-amber-300/25 bg-zinc-950/90 p-4 shadow-2xl">
+    <section className="mb-5 rounded-lg border border-amber-300/25 ui-surface p-4 shadow-2xl">
       <div className="mb-3">
         <p className="text-xs font-bold uppercase tracking-widest text-amber-300">Admin control</p>
         <h2 className="text-xl font-bold">Team Competition Status</h2>

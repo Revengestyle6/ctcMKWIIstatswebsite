@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchJson, resolveAssetUrl, type TeamScope } from "../api";
-import { BackToHomeLink } from "../components/BackToHomeLink";
-import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
+import { PageHeader } from "../components/PageHeader";
 import SeasonDivisionSelector from "../components/SeasonDivisionSelector";
 import TeamCompetitionStatusManager from "../components/TeamCompetitionStatusManager";
 import { useLeague } from "../context/LeagueContext";
@@ -156,7 +155,7 @@ function StandingsTable({ standings }: { standings: Standing[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[760px] border-collapse text-sm">
-        <thead className="league-accent-bg text-black">
+        <thead className="table-heading">
           <tr>
             <th className="px-3 py-3 text-left">#</th>
             <th className="border-l border-black/20 px-3 py-3 text-left">Team</th>
@@ -248,7 +247,7 @@ function MatchupMatrix({ standings, matches }: { standings: Standing[]; matches:
             {standings.map((team) => (
               <th
                 key={team.team_season_entry_id}
-                className="min-w-28 border border-white/10 bg-black/70 px-2 py-2"
+                className="min-w-28 border border-white/10 ui-surface px-2 py-2"
               >
                 {team.tag}
               </th>
@@ -405,9 +404,9 @@ function PlayerLeaderboard({
           </div>
         </fieldset>
       </div>
-      <div className="overflow-hidden rounded-md border border-white/10">
+      <div className="overflow-x-auto rounded-md border border-white/10">
         <table className="w-full text-sm">
-          <thead className="league-accent-bg text-black">
+          <thead className="table-heading">
             <tr>
               <th className="px-2 py-2">#</th>
               <th className="border-l border-black/20 px-2 py-2 text-left">Player</th>
@@ -628,40 +627,37 @@ export default function StandingsPage(): React.JSX.Element {
   return (
     <main className="relative min-h-screen px-4 py-8 text-white sm:px-6">
       <div className="mx-auto max-w-[96rem]">
-        <header className="mb-5 rounded-xl border border-white/10 bg-black/70 p-5 shadow-2xl backdrop-blur-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <BackToHomeLink className="-ml-2" />
-              <p className="mt-3 text-xs font-bold uppercase tracking-[0.25em] league-accent-text">
-                {config.shortName} competition
-              </p>
-              <h1 className="mt-1 text-3xl font-black sm:text-4xl">Divisional Standings</h1>
-              <p className="mt-2 max-w-2xl text-sm text-gray-300">
-                League table, head-to-head score grid, eligible GP averages, and playoff progress in
-                one view.
-              </p>
-            </div>
-            <LeagueHeaderControls logoClassName="h-16 w-16" />
-          </div>
-          <div className="mt-5 max-w-xl">
-            <SeasonDivisionSelector
-              season={scope.season}
-              division={scope.division}
-              seasons={scope.seasons}
-              divisions={scope.divisions}
-              disabled={scope.loadingScope}
-              onSeasonChange={(season) => {
-                scope.setSeason(season);
-                scope.setDivision("");
-                updateScope(season, "");
-              }}
-              onDivisionChange={(division) => {
-                scope.setDivision(division);
-                updateScope(scope.season, division);
-              }}
-            />
-          </div>
-        </header>
+        <PageHeader
+          title="Divisional Standings"
+          description={`${config.shortName} league tables, player averages, and playoff progress.`}
+        />
+        <section
+          className="filter-panel mb-6 flex flex-wrap items-end justify-between gap-4"
+          aria-label="Standings filters"
+        >
+          <SeasonDivisionSelector
+            season={scope.season}
+            division={scope.division}
+            seasons={scope.seasons}
+            divisions={scope.divisions}
+            disabled={scope.loadingScope}
+            onSeasonChange={(season) => {
+              scope.setSeason(season);
+              scope.setDivision("");
+              updateScope(season, "");
+            }}
+            onDivisionChange={(division) => {
+              scope.setDivision(division);
+              updateScope(scope.season, division);
+            }}
+          />
+          <nav aria-label="Standings sections" className="section-links">
+            <a href="#league-table">League table</a>
+            <a href="#head-to-head">Head-to-head</a>
+            <a href="#player-averages">Player averages</a>
+            <a href="#playoffs">Playoffs</a>
+          </nav>
+        </section>
         {error || scope.scopeError ? (
           <p className="mb-5 rounded-lg border border-red-300/30 bg-red-950/70 p-4 text-red-100">
             {error || scope.scopeError}
@@ -681,9 +677,12 @@ export default function StandingsPage(): React.JSX.Element {
                 onUpdated={() => setRefreshVersion((version) => version + 1)}
               />
             ) : null}
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(23rem,0.9fr)]">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(23rem,0.9fr)]">
               <div className="min-w-0 space-y-5">
-                <section className="overflow-hidden rounded-xl border border-white/10 bg-zinc-950/90 shadow-2xl">
+                <section
+                  id="league-table"
+                  className="overflow-hidden rounded-xl border border-white/10 ui-surface"
+                >
                   <div className="border-b border-white/10 px-5 py-4">
                     <h2 className="text-xl font-bold">League Table</h2>
                     <p className="mt-1 text-xs text-gray-400">
@@ -692,7 +691,10 @@ export default function StandingsPage(): React.JSX.Element {
                   </div>
                   <StandingsTable standings={data.standings} />
                 </section>
-                <section className="rounded-xl border border-white/10 bg-zinc-950/90 p-5 shadow-2xl">
+                <section
+                  id="head-to-head"
+                  className="rounded-xl border border-white/10 ui-surface p-5"
+                >
                   <div className="mb-4">
                     <h2 className="text-xl font-bold">Head-to-Head Results</h2>
                     <p className="mt-1 text-xs text-gray-400">
@@ -702,7 +704,10 @@ export default function StandingsPage(): React.JSX.Element {
                   <MatchupMatrix standings={data.standings} matches={data.matches} />
                 </section>
               </div>
-              <section className="self-start rounded-xl border border-white/10 bg-zinc-950/90 p-5 shadow-2xl">
+              <section
+                id="player-averages"
+                className="self-start rounded-xl border border-white/10 ui-surface p-5"
+              >
                 <div className="mb-4">
                   <h2 className="text-xl font-bold">Player GP Average</h2>
                 </div>
@@ -713,7 +718,7 @@ export default function StandingsPage(): React.JSX.Element {
                 />
               </section>
             </div>
-            <section className="rounded-xl border border-white/10 bg-zinc-950/90 p-5 shadow-2xl">
+            <section id="playoffs" className="rounded-xl border border-white/10 ui-surface p-5">
               <div className="mb-4">
                 <p className="text-xs font-bold uppercase tracking-widest league-accent-text">
                   Postseason

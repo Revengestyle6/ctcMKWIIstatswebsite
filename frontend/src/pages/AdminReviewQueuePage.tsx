@@ -3,8 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { fetchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
-import { BackToHomeLink } from "../components/BackToHomeLink";
-import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import { isLeagueCode } from "../config/leagues";
 import { useAdminSession } from "../hooks/useAdminSession";
 
@@ -87,11 +85,10 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
     );
   };
   return (
-    <main className="relative z-10 min-h-screen bg-black/85 px-5 py-8 text-white sm:px-8">
+    <main className="relative min-h-screen px-5 py-8 text-white sm:px-8">
       <div className="mx-auto max-w-6xl space-y-5">
         <header className="flex flex-wrap justify-between gap-3">
           <div>
-            <BackToHomeLink className="-ml-2 mb-1" />
             <p className="text-sm uppercase text-blue-200">Restricted administration</p>
             <h1 className="text-3xl font-bold">JSON Review Queue</h1>
           </div>
@@ -104,15 +101,14 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
                 Access
               </Link>
             </nav>
-            <LeagueHeaderControls />
           </div>
         </header>
-        <section className="border border-white/15 bg-zinc-950/90 p-5">
+        <section className="border border-white/15 ui-surface p-5">
           <AdminSessionPanel {...auth} />
         </section>
         {auth.session?.authenticated ? (
           <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
-            <section className="border border-white/15 bg-zinc-950/90 p-4">
+            <section className="border border-white/15 ui-surface p-4">
               <h2 className="text-xl font-bold">Submissions</h2>
               <div className="mt-3 max-h-[65vh] overflow-auto">
                 {submissions.map((entry) => (
@@ -131,7 +127,7 @@ export default function AdminReviewQueuePage(): React.JSX.Element {
                 ))}
               </div>
             </section>
-            <section className="border border-white/15 bg-zinc-950/90 p-4">
+            <section className="border border-white/15 ui-surface p-4">
               {selected ? (
                 <div className="space-y-4">
                   <div>

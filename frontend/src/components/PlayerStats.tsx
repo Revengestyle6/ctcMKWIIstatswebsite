@@ -14,8 +14,8 @@ import type {
   PlayerTrackRow,
 } from "../dashboardApi";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
-import { LegacyStatHeader } from "./LegacyStatHeader";
 import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
+import { PageHeader } from "./PageHeader";
 import { RoleModeToggle } from "./RoleModeToggle";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
@@ -171,10 +171,9 @@ export default function PlayerStats() {
 
   return (
     <div className="relative min-h-screen p-6 font-sans text-white">
-      <LegacyStatHeader title="Player Statistics" />
-
-      <div className="mx-auto max-w-5xl pt-24">
-        <div className="mb-6 rounded-xl border border-white/15 bg-black/45 p-5 shadow-lg backdrop-blur-sm">
+      <div className="mx-auto max-w-5xl pt-0">
+        <PageHeader title="Player Statistics" />
+        <div className="filter-panel mb-6">
           <p className="mb-4 text-sm text-gray-300">
             Choose a season and division, then search for a player by name.
           </p>
@@ -243,7 +242,7 @@ export default function PlayerStats() {
 
         {!loading && currentStats && metrics && (
           <>
-            <section className="mt-6 rounded-lg border border-blue-400/50 bg-black/70 p-6 shadow-md backdrop-blur-sm">
+            <section className="mt-6 rounded-lg border border-blue-400/50 ui-surface p-6 shadow-md backdrop-blur-sm">
               <h2 className="mb-4 text-2xl font-bold text-blue-400">
                 {currentStats.average.player_name}{" "}
                 {currentStats.average.team_name && (
@@ -338,7 +337,7 @@ function TrackTable({ tracks, role }: { tracks: PlayerTrackRow[]; role: PlayerRo
     return <p className="mt-6 text-center text-gray-300">No qualifying track results.</p>;
   return (
     <div className="mt-6 overflow-x-auto rounded-lg border border-white/10 shadow-lg">
-      <table className="min-w-full bg-black/70 text-sm tabular-nums backdrop-blur-sm">
+      <table className="min-w-full ui-surface text-sm tabular-nums backdrop-blur-sm">
         <thead className="bg-black/90">
           <tr>
             <th scope="col" className="px-4 py-3 text-left">
@@ -387,7 +386,7 @@ function TrackTable({ tracks, role }: { tracks: PlayerTrackRow[]; role: PlayerRo
           {tracks.map((track, index) => (
             <tr
               key={track.track_id}
-              className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}
+              className={`${index % 2 === 0 ? "bg-black/50" : "ui-surface"} transition-colors hover:bg-blue-950/40`}
             >
               <td className="whitespace-nowrap px-4 py-3 font-semibold text-blue-200">
                 {track.name}

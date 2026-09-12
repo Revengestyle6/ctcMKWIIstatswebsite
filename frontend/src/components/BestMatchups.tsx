@@ -4,8 +4,8 @@ import { useSearchParams } from "react-router-dom";
 import { fetchCachedJson, fetchJson, prefetchMatchSetVariants } from "../api";
 import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
-import { LegacyStatHeader } from "./LegacyStatHeader";
 import { type MatchSet, MatchSetToggle } from "./MatchSetToggle";
+import { PageHeader } from "./PageHeader";
 import SeasonDivisionSelector from "./SeasonDivisionSelector";
 
 type TrackStat = {
@@ -198,12 +198,11 @@ export default function BestMatchups(): React.JSX.Element {
 
   return (
     <div className="relative min-h-screen p-6 font-sans text-white">
-      <LegacyStatHeader title="Team Matchups" />
-
-      <div className="mx-auto max-w-5xl pt-24">
+      <div className="mx-auto max-w-5xl pt-0">
+        <PageHeader title="Team Matchups" />
         {combinedError && <p className="text-red-400 mb-4 text-center">{combinedError}</p>}
 
-        <div className="mb-6 rounded-xl border border-white/15 bg-black/45 p-5 shadow-lg backdrop-blur-sm">
+        <div className="filter-panel mb-6">
           <p className="mb-4 text-sm text-gray-300">
             Choose two teams to compare their averages on tracks they have both played.
           </p>
@@ -308,7 +307,7 @@ export default function BestMatchups(): React.JSX.Element {
               </p>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-white/10 shadow-lg">
-                <table className="min-w-full bg-black/70 text-sm tabular-nums backdrop-blur-sm">
+                <table className="min-w-full ui-surface text-sm tabular-nums backdrop-blur-sm">
                   <thead className="bg-black/90">
                     <tr>
                       <th className="text-left px-4 py-2 font-semibold text-white">#</th>
@@ -326,7 +325,7 @@ export default function BestMatchups(): React.JSX.Element {
                     {comparisonRows.map((row, index) => (
                       <tr
                         key={`${row.track}-${index}`}
-                        className={`${index % 2 === 0 ? "bg-black/50" : "bg-black/70"} transition-colors hover:bg-blue-950/40`}
+                        className={`${index % 2 === 0 ? "bg-black/50" : "ui-surface"} transition-colors hover:bg-blue-950/40`}
                       >
                         <td className="px-4 py-2 font-semibold text-blue-400">{index + 1}</td>
                         <td className="px-4 py-2 text-white">{row.track}</td>

@@ -524,7 +524,7 @@ export function TraditionalTable({
 
   return (
     <div className="space-y-5">
-      <div className="overflow-x-auto rounded-md border border-white/10 bg-black/70">
+      <div className="overflow-x-auto rounded-md border border-white/10 ui-surface">
         <table className="min-w-[980px] w-full table-fixed border-collapse text-sm">
           <thead>
             <tr className="bg-black/80 text-gray-200">
@@ -857,7 +857,7 @@ export function VerticalScorecard({
   };
 
   return (
-    <div className="overflow-x-auto rounded-md border border-white/10 bg-black/70">
+    <div className="overflow-x-auto rounded-md border border-white/10 ui-surface">
       <table className="min-w-[1100px] w-full border-collapse text-sm">
         <thead>
           <tr className="bg-black/80 text-white">
@@ -981,7 +981,7 @@ export function VerticalScorecard({
               </td>
             ))}
           </tr>
-          <tr className="bg-black/85 text-white">
+          <tr className=" text-white">
             <th className="px-3 py-2.5 text-left text-xs uppercase tracking-wide text-gray-300">
               Player diff
             </th>

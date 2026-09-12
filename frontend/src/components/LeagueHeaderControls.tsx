@@ -6,9 +6,11 @@ import LeagueSwitcher from "./LeagueSwitcher";
 export function LeagueHeaderControls({
   logoClassName = "h-11 w-11",
   className = "",
+  disabled = false,
 }: {
   logoClassName?: string;
   className?: string;
+  disabled?: boolean;
 }) {
   const { config, leaguePath } = useLeague();
 
@@ -21,7 +23,7 @@ export function LeagueHeaderControls({
       >
         <LeagueLogo className={logoClassName} />
       </Link>
-      <LeagueSwitcher />
+      <LeagueSwitcher disabled={disabled} />
     </div>
   );
 }

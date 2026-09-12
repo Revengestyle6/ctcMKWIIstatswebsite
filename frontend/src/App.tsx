@@ -1,7 +1,8 @@
 import { type JSX, lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-import BackgroundSlideshow from "./components/BackgroundSlideshow";
+import LeagueBackdrop from "./components/LeagueBackdrop";
+import SiteHeader from "./components/SiteHeader";
 import { LeagueProvider } from "./context/LeagueContext";
 
 const BestMatchups = lazy(() => import("./components/BestMatchups"));
@@ -12,7 +13,6 @@ const DatabaseHealthDashboard = lazy(() => import("./pages/DatabaseHealthDashboa
 const HomePage = lazy(() => import("./pages/HomePage"));
 const MatchHistory = lazy(() => import("./components/MatchHistory"));
 const MatchJsonEditor = lazy(() => import("./components/MatchJsonEditor"));
-const MusicPlayer = lazy(() => import("./components/MusicPlayer"));
 const PlayerDashboard = lazy(() => import("./pages/PlayerDashboard"));
 const PlayerStats = lazy(() => import("./components/PlayerStats"));
 const StandingsPage = lazy(() => import("./pages/StandingsPage"));
@@ -44,31 +44,31 @@ export default function App(): JSX.Element {
   return (
     <BrowserRouter>
       <LeagueProvider>
-        <BackgroundSlideshow />
-        <Suspense fallback={null}>
-          <MusicPlayer />
-        </Suspense>
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/stats" element={<PlayerStats />} />
-            <Route path="/standings" element={<StandingsPage />} />
-            <Route path="/top-team-players" element={<TopTeamPlayers />} />
-            <Route path="/top-tracks" element={<TopTracks />} />
-            <Route path="/best-matchups" element={<BestMatchups />} />
-            <Route path="/matches" element={<MatchHistory />} />
-            <Route path="/players/:playerId" element={<PlayerDashboard />} />
-            <Route path="/teams/:teamId" element={<TeamDashboard />} />
-            <Route path="/players" element={<PlayerDirectory />} />
-            <Route path="/teams" element={<TeamDirectory />} />
-            <Route path="/json-editor" element={<MatchJsonEditor />} />
-            <Route path="/database-health" element={<DatabaseHealthDashboard />} />
-            <Route path="/admin/access" element={<AdminAccessPage />} />
-            <Route path="/admin/database" element={<AdminAliasManagementPage />} />
-            <Route path="/admin/aliases" element={<Navigate to="/admin/database" replace />} />
-            <Route path="/admin/review-queue" element={<AdminReviewQueuePage />} />
-          </Routes>
-        </Suspense>
+        <LeagueBackdrop />
+        <SiteHeader />
+        <div id="main-content" className="site-content" tabIndex={-1}>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/stats" element={<PlayerStats />} />
+              <Route path="/standings" element={<StandingsPage />} />
+              <Route path="/top-team-players" element={<TopTeamPlayers />} />
+              <Route path="/top-tracks" element={<TopTracks />} />
+              <Route path="/best-matchups" element={<BestMatchups />} />
+              <Route path="/matches" element={<MatchHistory />} />
+              <Route path="/players/:playerId" element={<PlayerDashboard />} />
+              <Route path="/teams/:teamId" element={<TeamDashboard />} />
+              <Route path="/players" element={<PlayerDirectory />} />
+              <Route path="/teams" element={<TeamDirectory />} />
+              <Route path="/json-editor" element={<MatchJsonEditor />} />
+              <Route path="/database-health" element={<DatabaseHealthDashboard />} />
+              <Route path="/admin/access" element={<AdminAccessPage />} />
+              <Route path="/admin/database" element={<AdminAliasManagementPage />} />
+              <Route path="/admin/aliases" element={<Navigate to="/admin/database" replace />} />
+              <Route path="/admin/review-queue" element={<AdminReviewQueuePage />} />
+            </Routes>
+          </Suspense>
+        </div>
       </LeagueProvider>
     </BrowserRouter>
   );

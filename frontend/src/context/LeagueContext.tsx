@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { isLeagueCode, LEAGUES, type LeagueCode, type LeagueConfig } from "../config/leagues";
+import { pageTitle } from "../config/navigation";
 
 const STORAGE_KEY = "mkw-stats:league:v1";
 const LEAGUE_SCOPED_PARAMS = [
@@ -72,7 +73,10 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
     root.style.setProperty("--league-accent-muted", config.theme.accentMuted);
     root.style.setProperty("--league-focus", config.theme.focus);
     root.style.setProperty("--league-page-fallback", config.theme.pageFallback);
-    document.title = `${config.name} Statistics`;
+    const title = pageTitle(location.pathname);
+    document.title = title
+      ? `${title} · ${config.shortName} Statistics`
+      : `${config.name} Statistics`;
 
     const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
     if (description) description.content = config.description;

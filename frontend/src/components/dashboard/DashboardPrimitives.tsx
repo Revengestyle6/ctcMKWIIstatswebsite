@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import { BackToHomeLink } from "../BackToHomeLink";
-import { LeagueHeaderControls } from "../LeagueHeaderControls";
+import { PageHeader } from "../PageHeader";
 
 export interface MetricItem {
   label: string;
@@ -34,24 +33,13 @@ interface DashboardShellProps {
 
 export function DashboardShell({ title, identity, controls, children }: DashboardShellProps) {
   return (
-    <div className="relative min-h-screen text-white">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-          <BackToHomeLink />
-          <h1 className="text-center text-xl font-bold sm:text-2xl">{title}</h1>
-          <LeagueHeaderControls className="ml-auto" />
-        </div>
-      </header>
-
-      <section className="border-b border-white/10 bg-zinc-950/90 px-4 py-6 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl">{identity}</div>
+    <div className="dashboard-page">
+      <PageHeader title={title} />
+      <section className="dashboard-identity">{identity}</section>
+      <section className="filter-panel" aria-label="Dashboard filters">
+        {controls}
       </section>
-
-      <section className="border-b border-white/10 bg-black/75 px-4 py-4 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl">{controls}</div>
-      </section>
-
-      <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
+      <main className="dashboard-results">{children}</main>
     </div>
   );
 }
@@ -82,14 +70,11 @@ export function TeamLogo({
 
 export function MetricGrid({ items }: { items: MetricItem[] }) {
   return (
-    <dl className="grid grid-cols-2 overflow-hidden rounded-md border border-white/10 bg-black/65 sm:grid-cols-3 lg:grid-cols-6">
+    <dl className="metric-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
       {items.map((item) => (
-        <div
-          key={item.label}
-          className="min-h-24 border-b border-r border-white/10 px-4 py-4 last:border-r-0 sm:min-h-28"
-        >
+        <div key={item.label} className="metric-item">
           <dt className="text-xs font-semibold text-gray-400">{item.label}</dt>
-          <dd className="mt-1 text-2xl font-bold text-white">{item.value}</dd>
+          <dd className="metric-value">{item.value}</dd>
           {item.detail && <dd className="mt-1 text-xs text-gray-400">{item.detail}</dd>}
         </div>
       ))}

@@ -160,7 +160,7 @@ export default function AdminMatchManager(): React.JSX.Element {
   }
 
   return (
-    <section className="border border-white/15 bg-zinc-950/90 p-5">
+    <section className="border border-white/15 ui-surface p-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold">Uploaded matches</h2>
