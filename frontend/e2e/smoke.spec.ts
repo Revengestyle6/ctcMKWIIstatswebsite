@@ -17,6 +17,31 @@ const routes = [
   "/admin/review-queue",
 ];
 
+test("top-bar navigation follows the page hierarchy and opens direct destinations", async ({
+  page,
+}) => {
+  await page.goto("/players/180?league=gsc");
+  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
+
+  const backLink = page.getByRole("link", { name: "Back", exact: true });
+  await expect(backLink).toHaveAttribute("href", "/players?league=gsc");
+  await backLink.click();
+  await expect(page).toHaveURL(/\/players\?league=gsc/);
+  await expect(page.getByRole("link", { name: "Back", exact: true })).toHaveAttribute(
+    "href",
+    "/?league=gsc"
+  );
+
+  await page.getByRole("button", { name: "Pages" }).click();
+  const navigation = page.getByRole("navigation", { name: "Page navigation" });
+  await expect(navigation.getByRole("heading", { name: "Competition" })).toBeVisible();
+  await navigation.getByRole("link", { name: "Track averages" }).click();
+  await expect(page).toHaveURL(/\/top-tracks\?league=gsc/);
+
+  await page.goto("/?league=gsc");
+  await expect(page.getByRole("button", { name: "Pages" })).toHaveCount(0);
+});
+
 test("standings renders the synchronized competition sections", async ({ page }) => {
   await page.goto("/standings?league=gsc&season=s15&division=d1");
   await expect(page.getByRole("heading", { name: "League Table" })).toBeVisible();
