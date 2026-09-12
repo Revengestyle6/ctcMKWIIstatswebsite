@@ -17,6 +17,50 @@ const routes = [
   "/admin/review-queue",
 ];
 
+test("site loads without a music prompt and keeps an identifiable music control", async ({
+  page,
+}) => {
+  await page.goto("/?league=gsc");
+
+  await expect(page.getByRole("heading", { name: "Thanks for Visiting!" })).toHaveCount(0);
+  const musicControl = page.getByRole("button", { name: /music/i });
+  await expect(musicControl).toBeVisible();
+  await expect(musicControl).toHaveAttribute("aria-pressed", /true|false/);
+  await expect(musicControl).toContainText("Music");
+
+  await musicControl.hover();
+  const volume = page.getByLabel("Volume");
+  await expect(volume).toBeVisible();
+  await volume.hover();
+  await expect(volume).toBeVisible();
+  await volume.fill("0.6");
+  await expect(volume).toHaveValue("0.6");
+});
+
+test("top-bar navigation follows the page hierarchy and opens direct destinations", async ({
+  page,
+}) => {
+  await page.goto("/players/180?league=gsc");
+
+  const backLink = page.getByRole("link", { name: "Back", exact: true });
+  await expect(backLink).toHaveAttribute("href", "/players?league=gsc");
+  await backLink.click();
+  await expect(page).toHaveURL(/\/players\?league=gsc/);
+  await expect(page.getByRole("link", { name: "Back", exact: true })).toHaveAttribute(
+    "href",
+    "/?league=gsc"
+  );
+
+  await page.getByRole("button", { name: "Pages" }).click();
+  const navigation = page.getByRole("navigation", { name: "Page navigation" });
+  await expect(navigation.getByRole("heading", { name: "Competition" })).toBeVisible();
+  await navigation.getByRole("link", { name: "Track averages" }).click();
+  await expect(page).toHaveURL(/\/top-tracks\?league=gsc/);
+
+  await page.goto("/?league=gsc");
+  await expect(page.getByRole("button", { name: "Pages" })).toHaveCount(0);
+});
+
 test("standings renders the synchronized competition sections", async ({ page }) => {
   await page.goto("/standings?league=gsc&season=s15&division=d1");
   await expect(page.getByRole("heading", { name: "League Table" })).toBeVisible();
@@ -66,7 +110,6 @@ test("signed-in administrators can update a team competition status from standin
   });
 
   await page.goto("/standings?league=gsc&season=s15&division=d1");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Team Competition Status" })).toBeVisible();
   await page.getByLabel("Status").selectOption("dropped");
   await page.getByRole("button", { name: "Save status" }).click();
@@ -162,7 +205,6 @@ test("alias manager updates a selected team season entry through the shared stat
   });
 
   await page.goto("/admin/aliases?league=gsc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   await page.getByRole("tab", { name: "Teams" }).click();
   await page.getByRole("button", { name: /TT — Test Team/ }).click();
   const statusPanel = page
@@ -218,7 +260,6 @@ test("review queue uses the match label instead of the uploaded filename", async
   );
 
   await page.goto("/admin/review-queue?league=gsc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   await expect(page.getByText("uploaded-table.json")).toHaveCount(0);
   await page.getByRole("button", { name: /M7 Alpha vs Beta/ }).click();
   await expect(page.getByRole("heading", { name: "M7 Alpha vs Beta" })).toBeVisible();
@@ -274,8 +315,6 @@ test("json editor creates a metadata-only free win", async ({ page }) => {
     })
   );
   await page.goto("/json-editor?league=gsc");
-  const dismissWelcome = page.getByRole("button", { name: "No Thanks", exact: true });
-  await dismissWelcome.click();
   const match = {
     league: "gsc",
     season: "s15",
@@ -333,7 +372,6 @@ test("json editor creates a metadata-only free win", async ({ page }) => {
 
 test("json editor validates and loads pasted raw JSON", async ({ page }) => {
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
 
   await page.getByRole("button", { name: "Paste JSON", exact: true }).click();
   const pastedJson = page.getByLabel("Raw match JSON");
@@ -386,7 +424,6 @@ test("a new visit defaults to GSC", async ({ page }) => {
 
 test("league switch replaces the browser-tab icon", async ({ page }) => {
   await page.goto("/?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   const ctcSelector = page.getByRole("button", { name: "CTC", exact: true });
   const gscSelector = page.getByRole("button", { name: "GSC", exact: true });
   await expect(
@@ -507,7 +544,6 @@ test("authorized JSON editor users can upload directly or submit to the review q
     });
   });
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Team Competition Status" })).toHaveCount(0);
   await page
     .locator('input[type="file"]')
@@ -531,8 +567,6 @@ test("authorized JSON editor users can upload directly or submit to the review q
 
 test("match history loads regular-season data directly after all matches", async ({ page }) => {
   await page.goto("/matches?league=ctc&season=s3&division=d1&match_set=all");
-  const dismissWelcome = page.getByRole("button", { name: "No Thanks", exact: true });
-  await dismissWelcome.click();
 
   const matchSelection = page.getByLabel("Match", { exact: true });
   await expect(matchSelection).toBeEnabled();
@@ -557,7 +591,6 @@ test("json editor changes a misplaced player's team and deletes the accidental t
   page,
 }) => {
   await page.goto("/json-editor");
-  await page.getByRole("button", { name: "No Thanks" }).click();
   const match = {
     title_str: "#title 2 races\n",
     format: "5v5",
@@ -641,7 +674,6 @@ test("json editor changes a misplaced player's team and deletes the accidental t
 
 test("json editor flags missing required metadata before review", async ({ page }) => {
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks" }).click();
   const match = {
     title_str: "#title 2 races\n",
     format: "5v5",
@@ -688,7 +720,6 @@ test("json editor ignores positionless substitution artifacts when every racer f
   page,
 }) => {
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
 
   const scoreByPosition = [15, 12, 10, 8, 6, 4, 3, 2, 1, 0];
   const player = (name: string, positions: Array<number | null>, scores: number[]) => ({
@@ -775,7 +806,6 @@ test("json editor ignores positionless substitution artifacts when every racer f
 
 test("json editor detects every positionless DC award in reduced rooms", async ({ page }) => {
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
 
   const scoresByRoomSize = {
     8: [15, 11, 8, 6, 4, 2, 1, 0],
@@ -854,7 +884,6 @@ test("json editor detects every positionless DC award in reduced rooms", async (
 
 test("json editor locks a three-team semifinal to Series 1", async ({ page }) => {
   await page.goto("/json-editor?league=ctc");
-  await page.getByRole("button", { name: "No Thanks", exact: true }).click();
 
   const match = {
     title_str: "#title 1 races\n",

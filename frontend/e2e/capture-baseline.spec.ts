@@ -21,10 +21,6 @@ test("capture representative application routes", async ({ page }, testInfo) => 
     const response = await page.goto(route.path);
     expect(response?.ok(), `${route.path} should load`).toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    const dismissMusic = page.getByRole("button", { name: "No Thanks" });
-    if (await dismissMusic.isVisible()) {
-      await dismissMusic.click();
-    }
     await page.waitForTimeout(1_000);
     await page.screenshot({
       path: path.join(outputDirectory, `${route.name}-${testInfo.project.name}.jpg`),
