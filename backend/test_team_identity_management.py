@@ -220,6 +220,25 @@ class TeamIdentityManagementTests(unittest.TestCase):
             self.assertEqual(identity["display_name"], "Season Two Name")
             self.assertEqual(identity["current_entry"]["tag"], "CS2")
 
+    def test_dashboard_uses_canonical_identity_for_career_scope(self):
+        with self.SessionLocal.begin() as session:
+            update_canonical_override(session, self.team_id, {"enabled": True})
+            update_canonical_identity(
+                session,
+                self.team_id,
+                {"canonical_name": "Vibe Freaks", "canonical_tag": "vf"},
+            )
+            team = session.get(Team, self.team_id)
+            identity = _team_identity(
+                session,
+                team,
+                DashboardScope("ctc", None, None, None, None, None),
+            )
+            self.assertEqual(identity["display_name"], "Vibe Freaks")
+            self.assertEqual(identity["tag"], "vf")
+            self.assertIsNone(identity["current_entry"])
+            self.assertEqual(identity["appearances"][0]["name"], "Season Three Name")
+
     def test_dashboard_falls_back_when_imported_season_name_is_only_the_tag(self):
         with self.SessionLocal.begin() as session:
             update_canonical_override(session, self.team_id, {"enabled": True})
