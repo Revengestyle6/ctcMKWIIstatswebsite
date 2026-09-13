@@ -21,13 +21,13 @@ const musicTracks = [
 ];
 
 export default function MusicPlayer() {
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.3);
   const [showControls, setShowControls] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<string>("");
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Select random track on mount and auto-play
+  // Select a random track on mount so it is ready if the user enables music.
   useEffect(() => {
     const randomTrack = musicTracks[Math.floor(Math.random() * musicTracks.length)];
     setCurrentTrack(randomTrack);

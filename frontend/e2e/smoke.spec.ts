@@ -25,7 +25,8 @@ test("site loads without a music prompt and keeps an identifiable music control"
   await expect(page.getByRole("heading", { name: "Thanks for Visiting!" })).toHaveCount(0);
   const musicControl = page.getByRole("button", { name: /music/i });
   await expect(musicControl).toBeVisible();
-  await expect(musicControl).toHaveAttribute("aria-pressed", /true|false/);
+  await expect(musicControl).toHaveAttribute("aria-pressed", "false");
+  await expect(musicControl).toHaveAccessibleName("Play music");
   await expect(musicControl).toContainText("Music");
 
   await musicControl.hover();
@@ -205,6 +206,22 @@ test("alias manager updates a selected team season entry through the shared stat
   });
 
   await page.goto("/admin/aliases?league=gsc");
+  const managerTabs = page.getByRole("tablist", { name: "Database management sections" });
+  await expect(managerTabs.getByRole("tab", { name: "Competition Setup" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+  const aliasWorkspace = page.getByRole("region", { name: "Alias management workspace" });
+  await expect(page.getByRole("heading", { name: "Competition Setup" })).toBeVisible();
+  await expect(aliasWorkspace).toBeHidden();
+  await managerTabs.getByRole("tab", { name: "Match Data Management" }).click();
+  await expect(page.getByRole("heading", { name: "Match Data Management" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Competition Setup" })).toHaveCount(0);
+  await expect(aliasWorkspace).toBeHidden();
+  await managerTabs.getByRole("tab", { name: "Alias Management" }).click();
+  await expect(page.getByRole("heading", { name: "Alias Management" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Match Data Management" })).toHaveCount(0);
+  await expect(aliasWorkspace).toBeVisible();
   await page.getByRole("tab", { name: "Teams" }).click();
   await page.getByRole("button", { name: /TT — Test Team/ }).click();
   const statusPanel = page
@@ -217,6 +234,228 @@ test("alias manager updates a selected team season entry through the shared stat
   await statusPanel.getByRole("button", { name: "Save status" }).click();
   await expect(page.getByText("Competition status saved")).toBeVisible();
   expect(submittedStatus).toBe("disqualified");
+});
+
+test("competition setup keeps actions independent and browses registered teams by division", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/session", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        authenticated: true,
+        admin: { admin_user_id: 1, email: "admin@example.com", role: "admin" },
+      }),
+    })
+  );
+  await page.route("**/api/admin/competition-setup?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        league: "gsc",
+        seasons: [
+          {
+            id: 3,
+            league: "gsc",
+            code: "s3",
+            number: 3,
+            name: "GSC Season 3",
+            status: "active",
+            starts_on: "2026-09-01",
+            ends_on: "2026-12-01",
+            divisions: [
+              {
+                id: 4,
+                code: "d1",
+                name: "Division 1",
+                is_conference_based: false,
+                conferences: [],
+                playoff_team_count: 3,
+              },
+              {
+                id: 5,
+                code: "d2",
+                name: "Division 2",
+                is_conference_based: true,
+                conferences: [
+                  { id: 31, code: "a", name: "Gold Conference", sort_order: 1 },
+                  { id: 32, code: "b", name: "Silver Conference", sort_order: 2 },
+                ],
+                playoff_team_count: 4,
+              },
+            ],
+          },
+        ],
+        teams: [
+          {
+            id: 1,
+            canonical_name: "Test Team",
+            canonical_tag: "TT",
+            league_identities: [{ league: "gsc", tag: "TT" }],
+          },
+        ],
+        entries: [
+          {
+            id: 12,
+            team: {
+              id: 1,
+              canonical_name: "Test Team",
+              canonical_tag: "TT",
+              league_identities: [],
+            },
+            season: { id: 3, code: "s3", name: "GSC Season 3" },
+            division: { id: 5, code: "d2", name: "Division 2" },
+            display_name: "Test Team",
+            clan_tag: "TT",
+            hex_color: "#3366CC",
+            competition_status: "active",
+            conference: { id: 31, code: "a", name: "Gold Conference", sort_order: 1 },
+          },
+        ],
+      }),
+    })
+  );
+  await page.route("**/api/admin/teams/1/logos", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        team: { id: 1, canonical_name: "Test Team", canonical_tag: "TT" },
+        seasons: [],
+        logos: [
+          {
+            id: 9,
+            season: null,
+            alt_text: "Test Team career logo",
+            priority: 0,
+            is_active: true,
+            source: "upload",
+            url: "/api/team-logos/9/content",
+            created_at: null,
+          },
+        ],
+      }),
+    })
+  );
+
+  await page.goto("/admin/aliases?league=gsc");
+  await expect(page.getByRole("heading", { name: "Create a season" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Create a division" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Create a canonical team" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Register a team for a division" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Edit a season" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Edit a division" })).toBeVisible();
+  await expect(page.getByText(/^Step [1-5]$/)).toHaveCount(0);
+
+  const divisionForm = page
+    .getByRole("heading", { name: "Create a division" })
+    .locator("xpath=ancestor::form[1]");
+  const registrationForm = page
+    .getByRole("heading", { name: "Register a team for a division" })
+    .locator("xpath=ancestor::form[1]");
+  await divisionForm.getByRole("combobox", { name: "Season", exact: true }).selectOption("3");
+  await expect(divisionForm.getByLabel(/^Playoff qualifiers/)).toHaveValue("3");
+  await divisionForm.getByLabel(/^Playoff qualifiers/).selectOption("4");
+  await expect(divisionForm.getByLabel(/^Playoff qualifiers/)).toHaveValue("4");
+  await expect(registrationForm.getByLabel(/^Division/)).toBeDisabled();
+  await registrationForm.getByRole("combobox", { name: "Season", exact: true }).selectOption("3");
+  await expect(registrationForm.getByLabel(/^Division/)).toBeEnabled();
+  await registrationForm.getByLabel(/^Division/).selectOption("5");
+  await registrationForm
+    .getByRole("combobox", { name: "Conference", exact: true })
+    .selectOption("31");
+  await registrationForm.getByRole("combobox", { name: "Team", exact: true }).selectOption("1");
+  await expect(registrationForm.getByLabel(/^Season display name/)).toHaveValue("Test Team");
+  await expect(
+    registrationForm.getByText(/only for the moment a team is initially added/)
+  ).toBeVisible();
+  await registrationForm.getByLabel(/^Logo choice/).selectOption("existing");
+  await registrationForm.getByLabel(/^Existing logo/).selectOption("9");
+  await expect(registrationForm.getByLabel(/^Logo scope/)).toHaveValue("season");
+  await expect(registrationForm.getByRole("img", { name: "Test Team career logo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Manage a team logo" })).toHaveCount(0);
+
+  const seasonEditor = page
+    .getByRole("heading", { name: "Edit a season" })
+    .locator("xpath=ancestor::form[1]");
+  await seasonEditor.getByLabel(/^Existing season/).selectOption("3");
+  await expect(seasonEditor.getByLabel(/^Display name/)).toHaveValue("GSC Season 3");
+  await expect(seasonEditor.getByLabel(/^Status/)).toHaveValue("active");
+  await expect(seasonEditor.getByLabel(/^Start date/)).toHaveValue("2026-09-01");
+
+  const divisionEditor = page
+    .getByRole("heading", { name: "Edit a division" })
+    .locator("xpath=ancestor::form[1]");
+  await expect(divisionEditor.getByLabel(/^Existing division/)).toBeDisabled();
+  await divisionEditor.getByLabel(/^Existing season/).selectOption("3");
+  await expect(divisionEditor.getByLabel(/^Existing division/)).toBeEnabled();
+  await divisionEditor.getByLabel(/^Existing division/).selectOption("4");
+  await expect(divisionEditor.getByLabel(/^Playoff qualifiers/)).toHaveValue("3");
+  await divisionEditor.getByLabel(/^Playoff qualifiers/).selectOption("4");
+  await divisionEditor.getByLabel(/^Existing division/).selectOption("5");
+  await expect(divisionEditor.getByLabel(/^Display name/)).toHaveValue("Division 2");
+  await expect(divisionEditor.getByLabel(/^Conference-based division/)).toBeChecked();
+  await expect(divisionEditor.getByLabel(/TT — Test Team/)).toHaveValue("a");
+
+  const directory = page
+    .getByRole("heading", { name: "Teams by division" })
+    .locator("xpath=ancestor::section[1]");
+  await expect(directory.getByLabel(/^Division/)).toBeDisabled();
+  await directory.getByLabel(/^Season/).selectOption("3");
+  await expect(directory.getByLabel(/^Division/)).toBeEnabled();
+  await directory.getByLabel(/^Division/).selectOption("5");
+  await expect(directory.getByText("TT", { exact: true })).toBeVisible();
+  await expect(directory.getByText("Canonical team: Test Team")).toBeVisible();
+  await expect(directory.getByText(/0 matches|0 points/)).toHaveCount(0);
+});
+
+test("competition setup suggests the next season for the selected league", async ({ page }) => {
+  await page.route("**/api/auth/session", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        authenticated: true,
+        admin: { admin_user_id: 1, email: "admin@example.com", role: "admin" },
+      }),
+    })
+  );
+  await page.route("**/api/admin/competition-setup?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        league: "ctc",
+        seasons: [
+          {
+            id: 3,
+            league: "ctc",
+            code: "s3",
+            number: 3,
+            name: "CTC Season 3",
+            status: "active",
+            starts_on: null,
+            ends_on: null,
+            divisions: [],
+          },
+        ],
+        teams: [],
+        entries: [],
+      }),
+    })
+  );
+
+  await page.goto("/admin/aliases?league=ctc");
+  const seasonForm = page
+    .getByRole("heading", { name: "Create a season" })
+    .locator("xpath=ancestor::form[1]");
+  await expect(seasonForm.getByLabel(/^Season code/)).toHaveAttribute("placeholder", "s4");
+  await expect(seasonForm.getByLabel(/^Display name/)).toHaveAttribute(
+    "placeholder",
+    "CTC Season 4"
+  );
 });
 
 test("review queue uses the match label instead of the uploaded filename", async ({ page }) => {
@@ -883,6 +1122,23 @@ test("json editor detects every positionless DC award in reduced rooms", async (
 });
 
 test("json editor locks a three-team semifinal to Series 1", async ({ page }) => {
+  await page.route("**/api/playoff-series?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        season: "s-test",
+        division: "d-test",
+        format: {
+          code: "three_team",
+          playoff_team_count: 3,
+          semifinal_series_count: 1,
+          finals_bye_count: 1,
+        },
+        series: [],
+      }),
+    })
+  );
   await page.goto("/json-editor?league=ctc");
 
   const match = {
@@ -946,6 +1202,8 @@ test("json editor locks a three-team semifinal to Series 1", async ({ page }) =>
   const seriesNumber = page.getByLabel("Series number, locked");
   await expect(seriesNumber).toBeVisible();
   await expect(seriesNumber).toHaveValue("1");
+  await expect(page.getByLabel("Playoff format, locked")).toHaveValue("3 teams (one semifinal)");
+  await expect(page.locator("#playoff-format")).toHaveCount(0);
   await expect(page.locator("#playoff-series-number")).toHaveCount(0);
   await expect(page.getByText("Each playoff team must have a numeric total score.")).toHaveCount(0);
 

@@ -5,9 +5,12 @@ from test_support import PostgreSQLTestDatabase, configure_test_environment
 
 configure_test_environment()
 
+from import_json_to_db import validate_conference_matchup  # noqa: E402
 from match_results import validate_result_metadata  # noqa: E402
 from models import (  # noqa: E402
     Division,
+    DivisionConference,
+    DivisionPlayoffConfig,
     Match,
     MatchTeam,
     Season,
@@ -19,6 +22,7 @@ from review_queue import validate_submission  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 from standings_service import (  # noqa: E402
     _race_equivalent_gps,
+    _rank_records,
     _role_eligibility,
     _role_gp_average,
     get_division_standings,
@@ -42,6 +46,64 @@ class RoleGpEligibilityTests(unittest.TestCase):
         self.assertEqual(_role_gp_average(30, 11), 10.91)
         self.assertEqual(_role_gp_average(30, 12), 10.0)
         self.assertIsNone(_role_gp_average(0, 0))
+
+
+class ConferenceTiebreakTests(unittest.TestCase):
+    def test_cross_conference_tie_uses_series_wins_and_normalized_differential(self):
+        def record(entry_id, conference_id):
+            return {
+                "team_season_entry_id": entry_id,
+                "name": f"Team {entry_id}",
+                "standings_points": 10,
+                "wins": 2,
+                "ties": 0,
+                "losses": 1,
+                "points_for": 300,
+                "points_against": 300,
+                "point_differential": 0,
+                "head_to_head_differential": 0,
+                "conference": {
+                    "id": conference_id,
+                    "code": str(conference_id),
+                    "name": f"Conference {conference_id}",
+                    "sort_order": conference_id,
+                },
+            }
+
+        records = {1: record(1, 1), 2: record(2, 1), 3: record(3, 2)}
+
+        def match(left, right, differential):
+            return {
+                "teams": [
+                    {
+                        "team_season_entry_id": left,
+                        "standings_points": 3 if differential > 0 else 0,
+                        "outcome": "win" if differential > 0 else "loss",
+                        "adjusted_score": 100 + differential,
+                        "adjusted_opponent_score": 100,
+                    },
+                    {
+                        "team_season_entry_id": right,
+                        "standings_points": 0 if differential > 0 else 3,
+                        "outcome": "loss" if differential > 0 else "win",
+                        "adjusted_score": 100,
+                        "adjusted_opponent_score": 100 + differential,
+                    },
+                ]
+            }
+
+        matches = [
+            match(1, 2, 50),
+            match(1, 2, 30),
+            match(2, 3, 10),
+            match(3, 1, 60),
+        ]
+        ordered = _rank_records(records, matches)
+        self.assertEqual([row["team_season_entry_id"] for row in ordered], [3, 1, 2])
+        self.assertEqual(records[1]["tiebreak"]["series_wins"], 1)
+        self.assertEqual(records[1]["tiebreak"]["series_average_differential"], -20)
+        self.assertEqual(records[2]["tiebreak"]["series_average_differential"], -30)
+        self.assertEqual(records[3]["tiebreak"]["series_average_differential"], 50)
 
 
 class StandingsServiceTests(unittest.TestCase):
@@ -85,7 +147,17 @@ class StandingsServiceTests(unittest.TestCase):
 
     def tearDown(self):
         with self.database.SessionLocal.begin() as session:
-            for table in [MatchTeam, Match, SourceFile, TeamSeasonEntry, Team, Division, Season]:
+            for table in [
+                MatchTeam,
+                Match,
+                SourceFile,
+                TeamSeasonEntry,
+                DivisionConference,
+                DivisionPlayoffConfig,
+                Team,
+                Division,
+                Season,
+            ]:
                 session.query(table).delete()
 
     def add_match(self, number, left, left_score, right, right_score, result_type="played"):
@@ -200,6 +272,118 @@ class StandingsServiceTests(unittest.TestCase):
             ],
             [(0, 0, "tie"), (0, 0, "tie")],
         )
+
+    def test_conference_tables_and_four_team_playoff_seeding(self):
+        with self.database.SessionLocal.begin() as session:
+            division = session.get(Division, self.division_id)
+            division.is_conference_based = True
+            conference_a = DivisionConference(
+                division_id=self.division_id,
+                conference_code="a",
+                conference_name="Gold Conference",
+                sort_order=1,
+            )
+            conference_b = DivisionConference(
+                division_id=self.division_id,
+                conference_code="b",
+                conference_name="Silver Conference",
+                sort_order=2,
+            )
+            session.add_all((conference_a, conference_b))
+            session.flush()
+            for tag in ("D", "E", "F", "G", "H"):
+                team = Team(canonical_name=f"Team {tag}", canonical_tag=tag)
+                session.add(team)
+                session.flush()
+                entry = TeamSeasonEntry(
+                    team_id=team.team_id,
+                    season_id=self.season_id,
+                    division_id=self.division_id,
+                    display_name=f"Team {tag}",
+                    clan_tag=tag,
+                )
+                session.add(entry)
+                session.flush()
+                self.entries[tag] = entry.team_season_entry_id
+            for tag in ("A", "B", "C", "D"):
+                session.get(
+                    TeamSeasonEntry, self.entries[tag]
+                ).conference_id = conference_a.division_conference_id
+            for tag in ("E", "F", "G", "H"):
+                session.get(
+                    TeamSeasonEntry, self.entries[tag]
+                ).conference_id = conference_b.division_conference_id
+            session.add(
+                DivisionPlayoffConfig(
+                    division_id=self.division_id,
+                    format_code="four_team",
+                    playoff_team_count=4,
+                    semifinal_series_count=2,
+                    finals_bye_count=0,
+                )
+            )
+
+        data = self.standings()
+        self.assertTrue(data["conference_config"]["valid"])
+        self.assertEqual(
+            [conference["name"] for conference in data["conferences"]],
+            ["Gold Conference", "Silver Conference"],
+        )
+        self.assertEqual(
+            [[row["tag"] for row in conference["standings"]] for conference in data["conferences"]],
+            [["A", "B", "C", "D"], ["E", "F", "G", "H"]],
+        )
+        seeds = data["playoff_qualification"]["seeds"]
+        self.assertEqual([seed["tag"] for seed in seeds], ["A", "E", "B", "C"])
+        self.assertEqual(
+            [seed["qualification"] for seed in seeds],
+            ["conference_winner", "conference_winner", "wild_card", "wild_card"],
+        )
+        self.assertEqual(data["playoff_qualification"]["semifinals"], [[1, 4], [2, 3]])
+
+        with self.database.SessionLocal() as session:
+            division = session.get(Division, self.division_id)
+            validate_conference_matchup(
+                session,
+                division,
+                [
+                    session.get(TeamSeasonEntry, self.entries["A"]),
+                    session.get(TeamSeasonEntry, self.entries["E"]),
+                ],
+            )
+        self.add_match(1, "A", 100, "E", 90)
+        with self.database.SessionLocal() as session:
+            division = session.get(Division, self.division_id)
+            with self.assertRaisesRegex(ValueError, "cross-conference matchup"):
+                validate_conference_matchup(
+                    session,
+                    division,
+                    [
+                        session.get(TeamSeasonEntry, self.entries["A"]),
+                        session.get(TeamSeasonEntry, self.entries["E"]),
+                    ],
+                )
+        self.add_match(2, "A", 100, "B", 90)
+        with self.database.SessionLocal() as session:
+            validate_conference_matchup(
+                session,
+                session.get(Division, self.division_id),
+                [
+                    session.get(TeamSeasonEntry, self.entries["A"]),
+                    session.get(TeamSeasonEntry, self.entries["B"]),
+                ],
+            )
+        self.add_match(3, "A", 95, "B", 90)
+        with self.database.SessionLocal() as session:
+            with self.assertRaisesRegex(ValueError, "same-conference matchup"):
+                validate_conference_matchup(
+                    session,
+                    session.get(Division, self.division_id),
+                    [
+                        session.get(TeamSeasonEntry, self.entries["A"]),
+                        session.get(TeamSeasonEntry, self.entries["B"]),
+                    ],
+                )
 
 
 class SpecialResultValidationTests(unittest.TestCase):

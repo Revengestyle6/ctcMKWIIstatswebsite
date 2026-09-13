@@ -160,6 +160,69 @@ def create_team_logo(session, team_id, content, season_id=None, alt_text=""):
     return get_team_logo_detail(session, team_id), logo
 
 
+def reuse_team_logo(session, team_id, source_logo_id, season_id=None, alt_text=""):
+    team = session.get(Team, team_id)
+    if team is None:
+        raise LookupError("Team not found.")
+    source = session.get(TeamLogo, source_logo_id)
+    if source is None or source.team_id != team_id:
+        raise LookupError("Team logo not found.")
+    if season_id is not None:
+        season = session.get(Season, season_id)
+        if season is None:
+            raise ValueError("The selected season does not exist.")
+        membership = session.scalar(
+            select(TeamSeasonEntry.team_season_entry_id)
+            .where(
+                TeamSeasonEntry.team_id == team_id,
+                TeamSeasonEntry.season_id == season_id,
+            )
+            .limit(1)
+        )
+        if membership is None:
+            raise ValueError("This team did not participate in the selected season.")
+
+    scope_filter = (
+        TeamLogo.season_id.is_(None) if season_id is None else TeamLogo.season_id == season_id
+    )
+    session.execute(
+        update(TeamLogo)
+        .where(TeamLogo.team_id == team_id, scope_filter, TeamLogo.is_active.is_(True))
+        .values(is_active=False)
+    )
+    priority = session.scalar(
+        select(func.coalesce(func.max(TeamLogo.priority), -1)).where(
+            TeamLogo.team_id == team_id, scope_filter
+        )
+    )
+    replacement_alt_text = str(alt_text or "").strip() or source.alt_text
+    existing = session.scalar(
+        select(TeamLogo).where(
+            TeamLogo.team_id == team_id,
+            scope_filter,
+            TeamLogo.asset_path == source.asset_path,
+        )
+    )
+    if existing is not None:
+        existing.alt_text = replacement_alt_text
+        existing.priority = int(priority) + 1
+        existing.is_active = True
+        session.flush()
+        return get_team_logo_detail(session, team_id), existing
+
+    logo = TeamLogo(
+        team_id=team_id,
+        season_id=season_id,
+        asset_path=source.asset_path,
+        alt_text=replacement_alt_text,
+        priority=int(priority) + 1,
+        is_active=True,
+    )
+    session.add(logo)
+    session.flush()
+    return get_team_logo_detail(session, team_id), logo
+
+
 def update_team_logo(session, team_id, logo_id, payload):
     if not isinstance(payload, dict):
         raise ValueError("Team logo updates must be a JSON object.")

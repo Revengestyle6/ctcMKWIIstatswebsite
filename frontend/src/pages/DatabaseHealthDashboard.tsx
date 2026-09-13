@@ -23,6 +23,7 @@ const COUNT_GROUPS = [
     tables: [
       "seasons",
       "divisions",
+      "division_conferences",
       "division_playoff_configs",
       "playoff_series",
       "playoff_series_participants",

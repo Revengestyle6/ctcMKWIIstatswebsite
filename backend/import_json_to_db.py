@@ -14,7 +14,6 @@ from match_results import result_type
 from mkc_registry import lookup_mkc_player
 from models import (
     Division,
-    DivisionPlayoffConfig,
     Match,
     MatchPlayer,
     MatchTableRef,
@@ -46,7 +45,6 @@ from player_naming import (
 from playoff_service import (
     ensure_match_label,
     match_type,
-    playoff_format_new_entry,
     resolve_playoff_series,
     validate_competition_metadata,
     validate_playoff_against_existing,
@@ -349,6 +347,10 @@ def get_or_create_team_entry(
         .limit(1)
     )
     if existing_team_entry:
+        if division.is_conference_based and existing_team_entry.conference_id is None:
+            raise ValueError(
+                f"{canonical_tag} must be assigned to a conference before importing matches."
+            )
         if hex_color and not existing_team_entry.hex_color:
             existing_team_entry.hex_color = hex_color
         return existing_team_entry
@@ -361,10 +363,18 @@ def get_or_create_team_entry(
         )
     )
     if entry:
+        if division.is_conference_based and entry.conference_id is None:
+            raise ValueError(
+                f"{canonical_tag} must be assigned to a conference before importing matches."
+            )
         if hex_color and not entry.hex_color:
             entry.hex_color = hex_color
         return entry
 
+    if division.is_conference_based:
+        raise ValueError(
+            f"{canonical_tag} must be registered and assigned to a conference before importing matches."
+        )
     entry = TeamSeasonEntry(
         team_id=team.team_id,
         season_id=season.season_id,
@@ -378,6 +388,35 @@ def get_or_create_team_entry(
     apply_canonical_identity_priority(session, team)
     session.flush()
     return entry
+
+
+def validate_conference_matchup(session, division, team_entries):
+    if not division.is_conference_based:
+        return
+    if len(team_entries) != 2 or any(entry.conference_id is None for entry in team_entries):
+        raise ValueError("Conference matches require two teams with conference assignments.")
+    entry_ids = [entry.team_season_entry_id for entry in team_entries]
+    same_conference = team_entries[0].conference_id == team_entries[1].conference_id
+    allowed_matches = 2 if same_conference else 1
+    matchup_query = (
+        select(Match.match_id)
+        .join(MatchTeam, MatchTeam.match_id == Match.match_id)
+        .where(
+            Match.division_id == division.division_id,
+            Match.match_type == "regular",
+            MatchTeam.team_season_entry_id.in_(entry_ids),
+        )
+        .group_by(Match.match_id)
+        .having(func.count(func.distinct(MatchTeam.team_season_entry_id)) == 2)
+        .subquery()
+    )
+    existing_count = session.scalar(select(func.count()).select_from(matchup_query)) or 0
+    if existing_count >= allowed_matches:
+        schedule_type = "same-conference" if same_conference else "cross-conference"
+        raise ValueError(
+            f"This {schedule_type} matchup already has its {allowed_matches} allowed "
+            f"regular-season match{'es' if allowed_matches != 1 else ''}."
+        )
 
 
 def display_player_name(player_data: dict[str, Any]) -> str | None:
@@ -786,6 +825,12 @@ def import_match(
         match_label = f"{playoff_series.display_label} — Match {series_match_number}"
     elif match_number is None:
         raise ValueError("Regular-season matches require a match number.")
+    else:
+        validate_conference_matchup(
+            session,
+            division,
+            [resolved_teams[key][2] for key in teams],
+        )
 
     explicit_review_notes = str(match_data.get("review_notes") or "").strip()
     combined_review_notes = [explicit_review_notes] if explicit_review_notes else []
@@ -1354,27 +1399,6 @@ def detect_new_entries(
             entries[entry["key"]] = entry
 
     if competition_metadata["match_type"] == "playoff":
-        config = (
-            session.get(DivisionPlayoffConfig, division.division_id)
-            if division is not None
-            else None
-        )
-        if config is None:
-            details = playoff_format_new_entry(match_data)
-            if details is not None:
-                entry = _new_entry(
-                    "playoff_format",
-                    details["format_label"],
-                    league_code,
-                    season_code,
-                    division_code,
-                    kind="new_playoff_format",
-                    league=league_code,
-                    season=season_code,
-                    division=division_code,
-                    **details,
-                )
-                entries[entry["key"]] = entry
         validate_playoff_against_existing(session, division, match_data, existing_team_ids)
 
     identities = load_player_identities()

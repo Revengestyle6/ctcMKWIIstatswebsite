@@ -25,6 +25,7 @@ from team_logo_management import (  # noqa: E402
     create_team_logo,
     get_team_logo_detail,
     normalize_logo,
+    reuse_team_logo,
     update_team_logo,
 )
 
@@ -154,6 +155,24 @@ class TeamLogoManagementTests(unittest.TestCase):
             self.assertTrue(updated.is_active)
             self.assertEqual(updated.alt_text, "Restored logo")
             self.assertEqual(sum(logo["is_active"] for logo in detail["logos"]), 1)
+
+    def test_existing_logo_can_be_reused_for_a_season_scope(self):
+        with self.SessionLocal.begin() as session:
+            _, career_logo = create_team_logo(
+                session, self.team_id, image_bytes("red"), alt_text="Career logo"
+            )
+            detail, season_logo = reuse_team_logo(
+                session,
+                self.team_id,
+                career_logo.team_logo_id,
+                season_id=self.season_id,
+                alt_text="Season 3 team logo",
+            )
+            self.assertEqual(season_logo.season_id, self.season_id)
+            self.assertEqual(season_logo.asset_path, career_logo.asset_path)
+            self.assertEqual(season_logo.alt_text, "Season 3 team logo")
+            self.assertEqual(len(detail["logos"]), 2)
+            self.assertTrue(season_logo.is_active)
 
     def test_team_detail_lists_only_participating_seasons(self):
         with self.SessionLocal() as session:
