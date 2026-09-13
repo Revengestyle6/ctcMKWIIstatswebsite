@@ -65,7 +65,10 @@ test("top-bar navigation follows the page hierarchy and opens direct destination
 test("track analytics supports comparison and per-track drill-down", async ({ page }) => {
   await page.goto("/tracks?league=ctc&season=s3&division=d1");
   const teamFilter = page.locator("label").filter({ hasText: /^Team/ }).locator("select");
-  const minimumPlays = page.locator("label").filter({ hasText: /^Minimum plays/ }).locator("input");
+  const minimumPlays = page
+    .locator("label")
+    .filter({ hasText: /^Minimum plays/ })
+    .locator("input");
 
   await expect(page.getByRole("heading", { name: "Frequency vs. race margin" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "All tracks" })).toBeVisible();
