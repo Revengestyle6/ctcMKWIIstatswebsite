@@ -126,6 +126,40 @@ test("standings renders the synchronized competition sections", async ({ page })
       headers.slice(1).map((header) => header.getBoundingClientRect().width)
     );
   expect(Math.max(...matchupColumnWidths) - Math.min(...matchupColumnWidths)).toBeLessThan(1);
+
+  const teamColumnWidth = await matchupTable
+    .locator("thead th")
+    .first()
+    .evaluate((header) => header.getBoundingClientRect().width);
+  expect(teamColumnWidth).toBeCloseTo(208, 0);
+
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width >= 1024) {
+    const horizontalOverflow = await matchupTable
+      .locator("xpath=..")
+      .evaluate((scroller) => scroller.scrollWidth - scroller.clientWidth);
+    expect(horizontalOverflow).toBeLessThanOrEqual(1);
+  }
+
+  const teamNames = matchupTable.locator("tbody th:first-child a > span:first-of-type");
+  await expect(teamNames.first()).not.toHaveCSS("text-overflow", "ellipsis");
+  const clippedTeamNames = await teamNames.evaluateAll((names) =>
+    names.filter((name) => name.scrollWidth > name.clientWidth).map((name) => name.textContent)
+  );
+  expect(clippedTeamNames).toEqual([]);
+
+  const overlappingTeamIdentities = await matchupTable
+    .locator("tbody th:first-child")
+    .evaluateAll((cells) =>
+      cells
+        .filter((cell) => {
+          const identity = cell.querySelector("a");
+          if (!identity) return false;
+          return identity.getBoundingClientRect().right > cell.getBoundingClientRect().right - 8;
+        })
+        .map((cell) => cell.textContent)
+    );
+  expect(overlappingTeamIdentities).toEqual([]);
 });
 
 test("match links preserve or recover the match competition scope", async ({ page, request }) => {
