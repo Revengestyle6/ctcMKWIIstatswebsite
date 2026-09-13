@@ -5,10 +5,22 @@ from statistics import median, pstdev
 
 from analytics_eligibility import apply_analytics_race_filter
 from models import (
-    Match, MatchTeam, Race, RacePlayerResult, RaceTeamResult, Team,
-    TeamSeasonEntry, Track, TrackAlias,
+    Match,
+    MatchTeam,
+    Race,
+    RacePlayerResult,
+    RaceTeamResult,
+    Team,
+    TeamSeasonEntry,
+    Track,
+    TrackAlias,
 )
-from player_dashboard_stats import DashboardError, DashboardNotFound, _resolve_scope, _scope_payload
+from player_dashboard_stats import (
+    DashboardError,
+    DashboardNotFound,
+    _resolve_scope,
+    _scope_payload,
+)
 from sqlalchemy import func, select
 
 EVEN_MARGIN = 5
