@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchJson, resolveAssetUrl, type TeamScope } from "../api";
 import { BackToHomeLink } from "../components/BackToHomeLink";
@@ -210,20 +210,28 @@ function StatusBadge({ status, note }: { status: CompetitionStatus; note?: strin
   );
 }
 
-function TeamIdentity({ team, centered = false }: { team: Standing; centered?: boolean }) {
+function TeamIdentity({
+  team,
+  centered = false,
+  truncateName = true,
+}: {
+  team: Standing;
+  centered?: boolean;
+  truncateName?: boolean;
+}) {
   const { leaguePath } = useLeague();
   return (
     <Link
       to={leaguePath(`/teams/${team.team_id}`)}
-      className={`flex min-w-0 items-center gap-2 font-semibold text-white hover:underline ${centered ? "justify-center" : ""}`}
+      className={`flex items-center gap-2 font-semibold text-white hover:underline ${truncateName ? "min-w-0" : "w-full min-w-0 flex-wrap"} ${centered ? "justify-center" : ""}`}
     >
       <img
         src={resolveAssetUrl(team.logo_url)}
         alt=""
         className="h-8 w-8 shrink-0 rounded-full bg-black/35 object-contain"
       />
-      <span className="truncate">{team.name}</span>
-      <span className="text-xs text-gray-400">{team.tag}</span>
+      <span className={truncateName ? "truncate" : "min-w-0 break-words"}>{team.name}</span>
+      <span className="shrink-0 text-xs text-gray-400">{team.tag}</span>
       <StatusBadge status={team.status} note={team.status_note} />
     </Link>
   );
@@ -330,14 +338,27 @@ function MatchupMatrix({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] table-fixed border-collapse text-center text-xs">
+      <table
+        className="matchup-matrix w-full table-fixed border-collapse text-center text-xs"
+        style={
+          {
+            "--matchup-mobile-min-width": `${13 + standings.length * 6}rem`,
+          } as CSSProperties
+        }
+      >
+        <colgroup>
+          <col className="w-52" />
+          {standings.map((team) => (
+            <col key={team.team_season_entry_id} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 bg-zinc-950 px-3 py-2 text-left">Team</th>
+            <th className="sticky left-0 z-10 w-52 bg-zinc-950 px-3 py-2 text-left">Team</th>
             {standings.map((team) => (
               <th
                 key={team.team_season_entry_id}
-                className="min-w-[4.5rem] border border-white/10 bg-black/70 px-1 py-2"
+                className="border border-white/10 bg-black/70 px-1 py-2"
               >
                 {team.tag}
               </th>
@@ -347,8 +368,8 @@ function MatchupMatrix({
         <tbody>
           {standings.map((team) => (
             <tr key={team.team_season_entry_id}>
-              <th className="sticky left-0 z-10 min-w-36 border border-white/10 bg-zinc-950 px-2 py-3 text-left">
-                <TeamIdentity team={team} />
+              <th className="sticky left-0 z-10 w-52 overflow-hidden border border-white/10 bg-zinc-950 py-3 pl-3 pr-4 text-left">
+                <TeamIdentity team={team} truncateName={false} />
               </th>
               {standings.map((opponent) => {
                 if (team.team_season_entry_id === opponent.team_season_entry_id)
