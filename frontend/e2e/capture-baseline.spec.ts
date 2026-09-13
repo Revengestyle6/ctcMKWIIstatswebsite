@@ -5,7 +5,7 @@ const routes = [
   { name: "home", path: "/" },
   { name: "player-statistics", path: "/stats" },
   { name: "team-statistics", path: "/top-team-players" },
-  { name: "track-averages", path: "/top-tracks" },
+  { name: "track-analytics", path: "/tracks" },
   { name: "team-matchups", path: "/best-matchups" },
   { name: "match-history", path: "/matches" },
   { name: "player-dashboard", path: "/players/180" },

@@ -5,7 +5,7 @@ const routes = [
   "/stats",
   "/standings",
   "/top-team-players",
-  "/top-tracks",
+  "/tracks",
   "/best-matchups",
   "/matches",
   "/players/180",
@@ -55,11 +55,42 @@ test("top-bar navigation follows the page hierarchy and opens direct destination
   await page.getByRole("button", { name: "Pages" }).click();
   const navigation = page.getByRole("navigation", { name: "Page navigation" });
   await expect(navigation.getByRole("heading", { name: "Competition" })).toBeVisible();
-  await navigation.getByRole("link", { name: "Track averages" }).click();
-  await expect(page).toHaveURL(/\/top-tracks\?league=gsc/);
+  await navigation.getByRole("link", { name: "Track analytics" }).click();
+  await expect(page).toHaveURL(/\/tracks\?league=gsc/);
 
   await page.goto("/?league=gsc");
   await expect(page.getByRole("button", { name: "Pages" })).toHaveCount(0);
+});
+
+test("track analytics supports comparison and per-track drill-down", async ({ page }) => {
+  await page.goto("/tracks?league=ctc&season=s3&division=d1");
+  const teamFilter = page.locator("label").filter({ hasText: /^Team/ }).locator("select");
+  const minimumPlays = page.locator("label").filter({ hasText: /^Minimum plays/ }).locator("input");
+
+  await expect(page.getByRole("heading", { name: "Frequency vs. race margin" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All tracks" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "When tracks appear" })).toBeVisible();
+  await expect(minimumPlays).toHaveValue("2");
+  await minimumPlays.fill("3");
+  await expect(page).toHaveURL(/min_races=3/);
+
+  await page.getByLabel("Season").selectOption("");
+  await expect(page).toHaveURL(/season=all&division=all/);
+  await expect(page.getByLabel("Division")).toBeDisabled();
+  await expect(teamFilter).toBeDisabled();
+
+  await page.getByLabel("Season").selectOption("s3");
+  await expect(page.getByLabel("Division")).toHaveValue("");
+  await expect(teamFilter).toBeDisabled();
+  await page.getByLabel("Division").selectOption("d1");
+  await expect(teamFilter).toBeEnabled();
+  await page.locator("tbody a").first().click();
+
+  await expect(page).toHaveURL(/\/tracks\/\d+\?.*league=ctc/);
+  await expect(page.getByRole("heading", { name: "Race-slot distribution" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Race margin distribution" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Team performance" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recent races" })).toBeVisible();
 });
 
 test("standings renders the synchronized competition sections", async ({ page }) => {

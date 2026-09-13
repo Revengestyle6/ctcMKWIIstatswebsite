@@ -50,9 +50,10 @@ const navigationSections = [
         description: "Compare player production and track results for a selected team.",
       },
       {
-        to: "/top-tracks",
-        title: "Track Averages",
-        description: "Find the strongest player and team results by track.",
+        to: "/tracks",
+        title: "Track Analytics",
+        description:
+          "Compare track frequency, scoring margins, timing, and team-specific strengths.",
       },
       {
         to: "/best-matchups",

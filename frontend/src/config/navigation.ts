@@ -36,9 +36,9 @@ export const navigationGroups = [
         description: "Player contributions and track results by team.",
       },
       {
-        to: "/top-tracks",
-        label: "Track averages",
-        description: "Player and team rankings for each track.",
+        to: "/tracks",
+        label: "Track analytics",
+        description: "Track trends, timing, margins, and team strengths.",
       },
       {
         to: "/best-matchups",
@@ -83,12 +83,14 @@ export const navigationGroups = [
 export function isNavigationLinkActive(link: NavigationLink, pathname: string): boolean {
   if (link.to === "/players") return pathname === "/players" || pathname.startsWith("/players/");
   if (link.to === "/teams") return pathname === "/teams" || pathname.startsWith("/teams/");
+  if (link.to === "/tracks") return pathname === "/tracks" || pathname.startsWith("/tracks/");
   return pathname === link.to;
 }
 
 export function backDestination(pathname: string): string {
   if (pathname.startsWith("/players/")) return "/players";
   if (pathname.startsWith("/teams/")) return "/teams";
+  if (pathname.startsWith("/tracks/")) return "/tracks";
   if (
     pathname === "/admin/database" ||
     pathname === "/admin/aliases" ||

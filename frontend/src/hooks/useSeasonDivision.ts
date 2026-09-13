@@ -3,10 +3,20 @@ import { type DivisionOption, fetchDivisions, fetchSeasons, type SeasonOption } 
 import { useLeague } from "../context/LeagueContext";
 
 export function useSeasonDivision(
-  options: { initialSeason?: string; initialDivision?: string } = {}
+  options: {
+    initialSeason?: string;
+    initialDivision?: string;
+    allowAllSeasons?: boolean;
+    allowAllDivisions?: boolean;
+  } = {}
 ) {
   const { league } = useLeague();
-  const { initialSeason = "", initialDivision = "" } = options;
+  const {
+    initialSeason = "",
+    initialDivision = "",
+    allowAllSeasons = false,
+    allowAllDivisions = false,
+  } = options;
   const [seasons, setSeasons] = useState<SeasonOption[]>([]);
   const [divisions, setDivisions] = useState<DivisionOption[]>([]);
   const [season, setSeason] = useState("");
@@ -25,9 +35,11 @@ export function useSeasonDivision(
         if (cancelled) return;
         setSeasons(seasonData);
         setSeason(
-          seasonData.some((entry) => entry.season === initialSeason)
-            ? initialSeason
-            : (seasonData[0]?.season ?? "")
+          allowAllSeasons && initialSeason === "all"
+            ? ""
+            : seasonData.some((entry) => entry.season === initialSeason)
+              ? initialSeason
+              : (seasonData[0]?.season ?? "")
         );
       } catch (error) {
         if (cancelled) return;
@@ -43,7 +55,7 @@ export function useSeasonDivision(
     return () => {
       cancelled = true;
     };
-  }, [initialSeason, league]);
+  }, [allowAllSeasons, initialSeason, league]);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,9 +74,11 @@ export function useSeasonDivision(
         if (cancelled) return;
         setDivisions(divisionData);
         setDivision(
-          divisionData.some((entry) => entry.division === initialDivision)
-            ? initialDivision
-            : (divisionData[0]?.division ?? "")
+          allowAllDivisions && initialDivision === "all"
+            ? ""
+            : divisionData.some((entry) => entry.division === initialDivision)
+              ? initialDivision
+              : (divisionData[0]?.division ?? "")
         );
       } catch (error) {
         if (cancelled) return;
@@ -80,7 +94,7 @@ export function useSeasonDivision(
     return () => {
       cancelled = true;
     };
-  }, [league, season, initialDivision]);
+  }, [allowAllDivisions, league, season, initialDivision]);
 
   return {
     seasons,
