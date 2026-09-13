@@ -206,6 +206,41 @@ def _validate_new_semifinal_participants(
         raise ValueError(f"A semifinal team is already assigned to another series: {occupied}.")
 
 
+def _validate_semifinal_seeding(
+    session, season_id: int, division: Division, series_number: int, team_ids: set[int]
+) -> None:
+    from standings_service import get_division_standings
+
+    if not division.is_conference_based:
+        has_regular_results = session.scalar(
+            select(Match.match_id)
+            .where(Match.division_id == division.division_id, Match.match_type == "regular")
+            .limit(1)
+        )
+        if has_regular_results is None:
+            return
+
+    season = division.season
+    standings = get_division_standings(
+        session,
+        league=season.league_code,
+        season=season.season_code,
+        division=division.division_code,
+    )
+    seeds = {seed["seed"]: seed["team_id"] for seed in standings["playoff_qualification"]["seeds"]}
+    team_count = standings["playoff_qualification"]["team_count"]
+    expected_seed_numbers = (
+        {1: (1, 4), 2: (2, 3)} if team_count == 4 else {1: (2, 3)} if team_count == 3 else {}
+    )
+    expected_numbers = expected_seed_numbers.get(series_number)
+    if expected_numbers is None or not all(seed in seeds for seed in expected_numbers):
+        return
+    expected_team_ids = {seeds[seed] for seed in expected_numbers}
+    if team_ids != expected_team_ids:
+        pairing = " vs ".join(f"seed {seed}" for seed in expected_numbers)
+        raise ValueError(f"Semifinals Series {series_number} must be {pairing}.")
+
+
 def _validate_finals_participants(
     session,
     config: DivisionPlayoffConfig,
@@ -254,16 +289,11 @@ def resolve_playoff_series(
     definition: PlayoffFormatDefinition = metadata["format"]
     config = session.get(DivisionPlayoffConfig, division.division_id)
     if config is None:
-        config = DivisionPlayoffConfig(
-            division_id=division.division_id,
-            format_code=definition.code,
-            playoff_team_count=definition.playoff_team_count,
-            semifinal_series_count=definition.semifinal_series_count,
-            finals_bye_count=definition.finals_bye_count,
+        raise ValueError(
+            "Configure this division's playoff format in Database Management before adding "
+            "playoff matches."
         )
-        session.add(config)
-        session.flush()
-    elif config.format_code != definition.code:
+    if config.format_code != definition.code:
         raise ValueError(
             f"This division's playoff format is already locked as {config.format_code}."
         )
@@ -280,6 +310,13 @@ def resolve_playoff_series(
     submitted_team_ids = set(team_ids)
     if series is None:
         if metadata["stage"] == "semifinals":
+            _validate_semifinal_seeding(
+                session,
+                season_id,
+                division,
+                metadata["series_number"],
+                submitted_team_ids,
+            )
             _validate_new_semifinal_participants(
                 session, division.division_id, metadata["series_number"], submitted_team_ids
             )
@@ -348,12 +385,19 @@ def validate_playoff_against_existing(
     team_ids: list[int],
 ) -> None:
     metadata = validate_competition_metadata(match_data)
-    if metadata["match_type"] != "playoff" or division is None:
+    if metadata["match_type"] != "playoff":
         return
+    if division is None:
+        raise ValueError(
+            "Configure this division in Database Management before adding playoff matches."
+        )
     config = session.get(DivisionPlayoffConfig, division.division_id)
     definition: PlayoffFormatDefinition = metadata["format"]
     if config is None:
-        return
+        raise ValueError(
+            "Configure this division's playoff format in Database Management before adding "
+            "playoff matches."
+        )
     if config.format_code != definition.code:
         raise ValueError(
             f"This division's playoff format is already locked as {config.format_code}."
@@ -401,17 +445,3 @@ def validate_playoff_against_existing(
     )
     if _series_winner(session, series) is not None and not filling_earlier_gap:
         raise ValueError("This playoff series has already been clinched.")
-
-
-def playoff_format_new_entry(match_data: dict[str, Any]) -> dict[str, Any] | None:
-    metadata = validate_competition_metadata(match_data)
-    if metadata["match_type"] != "playoff":
-        return None
-    definition: PlayoffFormatDefinition = metadata["format"]
-    return {
-        "format_code": definition.code,
-        "format_label": definition.label,
-        "playoff_team_count": definition.playoff_team_count,
-        "semifinal_series_count": definition.semifinal_series_count,
-        "finals_bye_count": definition.finals_bye_count,
-    }

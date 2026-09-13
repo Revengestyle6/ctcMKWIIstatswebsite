@@ -2,7 +2,18 @@ import math
 from collections import defaultdict
 
 from analytics_eligibility import analytics_excluded_race_ids
-from models import Match, MatchTeam, Player, Race, RacePlayerResult, Team, TeamSeasonEntry
+from models import (
+    Division,
+    DivisionConference,
+    DivisionPlayoffConfig,
+    Match,
+    MatchTeam,
+    Player,
+    Race,
+    RacePlayerResult,
+    Team,
+    TeamSeasonEntry,
+)
 from player_dashboard_stats import _team_logo_url
 from player_display_names import _display_names_for_players
 from player_role_analytics import confirmed_5v5_race_ids, role_coverage, valid_race_score
@@ -13,7 +24,7 @@ INACTIVE_STATUSES = frozenset({"dropped", "disqualified"})
 LEADERBOARD_ROLES = ("runner", "bagger")
 
 
-def _empty_record(entry, team, logo_url):
+def _empty_record(entry, team, logo_url, conference=None):
     return {
         "team_id": team.team_id,
         "team_season_entry_id": entry.team_season_entry_id,
@@ -33,6 +44,16 @@ def _empty_record(entry, team, logo_url):
         "standings_points": 0,
         "bonus_points": 0,
         "head_to_head_differential": 0,
+        "conference": (
+            {
+                "id": conference.division_conference_id,
+                "code": conference.conference_code,
+                "name": conference.conference_name,
+                "sort_order": conference.sort_order,
+            }
+            if conference
+            else None
+        ),
     }
 
 
@@ -100,7 +121,54 @@ def _apply_result(records, team_rows, scores, both_inactive, result_type):
     return awarded, {winner_id: "win", loser_id: "loss"}
 
 
-def _rank_records(records, matches):
+def _tied_match_metrics(entry_ids, matches, *, cross_conference):
+    tied = set(entry_ids)
+    metrics = {
+        entry_id: {
+            "points": 0,
+            "wins": 0,
+            "ties": 0,
+            "losses": 0,
+            "differential": 0,
+            "series_wins": 0,
+            "series_average_differential": 0.0,
+        }
+        for entry_id in entry_ids
+    }
+    series = defaultdict(lambda: defaultdict(lambda: {"differential": 0, "matches": 0}))
+    for match in matches:
+        teams = match["teams"]
+        ids = {team["team_season_entry_id"] for team in teams}
+        if len(ids) != 2 or not ids.issubset(tied):
+            continue
+        for team in teams:
+            entry_id = team["team_season_entry_id"]
+            opponent_id = next(
+                candidate["team_season_entry_id"]
+                for candidate in teams
+                if candidate["team_season_entry_id"] != entry_id
+            )
+            metric = metrics[entry_id]
+            metric["points"] += team["standings_points"]
+            outcome_field = {"win": "wins", "tie": "ties", "loss": "losses"}[team["outcome"]]
+            metric[outcome_field] += 1
+            differential = team["adjusted_score"] - team["adjusted_opponent_score"]
+            metric["differential"] += differential
+            series[entry_id][opponent_id]["differential"] += differential
+            series[entry_id][opponent_id]["matches"] += 1
+
+    if cross_conference:
+        for entry_id, opponents in series.items():
+            for result in opponents.values():
+                if result["differential"] > 0:
+                    metrics[entry_id]["series_wins"] += 1
+                metrics[entry_id]["series_average_differential"] += (
+                    result["differential"] / result["matches"]
+                )
+    return metrics
+
+
+def _rank_records(records, matches, *, rank_field="rank", force_general=False):
     for record in records.values():
         record["point_differential"] = record["points_for"] - record["points_against"]
 
@@ -114,16 +182,39 @@ def _rank_records(records, matches):
                 record["losses"],
             )
         ].append(entry_id)
+    tie_keys = {}
     for entry_ids in primary_groups.values():
-        tied = set(entry_ids)
-        for match in matches:
-            ids = {team["team_season_entry_id"] for team in match["teams"]}
-            if len(ids) != 2 or not ids.issubset(tied):
-                continue
-            for team in match["teams"]:
-                records[team["team_season_entry_id"]]["head_to_head_differential"] += (
-                    team["adjusted_score"] - team["adjusted_opponent_score"]
+        conference_ids = {
+            records[entry_id]["conference"]["id"]
+            for entry_id in entry_ids
+            if records[entry_id]["conference"] is not None
+        }
+        cross_conference = not force_general and len(entry_ids) >= 3 and len(conference_ids) > 1
+        metrics = _tied_match_metrics(entry_ids, matches, cross_conference=cross_conference)
+        for entry_id in entry_ids:
+            metric = metrics[entry_id]
+            if rank_field == "rank":
+                records[entry_id]["head_to_head_differential"] = metric["differential"]
+            if cross_conference:
+                tie_keys[entry_id] = (
+                    metric["series_wins"],
+                    metric["series_average_differential"],
+                    records[entry_id]["point_differential"],
                 )
+            else:
+                tie_keys[entry_id] = (
+                    metric["points"],
+                    metric["wins"],
+                    metric["ties"],
+                    -metric["losses"],
+                    metric["differential"],
+                    records[entry_id]["point_differential"],
+                )
+            if rank_field == "rank":
+                records[entry_id]["tiebreak"] = {
+                    "mode": "cross_conference_series" if cross_conference else "head_to_head",
+                    **metric,
+                }
 
     ordered = sorted(
         records.values(),
@@ -132,8 +223,7 @@ def _rank_records(records, matches):
             -row["wins"],
             -row["ties"],
             row["losses"],
-            -row["head_to_head_differential"],
-            -row["point_differential"],
+            *(-value for value in tie_keys[row["team_season_entry_id"]]),
             row["name"].casefold(),
         ),
     )
@@ -145,13 +235,12 @@ def _rank_records(records, matches):
             record["wins"],
             record["ties"],
             record["losses"],
-            record["head_to_head_differential"],
-            record["point_differential"],
+            tie_keys[record["team_season_entry_id"]],
         )
         if key != prior_key:
             rank = index
             prior_key = key
-        record["rank"] = rank
+        record[rank_field] = rank
     return ordered
 
 
@@ -295,6 +384,15 @@ def _player_leaderboard(session, scope, records):
 
 def get_division_standings(session, *, league, season, division):
     scope = _get_scope(session, season=season, division=division, league_code=league)
+    division_record = session.get(Division, scope.division_id)
+    conference_rows = session.scalars(
+        select(DivisionConference)
+        .where(DivisionConference.division_id == scope.division_id)
+        .order_by(DivisionConference.sort_order)
+    ).all()
+    conferences_by_id = {
+        conference.division_conference_id: conference for conference in conference_rows
+    }
     team_rows = session.execute(
         select(TeamSeasonEntry, Team)
         .join(Team, Team.team_id == TeamSeasonEntry.team_id)
@@ -306,7 +404,10 @@ def get_division_standings(session, *, league, season, division):
     ).all()
     records = {
         entry.team_season_entry_id: _empty_record(
-            entry, team, _team_logo_url(session, team.team_id, scope.season_id)
+            entry,
+            team,
+            _team_logo_url(session, team.team_id, scope.season_id),
+            conferences_by_id.get(entry.conference_id),
         )
         for entry, team in team_rows
     }
@@ -379,6 +480,76 @@ def get_division_standings(session, *, league, season, division):
         )
 
     ordered = _rank_records(records, matches)
+    conference_standings = []
+    if division_record.is_conference_based:
+        for conference in conference_rows:
+            conference_records = {
+                entry_id: record
+                for entry_id, record in records.items()
+                if record["conference"]
+                and record["conference"]["id"] == conference.division_conference_id
+            }
+            ranked = _rank_records(
+                conference_records, matches, rank_field="conference_rank", force_general=True
+            )
+            conference_standings.append(
+                {
+                    "id": conference.division_conference_id,
+                    "code": conference.conference_code,
+                    "name": conference.conference_name,
+                    "standings": ranked,
+                }
+            )
+
+    active_ordered = [record for record in ordered if record["status"] not in INACTIVE_STATUSES]
+    playoff_config = session.get(DivisionPlayoffConfig, scope.division_id)
+    playoff_team_count = playoff_config.playoff_team_count if playoff_config else None
+    qualifiers = []
+    if division_record.is_conference_based and len(conference_standings) == 2:
+        winners = [
+            conference["standings"][0]
+            for conference in conference_standings
+            if conference["standings"]
+            and conference["standings"][0]["status"] not in INACTIVE_STATUSES
+        ]
+        winners = _rank_records(
+            {record["team_season_entry_id"]: record for record in winners},
+            matches,
+            rank_field="playoff_seed_rank",
+            force_general=True,
+        )
+        winner_ids = {record["team_season_entry_id"] for record in winners}
+        wildcard_records = {
+            record["team_season_entry_id"]: record
+            for record in active_ordered
+            if record["team_season_entry_id"] not in winner_ids
+        }
+        wildcards = _rank_records(wildcard_records, matches, rank_field="wildcard_rank")[:2]
+        qualifiers = winners[:2] + wildcards
+        playoff_team_count = 4
+    elif playoff_team_count in {3, 4}:
+        qualifiers = active_ordered[:playoff_team_count]
+    elif len(active_ordered) in {5, 6}:
+        playoff_team_count = 3
+        qualifiers = active_ordered[:3]
+
+    qualification = [
+        {
+            "seed": index,
+            "team_id": record["team_id"],
+            "team_season_entry_id": record["team_season_entry_id"],
+            "tag": record["tag"],
+            "name": record["name"],
+            "qualification": (
+                "conference_winner"
+                if division_record.is_conference_based and index <= 2
+                else "wild_card"
+                if division_record.is_conference_based
+                else "league_table"
+            ),
+        }
+        for index, record in enumerate(qualifiers, start=1)
+    ]
     leaderboard = _player_leaderboard(session, scope, records)
     return {
         "league": league,
@@ -391,12 +562,47 @@ def get_division_standings(session, *, league, season, division):
             "close_loss_max_margin": 20,
             "eligibility_fraction": "2/3",
             "tiebreaks": [
-                "overall_record",
-                "head_to_head_point_differential",
+                "standings_points",
+                "overall_wdl",
+                "points_vs_tied_opponents",
+                "wdl_vs_tied_opponents",
+                "point_differential_vs_tied_opponents",
+                "overall_point_differential",
+            ],
+            "cross_conference_tiebreaks": [
+                "standings_points",
+                "overall_wdl",
+                "head_to_head_series_wins",
+                "sum_of_average_series_differentials",
                 "overall_point_differential",
             ],
         },
         "standings": ordered,
+        "conferences": conference_standings,
+        "conference_config": {
+            "enabled": division_record.is_conference_based,
+            "valid": (
+                not division_record.is_conference_based
+                or (
+                    len(conference_standings) == 2
+                    and len(records) == 8
+                    and all(len(item["standings"]) == 4 for item in conference_standings)
+                )
+            ),
+            "same_conference_matches": 2,
+            "cross_conference_matches": 1,
+        },
+        "playoff_qualification": {
+            "team_count": playoff_team_count,
+            "seeds": qualification,
+            "semifinals": (
+                [[1, 4], [2, 3]]
+                if playoff_team_count == 4
+                else [[2, 3]]
+                if playoff_team_count == 3
+                else []
+            ),
+        },
         "matches": matches,
         "leaderboard": leaderboard,
         "playoffs": list_playoff_series(

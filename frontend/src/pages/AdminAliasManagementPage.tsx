@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { deleteJson, fetchJson, patchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
 import AdminMatchManager from "../components/admin/AdminMatchManager";
+import CompetitionSetupManager from "../components/admin/CompetitionSetupManager";
 import TeamIdentityManager from "../components/admin/TeamIdentityManager";
 import TeamLogoManager from "../components/admin/TeamLogoManager";
 import { BackToHomeLink } from "../components/BackToHomeLink";
@@ -12,6 +13,14 @@ import { useLeague } from "../context/LeagueContext";
 import { useAdminSession } from "../hooks/useAdminSession";
 
 type EntityType = "players" | "teams" | "tracks";
+type ManagerTab = "competition" | "matches" | "aliases";
+
+const managerTabs: Array<{ id: ManagerTab; label: string }> = [
+  { id: "competition", label: "Competition Setup" },
+  { id: "matches", label: "Match Data Management" },
+  { id: "aliases", label: "Alias Management" },
+];
+
 type AliasEntity = {
   id: number;
   label: string;
@@ -383,6 +392,12 @@ function TeamComparisonCard({
 export default function AdminAliasManagementPage(): React.JSX.Element {
   const auth = useAdminSession();
   const { league } = useLeague();
+  const [managerTab, setManagerTab] = useState<ManagerTab>("competition");
+  const [visitedManagerTabs, setVisitedManagerTabs] = useState<Record<ManagerTab, boolean>>({
+    competition: true,
+    matches: false,
+    aliases: false,
+  });
   const [entityType, setEntityType] = useState<EntityType>("tracks");
   const [trackLeague, setTrackLeague] = useState<"ctc" | "gsc">(league);
   const [query, setQuery] = useState("");
@@ -411,7 +426,7 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
   const [mkcCanonicalSelections, setMkcCanonicalSelections] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    if (!auth.session?.authenticated) return;
+    if (!auth.session?.authenticated || managerTab !== "aliases") return;
     let cancelled = false;
     const timeout = window.setTimeout(() => {
       setLoading(true);
@@ -436,10 +451,10 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [auth.session?.authenticated, entityType, query, trackLeague]);
+  }, [auth.session?.authenticated, entityType, managerTab, query, trackLeague]);
 
   useEffect(() => {
-    if (!auth.session?.authenticated || entityType !== "tracks") return;
+    if (!auth.session?.authenticated || managerTab !== "aliases" || entityType !== "tracks") return;
     let cancelled = false;
     fetchJson<AliasEntity[]>("/api/admin/aliases/tracks", {
       limit: 500,
@@ -455,10 +470,11 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [auth.session?.authenticated, entityType, trackLeague]);
+  }, [auth.session?.authenticated, entityType, managerTab, trackLeague]);
 
   useEffect(() => {
-    if (!auth.session?.authenticated || entityType !== "players") return;
+    if (!auth.session?.authenticated || managerTab !== "aliases" || entityType !== "players")
+      return;
     let cancelled = false;
     fetchJson<AliasEntity[]>("/api/admin/aliases/players", { limit: 500 })
       .then((response) => {
@@ -471,10 +487,10 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [auth.session?.authenticated, entityType]);
+  }, [auth.session?.authenticated, entityType, managerTab]);
 
   useEffect(() => {
-    if (!auth.session?.authenticated || entityType !== "teams") return;
+    if (!auth.session?.authenticated || managerTab !== "aliases" || entityType !== "teams") return;
     let cancelled = false;
     fetchJson<AliasEntity[]>("/api/admin/aliases/teams", { limit: 500 })
       .then((response) => {
@@ -487,7 +503,7 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [auth.session?.authenticated, entityType]);
+  }, [auth.session?.authenticated, entityType, managerTab]);
 
   useEffect(() => {
     setTrackLeague(league);
@@ -524,6 +540,31 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
       ).length ?? 0,
     [mkcCanonicalSelections, mkcPreview]
   );
+
+  const chooseManagerTab = (nextTab: ManagerTab) => {
+    setManagerTab(nextTab);
+    setVisitedManagerTabs((current) =>
+      current[nextTab] ? current : { ...current, [nextTab]: true }
+    );
+  };
+
+  const handleManagerTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number
+  ) => {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % managerTabs.length;
+    if (event.key === "ArrowLeft") {
+      nextIndex = (currentIndex - 1 + managerTabs.length) % managerTabs.length;
+    }
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = managerTabs.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const nextTab = managerTabs[nextIndex];
+    chooseManagerTab(nextTab.id);
+    document.getElementById(`database-manager-tab-${nextTab.id}`)?.focus();
+  };
 
   const chooseType = (nextType: EntityType) => {
     setEntityType(nextType);
@@ -1054,7 +1095,8 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
             <p className="text-sm uppercase text-blue-200">Restricted administration</p>
             <h1 className="text-3xl font-bold">Database Management</h1>
             <p className="mt-2 max-w-3xl text-gray-300">
-              Maintain canonical records and aliases, or safely edit and delete uploaded match data.
+              Set up competitions, maintain canonical records and aliases, or safely manage uploaded
+              match data.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-4">
@@ -1073,20 +1115,75 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
 
         {auth.session?.authenticated ? (
           <>
-            <section id="match-data-management" aria-labelledby="match-data-management-heading">
+            <div
+              className="grid overflow-hidden rounded-lg border border-white/15 bg-zinc-950/90 p-1 sm:grid-cols-3"
+              role="tablist"
+              aria-label="Database management sections"
+            >
+              {managerTabs.map((tab, index) => (
+                <button
+                  key={tab.id}
+                  id={`database-manager-tab-${tab.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={managerTab === tab.id}
+                  aria-controls={`database-manager-panel-${tab.id}`}
+                  tabIndex={managerTab === tab.id ? 0 : -1}
+                  onClick={() => chooseManagerTab(tab.id)}
+                  onKeyDown={(event) => handleManagerTabKeyDown(event, index)}
+                  className={`min-h-12 rounded-md px-4 py-3 text-sm font-bold transition-colors sm:text-base ${
+                    managerTab === tab.id
+                      ? "bg-blue-500 text-white shadow-lg shadow-blue-950/40"
+                      : "text-gray-300 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <section
+              id="database-manager-panel-competition"
+              role="tabpanel"
+              aria-labelledby="database-manager-tab-competition"
+              hidden={managerTab !== "competition"}
+              className="border border-white/15 bg-zinc-950/90 p-4"
+            >
+              <div className="mb-4">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-200">
+                  Before the first match
+                </p>
+                <h2 id="competition-setup-heading" className="mt-1 text-2xl font-bold">
+                  Competition Setup
+                </h2>
+                <p className="mt-1 max-w-3xl text-sm text-gray-400">
+                  Create the season structure, register teams, and upload logos so standings are
+                  ready before match JSON is submitted.
+                </p>
+              </div>
+              {visitedManagerTabs.competition ? <CompetitionSetupManager league={league} /> : null}
+            </section>
+
+            <section
+              id="database-manager-panel-matches"
+              role="tabpanel"
+              aria-labelledby="database-manager-tab-matches"
+              hidden={managerTab !== "matches"}
+            >
               <div className="mb-3">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">
                   Match records
                 </p>
-                <h2 id="match-data-management-heading" className="mt-1 text-2xl font-bold">
-                  Match Data Management
-                </h2>
+                <h2 className="mt-1 text-2xl font-bold">Match Data Management</h2>
               </div>
-              <AdminMatchManager />
+              {visitedManagerTabs.matches ? <AdminMatchManager /> : null}
             </section>
+
             <section
-              id="alias-management"
-              aria-labelledby="alias-management-heading"
+              id="database-manager-panel-aliases"
+              role="tabpanel"
+              aria-labelledby="database-manager-tab-aliases"
+              hidden={managerTab !== "aliases"}
               className="border border-white/15 bg-zinc-950/90 p-4"
             >
               <div className="mb-4">
@@ -1137,7 +1234,14 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
               ) : null}
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.4fr)]">
+            <section
+              aria-label="Alias management workspace"
+              className={
+                managerTab === "aliases"
+                  ? "grid gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.4fr)]"
+                  : "hidden"
+              }
+            >
               <section className="border border-white/15 bg-zinc-950/90 p-4">
                 {entityType === "tracks" ? (
                   <fieldset className="mb-4">
@@ -1744,14 +1848,14 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                   </div>
                 )}
               </section>
-            </div>
+            </section>
           </>
         ) : null}
 
-        {error ? (
+        {managerTab === "aliases" && error ? (
           <p className="border border-red-500/40 bg-red-950/40 p-3 text-red-200">{error}</p>
         ) : null}
-        {notice ? (
+        {managerTab === "aliases" && notice ? (
           <p className="border border-emerald-500/40 bg-emerald-950/40 p-3 text-emerald-100">
             {notice}
           </p>

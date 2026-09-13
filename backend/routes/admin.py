@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timezone
 
 import alias_management
+import competition_setup
 import database_health as database_health_service
 import match_management
 import mkc_name_sync
@@ -23,7 +24,7 @@ from match_upload import (
     serialize_addition_log,
     validate_committable_match,
 )
-from models import DatabaseAdditionLog, Match, SourceFile
+from models import DatabaseAdditionLog, Match, Season, SourceFile
 from sqlalchemy import func, select
 
 from routes.common import (
@@ -64,6 +65,302 @@ def _team_identity_error(error):
         return jsonify({"error": str(error)}), 400
     logger.exception("Team identity management failed")
     return jsonify({"error": "Team identity management failed."}), 500
+
+
+def _competition_setup_error(error):
+    if isinstance(error, LookupError):
+        return jsonify({"error": str(error)}), 404
+    if isinstance(error, ValueError):
+        return jsonify({"error": str(error)}), 400
+    logger.exception("Competition setup failed")
+    return jsonify({"error": "Competition setup failed."}), 500
+
+
+@admin_api.get("/api/admin/competition-setup")
+@require_admin
+def api_competition_setup_catalog():
+    try:
+        with stats.SessionLocal() as session:
+            return jsonify(competition_setup.get_catalog(session, request.args.get("league", "")))
+    except Exception as error:
+        return _competition_setup_error(error)
+
+
+@admin_api.post("/api/admin/competition-setup/seasons")
+@require_admin
+def api_competition_setup_season_create():
+    try:
+        payload = request.get_json(silent=True) or {}
+        with stats.SessionLocal.begin() as session:
+            season = competition_setup.create_season(session, payload)
+            record_audit(
+                session,
+                g.admin_actor,
+                "season.created",
+                target_type="season",
+                target_id=season.season_id,
+                details={
+                    "league": season.league_code,
+                    "code": season.season_code,
+                    "name": season.name,
+                    "status": season.status,
+                },
+            )
+            created_id = season.season_id
+        cache.clear()
+        with stats.SessionLocal() as session:
+            catalog = competition_setup.get_catalog(session, payload.get("league"))
+        return jsonify({"created_id": created_id, "catalog": catalog}), 201
+    except Exception as error:
+        return _competition_setup_error(error)
+
+
+@admin_api.patch("/api/admin/competition-setup/seasons/<int:season_id>")
+@require_admin
+def api_competition_setup_season_update(season_id):
+    try:
+        payload = request.get_json(silent=True) or {}
+        with stats.SessionLocal.begin() as session:
+            season, previous = competition_setup.update_season(session, season_id, payload)
+            current = {
+                "code": season.season_code,
+                "number": season.season_number,
+                "name": season.name,
+                "status": season.status,
+                "starts_on": season.starts_on.isoformat() if season.starts_on else None,
+                "ends_on": season.ends_on.isoformat() if season.ends_on else None,
+            }
+            record_audit(
+                session,
+                g.admin_actor,
+                "season.updated",
+                target_type="season",
+                target_id=season_id,
+                details={"previous": previous, "current": current},
+            )
+            league = season.league_code
+        cache.clear()
+        with stats.SessionLocal() as session:
+            catalog = competition_setup.get_catalog(session, league)
+        return jsonify({"updated_id": season_id, "catalog": catalog})
+    except Exception as error:
+        return _competition_setup_error(error)
+
+
+@admin_api.post("/api/admin/competition-setup/divisions")
+@require_admin
+def api_competition_setup_division_create():
+    try:
+        payload = request.get_json(silent=True) or {}
+        with stats.SessionLocal.begin() as session:
+            division = competition_setup.create_division(session, payload)
+            season = session.get(Season, division.season_id)
+            record_audit(
+                session,
+                g.admin_actor,
+                "division.created",
+                target_type="division",
+                target_id=division.division_id,
+                details={
+                    "season_id": division.season_id,
+                    "code": division.division_code,
+                    "name": division.division_name,
+                },
+            )
+            created_id = division.division_id
+            league = season.league_code
+        cache.clear()
+        with stats.SessionLocal() as session:
+            catalog = competition_setup.get_catalog(session, league)
+        return jsonify({"created_id": created_id, "catalog": catalog}), 201
+    except Exception as error:
+        return _competition_setup_error(error)
+
+
+@admin_api.patch("/api/admin/competition-setup/divisions/<int:division_id>")
+@require_admin
+def api_competition_setup_division_update(division_id):
+    try:
+        payload = request.get_json(silent=True) or {}
+        with stats.SessionLocal.begin() as session:
+            division, previous = competition_setup.update_division(session, division_id, payload)
+            season = session.get(Season, division.season_id)
+            current = {
+                "id": division.division_id,
+                "code": division.division_code,
+                "name": division.division_name,
+            }
+            record_audit(
+                session,
+                g.admin_actor,
+                "division.updated",
+                target_type="division",
+                target_id=division_id,
+                details={"previous": previous, "current": current},
+            )
+            league = season.league_code
+        cache.clear()
+        with stats.SessionLocal() as session:
+            catalog = competition_setup.get_catalog(session, league)
+        return jsonify({"updated_id": division_id, "catalog": catalog})
+    except Exception as error:
+        return _competition_setup_error(error)
+
+
+@admin_api.post("/api/admin/competition-setup/teams")
+@require_admin
+def api_competition_setup_team_create():
+    try:
+        payload = request.get_json(silent=True) or {}
+        with stats.SessionLocal.begin() as session:
+            team = competition_setup.create_team(session, payload)
+            record_audit(
+                session,
+                g.admin_actor,
+                "team.created",
+                target_type="team",
+                target_id=team.team_id,
+                details={
+                    "canonical_name": team.canonical_name,
+                    "canonical_tag": team.canonical_tag,
+                    "league": payload.get("league"),
+                },
+            )
+            created_id = team.team_id
+        cache.clear()
+        with stats.SessionLocal() as session:
+            catalog = competition_setup.get_catalog(session, payload.get("league"))
+        return jsonify({"created_id": created_id, "catalog": catalog}), 201
+    except Exception as error:
+        return _competition_setup_error(error)
+
+
+@admin_api.post("/api/admin/competition-setup/team-season-entries")
+@require_admin
+def api_competition_setup_team_entry_create():
+    try:
+        payload = request.get_json(silent=True) or {}
+        with stats.SessionLocal.begin() as session:
+            entry, team, season, division = competition_setup.create_team_season_entry(
+                session, payload
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team_season_entry.created",
+                target_type="team_season_entry",
+                target_id=entry.team_season_entry_id,
+                details={
+                    "team_id": team.team_id,
+                    "season_id": season.season_id,
+                    "division_id": division.division_id,
+                    "display_name": entry.display_name,
+                    "clan_tag": entry.clan_tag,
+                },
+            )
+            created_id = entry.team_season_entry_id
+            league = season.league_code
+        cache.clear()
+        with stats.SessionLocal() as session:
+            catalog = competition_setup.get_catalog(session, league)
+        return jsonify({"created_id": created_id, "catalog": catalog}), 201
+    except Exception as error:
+        return _competition_setup_error(error)
+
+
+@admin_api.post("/api/admin/competition-setup/team-season-entries/with-logo")
+@require_admin
+def api_competition_setup_team_entry_with_logo_create():
+    try:
+        payload = {
+            "team_id": request.form.get("team_id"),
+            "season_id": request.form.get("season_id"),
+            "division_id": request.form.get("division_id"),
+            "conference_id": request.form.get("conference_id"),
+            "display_name": request.form.get("display_name"),
+            "clan_tag": request.form.get("clan_tag"),
+            "hex_color": request.form.get("hex_color"),
+        }
+        logo_mode = str(request.form.get("logo_mode") or "none").strip().casefold()
+        logo_scope = str(request.form.get("logo_scope") or "season").strip().casefold()
+        if logo_mode not in {"none", "existing", "upload"}:
+            raise ValueError("Initial logo choice is invalid.")
+        if logo_scope not in {"season", "career"}:
+            raise ValueError("Logo scope must be this season or default/career.")
+
+        with stats.SessionLocal.begin() as session:
+            entry, team, season, division = competition_setup.create_team_season_entry(
+                session, payload
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team_season_entry.created",
+                target_type="team_season_entry",
+                target_id=entry.team_season_entry_id,
+                details={
+                    "team_id": team.team_id,
+                    "season_id": season.season_id,
+                    "division_id": division.division_id,
+                    "conference_id": entry.conference_id,
+                    "display_name": entry.display_name,
+                    "clan_tag": entry.clan_tag,
+                },
+            )
+
+            logo = None
+            target_season_id = season.season_id if logo_scope == "season" else None
+            if logo_mode == "existing":
+                try:
+                    source_logo_id = int(str(request.form.get("existing_logo_id") or ""))
+                except ValueError as error:
+                    raise ValueError("Choose an existing logo.") from error
+                _, logo = team_logo_management.reuse_team_logo(
+                    session,
+                    team.team_id,
+                    source_logo_id,
+                    season_id=target_season_id,
+                    alt_text=request.form.get("alt_text", ""),
+                )
+            elif logo_mode == "upload":
+                image = request.files.get("image")
+                if image is None:
+                    raise ValueError("Choose an image to upload.")
+                _, logo = team_logo_management.create_team_logo(
+                    session,
+                    team.team_id,
+                    image.read(team_logo_management.MAX_UPLOAD_BYTES + 1),
+                    season_id=target_season_id,
+                    alt_text=request.form.get("alt_text", ""),
+                )
+
+            if logo is not None:
+                record_audit(
+                    session,
+                    g.admin_actor,
+                    "team_logo.created" if logo_mode == "upload" else "team_logo.reused",
+                    target_type="team_logo",
+                    target_id=logo.team_logo_id,
+                    details={
+                        "team_id": team.team_id,
+                        "season_id": target_season_id,
+                        "asset_path": logo.asset_path,
+                        "source_logo_id": (
+                            request.form.get("existing_logo_id")
+                            if logo_mode == "existing"
+                            else None
+                        ),
+                    },
+                )
+
+            created_id = entry.team_season_entry_id
+            league = season.league_code
+        cache.clear()
+        with stats.SessionLocal() as session:
+            catalog = competition_setup.get_catalog(session, league)
+        return jsonify({"created_id": created_id, "catalog": catalog}), 201
+    except Exception as error:
+        return _competition_setup_error(error)
 
 
 @admin_api.patch("/api/admin/team-season-entries/<int:entry_id>/status")

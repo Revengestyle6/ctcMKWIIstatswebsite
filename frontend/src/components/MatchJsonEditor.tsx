@@ -644,6 +644,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
     let cancelled = false;
     setPlayoffContext(null);
     setPlayoffContextStatus("loading");
+    setMatch((current) =>
+      current.match_type === "playoff" && current.playoff_format !== undefined
+        ? { ...current, playoff_format: undefined }
+        : current
+    );
     fetchPlayoffSeries(match.league ?? "ctc", match.season, match.division)
       .then((context) => {
         if (cancelled) return;
@@ -682,7 +687,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
   useEffect(() => {
     if (match.match_type !== "playoff" || playoffContextStatus !== "loaded") return;
     const lockedBestOf = selectedPlayoffSeries?.best_of;
-    const lockedFormat = selectedPlayoffSeries ? playoffContext?.format?.code : undefined;
+    const lockedFormat = playoffContext?.format?.code;
     if (
       match.series_match_number !== deterministicSeriesMatchNumber ||
       (lockedBestOf !== undefined && match.best_of !== lockedBestOf) ||
@@ -2119,8 +2124,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       match_type: "playoff",
                       result_type: "played",
                       match_number: undefined,
-                      playoff_format:
-                        playoffContext?.format?.code ?? match.playoff_format ?? "four_team",
+                      playoff_format: playoffContext?.format?.code,
                       playoff_stage: match.playoff_stage ?? "semifinals",
                       playoff_series_number: match.playoff_series_number ?? 1,
                       series_match_number: match.series_match_number ?? 1,
@@ -2232,7 +2236,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
               <>
                 <div className="text-sm font-semibold text-gray-200">
                   <span>Playoff format</span>
-                  {selectedPlayoffSeries && playoffContext?.format ? (
+                  {playoffContext?.format ? (
                     <ReadOnlyControl
                       invalid={fieldHasError(issues, "playoff_format")}
                       label="Playoff format"
@@ -2243,23 +2247,13 @@ export default function MatchJsonEditor(): React.JSX.Element {
                           : "4 teams (two semifinals)"
                       }
                     />
+                  ) : playoffContextStatus === "loading" ? (
+                    <ReadOnlyControl label="Playoff format" locked value="Loading…" />
                   ) : (
-                    <select
-                      id="playoff-format"
-                      aria-label="Playoff format"
-                      value={match.playoff_format ?? "four_team"}
-                      onChange={(event) =>
-                        updateMatch({
-                          playoff_format: event.target.value as "three_team" | "four_team",
-                          playoff_series_number: 1,
-                        })
-                      }
-                      aria-invalid={fieldHasError(issues, "playoff_format") || undefined}
-                      className={`${inputClass} ${fieldHasError(issues, "playoff_format") ? "border-red-400/70" : ""}`}
-                    >
-                      <option value="three_team">3 teams (one semifinal)</option>
-                      <option value="four_team">4 teams (two semifinals)</option>
-                    </select>
+                    <div className="mt-2 rounded border border-amber-400/40 bg-amber-950/25 px-3 py-2 text-sm font-normal text-amber-100">
+                      Configure this division’s playoff format in Database Management before adding
+                      playoff matches.
+                    </div>
                   )}
                   <FieldIssues field="playoff_format" issues={issues} />
                 </div>

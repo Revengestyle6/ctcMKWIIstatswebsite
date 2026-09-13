@@ -53,12 +53,33 @@ class Division(Base):
     season_id = Column(Integer, ForeignKey("seasons.season_id"), nullable=False)
     division_code = Column(Text, nullable=False)
     division_name = Column(Text, nullable=False)
+    is_conference_based = Column(Boolean, nullable=False, default=False)
     last_update_at = last_update_column()
 
     season = relationship("Season", back_populates="divisions")
+    conferences = relationship("DivisionConference", back_populates="division")
 
     __table_args__ = (
         UniqueConstraint("season_id", "division_code", name="uq_division_season_code"),
+    )
+
+
+class DivisionConference(Base):
+    __tablename__ = "division_conferences"
+
+    division_conference_id = Column(Integer, primary_key=True)
+    division_id = Column(Integer, ForeignKey("divisions.division_id"), nullable=False, index=True)
+    conference_code = Column(Text, nullable=False)
+    conference_name = Column(Text, nullable=False)
+    sort_order = Column(Integer, nullable=False)
+    last_update_at = last_update_column()
+
+    division = relationship("Division", back_populates="conferences")
+
+    __table_args__ = (
+        UniqueConstraint("division_id", "conference_code", name="uq_division_conference_code"),
+        UniqueConstraint("division_id", "sort_order", name="uq_division_conference_order"),
+        CheckConstraint("sort_order IN (1, 2)", name="ck_division_conference_order"),
     )
 
 
@@ -245,6 +266,7 @@ class TeamSeasonEntry(Base):
     team_id = Column(Integer, ForeignKey("teams.team_id"), nullable=False)
     season_id = Column(Integer, ForeignKey("seasons.season_id"), nullable=False)
     division_id = Column(Integer, ForeignKey("divisions.division_id"), nullable=False)
+    conference_id = Column(Integer, ForeignKey("division_conferences.division_conference_id"))
     display_name = Column(Text, nullable=False)
     clan_tag = Column(Text, nullable=False)
     hex_color = Column(Text)

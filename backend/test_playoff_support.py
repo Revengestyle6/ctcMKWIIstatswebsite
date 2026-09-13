@@ -8,6 +8,7 @@ from import_json_to_db import detect_new_entries  # noqa: E402
 from match_sets import apply_match_set  # noqa: E402
 from models import (  # noqa: E402
     Division,
+    DivisionPlayoffConfig,
     Match,
     MatchTeam,
     Season,
@@ -48,6 +49,15 @@ class PlayoffSupportTests(unittest.TestCase):
             )
             session.add(division)
             session.flush()
+            session.add(
+                DivisionPlayoffConfig(
+                    division_id=division.division_id,
+                    format_code="four_team",
+                    playoff_team_count=4,
+                    semifinal_series_count=2,
+                    finals_bye_count=0,
+                )
+            )
             self.season_id = season.season_id
             self.division_id = division.division_id
             self.team_ids = []
@@ -135,12 +145,12 @@ class PlayoffSupportTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "cannot end in a tie"):
             validate_competition_metadata(match)
 
-    def test_new_division_still_requires_explicit_playoff_format_approval(self):
+    def test_new_division_requires_database_manager_configuration(self):
         match = self.metadata()
         match.update({"league": "ctc", "season": "s4", "division": "d9"})
         with self.SessionLocal() as session:
-            entries = detect_new_entries(session, match)
-        self.assertIn("playoff_format", {entry["type"] for entry in entries})
+            with self.assertRaisesRegex(ValueError, "Database Management"):
+                detect_new_entries(session, match)
 
     def test_series_pairing_is_immutable_and_team_cannot_enter_other_semifinal(self):
         with self.SessionLocal.begin() as session:
@@ -169,6 +179,11 @@ class PlayoffSupportTests(unittest.TestCase):
         first_match = self.metadata(format_code="three_team")
         first_match.update({"league": "ctc", "season": "s3", "division": "d1"})
         with self.SessionLocal.begin() as session:
+            config = session.get(DivisionPlayoffConfig, self.division_id)
+            config.format_code = "three_team"
+            config.playoff_team_count = 3
+            config.semifinal_series_count = 1
+            config.finals_bye_count = 1
             division = session.get(Division, self.division_id)
             series, _ = resolve_playoff_series(
                 session, self.season_id, division, first_match, self.team_ids[:2]

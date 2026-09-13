@@ -12,6 +12,7 @@ import { useSeasonDivision } from "../hooks/useSeasonDivision";
 type CompetitionStatus = "active" | "dropped" | "disqualified";
 type Standing = {
   rank: number;
+  conference_rank?: number;
   team_id: number;
   team_season_entry_id: number;
   name: string;
@@ -30,6 +31,7 @@ type Standing = {
   standings_points: number;
   bonus_points: number;
   head_to_head_differential: number;
+  conference: { id: number; code: string; name: string; sort_order: number } | null;
 };
 type MatchResult = {
   match_id: number;
@@ -92,6 +94,23 @@ type StandingsResponse = {
   season: string;
   division: string;
   standings: Standing[];
+  conferences: Array<{
+    id: number;
+    code: string;
+    name: string;
+    standings: Standing[];
+  }>;
+  conference_config: { enabled: boolean; valid: boolean };
+  playoff_qualification: {
+    team_count: number | null;
+    seeds: Array<{
+      seed: number;
+      team_id: number;
+      tag: string;
+      name: string;
+      qualification: "conference_winner" | "wild_card" | "league_table";
+    }>;
+  };
   matches: MatchResult[];
   leaderboard: LeaderboardPlayer[];
   playoffs: { format: unknown; series: PlayoffSeries[] };
@@ -186,7 +205,7 @@ function StandingsTable({ standings }: { standings: Standing[] }) {
               key={team.team_season_entry_id}
               className="border-b border-white/10 bg-black/45 odd:bg-white/[0.04]"
             >
-              <td className="px-3 py-3 text-gray-300">{team.rank}</td>
+              <td className="px-3 py-3 text-gray-300">{team.conference_rank ?? team.rank}</td>
               <td className="min-w-64 border-l border-white/[0.08] px-3 py-3">
                 <TeamIdentity team={team} />
               </td>
@@ -683,15 +702,43 @@ export default function StandingsPage(): React.JSX.Element {
             ) : null}
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(23rem,0.9fr)]">
               <div className="min-w-0 space-y-5">
-                <section className="overflow-hidden rounded-xl border border-white/10 bg-zinc-950/90 shadow-2xl">
-                  <div className="border-b border-white/10 px-5 py-4">
-                    <h2 className="text-xl font-bold">League Table</h2>
-                    <p className="mt-1 text-xs text-gray-400">
-                      3 for a win · 2 for a tie · 1 for a loss by 20 or fewer
-                    </p>
+                {data.conference_config.enabled ? (
+                  <div className="space-y-5">
+                    {!data.conference_config.valid ? (
+                      <p className="rounded-lg border border-amber-300/30 bg-amber-950/40 p-3 text-sm text-amber-100">
+                        Conference setup is incomplete. Assign exactly four teams to each conference
+                        in Competition Setup.
+                      </p>
+                    ) : null}
+                    {data.conferences.map((conference) => (
+                      <section
+                        key={conference.id}
+                        className="overflow-hidden rounded-xl border border-white/10 bg-zinc-950/90 shadow-2xl"
+                      >
+                        <div className="border-b border-white/10 px-5 py-4">
+                          <p className="text-xs font-bold uppercase tracking-widest league-accent-text">
+                            League Table
+                          </p>
+                          <h2 className="mt-1 text-xl font-bold">{conference.name}</h2>
+                          <p className="mt-1 text-xs text-gray-400">
+                            3 for a win · 2 for a tie · 1 for a loss by 20 or fewer
+                          </p>
+                        </div>
+                        <StandingsTable standings={conference.standings} />
+                      </section>
+                    ))}
                   </div>
-                  <StandingsTable standings={data.standings} />
-                </section>
+                ) : (
+                  <section className="overflow-hidden rounded-xl border border-white/10 bg-zinc-950/90 shadow-2xl">
+                    <div className="border-b border-white/10 px-5 py-4">
+                      <h2 className="text-xl font-bold">League Table</h2>
+                      <p className="mt-1 text-xs text-gray-400">
+                        3 for a win · 2 for a tie · 1 for a loss by 20 or fewer
+                      </p>
+                    </div>
+                    <StandingsTable standings={data.standings} />
+                  </section>
+                )}
                 <section className="rounded-xl border border-white/10 bg-zinc-950/90 p-5 shadow-2xl">
                   <div className="mb-4">
                     <h2 className="text-xl font-bold">Head-to-Head Results</h2>
@@ -720,6 +767,23 @@ export default function StandingsPage(): React.JSX.Element {
                 </p>
                 <h2 className="text-xl font-bold">Playoff Bracket</h2>
               </div>
+              {data.playoff_qualification.seeds.length ? (
+                <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {data.playoff_qualification.seeds.map((team) => (
+                    <div
+                      key={team.team_id}
+                      className="rounded border border-white/10 bg-black/30 p-3"
+                    >
+                      <p className="text-xs uppercase tracking-wide text-gray-400">
+                        Seed {team.seed} · {team.qualification.replace("_", " ")}
+                      </p>
+                      <p className="mt-1 font-bold">
+                        {team.tag} — {team.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <PlayoffBracket series={data.playoffs.series} />
             </section>
           </div>
