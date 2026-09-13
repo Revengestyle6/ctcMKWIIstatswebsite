@@ -40,13 +40,17 @@ def _team_name(display_name, clan_tag, canonical_name):
 def _load_rows(session, scope, team_id=None, track_id=None):
     if team_id is not None and (scope.season_id is None or scope.division_id is None):
         raise DashboardError("A team filter requires a specific season and division.")
-    if team_id is not None and session.scalar(
-        select(TeamSeasonEntry.team_season_entry_id).where(
-            TeamSeasonEntry.team_id == team_id,
-            TeamSeasonEntry.season_id == scope.season_id,
-            TeamSeasonEntry.division_id == scope.division_id,
+    if (
+        team_id is not None
+        and session.scalar(
+            select(TeamSeasonEntry.team_season_entry_id).where(
+                TeamSeasonEntry.team_id == team_id,
+                TeamSeasonEntry.season_id == scope.season_id,
+                TeamSeasonEntry.division_id == scope.division_id,
+            )
         )
-    ) is None:
+        is None
+    ):
         raise DashboardError("The selected team is not registered in this division.")
 
     player_scores = (
@@ -71,18 +75,36 @@ def _load_rows(session, scope, team_id=None, track_id=None):
     score = func.coalesce(player_scores.c.score, 0) + func.coalesce(awards.c.score, 0)
     statement = (
         select(
-            Race.race_id, Race.race_number, Match.match_id, Match.match_number,
-            Match.match_label, Track.track_id, Track.canonical_name.label("track_name"),
-            Team.team_id, Team.canonical_name, TeamSeasonEntry.display_name,
-            TeamSeasonEntry.clan_tag, score.label("score"),
+            Race.race_id,
+            Race.race_number,
+            Match.match_id,
+            Match.match_number,
+            Match.match_label,
+            Track.track_id,
+            Track.canonical_name.label("track_name"),
+            Team.team_id,
+            Team.canonical_name,
+            TeamSeasonEntry.display_name,
+            TeamSeasonEntry.clan_tag,
+            score.label("score"),
         )
         .join(Match, Match.match_id == Race.match_id)
         .join(Track, Track.track_id == Race.track_id)
         .join(MatchTeam, MatchTeam.match_id == Match.match_id)
-        .join(TeamSeasonEntry, TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id)
+        .join(
+            TeamSeasonEntry, TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id
+        )
         .join(Team, Team.team_id == TeamSeasonEntry.team_id)
-        .outerjoin(player_scores, (player_scores.c.race_id == Race.race_id) & (player_scores.c.match_team_id == MatchTeam.match_team_id))
-        .outerjoin(awards, (awards.c.race_id == Race.race_id) & (awards.c.match_team_id == MatchTeam.match_team_id))
+        .outerjoin(
+            player_scores,
+            (player_scores.c.race_id == Race.race_id)
+            & (player_scores.c.match_team_id == MatchTeam.match_team_id),
+        )
+        .outerjoin(
+            awards,
+            (awards.c.race_id == Race.race_id)
+            & (awards.c.match_team_id == MatchTeam.match_team_id),
+        )
         .where(
             Match.match_type == "regular",
             Match.result_type == "played",
@@ -98,7 +120,10 @@ def _load_rows(session, scope, team_id=None, track_id=None):
     if team_id is not None:
         selected_matches = (
             select(MatchTeam.match_id)
-            .join(TeamSeasonEntry, TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id)
+            .join(
+                TeamSeasonEntry,
+                TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id,
+            )
             .where(
                 TeamSeasonEntry.team_id == team_id,
                 TeamSeasonEntry.season_id == scope.season_id,
@@ -107,7 +132,9 @@ def _load_rows(session, scope, team_id=None, track_id=None):
         )
         statement = statement.where(Match.match_id.in_(selected_matches))
     return session.execute(
-        apply_analytics_race_filter(statement, session).order_by(Match.match_id, Race.race_number, Team.team_id)
+        apply_analytics_race_filter(statement, session).order_by(
+            Match.match_id, Race.race_number, Team.team_id
+        )
     ).all()
 
 
@@ -121,16 +148,38 @@ def _race_records(rows):
         if len(teams) != 2:
             continue
         first, second = teams
-        records.append({
-            "race_id": first.race_id, "race_number": first.race_number,
-            "match_id": first.match_id, "match_number": first.match_number,
-            "match_label": first.match_label, "track_id": first.track_id,
-            "track_name": first.track_name, "margin": abs(first.score - second.score),
-            "teams": [
-                {"team_id": first.team_id, "team_name": _team_name(first.display_name, first.clan_tag, first.canonical_name), "team_tag": first.clan_tag, "score": int(first.score), "differential": int(first.score - second.score)},
-                {"team_id": second.team_id, "team_name": _team_name(second.display_name, second.clan_tag, second.canonical_name), "team_tag": second.clan_tag, "score": int(second.score), "differential": int(second.score - first.score)},
-            ],
-        })
+        records.append(
+            {
+                "race_id": first.race_id,
+                "race_number": first.race_number,
+                "match_id": first.match_id,
+                "match_number": first.match_number,
+                "match_label": first.match_label,
+                "track_id": first.track_id,
+                "track_name": first.track_name,
+                "margin": abs(first.score - second.score),
+                "teams": [
+                    {
+                        "team_id": first.team_id,
+                        "team_name": _team_name(
+                            first.display_name, first.clan_tag, first.canonical_name
+                        ),
+                        "team_tag": first.clan_tag,
+                        "score": int(first.score),
+                        "differential": int(first.score - second.score),
+                    },
+                    {
+                        "team_id": second.team_id,
+                        "team_name": _team_name(
+                            second.display_name, second.clan_tag, second.canonical_name
+                        ),
+                        "team_tag": second.clan_tag,
+                        "score": int(second.score),
+                        "differential": int(second.score - first.score),
+                    },
+                ],
+            }
+        )
     return records
 
 
@@ -142,7 +191,9 @@ def _team_track_rows(races, selected_team_id=None):
                 continue
             identity[team["team_id"]] = team
             overall[team["team_id"]].append(team["differential"])
-            by_track[(team["team_id"], race["track_id"])].append((team["score"], team["differential"]))
+            by_track[(team["team_id"], race["track_id"])].append(
+                (team["score"], team["differential"])
+            )
     names = {race["track_id"]: race["track_name"] for race in races}
     results = []
     for (team_id, track_id), samples in by_track.items():
@@ -150,14 +201,22 @@ def _team_track_rows(races, selected_team_id=None):
         baseline = sum(overall[team_id]) / len(overall[team_id])
         average_margin = sum(margins) / len(margins)
         team = identity[team_id]
-        results.append({
-            "team_id": team_id, "team_name": team["team_name"], "team_tag": team["team_tag"],
-            "track_id": track_id, "track_name": names[track_id], "races": len(samples),
-            "average_score": _round(sum(scores) / len(scores)), "average_margin": _round(average_margin),
-            "win_rate": _round(100 * sum(value > 0 for value in margins) / len(margins)),
-            "baseline_margin": _round(baseline), "lift": _round(average_margin - baseline),
-            "sample_status": "established" if len(samples) >= STANDOUT_MIN_RACES else "early",
-        })
+        results.append(
+            {
+                "team_id": team_id,
+                "team_name": team["team_name"],
+                "team_tag": team["team_tag"],
+                "track_id": track_id,
+                "track_name": names[track_id],
+                "races": len(samples),
+                "average_score": _round(sum(scores) / len(scores)),
+                "average_margin": _round(average_margin),
+                "win_rate": _round(100 * sum(value > 0 for value in margins) / len(margins)),
+                "baseline_margin": _round(baseline),
+                "lift": _round(average_margin - baseline),
+                "sample_status": "established" if len(samples) >= STANDOUT_MIN_RACES else "early",
+            }
+        )
     return sorted(results, key=lambda row: (-row["lift"], -row["races"], row["track_name"]))
 
 
@@ -165,7 +224,11 @@ def _track_rows(races, team_rows, selected_team_id=None):
     grouped = defaultdict(list)
     for race in races:
         grouped[race["track_id"]].append(race)
-    selected = {row["track_id"]: row for row in team_rows if selected_team_id is not None and row["team_id"] == selected_team_id}
+    selected = {
+        row["track_id"]: row
+        for row in team_rows
+        if selected_team_id is not None and row["team_id"] == selected_team_id
+    }
     result = []
     for track_id, samples in grouped.items():
         margins = [race["margin"] for race in samples]
@@ -175,13 +238,20 @@ def _track_rows(races, team_rows, selected_team_id=None):
             if 1 <= number <= RACE_SLOTS:
                 timing[number - 1] += 1
         item = {
-            "track_id": track_id, "track_name": samples[0]["track_name"], "appearances": len(samples),
+            "track_id": track_id,
+            "track_name": samples[0]["track_name"],
+            "appearances": len(samples),
             "unique_teams": len({team["team_id"] for race in samples for team in race["teams"]}),
             "average_race_number": _round(sum(race_numbers) / len(race_numbers)),
-            "average_margin": _round(sum(margins) / len(margins)), "median_margin": _round(median(margins)),
+            "average_margin": _round(sum(margins) / len(margins)),
+            "median_margin": _round(median(margins)),
             "margin_variation": _round(pstdev(margins)) if len(margins) > 1 else 0.0,
-            "even_race_rate": _round(100 * sum(value <= EVEN_MARGIN for value in margins) / len(margins)),
-            "blowout_rate": _round(100 * sum(value >= BLOWOUT_MARGIN for value in margins) / len(margins)),
+            "even_race_rate": _round(
+                100 * sum(value <= EVEN_MARGIN for value in margins) / len(margins)
+            ),
+            "blowout_rate": _round(
+                100 * sum(value >= BLOWOUT_MARGIN for value in margins) / len(margins)
+            ),
             "timing_counts": timing,
         }
         if track_id in selected:
@@ -199,12 +269,12 @@ def get_track_analytics(
     races = _race_records(_load_rows(session, scope, team_id=team_id))
     team_rows = _team_track_rows(races, team_id)
     tracks = [
-        row
-        for row in _track_rows(races, team_rows, team_id)
-        if row["appearances"] >= min_plays
+        row for row in _track_rows(races, team_rows, team_id) if row["appearances"] >= min_plays
     ]
     reliable = [row for row in team_rows if row["races"] >= min_plays]
-    selected_team = next((team for race in races for team in race["teams"] if team["team_id"] == team_id), None)
+    selected_team = next(
+        (team for race in races for team in race["teams"] if team["team_id"] == team_id), None
+    )
     if team_id is not None and selected_team is None:
         team_row = session.execute(
             select(TeamSeasonEntry.display_name, TeamSeasonEntry.clan_tag, Team.canonical_name)
@@ -223,18 +293,42 @@ def get_track_analytics(
             }
 
     def extreme(key, reverse=False):
-        return sorted(
-            tracks,
-            key=lambda row: (row[key], row["appearances"]),
-            reverse=reverse,
-        )[0] if tracks else None
+        return (
+            sorted(
+                tracks,
+                key=lambda row: (row[key], row["appearances"]),
+                reverse=reverse,
+            )[0]
+            if tracks
+            else None
+        )
 
     return {
-        "scope": {**_scope_payload(scope), "team_id": team_id, "team_name": selected_team and selected_team["team_name"]},
-        "definitions": {"even_margin": EVEN_MARGIN, "blowout_margin": BLOWOUT_MARGIN, "standout_min_races": min_plays, "minimum_plays": min_plays, "match_set": "regular"},
-        "summary": {"races": len(races), "tracks": len(tracks), "teams": len({team["team_id"] for race in races for team in race["teams"]}), "most_played": tracks[0] if tracks else None, "widest_average": extreme("average_margin", True), "closest_average": extreme("average_margin")},
+        "scope": {
+            **_scope_payload(scope),
+            "team_id": team_id,
+            "team_name": selected_team and selected_team["team_name"],
+        },
+        "definitions": {
+            "even_margin": EVEN_MARGIN,
+            "blowout_margin": BLOWOUT_MARGIN,
+            "standout_min_races": min_plays,
+            "minimum_plays": min_plays,
+            "match_set": "regular",
+        },
+        "summary": {
+            "races": len(races),
+            "tracks": len(tracks),
+            "teams": len({team["team_id"] for race in races for team in race["teams"]}),
+            "most_played": tracks[0] if tracks else None,
+            "widest_average": extreme("average_margin", True),
+            "closest_average": extreme("average_margin"),
+        },
         "tracks": tracks,
-        "standouts": {"strengths": reliable[:8], "struggles": sorted(reliable, key=lambda row: (row["lift"], -row["races"]))[:8]},
+        "standouts": {
+            "strengths": reliable[:8],
+            "struggles": sorted(reliable, key=lambda row: (row["lift"], -row["races"]))[:8],
+        },
     }
 
 
@@ -244,7 +338,11 @@ def get_track_dashboard(
     if min_plays < 1 or min_plays > 500:
         raise DashboardError("min_races must be between 1 and 500.")
     scope = _resolve_scope(session, league, season, division)
-    track = session.execute(select(Track.track_id, Track.canonical_name).where(Track.track_id == track_id, Track.league_code == scope.league_code)).first()
+    track = session.execute(
+        select(Track.track_id, Track.canonical_name).where(
+            Track.track_id == track_id, Track.league_code == scope.league_code
+        )
+    ).first()
     if track is None:
         raise DashboardNotFound("Track not found.")
     all_races = _race_records(_load_rows(session, scope, team_id=team_id))
@@ -255,7 +353,23 @@ def get_track_dashboard(
         if row["track_id"] == track_id and row["races"] >= min_plays
     ]
     rows = _track_rows(races, team_rows, team_id)
-    metrics = rows[0] if rows else {"track_id": track_id, "track_name": track.canonical_name, "appearances": 0, "unique_teams": 0, "average_race_number": None, "average_margin": None, "median_margin": None, "margin_variation": None, "even_race_rate": None, "blowout_rate": None, "timing_counts": [0] * RACE_SLOTS}
+    metrics = (
+        rows[0]
+        if rows
+        else {
+            "track_id": track_id,
+            "track_name": track.canonical_name,
+            "appearances": 0,
+            "unique_teams": 0,
+            "average_race_number": None,
+            "average_margin": None,
+            "median_margin": None,
+            "margin_variation": None,
+            "even_race_rate": None,
+            "blowout_rate": None,
+            "timing_counts": [0] * RACE_SLOTS,
+        }
+    )
     buckets = [
         {"label": "0–5", "count": sum(race["margin"] <= 5 for race in races)},
         {"label": "6–10", "count": sum(6 <= race["margin"] <= 10 for race in races)},
@@ -271,5 +385,28 @@ def get_track_dashboard(
         )
         if alias.casefold() != track.canonical_name.casefold()
     ]
-    recent = sorted(races, key=lambda race: (race["match_number"] or -1, race["match_id"], race["race_number"]), reverse=True)[:12]
-    return {"scope": {**_scope_payload(scope), "team_id": team_id}, "track": {"track_id": track.track_id, "track_name": track.canonical_name, "aliases": aliases}, "definitions": {"even_margin": EVEN_MARGIN, "blowout_margin": BLOWOUT_MARGIN, "minimum_plays": min_plays, "match_set": "regular"}, "metrics": metrics, "margin_buckets": buckets, "teams": sorted(team_rows, key=lambda row: (-row["average_margin"], -row["races"], row["team_name"])), "recent_races": recent}
+    recent = sorted(
+        races,
+        key=lambda race: (race["match_number"] or -1, race["match_id"], race["race_number"]),
+        reverse=True,
+    )[:12]
+    return {
+        "scope": {**_scope_payload(scope), "team_id": team_id},
+        "track": {
+            "track_id": track.track_id,
+            "track_name": track.canonical_name,
+            "aliases": aliases,
+        },
+        "definitions": {
+            "even_margin": EVEN_MARGIN,
+            "blowout_margin": BLOWOUT_MARGIN,
+            "minimum_plays": min_plays,
+            "match_set": "regular",
+        },
+        "metrics": metrics,
+        "margin_buckets": buckets,
+        "teams": sorted(
+            team_rows, key=lambda row: (-row["average_margin"], -row["races"], row["team_name"])
+        ),
+        "recent_races": recent,
+    }
