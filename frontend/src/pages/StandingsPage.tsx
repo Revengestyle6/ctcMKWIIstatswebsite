@@ -330,7 +330,7 @@ function MatchupMatrix({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] border-collapse text-center text-xs">
+      <table className="w-full min-w-[720px] table-fixed border-collapse text-center text-xs">
         <thead>
           <tr>
             <th className="sticky left-0 z-10 bg-zinc-950 px-3 py-2 text-left">Team</th>
@@ -355,14 +355,16 @@ function MatchupMatrix({
                   return (
                     <td
                       key={opponent.team_season_entry_id}
-                      className="border border-white/10 bg-black/80 p-0.5"
+                      className="overflow-hidden border border-white/10 bg-black/80 p-1"
                     >
-                      <img
-                        src={resolveAssetUrl(team.logo_url)}
-                        alt=""
-                        data-diagonal-logo="true"
-                        className="mx-auto h-[4.375rem] w-full object-contain opacity-70"
-                      />
+                      <div className="mx-auto h-16 w-16 overflow-hidden">
+                        <img
+                          src={resolveAssetUrl(team.logo_url)}
+                          alt=""
+                          data-diagonal-logo="true"
+                          className="h-full w-full object-cover opacity-70"
+                        />
+                      </div>
                     </td>
                   );
                 const results =

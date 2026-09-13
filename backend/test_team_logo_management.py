@@ -30,9 +30,9 @@ from team_logo_management import (  # noqa: E402
 )
 
 
-def image_bytes(color, image_format="PNG"):
+def image_bytes(color, image_format="PNG", size=(80, 40)):
     stream = BytesIO()
-    Image.new("RGBA", (80, 40), color).save(stream, image_format)
+    Image.new("RGBA", size, color).save(stream, image_format)
     return stream.getvalue()
 
 
@@ -174,6 +174,67 @@ class TeamLogoManagementTests(unittest.TestCase):
             self.assertEqual(season_logo.alt_text, "Season 3 team logo")
             self.assertEqual(len(detail["logos"]), 2)
             self.assertTrue(season_logo.is_active)
+
+    def test_career_logo_falls_back_to_newest_active_scoped_logo(self):
+        with self.SessionLocal.begin() as session:
+            older_season = session.get(Season, self.season_id)
+            older_season.season_number = 3
+            newer_season = Season(
+                league_code="ctc",
+                season_code="s4",
+                season_number=4,
+                name="Season 4",
+                status="active",
+            )
+            session.add(newer_season)
+            session.flush()
+            newer_division = Division(
+                season_id=newer_season.season_id,
+                division_code="d1",
+                division_name="Division 1",
+            )
+            session.add(newer_division)
+            session.flush()
+            newer_entry = TeamSeasonEntry(
+                team_id=self.team_id,
+                season_id=newer_season.season_id,
+                division_id=newer_division.division_id,
+                display_name="Newer Subteam",
+                clan_tag="CS4",
+            )
+            session.add(newer_entry)
+            session.flush()
+            _, older_logo = create_team_logo(
+                session,
+                self.team_id,
+                image_bytes("blue"),
+                team_season_entry_id=self.entry_id,
+                alt_text="Older scoped logo",
+            )
+            _, newer_wide_logo = create_team_logo(
+                session,
+                self.team_id,
+                image_bytes("purple", size=(800, 120)),
+                team_season_entry_id=newer_entry.team_season_entry_id,
+                alt_text="Newer wide scoped logo",
+            )
+
+            self.assertNotEqual(older_logo.team_logo_id, newer_wide_logo.team_logo_id)
+            self.assertEqual(
+                _team_logo_url(session, self.team_id),
+                f"/api/team-logos/{newer_wide_logo.team_logo_id}/content",
+            )
+
+            _, career_logo = create_team_logo(
+                session,
+                self.team_id,
+                image_bytes("green"),
+                alt_text="Explicit career logo",
+            )
+            self.assertEqual(
+                _team_logo_url(session, self.team_id),
+                f"/api/team-logos/{career_logo.team_logo_id}/content",
+            )
 
     def test_distinct_division_entries_can_use_distinct_reused_logos(self):
         with self.SessionLocal.begin() as session:

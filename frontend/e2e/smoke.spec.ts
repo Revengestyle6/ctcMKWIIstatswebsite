@@ -108,6 +108,24 @@ test("standings renders the synchronized competition sections", async ({ page })
   await expect(page.getByRole("button", { name: "Bagging points" })).toBeVisible();
   await expect(page.getByTitle("Player GPs played / team GPs played")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Team Competition Status" })).toHaveCount(0);
+
+  const matchupTable = page
+    .getByRole("heading", { name: "Head-to-Head Results" })
+    .locator("xpath=ancestor::section[1]")
+    .locator("table");
+  await expect(matchupTable).toHaveCSS("table-layout", "fixed");
+  const diagonalLogo = matchupTable.locator('[data-diagonal-logo="true"]').first();
+  await expect(diagonalLogo).toHaveCSS("object-fit", "cover");
+  const logoBounds = await diagonalLogo.boundingBox();
+  expect(logoBounds?.width).toBe(64);
+  expect(logoBounds?.height).toBe(64);
+
+  const matchupColumnWidths = await matchupTable
+    .locator("thead th")
+    .evaluateAll((headers) =>
+      headers.slice(1).map((header) => header.getBoundingClientRect().width)
+    );
+  expect(Math.max(...matchupColumnWidths) - Math.min(...matchupColumnWidths)).toBeLessThan(1);
 });
 
 test("match links preserve or recover the match competition scope", async ({ page, request }) => {

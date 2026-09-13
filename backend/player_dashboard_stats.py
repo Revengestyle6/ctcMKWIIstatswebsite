@@ -30,7 +30,7 @@ from player_role_analytics import (
     valid_placement,
     valid_race_score,
 )
-from sqlalchemy import desc, select
+from sqlalchemy import case, desc, select
 
 SessionLocal = get_session_factory()
 PLACEHOLDER_LOGO = "/media/shared/team-logo-placeholder.svg"
@@ -147,6 +147,14 @@ def _asset_url(asset_path):
     return f"/{normalized}"
 
 
+def _stored_team_logo_url(logo):
+    return (
+        f"/api/team-logos/{logo.team_logo_id}/content"
+        if logo.asset_path.startswith("team-logos/")
+        else _asset_url(logo.asset_path)
+    )
+
+
 def _team_display_name(display_name, clan_tag, canonical_name):
     season_name = str(display_name or "").strip()
     season_tag = str(clan_tag or "").strip()
@@ -167,11 +175,7 @@ def _team_logo_url(session, team_id, season_id=None, team_season_entry_id=None):
             .limit(1)
         )
         if entry_asset:
-            return (
-                f"/api/team-logos/{entry_asset.team_logo_id}/content"
-                if entry_asset.asset_path.startswith("team-logos/")
-                else _asset_url(entry_asset.asset_path)
-            )
+            return _stored_team_logo_url(entry_asset)
     if season_id is not None:
         season_asset = session.scalar(
             base.where(
@@ -182,11 +186,7 @@ def _team_logo_url(session, team_id, season_id=None, team_season_entry_id=None):
             .limit(1)
         )
         if season_asset:
-            return (
-                f"/api/team-logos/{season_asset.team_logo_id}/content"
-                if season_asset.asset_path.startswith("team-logos/")
-                else _asset_url(season_asset.asset_path)
-            )
+            return _stored_team_logo_url(season_asset)
 
     default_asset = session.scalar(
         base.where(
@@ -196,13 +196,25 @@ def _team_logo_url(session, team_id, season_id=None, team_season_entry_id=None):
         .order_by(desc(TeamLogo.priority), desc(TeamLogo.team_logo_id))
         .limit(1)
     )
-    if not default_asset:
+    if default_asset:
+        return _stored_team_logo_url(default_asset)
+    if season_id is not None:
         return PLACEHOLDER_LOGO
-    return (
-        f"/api/team-logos/{default_asset.team_logo_id}/content"
-        if default_asset.asset_path.startswith("team-logos/")
-        else _asset_url(default_asset.asset_path)
+
+    latest_scoped_asset = session.scalar(
+        base.join(Season, Season.season_id == TeamLogo.season_id)
+        .where(TeamLogo.season_id.is_not(None))
+        .order_by(
+            desc(Season.season_number).nulls_last(),
+            desc(Season.season_id),
+            case((TeamLogo.team_season_entry_id.is_(None), 0), else_=1),
+            desc(TeamLogo.team_season_entry_id).nulls_last(),
+            desc(TeamLogo.priority),
+            desc(TeamLogo.team_logo_id),
+        )
+        .limit(1)
     )
+    return _stored_team_logo_url(latest_scoped_asset) if latest_scoped_asset else PLACEHOLDER_LOGO
 
 
 def _player_identity(session, player, league_code="ctc"):
