@@ -10,6 +10,7 @@ from media_storage import get_media_storage
 from mkc_registry import lookup_mkc_player
 from models import TeamLogo
 from standings_service import get_division_standings
+from track_analytics import get_track_analytics, get_track_dashboard
 
 from routes.common import (
     division_arg,
@@ -459,6 +460,45 @@ def api_tracks():
         )
     except Exception as error:
         logger.exception("Failed to list tracks")
+        return error_response(error)
+
+
+@public_api.get("/api/track-analytics")
+def api_track_analytics():
+    try:
+        with stats.SessionLocal() as session:
+            return jsonify(
+                get_track_analytics(
+                    session,
+                    league=league_arg(),
+                    season=season_arg(),
+                    division=division_arg(),
+                    team_id=optional_int_arg("team_id"),
+                    min_plays=minimum_races_arg(default=2),
+                )
+            )
+    except Exception as error:
+        logger.exception("Failed to build track analytics")
+        return error_response(error)
+
+
+@public_api.get("/api/tracks/<int:track_id>/analytics")
+def api_track_dashboard(track_id):
+    try:
+        with stats.SessionLocal() as session:
+            return jsonify(
+                get_track_dashboard(
+                    session,
+                    track_id,
+                    league=league_arg(),
+                    season=season_arg(),
+                    division=division_arg(),
+                    team_id=optional_int_arg("team_id"),
+                    min_plays=minimum_races_arg(default=2),
+                )
+            )
+    except Exception as error:
+        logger.exception("Failed to build track dashboard for %s", track_id)
         return error_response(error)
 
 

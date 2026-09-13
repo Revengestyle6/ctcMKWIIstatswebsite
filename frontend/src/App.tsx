@@ -18,7 +18,8 @@ const PlayerStats = lazy(() => import("./components/PlayerStats"));
 const StandingsPage = lazy(() => import("./pages/StandingsPage"));
 const TeamDashboard = lazy(() => import("./pages/TeamDashboard"));
 const TopTeamPlayers = lazy(() => import("./components/TopTeamPlayers"));
-const TopTracks = lazy(() => import("./components/TopTracks"));
+const TrackAnalyticsPage = lazy(() => import("./pages/TrackAnalyticsPage"));
+const TrackDashboard = lazy(() => import("./pages/TrackDashboard"));
 const PlayerDirectory = lazy(() =>
   import("./pages/DashboardDirectories").then((module) => ({
     default: module.PlayerDirectory,
@@ -54,7 +55,9 @@ export default function App(): JSX.Element {
             <Route path="/stats" element={<PlayerStats />} />
             <Route path="/standings" element={<StandingsPage />} />
             <Route path="/top-team-players" element={<TopTeamPlayers />} />
-            <Route path="/top-tracks" element={<TopTracks />} />
+            <Route path="/top-tracks" element={<Navigate to="/tracks" replace />} />
+            <Route path="/tracks" element={<TrackAnalyticsPage />} />
+            <Route path="/tracks/:trackId" element={<TrackDashboard />} />
             <Route path="/best-matchups" element={<BestMatchups />} />
             <Route path="/matches" element={<MatchHistory />} />
             <Route path="/players/:playerId" element={<PlayerDashboard />} />
