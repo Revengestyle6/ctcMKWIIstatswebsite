@@ -44,6 +44,7 @@ from models import (
     Track,
 )
 from test_support import PostgreSQLTestDatabase
+from track_analytics import get_track_dashboard
 
 
 class DashboardRoleContractTests(unittest.TestCase):
@@ -370,6 +371,7 @@ class DashboardRoleContractTests(unittest.TestCase):
         )
 
         detail = stats_queries.get_match_detail(match.match_id, session=self.session)
+        self.assertEqual(detail["league"], "ctc")
         self.assertEqual([team["tag"] for team in detail["teams"]], ["b", "a"])
         self.assertEqual([team["final_score"] for team in detail["teams"]], [40, 22])
 
@@ -386,6 +388,19 @@ class DashboardRoleContractTests(unittest.TestCase):
             for team in detail["teams"]
         ]
         self.assertEqual(detail["differential"][0], first_race_totals[0] - first_race_totals[1])
+
+    def test_track_dashboard_recent_races_include_their_match_scope(self):
+        dashboard = get_track_dashboard(
+            self.session,
+            self.track.track_id,
+            league="ctc",
+            min_plays=1,
+        )
+
+        self.assertEqual(
+            {(race["season"], race["division"]) for race in dashboard["recent_races"]},
+            {("s1", "d1"), ("s2", "d1")},
+        )
 
     def _selected_result(self, match_number, race_number):
         return (

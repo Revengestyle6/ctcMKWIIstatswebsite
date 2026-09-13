@@ -247,6 +247,11 @@ class TeamLogo(Base):
     team_logo_id = Column(Integer, primary_key=True)
     team_id = Column(Integer, ForeignKey("teams.team_id"), nullable=False, index=True)
     season_id = Column(Integer, ForeignKey("seasons.season_id"), index=True)
+    team_season_entry_id = Column(
+        Integer,
+        ForeignKey("team_season_entries.team_season_entry_id", ondelete="CASCADE"),
+        index=True,
+    )
     asset_path = Column(Text, nullable=False)
     alt_text = Column(Text, nullable=False)
     priority = Column(Integer, nullable=False, default=0)
@@ -255,7 +260,13 @@ class TeamLogo(Base):
     last_update_at = last_update_column()
 
     __table_args__ = (
-        UniqueConstraint("team_id", "season_id", "asset_path", name="uq_team_logo_asset"),
+        UniqueConstraint(
+            "team_id",
+            "season_id",
+            "team_season_entry_id",
+            "asset_path",
+            name="uq_team_logo_asset",
+        ),
     )
 
 

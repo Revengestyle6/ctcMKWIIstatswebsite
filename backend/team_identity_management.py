@@ -591,19 +591,37 @@ def merge_team(session, source_team_id, payload):
             .values(team_season_entry_id=target_entry.team_season_entry_id)
         )
         match_appearances_updated += match_result.rowcount
+        entry_logos = session.scalars(
+            select(TeamLogo).where(TeamLogo.team_season_entry_id == entry.team_season_entry_id)
+        ).all()
+        target_entry_logo_paths = {
+            logo.asset_path
+            for logo in session.scalars(
+                select(TeamLogo).where(
+                    TeamLogo.team_season_entry_id == target_entry.team_season_entry_id
+                )
+            ).all()
+        }
+        for logo in entry_logos:
+            if logo.asset_path in target_entry_logo_paths:
+                session.delete(logo)
+            else:
+                logo.team_id = target_team_id
+                logo.team_season_entry_id = target_entry.team_season_entry_id
+                target_entry_logo_paths.add(logo.asset_path)
         session.delete(entry)
         season_entries_consolidated += 1
 
     source_logos = session.scalars(select(TeamLogo).where(TeamLogo.team_id == source_team_id)).all()
     target_logo_keys = {
-        (logo.season_id, logo.asset_path): logo
+        (logo.season_id, logo.team_season_entry_id, logo.asset_path): logo
         for logo in session.scalars(
             select(TeamLogo).where(TeamLogo.team_id == target_team_id)
         ).all()
     }
     logos_consolidated = 0
     for logo in source_logos:
-        if (logo.season_id, logo.asset_path) in target_logo_keys:
+        if (logo.season_id, logo.team_season_entry_id, logo.asset_path) in target_logo_keys:
             session.delete(logo)
             logos_consolidated += 1
         else:

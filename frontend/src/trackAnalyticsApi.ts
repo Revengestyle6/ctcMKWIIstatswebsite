@@ -63,6 +63,8 @@ export interface TrackRace {
   race_id: number;
   race_number: number;
   match_id: number;
+  season: string;
+  division: string;
   match_number: number | null;
   match_label: string;
   margin: number;

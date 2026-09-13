@@ -309,7 +309,7 @@ def api_competition_setup_team_entry_with_logo_create():
             )
 
             logo = None
-            target_season_id = season.season_id if logo_scope == "season" else None
+            target_entry_id = entry.team_season_entry_id if logo_scope == "season" else None
             if logo_mode == "existing":
                 try:
                     source_logo_id = int(str(request.form.get("existing_logo_id") or ""))
@@ -319,7 +319,7 @@ def api_competition_setup_team_entry_with_logo_create():
                     session,
                     team.team_id,
                     source_logo_id,
-                    season_id=target_season_id,
+                    team_season_entry_id=target_entry_id,
                     alt_text=request.form.get("alt_text", ""),
                 )
             elif logo_mode == "upload":
@@ -330,7 +330,7 @@ def api_competition_setup_team_entry_with_logo_create():
                     session,
                     team.team_id,
                     image.read(team_logo_management.MAX_UPLOAD_BYTES + 1),
-                    season_id=target_season_id,
+                    team_season_entry_id=target_entry_id,
                     alt_text=request.form.get("alt_text", ""),
                 )
 
@@ -343,7 +343,8 @@ def api_competition_setup_team_entry_with_logo_create():
                     target_id=logo.team_logo_id,
                     details={
                         "team_id": team.team_id,
-                        "season_id": target_season_id,
+                        "season_id": logo.season_id,
+                        "team_season_entry_id": logo.team_season_entry_id,
                         "asset_path": logo.asset_path,
                         "source_logo_id": (
                             request.form.get("existing_logo_id")
@@ -953,16 +954,19 @@ def api_team_logo_upload(team_id):
         if image is None:
             raise ValueError("Choose an image to upload.")
         raw_season_id = str(request.form.get("season_id") or "").strip()
+        raw_entry_id = str(request.form.get("team_season_entry_id") or "").strip()
         try:
             season_id = int(raw_season_id) if raw_season_id else None
+            team_season_entry_id = int(raw_entry_id) if raw_entry_id else None
         except ValueError as error:
-            raise ValueError("The selected season is invalid.") from error
+            raise ValueError("The selected logo scope is invalid.") from error
         with stats.SessionLocal.begin() as session:
             detail, logo = team_logo_management.create_team_logo(
                 session,
                 team_id,
                 image.read(team_logo_management.MAX_UPLOAD_BYTES + 1),
                 season_id=season_id,
+                team_season_entry_id=team_season_entry_id,
                 alt_text=request.form.get("alt_text", ""),
             )
             record_audit(
@@ -973,7 +977,52 @@ def api_team_logo_upload(team_id):
                 target_id=logo.team_logo_id,
                 details={
                     "team_id": team_id,
-                    "season_id": season_id,
+                    "season_id": logo.season_id,
+                    "team_season_entry_id": logo.team_season_entry_id,
+                    "asset_path": logo.asset_path,
+                },
+            )
+        cache.clear()
+        return jsonify(detail), 201
+    except Exception as error:
+        return _team_logo_error(error)
+
+
+@admin_api.post("/api/admin/teams/<int:team_id>/logos/reuse")
+@require_admin
+def api_team_logo_reuse(team_id):
+    try:
+        payload = request.get_json(silent=True) or {}
+        try:
+            source_logo_id = int(str(payload.get("source_logo_id") or ""))
+            season_id = int(payload["season_id"]) if payload.get("season_id") is not None else None
+            team_season_entry_id = (
+                int(payload["team_season_entry_id"])
+                if payload.get("team_season_entry_id") is not None
+                else None
+            )
+        except (TypeError, ValueError) as error:
+            raise ValueError("Choose an existing logo and a valid target scope.") from error
+        with stats.SessionLocal.begin() as session:
+            detail, logo = team_logo_management.reuse_team_logo(
+                session,
+                team_id,
+                source_logo_id,
+                season_id=season_id,
+                team_season_entry_id=team_season_entry_id,
+                alt_text=payload.get("alt_text", ""),
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team_logo.reused",
+                target_type="team_logo",
+                target_id=logo.team_logo_id,
+                details={
+                    "team_id": team_id,
+                    "season_id": logo.season_id,
+                    "team_season_entry_id": logo.team_season_entry_id,
+                    "source_logo_id": source_logo_id,
                     "asset_path": logo.asset_path,
                 },
             )
@@ -998,6 +1047,8 @@ def api_team_logo_update(team_id, logo_id):
                 target_id=logo_id,
                 details={
                     "team_id": team_id,
+                    "season_id": logo.season_id,
+                    "team_season_entry_id": logo.team_season_entry_id,
                     "is_active": logo.is_active,
                     "alt_text": logo.alt_text,
                 },

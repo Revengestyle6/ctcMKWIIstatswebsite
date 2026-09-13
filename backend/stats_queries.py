@@ -1066,6 +1066,7 @@ def get_match_detail(match_id, session=None):
 
         return {
             "match_id": match.match_id,
+            "league": season.league_code if season else "",
             "match_type": match.match_type,
             "result_type": match.result_type,
             "season": season.season_code if season else "",

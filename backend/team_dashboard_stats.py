@@ -107,7 +107,12 @@ def _team_identity(session, team, scope):
             if scoped_entry
             else None
         ),
-        "logo_url": _team_logo_url(session, team.team_id, scope.season_id),
+        "logo_url": _team_logo_url(
+            session,
+            team.team_id,
+            scope.season_id,
+            scoped_entry.team_season_entry_id if scoped_entry else None,
+        ),
         "appearances": [
             {
                 "season": row.season_code,
@@ -117,7 +122,9 @@ def _team_identity(session, team, scope):
                 "hex_color": row.hex_color,
                 "competition_status": row.competition_status,
                 "competition_status_note": row.competition_status_note,
-                "logo_url": _team_logo_url(session, team.team_id, row.season_id),
+                "logo_url": _team_logo_url(
+                    session, team.team_id, row.season_id, row.team_season_entry_id
+                ),
             }
             for row in entries
         ],

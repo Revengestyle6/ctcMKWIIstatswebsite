@@ -110,6 +110,30 @@ test("standings renders the synchronized competition sections", async ({ page })
   await expect(page.getByRole("heading", { name: "Team Competition Status" })).toHaveCount(0);
 });
 
+test("match links preserve or recover the match competition scope", async ({ page, request }) => {
+  const response = await request.get(
+    "/api/matches?league=ctc&season=s2&division=d1&match_set=regular"
+  );
+  expect(response.ok()).toBeTruthy();
+  const matches = (await response.json()) as Array<{ match_id: number }>;
+  expect(matches.length).toBeGreaterThan(0);
+  const matchId = matches[0].match_id;
+
+  await page.goto("/standings?league=ctc&season=s2&division=d1");
+  const standingsMatchLink = page.locator('a[href^="/matches?"]').first();
+  const href = await standingsMatchLink.getAttribute("href");
+  expect(href).toBeTruthy();
+  const standingsTarget = new URL(href ?? "", page.url());
+  expect(standingsTarget.searchParams.get("league")).toBe("ctc");
+  expect(standingsTarget.searchParams.get("season")).toBe("s2");
+  expect(standingsTarget.searchParams.get("division")).toBe("d1");
+  expect(standingsTarget.searchParams.get("match")).toBeTruthy();
+
+  await page.goto(`/matches?league=ctc&match=${matchId}`);
+  await expect(page).toHaveURL(new RegExp(`season=s2.*division=d1.*match=${matchId}`));
+  await expect(page.getByLabel("Match", { exact: true })).toHaveValue(String(matchId));
+});
+
 test("signed-in administrators can update a team competition status from standings", async ({
   page,
 }) => {
@@ -410,6 +434,17 @@ test("competition setup keeps actions independent and browses registered teams b
   await expect(registrationForm.getByLabel(/^Logo scope/)).toHaveValue("season");
   await expect(registrationForm.getByRole("img", { name: "Test Team career logo" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Manage a team logo" })).toHaveCount(0);
+  const registerButton = registrationForm.getByRole("button", { name: "Register team" });
+  await expect(registerButton).toBeDisabled();
+  await expect(
+    registrationForm.getByRole("combobox", { name: "Team", exact: true }).locator("option:checked")
+  ).toContainText("already registered in this division");
+
+  await registrationForm.getByLabel(/^Division/).selectOption("4");
+  await expect(registrationForm.getByText(/D2 as Test Team \(TT\)/)).toBeVisible();
+  await expect(registerButton).toBeDisabled();
+  await registrationForm.getByLabel(/^Season tag/).fill("TT2");
+  await expect(registerButton).toBeEnabled();
 
   const seasonEditor = page
     .getByRole("heading", { name: "Edit a season" })

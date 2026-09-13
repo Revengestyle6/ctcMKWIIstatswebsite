@@ -5,11 +5,13 @@ from statistics import median, pstdev
 
 from analytics_eligibility import apply_analytics_race_filter
 from models import (
+    Division,
     Match,
     MatchTeam,
     Race,
     RacePlayerResult,
     RaceTeamResult,
+    Season,
     Team,
     TeamSeasonEntry,
     Track,
@@ -80,6 +82,8 @@ def _load_rows(session, scope, team_id=None, track_id=None):
             Match.match_id,
             Match.match_number,
             Match.match_label,
+            Season.season_code,
+            Division.division_code,
             Track.track_id,
             Track.canonical_name.label("track_name"),
             Team.team_id,
@@ -89,6 +93,8 @@ def _load_rows(session, scope, team_id=None, track_id=None):
             score.label("score"),
         )
         .join(Match, Match.match_id == Race.match_id)
+        .join(Season, Season.season_id == Match.season_id)
+        .join(Division, Division.division_id == Match.division_id)
         .join(Track, Track.track_id == Race.track_id)
         .join(MatchTeam, MatchTeam.match_id == Match.match_id)
         .join(
@@ -153,6 +159,8 @@ def _race_records(rows):
                 "race_id": first.race_id,
                 "race_number": first.race_number,
                 "match_id": first.match_id,
+                "season": first.season_code,
+                "division": first.division_code,
                 "match_number": first.match_number,
                 "match_label": first.match_label,
                 "track_id": first.track_id,

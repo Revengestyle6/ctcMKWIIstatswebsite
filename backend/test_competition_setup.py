@@ -7,6 +7,7 @@ from test_support import PostgreSQLTestDatabase, configure_test_environment
 configure_test_environment()
 
 from app import app  # noqa: E402
+from competition_setup import create_team_season_entry  # noqa: E402
 from import_json_to_db import (  # noqa: E402
     get_or_create_division,
     get_or_create_season,
@@ -61,6 +62,96 @@ class CompetitionSetupTests(unittest.TestCase):
                     status="active",
                 )
             )
+
+    def test_canonical_team_can_register_distinct_subteams_across_divisions(self):
+        with self.SessionLocal.begin() as session:
+            season = Season(
+                league_code="ctc",
+                season_code="s-test",
+                season_number=999,
+                name="Test Season",
+            )
+            team = Team(
+                canonical_name="Canonical Team",
+                canonical_tag="CT",
+                canonical_identity_override=True,
+            )
+            session.add_all([season, team])
+            session.flush()
+            divisions = [
+                Division(
+                    season_id=season.season_id,
+                    division_code=f"d{number}",
+                    division_name=f"Division {number}",
+                )
+                for number in range(1, 5)
+            ]
+            session.add_all(divisions)
+            session.flush()
+            session.add(TeamLeagueIdentity(team_id=team.team_id, league_code="ctc", tag="CT"))
+            session.flush()
+
+            first, *_ = create_team_season_entry(
+                session,
+                {
+                    "team_id": team.team_id,
+                    "season_id": season.season_id,
+                    "division_id": divisions[0].division_id,
+                    "display_name": "First Subteam",
+                    "clan_tag": "CT",
+                },
+            )
+            different_tag, *_ = create_team_season_entry(
+                session,
+                {
+                    "team_id": team.team_id,
+                    "season_id": season.season_id,
+                    "division_id": divisions[1].division_id,
+                    "display_name": "First Subteam",
+                    "clan_tag": "CT2",
+                },
+            )
+            different_name, *_ = create_team_season_entry(
+                session,
+                {
+                    "team_id": team.team_id,
+                    "season_id": season.season_id,
+                    "division_id": divisions[2].division_id,
+                    "display_name": "Third Subteam",
+                    "clan_tag": "CT",
+                },
+            )
+
+            self.assertEqual(
+                {first.team_id, different_tag.team_id, different_name.team_id},
+                {team.team_id},
+            )
+            self.assertEqual(
+                {first.division_id, different_tag.division_id, different_name.division_id},
+                {division.division_id for division in divisions[:3]},
+            )
+            with self.assertRaisesRegex(ValueError, "Change at least one"):
+                create_team_season_entry(
+                    session,
+                    {
+                        "team_id": team.team_id,
+                        "season_id": season.season_id,
+                        "division_id": divisions[3].division_id,
+                        "display_name": "First Subteam",
+                        "clan_tag": "CT",
+                    },
+                )
+            with self.assertRaisesRegex(ValueError, "already registered in Division 1"):
+                create_team_season_entry(
+                    session,
+                    {
+                        "team_id": team.team_id,
+                        "season_id": season.season_id,
+                        "division_id": divisions[0].division_id,
+                        "display_name": "Another Subteam",
+                        "clan_tag": "CT3",
+                    },
+                )
 
     def test_admin_can_build_preseason_structure_before_match_import(self):
         headers = {"X-Dev-Admin-Email": "owner@example.com"}
