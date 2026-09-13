@@ -100,6 +100,19 @@ export default function MatchHistory(): React.JSX.Element {
             : fetchPlayoffSeries(league, season, division, selectedTeam || undefined),
         ]);
         if (cancelled) return;
+        if (requestedMatchId && !data.some((match) => match.match_id === requestedMatchId)) {
+          const requestedDetail = await fetchJson<MatchDetail>(`/api/matches/${requestedMatchId}`);
+          if (cancelled) return;
+          const next = new URLSearchParams({
+            league: requestedDetail.league,
+            season: requestedDetail.season,
+            division: requestedDetail.division,
+            match: String(requestedDetail.match_id),
+          });
+          if (requestedDetail.match_type === "playoff") next.set("match_set", "playoffs");
+          setSearchParams(next, { replace: true });
+          return;
+        }
         setMatches(data);
         setPlayoffSeries(seriesData?.series ?? []);
         const nextMatchId =
@@ -122,7 +135,7 @@ export default function MatchHistory(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [league, season, division, selectedTeam, requestedMatchId, matchSet]);
+  }, [league, season, division, selectedTeam, requestedMatchId, matchSet, setSearchParams]);
 
   useEffect(() => {
     if (!season || !division) return;

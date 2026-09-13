@@ -82,17 +82,18 @@ class TeamLogoManagementTests(unittest.TestCase):
             )
             session.add(division)
             session.flush()
-            session.add(
-                TeamSeasonEntry(
-                    team_id=team.team_id,
-                    season_id=season.season_id,
-                    division_id=division.division_id,
-                    display_name=team.canonical_name,
-                    clan_tag=team.canonical_tag,
-                )
+            entry = TeamSeasonEntry(
+                team_id=team.team_id,
+                season_id=season.season_id,
+                division_id=division.division_id,
+                display_name=team.canonical_name,
+                clan_tag=team.canonical_tag,
             )
+            session.add(entry)
+            session.flush()
             self.team_id = team.team_id
             self.season_id = season.season_id
+            self.entry_id = entry.team_season_entry_id
             session.add(
                 AdminUser(
                     firebase_uid=None,
@@ -174,6 +175,68 @@ class TeamLogoManagementTests(unittest.TestCase):
             self.assertEqual(len(detail["logos"]), 2)
             self.assertTrue(season_logo.is_active)
 
+    def test_distinct_division_entries_can_use_distinct_reused_logos(self):
+        with self.SessionLocal.begin() as session:
+            division = Division(
+                season_id=self.season_id,
+                division_code="d2",
+                division_name="Division 2",
+            )
+            session.add(division)
+            session.flush()
+            second_entry = TeamSeasonEntry(
+                team_id=self.team_id,
+                season_id=self.season_id,
+                division_id=division.division_id,
+                display_name="Sirius",
+                clan_tag="SRS",
+            )
+            session.add(second_entry)
+            session.flush()
+            _, arcturus_source = create_team_logo(
+                session, self.team_id, image_bytes("purple"), alt_text="Arcturus logo"
+            )
+            _, sirius_source = create_team_logo(
+                session, self.team_id, image_bytes("blue"), alt_text="Sirius logo"
+            )
+            _, arcturus_logo = reuse_team_logo(
+                session,
+                self.team_id,
+                arcturus_source.team_logo_id,
+                team_season_entry_id=self.entry_id,
+            )
+            detail, sirius_logo = reuse_team_logo(
+                session,
+                self.team_id,
+                sirius_source.team_logo_id,
+                team_season_entry_id=second_entry.team_season_entry_id,
+            )
+
+            self.assertEqual(arcturus_logo.team_season_entry_id, self.entry_id)
+            self.assertEqual(sirius_logo.team_season_entry_id, second_entry.team_season_entry_id)
+            self.assertEqual(
+                _team_logo_url(session, self.team_id, self.season_id, self.entry_id),
+                f"/api/team-logos/{arcturus_logo.team_logo_id}/content",
+            )
+            self.assertEqual(
+                _team_logo_url(
+                    session,
+                    self.team_id,
+                    self.season_id,
+                    second_entry.team_season_entry_id,
+                ),
+                f"/api/team-logos/{sirius_logo.team_logo_id}/content",
+            )
+            self.assertEqual(len(detail["season_entries"]), 2)
+            self.assertEqual(
+                {
+                    logo["team_season_entry"]["division"]["code"]
+                    for logo in detail["logos"]
+                    if logo["team_season_entry"] is not None
+                },
+                {"d1", "d2"},
+            )
+
     def test_team_detail_lists_only_participating_seasons(self):
         with self.SessionLocal() as session:
             detail = get_team_logo_detail(session, self.team_id)
@@ -211,6 +274,38 @@ class TeamLogoManagementTests(unittest.TestCase):
             self.assertEqual(
                 content.headers["Cache-Control"], "public, max-age=31536000, immutable"
             )
+
+    def test_admin_route_reuses_existing_logo_for_a_division_entry(self):
+        headers = {"X-Dev-Admin-Email": "owner@example.com"}
+        with self.SessionLocal.begin() as session:
+            _, source = create_team_logo(
+                session, self.team_id, image_bytes("purple"), alt_text="Reusable logo"
+            )
+            source_id = source.team_logo_id
+        with (
+            patch.dict(os.environ, {"ALLOW_DEV_AUTH": "true"}),
+            patch("admin_auth.SessionLocal", self.SessionLocal),
+            patch("routes.admin.stats.SessionLocal", self.SessionLocal),
+            app.test_client() as client,
+        ):
+            response = client.post(
+                f"/api/admin/teams/{self.team_id}/logos/reuse",
+                json={
+                    "source_logo_id": source_id,
+                    "team_season_entry_id": self.entry_id,
+                    "alt_text": "Division 1 logo",
+                },
+                headers=headers,
+            )
+            self.assertEqual(response.status_code, 201, response.get_json())
+            assigned = next(
+                logo
+                for logo in response.get_json()["logos"]
+                if logo["team_season_entry"] is not None
+            )
+            self.assertEqual(assigned["team_season_entry"]["id"], self.entry_id)
+            self.assertEqual(assigned["alt_text"], "Division 1 logo")
+            self.assertTrue(assigned["is_active"])
 
 
 if __name__ == "__main__":

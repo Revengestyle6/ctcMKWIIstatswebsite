@@ -512,14 +512,32 @@ def create_team_season_entry(session, payload):
         raise LookupError("Season not found.")
     if division is None or division.season_id != season_id:
         raise ValueError("Division must belong to the selected season.")
-    existing_membership = session.scalar(
+    display_name = _required_text(payload, "display_name", "Season team name")
+    clan_tag = _required_text(payload, "clan_tag", "Season team tag", 64)
+    existing_division_membership = session.scalar(
         select(TeamSeasonEntry).where(
             TeamSeasonEntry.team_id == team_id,
             TeamSeasonEntry.season_id == season_id,
+            TeamSeasonEntry.division_id == division_id,
         )
     )
-    if existing_membership is not None:
-        raise ValueError(f"{team.canonical_name} is already registered for {season.name}.")
+    if existing_division_membership is not None:
+        raise ValueError(
+            f"{team.canonical_name} is already registered in {division.division_name}."
+        )
+    existing_season_identity = session.scalar(
+        select(TeamSeasonEntry).where(
+            TeamSeasonEntry.team_id == team_id,
+            TeamSeasonEntry.season_id == season_id,
+            func.lower(TeamSeasonEntry.display_name) == display_name.casefold(),
+            func.lower(TeamSeasonEntry.clan_tag) == clan_tag.casefold(),
+        )
+    )
+    if existing_season_identity is not None:
+        raise ValueError(
+            f"{team.canonical_name} is already registered for {season.name} with that "
+            "season display name and tag. Change at least one for another division."
+        )
     conference_id = _positive_int(payload, "conference_id", "Conference", required=False)
     if division.is_conference_based:
         conference = session.get(DivisionConference, conference_id) if conference_id else None
@@ -534,8 +552,6 @@ def create_team_season_entry(session, payload):
             raise ValueError("That conference already has 4 teams.")
     elif conference_id is not None:
         raise ValueError("This division does not use conferences.")
-    display_name = _required_text(payload, "display_name", "Season team name")
-    clan_tag = _required_text(payload, "clan_tag", "Season team tag", 64)
     hex_color = str(payload.get("hex_color") or "").strip() or None
     if hex_color is not None and not HEX_COLOR_PATTERN.fullmatch(hex_color):
         raise ValueError("Team color must use six-digit hex format, such as #3B82F6.")

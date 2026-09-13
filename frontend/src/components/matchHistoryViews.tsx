@@ -63,6 +63,7 @@ export type MatchTeam = {
 
 export type MatchDetail = {
   match_id: number;
+  league: string;
   match_type: "regular" | "playoff";
   result_type: "played" | "free_win" | "mutual_tie";
   season: string;

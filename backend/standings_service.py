@@ -406,7 +406,12 @@ def get_division_standings(session, *, league, season, division):
         entry.team_season_entry_id: _empty_record(
             entry,
             team,
-            _team_logo_url(session, team.team_id, scope.season_id),
+            _team_logo_url(
+                session,
+                team.team_id,
+                scope.season_id,
+                entry.team_season_entry_id,
+            ),
             conferences_by_id.get(entry.conference_id),
         )
         for entry, team in team_rows

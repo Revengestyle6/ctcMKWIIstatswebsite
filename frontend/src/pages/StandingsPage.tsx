@@ -8,6 +8,7 @@ import TeamCompetitionStatusManager from "../components/TeamCompetitionStatusMan
 import { useLeague } from "../context/LeagueContext";
 import { useAdminSession } from "../hooks/useAdminSession";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
+import { matchHistoryPath } from "../matchHistoryLinks";
 
 type CompetitionStatus = "active" | "dropped" | "disqualified";
 type Standing = {
@@ -295,7 +296,17 @@ function StandingsTable({ standings }: { standings: Standing[] }) {
   );
 }
 
-function MatchupMatrix({ standings, matches }: { standings: Standing[]; matches: MatchResult[] }) {
+function MatchupMatrix({
+  standings,
+  matches,
+  season,
+  division,
+}: {
+  standings: Standing[];
+  matches: MatchResult[];
+  season: string;
+  division: string;
+}) {
   const { leaguePath } = useLeague();
   const cells = useMemo(() => {
     const result = new Map<
@@ -366,7 +377,13 @@ function MatchupMatrix({ standings, matches }: { standings: Standing[]; matches:
                         {results.map((result) => (
                           <Link
                             key={result.match_id}
-                            to={leaguePath(`/matches?match=${result.match_id}`)}
+                            to={leaguePath(
+                              matchHistoryPath({
+                                season,
+                                division,
+                                matchId: result.match_id,
+                              })
+                            )}
                             title={
                               result.standings_adjusted
                                 ? `Original score ${result.perspective.original_score}–${result.perspective.original_opponent_score}`
@@ -639,7 +656,15 @@ function PlayerLeaderboard({
   );
 }
 
-function PlayoffBracket({ series }: { series: PlayoffSeries[] }) {
+function PlayoffBracket({
+  series,
+  season,
+  division,
+}: {
+  series: PlayoffSeries[];
+  season: string;
+  division: string;
+}) {
   const { leaguePath } = useLeague();
   if (!series.length)
     return (
@@ -682,7 +707,14 @@ function PlayoffBracket({ series }: { series: PlayoffSeries[] }) {
             {item.matches.map((match) => (
               <Link
                 key={match.match_id}
-                to={leaguePath(`/matches?match=${match.match_id}`)}
+                to={leaguePath(
+                  matchHistoryPath({
+                    season,
+                    division,
+                    matchId: match.match_id,
+                    matchSet: "playoffs",
+                  })
+                )}
                 className="rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/15"
               >
                 {match.teams.map((team) => team.score).join("–") || match.label}
@@ -866,7 +898,12 @@ export default function StandingsPage(): React.JSX.Element {
                     </p>
                   </div>
                   <div className="flex-1">
-                    <MatchupMatrix standings={data.standings} matches={data.matches} />
+                    <MatchupMatrix
+                      standings={data.standings}
+                      matches={data.matches}
+                      season={data.season}
+                      division={data.division}
+                    />
                   </div>
                 </section>
               </div>
@@ -905,7 +942,11 @@ export default function StandingsPage(): React.JSX.Element {
                   ))}
                 </div>
               ) : null}
-              <PlayoffBracket series={data.playoffs.series} />
+              <PlayoffBracket
+                series={data.playoffs.series}
+                season={data.season}
+                division={data.division}
+              />
             </section>
           </div>
         ) : null}

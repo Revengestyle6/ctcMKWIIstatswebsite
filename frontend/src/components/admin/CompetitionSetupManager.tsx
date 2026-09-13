@@ -234,16 +234,30 @@ export default function CompetitionSetupManager({
     () => catalog?.entries.filter((entry) => String(entry.division.id) === editDivisionId) ?? [],
     [catalog, editDivisionId]
   );
-  const registeredTeamIds = useMemo(
+  const registeredDivisionTeamIds = useMemo(
     () =>
       new Set(
         registrationDivision
           ? (catalog?.entries
-              .filter((entry) => entry.season.id === registrationDivision.season.id)
+              .filter((entry) => entry.division.id === registrationDivision.division.id)
               .map((entry) => entry.team.id) ?? [])
           : []
       ),
     [catalog, registrationDivision]
+  );
+  const selectedTeamSeasonEntries = useMemo(() => {
+    if (!registrationDivision || !registrationTeamId) return [];
+    const teamId = Number(registrationTeamId);
+    return (
+      catalog?.entries.filter(
+        (entry) => entry.season.id === registrationDivision.season.id && entry.team.id === teamId
+      ) ?? []
+    );
+  }, [catalog, registrationDivision, registrationTeamId]);
+  const registrationIdentityAlreadyUsed = selectedTeamSeasonEntries.some(
+    (entry) =>
+      entry.display_name.trim().toLowerCase() === entryName.trim().toLowerCase() &&
+      entry.clan_tag.trim().toLowerCase() === entryTag.trim().toLowerCase()
   );
   const selectedRegistrationLogo = useMemo(
     () =>
@@ -836,7 +850,9 @@ export default function CompetitionSetupManager({
                 {catalog?.teams.map((team) => (
                   <option key={team.id} value={team.id}>
                     {team.canonical_tag} — {team.canonical_name}
-                    {registeredTeamIds.has(team.id) ? " (already registered this season)" : ""}
+                    {registeredDivisionTeamIds.has(team.id)
+                      ? " (already registered in this division)"
+                      : ""}
                   </option>
                 ))}
               </select>
@@ -859,6 +875,19 @@ export default function CompetitionSetupManager({
                 className={inputClass}
               />
             </label>
+            {selectedTeamSeasonEntries.length ? (
+              <p className="text-sm text-amber-100 sm:col-span-2">
+                Existing entries this season:{" "}
+                {selectedTeamSeasonEntries
+                  .map(
+                    (entry) =>
+                      `${entry.division.code.toUpperCase()} as ${entry.display_name} (${entry.clan_tag})`
+                  )
+                  .join(", ")}
+                . To register another divisional subteam, change the season display name or season
+                tag.
+              </p>
+            ) : null}
             <label className="text-sm font-bold text-gray-200 sm:col-span-2">
               Team color
               <input
@@ -910,8 +939,10 @@ export default function CompetitionSetupManager({
                     className={inputClass}
                   >
                     <option value="season">
-                      This season
-                      {registrationDivision ? ` — ${registrationDivision.season.name}` : ""}
+                      This season and division
+                      {registrationDivision
+                        ? ` — ${registrationDivision.season.name} ${registrationDivision.division.name}`
+                        : ""}
                     </option>
                     <option value="career">Default / career logo</option>
                   </select>
@@ -1000,7 +1031,8 @@ export default function CompetitionSetupManager({
               !registrationDivision ||
               (registrationDivision.division.is_conference_based && !registrationConferenceId) ||
               !registrationLogoReady ||
-              registeredTeamIds.has(Number(registrationTeamId))
+              registeredDivisionTeamIds.has(Number(registrationTeamId)) ||
+              registrationIdentityAlreadyUsed
             }
             className="mt-4 rounded bg-emerald-500 px-4 py-2 font-bold text-black disabled:opacity-40"
           >

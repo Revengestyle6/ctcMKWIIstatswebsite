@@ -30,6 +30,7 @@ import {
   type PlayerTracks,
   prefetchPlayerDashboardMatchSets,
 } from "../dashboardApi";
+import { matchHistoryPath } from "../matchHistoryLinks";
 
 function numberValue(value: number | null, suffix = ""): string {
   return value === null ? "-" : `${value}${suffix}`;
@@ -474,7 +475,12 @@ export default function PlayerDashboard() {
                         <td className="px-4 py-3">
                           <Link
                             to={leaguePath(
-                              `/matches?season=${match.season}&division=${match.division}&match=${match.match_id}&match_set=${matchSet}`
+                              matchHistoryPath({
+                                season: match.season,
+                                division: match.division,
+                                matchId: match.match_id,
+                                matchSet,
+                              })
                             )}
                             className="font-semibold text-blue-300 hover:text-blue-200"
                           >

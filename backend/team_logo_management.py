@@ -2,9 +2,9 @@ import hashlib
 from io import BytesIO
 
 from media_storage import get_media_storage
-from models import Season, Team, TeamLogo, TeamSeasonEntry
+from models import Division, Season, Team, TeamLogo, TeamSeasonEntry
 from PIL import Image, ImageOps, UnidentifiedImageError
-from sqlalchemy import case, desc, func, select, update
+from sqlalchemy import and_, case, desc, func, select, update
 
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 MAX_IMAGE_PIXELS = 16_000_000
@@ -23,12 +23,29 @@ def _season_payload(season):
     }
 
 
-def _logo_payload(logo, season=None):
+def _entry_payload(entry, season, division):
+    return {
+        "id": entry.team_season_entry_id,
+        "display_name": entry.display_name,
+        "clan_tag": entry.clan_tag,
+        "season": _season_payload(season),
+        "division": {
+            "id": division.division_id,
+            "code": division.division_code,
+            "name": division.division_name,
+        },
+    }
+
+
+def _logo_payload(logo, season=None, entry=None, division=None):
     uploaded = logo.asset_path.startswith(UPLOADED_LOGO_PREFIX)
     return {
         "id": logo.team_logo_id,
         "team_id": logo.team_id,
         "season": _season_payload(season) if season else None,
+        "team_season_entry": (
+            _entry_payload(entry, season, division) if entry and season and division else None
+        ),
         "alt_text": logo.alt_text,
         "priority": logo.priority,
         "is_active": logo.is_active,
@@ -47,23 +64,35 @@ def get_team_logo_detail(session, team_id):
     if team is None:
         raise LookupError("Team not found.")
     rows = session.execute(
-        select(TeamLogo, Season)
+        select(TeamLogo, Season, TeamSeasonEntry, Division)
         .outerjoin(Season, Season.season_id == TeamLogo.season_id)
+        .outerjoin(
+            TeamSeasonEntry,
+            TeamSeasonEntry.team_season_entry_id == TeamLogo.team_season_entry_id,
+        )
+        .outerjoin(Division, Division.division_id == TeamSeasonEntry.division_id)
         .where(TeamLogo.team_id == team_id)
         .order_by(
             case((TeamLogo.season_id.is_(None), 0), else_=1),
             desc(Season.season_number),
+            Division.division_code,
             desc(TeamLogo.priority),
             desc(TeamLogo.team_logo_id),
         )
     ).all()
-    seasons = session.scalars(
-        select(Season)
-        .join(TeamSeasonEntry, TeamSeasonEntry.season_id == Season.season_id)
+    entry_rows = session.execute(
+        select(TeamSeasonEntry, Season, Division)
+        .join(Season, Season.season_id == TeamSeasonEntry.season_id)
+        .join(Division, Division.division_id == TeamSeasonEntry.division_id)
         .where(TeamSeasonEntry.team_id == team_id)
-        .distinct()
-        .order_by(desc(Season.season_number), Season.season_code)
+        .order_by(desc(Season.season_number), Season.season_code, Division.division_code)
     ).all()
+    seasons = []
+    seen_season_ids = set()
+    for _, season, _ in entry_rows:
+        if season.season_id not in seen_season_ids:
+            seen_season_ids.add(season.season_id)
+            seasons.append(season)
     return {
         "team": {
             "id": team.team_id,
@@ -71,8 +100,49 @@ def get_team_logo_detail(session, team_id):
             "canonical_tag": team.canonical_tag,
         },
         "seasons": [_season_payload(season) for season in seasons],
-        "logos": [_logo_payload(logo, season) for logo, season in rows],
+        "season_entries": [
+            _entry_payload(entry, season, division) for entry, season, division in entry_rows
+        ],
+        "logos": [
+            _logo_payload(logo, season, entry, division) for logo, season, entry, division in rows
+        ],
     }
+
+
+def _resolve_scope(session, team_id, season_id=None, team_season_entry_id=None):
+    if season_id is not None and team_season_entry_id is not None:
+        raise ValueError("Choose either a season-wide scope or a division entry, not both.")
+    if team_season_entry_id is not None:
+        entry = session.get(TeamSeasonEntry, team_season_entry_id)
+        if entry is None or entry.team_id != team_id:
+            raise ValueError("The selected team season and division entry is invalid.")
+        return entry.season_id, entry.team_season_entry_id
+    if season_id is not None:
+        season = session.get(Season, season_id)
+        if season is None:
+            raise ValueError("The selected season does not exist.")
+        membership = session.scalar(
+            select(TeamSeasonEntry.team_season_entry_id)
+            .where(
+                TeamSeasonEntry.team_id == team_id,
+                TeamSeasonEntry.season_id == season_id,
+            )
+            .limit(1)
+        )
+        if membership is None:
+            raise ValueError("This team did not participate in the selected season.")
+    return season_id, None
+
+
+def _scope_filter(season_id, team_season_entry_id):
+    if team_season_entry_id is not None:
+        return TeamLogo.team_season_entry_id == team_season_entry_id
+    if season_id is not None:
+        return and_(
+            TeamLogo.season_id == season_id,
+            TeamLogo.team_season_entry_id.is_(None),
+        )
+    return and_(TeamLogo.season_id.is_(None), TeamLogo.team_season_entry_id.is_(None))
 
 
 def normalize_logo(content):
@@ -97,33 +167,26 @@ def normalize_logo(content):
     return output.getvalue()
 
 
-def create_team_logo(session, team_id, content, season_id=None, alt_text=""):
+def create_team_logo(
+    session,
+    team_id,
+    content,
+    season_id=None,
+    team_season_entry_id=None,
+    alt_text="",
+):
     team = session.get(Team, team_id)
     if team is None:
         raise LookupError("Team not found.")
-    season = None
-    if season_id is not None:
-        season = session.get(Season, season_id)
-        if season is None:
-            raise ValueError("The selected season does not exist.")
-        membership = session.scalar(
-            select(TeamSeasonEntry.team_season_entry_id)
-            .where(
-                TeamSeasonEntry.team_id == team_id,
-                TeamSeasonEntry.season_id == season_id,
-            )
-            .limit(1)
-        )
-        if membership is None:
-            raise ValueError("This team did not participate in the selected season.")
+    season_id, team_season_entry_id = _resolve_scope(
+        session, team_id, season_id, team_season_entry_id
+    )
     normalized = normalize_logo(content)
     fingerprint = hashlib.sha256(normalized).hexdigest()
     key = f"team-logos/{team_id}/{fingerprint[:24]}.webp"
     get_media_storage().put(key, normalized, "image/webp")
 
-    scope_filter = (
-        TeamLogo.season_id.is_(None) if season_id is None else TeamLogo.season_id == season_id
-    )
+    scope_filter = _scope_filter(season_id, team_season_entry_id)
     session.execute(
         update(TeamLogo)
         .where(TeamLogo.team_id == team_id, scope_filter, TeamLogo.is_active.is_(True))
@@ -150,6 +213,7 @@ def create_team_logo(session, team_id, content, season_id=None, alt_text=""):
     logo = TeamLogo(
         team_id=team_id,
         season_id=season_id,
+        team_season_entry_id=team_season_entry_id,
         asset_path=key,
         alt_text=str(alt_text or "").strip() or f"{team.canonical_name} logo",
         priority=int(priority) + 1,
@@ -160,31 +224,24 @@ def create_team_logo(session, team_id, content, season_id=None, alt_text=""):
     return get_team_logo_detail(session, team_id), logo
 
 
-def reuse_team_logo(session, team_id, source_logo_id, season_id=None, alt_text=""):
+def reuse_team_logo(
+    session,
+    team_id,
+    source_logo_id,
+    season_id=None,
+    team_season_entry_id=None,
+    alt_text="",
+):
     team = session.get(Team, team_id)
     if team is None:
         raise LookupError("Team not found.")
     source = session.get(TeamLogo, source_logo_id)
     if source is None or source.team_id != team_id:
         raise LookupError("Team logo not found.")
-    if season_id is not None:
-        season = session.get(Season, season_id)
-        if season is None:
-            raise ValueError("The selected season does not exist.")
-        membership = session.scalar(
-            select(TeamSeasonEntry.team_season_entry_id)
-            .where(
-                TeamSeasonEntry.team_id == team_id,
-                TeamSeasonEntry.season_id == season_id,
-            )
-            .limit(1)
-        )
-        if membership is None:
-            raise ValueError("This team did not participate in the selected season.")
-
-    scope_filter = (
-        TeamLogo.season_id.is_(None) if season_id is None else TeamLogo.season_id == season_id
+    season_id, team_season_entry_id = _resolve_scope(
+        session, team_id, season_id, team_season_entry_id
     )
+    scope_filter = _scope_filter(season_id, team_season_entry_id)
     session.execute(
         update(TeamLogo)
         .where(TeamLogo.team_id == team_id, scope_filter, TeamLogo.is_active.is_(True))
@@ -213,6 +270,7 @@ def reuse_team_logo(session, team_id, source_logo_id, season_id=None, alt_text="
     logo = TeamLogo(
         team_id=team_id,
         season_id=season_id,
+        team_season_entry_id=team_season_entry_id,
         asset_path=source.asset_path,
         alt_text=replacement_alt_text,
         priority=int(priority) + 1,
@@ -239,11 +297,7 @@ def update_team_logo(session, team_id, logo_id, payload):
         if not isinstance(is_active, bool):
             raise ValueError("is_active must be true or false.")
         if is_active:
-            scope_filter = (
-                TeamLogo.season_id.is_(None)
-                if logo.season_id is None
-                else TeamLogo.season_id == logo.season_id
-            )
+            scope_filter = _scope_filter(logo.season_id, logo.team_season_entry_id)
             session.execute(
                 update(TeamLogo)
                 .where(

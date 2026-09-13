@@ -4,6 +4,7 @@ import { fetchTeamScopes, type TeamScope } from "../api";
 import { DashboardShell, MetricGrid } from "../components/dashboard/DashboardPrimitives";
 import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
+import { matchHistoryPath } from "../matchHistoryLinks";
 import { fetchTrackDashboard, type TrackDashboardResponse } from "../trackAnalyticsApi";
 
 const panel = "rounded-lg border border-white/10 bg-black/75 p-4 shadow-lg backdrop-blur-sm sm:p-5";
@@ -346,7 +347,11 @@ export default function TrackDashboard() {
                   <Link
                     key={race.race_id}
                     to={leaguePath(
-                      `/matches?season=${season}&division=${division}&match=${race.match_id}`
+                      matchHistoryPath({
+                        season: race.season,
+                        division: race.division,
+                        matchId: race.match_id,
+                      })
                     )}
                     className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md border border-white/10 bg-white/5 p-3 hover:border-blue-400/50 hover:bg-white/10"
                   >

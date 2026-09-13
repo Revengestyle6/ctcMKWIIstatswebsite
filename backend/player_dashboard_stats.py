@@ -155,14 +155,29 @@ def _team_display_name(display_name, clan_tag, canonical_name):
     return season_name
 
 
-def _team_logo_url(session, team_id, season_id=None):
+def _team_logo_url(session, team_id, season_id=None, team_season_entry_id=None):
     base = select(TeamLogo).where(
         TeamLogo.team_id == team_id,
         TeamLogo.is_active.is_(True),
     )
+    if team_season_entry_id is not None:
+        entry_asset = session.scalar(
+            base.where(TeamLogo.team_season_entry_id == team_season_entry_id)
+            .order_by(desc(TeamLogo.priority), desc(TeamLogo.team_logo_id))
+            .limit(1)
+        )
+        if entry_asset:
+            return (
+                f"/api/team-logos/{entry_asset.team_logo_id}/content"
+                if entry_asset.asset_path.startswith("team-logos/")
+                else _asset_url(entry_asset.asset_path)
+            )
     if season_id is not None:
         season_asset = session.scalar(
-            base.where(TeamLogo.season_id == season_id)
+            base.where(
+                TeamLogo.season_id == season_id,
+                TeamLogo.team_season_entry_id.is_(None),
+            )
             .order_by(desc(TeamLogo.priority), desc(TeamLogo.team_logo_id))
             .limit(1)
         )
@@ -174,7 +189,10 @@ def _team_logo_url(session, team_id, season_id=None):
             )
 
     default_asset = session.scalar(
-        base.where(TeamLogo.season_id.is_(None))
+        base.where(
+            TeamLogo.season_id.is_(None),
+            TeamLogo.team_season_entry_id.is_(None),
+        )
         .order_by(desc(TeamLogo.priority), desc(TeamLogo.team_logo_id))
         .limit(1)
     )
@@ -224,6 +242,7 @@ def _player_identity(session, player, league_code="ctc"):
             PlayerSeasonEntry.first_seen_match_id,
             PlayerSeasonEntry.last_seen_match_id,
             PlayerSeasonEntry.player_season_entry_id,
+            TeamSeasonEntry.team_season_entry_id,
         )
         .join(Season, Season.season_id == PlayerSeasonEntry.season_id)
         .join(Division, Division.division_id == PlayerSeasonEntry.division_id)
@@ -278,7 +297,12 @@ def _player_identity(session, player, league_code="ctc"):
                 "tag": latest.clan_tag,
                 "season": latest.season_code,
                 "division": latest.division_code,
-                "logo_url": _team_logo_url(session, latest.team_id, latest.season_id),
+                "logo_url": _team_logo_url(
+                    session,
+                    latest.team_id,
+                    latest.season_id,
+                    latest.team_season_entry_id,
+                ),
             }
             if latest
             else None
