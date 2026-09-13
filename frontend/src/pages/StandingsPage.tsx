@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchJson, resolveAssetUrl, type TeamScope } from "../api";
 import { BackToHomeLink } from "../components/BackToHomeLink";
@@ -116,7 +116,9 @@ type StandingsResponse = {
   playoffs: { format: unknown; series: PlayoffSeries[] };
 };
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
+const FALLBACK_LEADERBOARD_ROW_HEIGHT = 37;
+const MAX_LEADERBOARD_TEXT_SIZE = 14;
 const ELIGIBILITY_OPTIONS = [
   { value: true, label: "Eligible players" },
   { value: false, label: "All players" },
@@ -136,6 +138,61 @@ function leaderboardRankClass(rank: number): string {
   return "border-white/10 bg-black/45 text-white odd:bg-white/[0.04]";
 }
 
+function AutoFitLeaderboardText({ text }: { text: string }): React.JSX.Element {
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const content = textRef.current;
+    if (!container || !content || content.textContent !== text) return;
+
+    let animationFrame = 0;
+    let active = true;
+    const fit = () => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => {
+        content.style.fontSize = `${MAX_LEADERBOARD_TEXT_SIZE}px`;
+        const availableWidth = Math.max(0, container.clientWidth - 2);
+        const naturalWidth = content.getBoundingClientRect().width;
+        if (!availableWidth || naturalWidth <= availableWidth) return;
+
+        const fittedSize = Math.max(1, MAX_LEADERBOARD_TEXT_SIZE * (availableWidth / naturalWidth));
+        content.style.fontSize = `${fittedSize}px`;
+      });
+    };
+
+    const observer = new ResizeObserver(fit);
+    observer.observe(container);
+    document.fonts.ready.then(() => {
+      if (active) fit();
+    });
+    fit();
+    return () => {
+      active = false;
+      cancelAnimationFrame(animationFrame);
+      observer.disconnect();
+    };
+  }, [text]);
+
+  return (
+    <span
+      ref={containerRef}
+      data-fit-text={text}
+      className="block w-full min-w-0 overflow-hidden text-center"
+    >
+      <span
+        ref={textRef}
+        data-fit-content="true"
+        className="inline-block whitespace-nowrap align-middle"
+        style={{ fontSize: MAX_LEADERBOARD_TEXT_SIZE }}
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
+
 function StatusBadge({ status, note }: { status: CompetitionStatus; note?: string | null }) {
   if (status === "active") return null;
   return (
@@ -152,12 +209,12 @@ function StatusBadge({ status, note }: { status: CompetitionStatus; note?: strin
   );
 }
 
-function TeamIdentity({ team }: { team: Standing }) {
+function TeamIdentity({ team, centered = false }: { team: Standing; centered?: boolean }) {
   const { leaguePath } = useLeague();
   return (
     <Link
       to={leaguePath(`/teams/${team.team_id}`)}
-      className="flex min-w-0 items-center gap-2 font-semibold text-white hover:underline"
+      className={`flex min-w-0 items-center gap-2 font-semibold text-white hover:underline ${centered ? "justify-center" : ""}`}
     >
       <img
         src={resolveAssetUrl(team.logo_url)}
@@ -177,8 +234,8 @@ function StandingsTable({ standings }: { standings: Standing[] }) {
       <table className="w-full min-w-[760px] border-collapse text-sm">
         <thead className="league-accent-bg text-black">
           <tr>
-            <th className="px-3 py-3 text-left">#</th>
-            <th className="border-l border-black/20 px-3 py-3 text-left">Team</th>
+            <th className="px-3 py-3 text-center">#</th>
+            <th className="border-l border-black/20 px-3 py-3 text-center">Team</th>
             {[
               ["P", "Played"],
               ["W", "Wins"],
@@ -205,9 +262,11 @@ function StandingsTable({ standings }: { standings: Standing[] }) {
               key={team.team_season_entry_id}
               className="border-b border-white/10 bg-black/45 odd:bg-white/[0.04]"
             >
-              <td className="px-3 py-3 text-gray-300">{team.conference_rank ?? team.rank}</td>
-              <td className="min-w-64 border-l border-white/[0.08] px-3 py-3">
-                <TeamIdentity team={team} />
+              <td className="px-3 py-3 text-center text-gray-300">
+                {team.conference_rank ?? team.rank}
+              </td>
+              <td className="min-w-64 border-l border-white/[0.08] px-3 py-3 text-center">
+                <TeamIdentity team={team} centered />
               </td>
               <td className="border-l border-white/[0.08] px-3 py-3 text-center">{team.played}</td>
               <td className="border-l border-white/[0.08] px-3 py-3 text-center">{team.wins}</td>
@@ -267,7 +326,7 @@ function MatchupMatrix({ standings, matches }: { standings: Standing[]; matches:
             {standings.map((team) => (
               <th
                 key={team.team_season_entry_id}
-                className="min-w-28 border border-white/10 bg-black/70 px-2 py-2"
+                className="min-w-[4.5rem] border border-white/10 bg-black/70 px-1 py-2"
               >
                 {team.tag}
               </th>
@@ -277,7 +336,7 @@ function MatchupMatrix({ standings, matches }: { standings: Standing[]; matches:
         <tbody>
           {standings.map((team) => (
             <tr key={team.team_season_entry_id}>
-              <th className="sticky left-0 z-10 min-w-52 border border-white/10 bg-zinc-950 px-3 py-3 text-left">
+              <th className="sticky left-0 z-10 min-w-36 border border-white/10 bg-zinc-950 px-2 py-3 text-left">
                 <TeamIdentity team={team} />
               </th>
               {standings.map((opponent) => {
@@ -285,12 +344,13 @@ function MatchupMatrix({ standings, matches }: { standings: Standing[]; matches:
                   return (
                     <td
                       key={opponent.team_season_entry_id}
-                      className="border border-white/10 bg-black/80 p-2"
+                      className="border border-white/10 bg-black/80 p-0.5"
                     >
                       <img
                         src={resolveAssetUrl(team.logo_url)}
                         alt=""
-                        className="mx-auto h-12 w-12 object-contain opacity-70"
+                        data-diagonal-logo="true"
+                        className="mx-auto h-[4.375rem] w-full object-contain opacity-70"
                       />
                     </td>
                   );
@@ -363,6 +423,13 @@ function PlayerLeaderboard({
   const [eligibleOnly, setEligibleOnly] = useState(true);
   const [role, setRole] = useState<"runner" | "bagger">("runner");
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const tableHeaderRef = useRef<HTMLTableRowElement>(null);
+  const firstRowRef = useRef<HTMLTableRowElement>(null);
+  const paginationRef = useRef<HTMLDivElement>(null);
+  const noteRef = useRef<HTMLParagraphElement>(null);
   const ranked = useMemo(() => {
     const metric = role === "runner" ? "runner_gp_average" : "bagger_gp_average";
     const eligibilityMetric = role === "runner" ? "runner_eligible" : "bagger_eligible";
@@ -373,18 +440,56 @@ function PlayerLeaderboard({
           (right[metric] ?? -1) - (left[metric] ?? -1) || left.name.localeCompare(right.name)
       );
   }, [eligibleOnly, players, role]);
-  const pageCount = Math.max(1, Math.ceil(ranked.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(ranked.length / pageSize));
   const currentPage = Math.min(page, pageCount - 1);
-  const visible = ranked.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
+  const visible = ranked.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
   const metric = role === "runner" ? "runner_gp_average" : "bagger_gp_average";
   const eligibilityMetric = role === "runner" ? "runner_eligible" : "bagger_eligible";
   const eligibilityReasonMetric =
     role === "runner" ? "runner_eligibility_reason" : "bagger_eligibility_reason";
   const roleGpsMetric = role === "runner" ? "runner_gps_played" : "bagger_gps_played";
 
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const controls = controlsRef.current;
+    const tableHeader = tableHeaderRef.current;
+    const pagination = paginationRef.current;
+    const note = noteRef.current;
+    if (!container || !controls || !tableHeader || !pagination || !note) return;
+
+    let animationFrame = 0;
+    const measure = () => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => {
+        const gap = Number.parseFloat(window.getComputedStyle(container).rowGap) || 0;
+        const fixedHeight =
+          controls.getBoundingClientRect().height +
+          tableHeader.getBoundingClientRect().height +
+          pagination.getBoundingClientRect().height +
+          note.getBoundingClientRect().height +
+          gap * 3;
+        const rowHeight =
+          firstRowRef.current?.getBoundingClientRect().height ?? FALLBACK_LEADERBOARD_ROW_HEIGHT;
+        const availableHeight = Math.max(0, container.clientHeight - fixedHeight);
+        const nextPageSize = Math.max(1, Math.floor(availableHeight / rowHeight));
+        setPageSize((current) => (current === nextPageSize ? current : nextPageSize));
+      });
+    };
+
+    const observer = new ResizeObserver(measure);
+    for (const element of [container, controls, tableHeader, pagination, note]) {
+      observer.observe(element);
+    }
+    measure();
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      observer.disconnect();
+    };
+  }, []);
+
   return (
-    <div>
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
+      <div ref={controlsRef} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
         <fieldset className="min-w-0">
           <legend className="mb-1.5 text-xs font-semibold text-gray-300">Players shown</legend>
           <div className="grid grid-cols-2 overflow-hidden rounded-md border border-white/20 bg-black/40">
@@ -425,41 +530,52 @@ function PlayerLeaderboard({
         </fieldset>
       </div>
       <div className="overflow-hidden rounded-md border border-white/10">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
+          <colgroup>
+            <col className="w-[10%]" />
+            <col className="w-[32%]" />
+            <col className="w-[16%]" />
+            <col className="w-[22%]" />
+            <col className="w-[20%]" />
+          </colgroup>
           <thead className="league-accent-bg text-black">
-            <tr>
-              <th className="px-2 py-2">#</th>
-              <th className="border-l border-black/20 px-2 py-2 text-left">Player</th>
-              <th className="border-l border-black/20 px-2 py-2">Team</th>
+            <tr ref={tableHeaderRef}>
+              <th className="px-1 py-2">#</th>
+              <th className="border-l border-black/20 px-1 py-2 text-center">Player</th>
+              <th className="border-l border-black/20 px-1 py-2">Team</th>
               <th
-                className="border-l border-black/20 px-2 py-2"
+                className="border-l border-black/20 px-1 py-2"
                 title="Player GPs played / team GPs played"
               >
                 GPs
               </th>
-              <th className="border-l border-black/20 px-2 py-2 text-right">GP Avg</th>
+              <th className="border-l border-black/20 px-1 py-2 text-center" title="GP Average">
+                GP Avg
+              </th>
             </tr>
           </thead>
           <tbody>
             {visible.map((player, index) => {
-              const rank = currentPage * PAGE_SIZE + index + 1;
+              const rank = currentPage * pageSize + index + 1;
               const roleEligible = player[eligibilityMetric];
               const eligibilityReason = player[eligibilityReasonMetric];
               const roleGpsPlayed = player[roleGpsMetric];
               return (
                 <tr
+                  ref={index === 0 ? firstRowRef : undefined}
                   key={`${player.player_id}:${player.team_id}`}
                   className={`border-b ${leaderboardRankClass(rank)}`}
                 >
-                  <td className="px-2 py-2 text-center font-black">{rank}</td>
-                  <td className="border-l border-white/[0.08] px-2 py-2">
+                  <td className="px-1 py-2 text-center font-black">{rank}</td>
+                  <td className="min-w-0 border-l border-white/[0.08] px-1 py-2 text-center">
                     <Link
                       to={leaguePath(
                         `/players/${player.player_id}?season=${season}&division=${division}&role=${role}`
                       )}
-                      className="font-semibold text-white hover:underline"
+                      title={player.name}
+                      className="block w-full font-semibold text-white hover:underline"
                     >
-                      {player.name}
+                      <AutoFitLeaderboardText text={player.name} />
                     </Link>
                     {!roleEligible ? (
                       <span
@@ -470,18 +586,21 @@ function PlayerLeaderboard({
                       </span>
                     ) : null}
                   </td>
-                  <td className="border-l border-white/[0.08] px-2 py-2 text-center text-gray-300">
-                    {player.team_tag}
+                  <td
+                    title={player.team_tag}
+                    className="border-l border-white/[0.08] px-1 py-2 text-center text-gray-300"
+                  >
+                    <AutoFitLeaderboardText text={player.team_tag} />
                   </td>
                   <td
-                    className="whitespace-nowrap border-l border-white/[0.08] px-2 py-2 text-center text-gray-200"
+                    className="whitespace-nowrap border-l border-white/[0.08] px-1 py-2 text-center text-[0.7rem] text-gray-200"
                     title={`${roleGpsPlayed} race-equivalent GPs as ${role} (4 races = 1 GP); ${player.required_gps} required for eligibility`}
                   >
                     <span className="font-bold text-white">{roleGpsPlayed}</span>
                     <span className="text-gray-500">/{player.team_gps}</span>
                   </td>
                   <td
-                    className={`border-l border-white/[0.08] px-2 py-2 text-right text-base font-black ${rank > 3 ? "league-accent-text" : ""}`}
+                    className={`border-l border-white/[0.08] px-1 py-2 text-center text-sm font-black ${rank > 3 ? "league-accent-text" : ""}`}
                   >
                     {player[metric]?.toFixed(1) ?? "—"}
                   </td>
@@ -491,7 +610,7 @@ function PlayerLeaderboard({
           </tbody>
         </table>
       </div>
-      <div className="mt-3 flex items-center justify-between text-xs text-gray-300">
+      <div ref={paginationRef} className="flex items-center justify-between text-xs text-gray-300">
         <button
           type="button"
           disabled={currentPage === 0}
@@ -512,7 +631,7 @@ function PlayerLeaderboard({
           Next
         </button>
       </div>
-      <p className="mt-3 text-xs leading-5 text-gray-400">
+      <p ref={noteRef} className="text-xs leading-5 text-gray-400">
         Four races in the selected role count as one GP, with partial GPs included. Eligibility
         requires race-equivalent GPs in at least two-thirds of an active team’s total GPs.
       </p>
@@ -700,8 +819,8 @@ export default function StandingsPage(): React.JSX.Element {
                 onUpdated={() => setRefreshVersion((version) => version + 1)}
               />
             ) : null}
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(23rem,0.9fr)]">
-              <div className="min-w-0 space-y-5">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(18.5rem,1fr)]">
+              <div className="flex min-w-0 flex-col gap-5">
                 {data.conference_config.enabled ? (
                   <div className="space-y-5">
                     {!data.conference_config.valid ? (
@@ -739,17 +858,19 @@ export default function StandingsPage(): React.JSX.Element {
                     <StandingsTable standings={data.standings} />
                   </section>
                 )}
-                <section className="rounded-xl border border-white/10 bg-zinc-950/90 p-5 shadow-2xl">
+                <section className="flex flex-1 flex-col rounded-xl border border-white/10 bg-zinc-950/90 p-5 shadow-2xl">
                   <div className="mb-4">
                     <h2 className="text-xl font-bold">Head-to-Head Results</h2>
                     <p className="mt-1 text-xs text-gray-400">
                       Scores are shown from the row team’s perspective.
                     </p>
                   </div>
-                  <MatchupMatrix standings={data.standings} matches={data.matches} />
+                  <div className="flex-1">
+                    <MatchupMatrix standings={data.standings} matches={data.matches} />
+                  </div>
                 </section>
               </div>
-              <section className="self-start rounded-xl border border-white/10 bg-zinc-950/90 p-5 shadow-2xl">
+              <section className="flex min-w-0 flex-col rounded-xl border border-white/10 bg-zinc-950/90 p-5 shadow-2xl">
                 <div className="mb-4">
                   <h2 className="text-xl font-bold">Player GP Average</h2>
                 </div>
