@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchTeamScopes, type TeamScope } from "../api";
+import {
+  type CsvColumn,
+  csvFilename,
+  downloadCsv,
+  TablePaginationControls,
+  usePaginatedRows,
+} from "../components/analytics/TablePagination";
 import { DashboardShell, MetricGrid } from "../components/dashboard/DashboardPrimitives";
 import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
@@ -11,20 +18,40 @@ import {
   type TrackAnalyticsRow,
 } from "../trackAnalyticsApi";
 
-type SortKey =
+type MetricSortKey =
   | "appearances"
   | "unique_teams"
   | "average_margin"
   | "even_race_rate"
   | "average_race_number"
-  | "lift";
+  | "lift"
+  | "alphabetical";
+type RaceSortKey = `race_${number}`;
+type SortKey = MetricSortKey | RaceSortKey;
+
+const trackSortOptions: Array<{ label: string; teamOnly?: boolean; value: SortKey }> = [
+  { value: "appearances", label: "Most played" },
+  { value: "average_margin", label: "Highest average margin" },
+  { value: "even_race_rate", label: "Highest even-race rate" },
+  { value: "average_race_number", label: "Latest average appearance" },
+  { value: "unique_teams", label: "Most unique teams" },
+  { value: "lift", label: "Best team lift", teamOnly: true },
+  { value: "alphabetical", label: "Track name (A–Z)" },
+];
+const raceSortOptions = Array.from(
+  { length: 12 },
+  (_, index): { label: string; value: RaceSortKey } => ({
+    value: `race_${index + 1}`,
+    label: `Race ${index + 1} playcount`,
+  })
+);
 
 const panel = "rounded-lg border border-white/10 bg-black/75 p-4 shadow-lg backdrop-blur-sm sm:p-5";
 const selectClass =
   "min-h-11 rounded-md border border-white/20 bg-zinc-950 px-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-400";
 
 function signed(value: number) {
-  return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
+  return `${value >= 0 ? "+" : ""}${value.toFixed(1)}`;
 }
 
 function trackPath(
@@ -43,34 +70,99 @@ function trackPath(
   return `/tracks/${trackId}?${query}`;
 }
 
+function sortTracks(rows: TrackAnalyticsRow[], sort: SortKey) {
+  return [...rows].sort((a, b) => {
+    if (sort === "alphabetical") return a.track_name.localeCompare(b.track_name);
+    if (sort.startsWith("race_")) {
+      const raceIndex = Number.parseInt(sort.slice(5), 10) - 1;
+      const difference = (b.timing_counts[raceIndex] ?? 0) - (a.timing_counts[raceIndex] ?? 0);
+      return difference || a.track_name.localeCompare(b.track_name);
+    }
+    const metricSort = sort as Exclude<MetricSortKey, "alphabetical">;
+    const av = metricSort === "lift" ? (a.selected_team?.lift ?? -Infinity) : a[metricSort];
+    const bv = metricSort === "lift" ? (b.selected_team?.lift ?? -Infinity) : b[metricSort];
+    return bv - av || a.track_name.localeCompare(b.track_name);
+  });
+}
+
+function TrackSortSelect({
+  value,
+  onChange,
+  includeTeamLift,
+  includeRaceCounts = false,
+  compact = false,
+}: {
+  value: SortKey;
+  onChange: (value: SortKey) => void;
+  includeTeamLift: boolean;
+  includeRaceCounts?: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <label className={compact ? "block" : "grid gap-1 text-xs font-semibold text-gray-400"}>
+      <span className={compact ? "sr-only" : undefined}>Sort by</span>
+      <select
+        className={
+          compact
+            ? "h-10 rounded-md border border-white/20 bg-zinc-950 px-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            : `${selectClass} min-h-9 py-1`
+        }
+        value={value}
+        onChange={(event) => onChange(event.target.value as SortKey)}
+      >
+        {trackSortOptions.map((option) =>
+          option.teamOnly && !includeTeamLift ? null : (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          )
+        )}
+        {includeRaceCounts && (
+          <optgroup label="Race playcount">
+            {raceSortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
+      </select>
+    </label>
+  );
+}
+
 function StandoutList({
   title,
   rows,
   positive,
   href,
   minimum,
+  resetKey,
 }: {
   title: string;
   rows: TeamTrackPerformance[];
   positive: boolean;
   href: (id: number) => string;
   minimum: number;
+  resetKey: string;
 }) {
+  const pager = usePaginatedRows(rows, resetKey, 6);
+
   return (
-    <section className={panel}>
+    <section className={`${panel} flex flex-col`}>
       <h3 className="text-lg font-bold">{title}</h3>
       <p className="mt-1 text-xs leading-5 text-gray-400">
         Difference from each team&apos;s normal race margin; minimum {minimum} plays.
       </p>
-      <ol className="mt-3 divide-y divide-white/10">
-        {rows.slice(0, 6).map((row) => (
+      <ol className="mt-3 grid h-96 flex-none grid-rows-6 divide-y divide-white/10">
+        {pager.rows.map((row) => (
           <li
             key={`${row.team_id}-${row.track_id}`}
             className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 py-2.5"
           >
             <div className="min-w-0">
               <Link
-                className="font-semibold text-white hover:text-blue-300"
+                className="block truncate font-semibold text-white hover:text-blue-300"
                 to={href(row.track_id)}
               >
                 {row.track_name}
@@ -87,9 +179,37 @@ function StandoutList({
           </li>
         ))}
         {!rows.length && (
-          <li className="py-5 text-sm text-gray-400">Not enough repeat plays yet.</li>
+          <li className="py-5 text-sm text-gray-400">
+            {positive ? "No nonnegative differences in this scope." : "No negative differences."}
+          </li>
         )}
       </ol>
+      <nav
+        className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-3"
+        aria-label={`${title} pages`}
+      >
+        <button
+          type="button"
+          className="min-h-9 rounded border border-white/15 bg-white/5 px-2.5 text-xs font-semibold hover:border-blue-300/60 disabled:cursor-not-allowed disabled:opacity-35"
+          disabled={pager.page === 1}
+          onClick={() => pager.setPage(pager.page - 1)}
+          aria-label={`Previous ${title.toLowerCase()} page`}
+        >
+          ← Prev
+        </button>
+        <span className="text-center text-xs text-gray-400">
+          Page <strong className="text-white">{pager.page}</strong> of {pager.pageCount}
+        </span>
+        <button
+          type="button"
+          className="min-h-9 rounded border border-white/15 bg-white/5 px-2.5 text-xs font-semibold hover:border-blue-300/60 disabled:cursor-not-allowed disabled:opacity-35"
+          disabled={pager.page === pager.pageCount}
+          onClick={() => pager.setPage(pager.page + 1)}
+          aria-label={`Next ${title.toLowerCase()} page`}
+        >
+          Next →
+        </button>
+      </nav>
     </section>
   );
 }
@@ -195,6 +315,7 @@ export default function TrackAnalyticsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sort, setSort] = useState<SortKey>("appearances");
+  const [timingSort, setTimingSort] = useState<SortKey>("appearances");
   const [minPlays, setMinPlays] = useState(() =>
     Math.min(500, Math.max(1, Number(params.get("min_races")) || 2))
   );
@@ -254,17 +375,57 @@ export default function TrackAnalyticsPage() {
   useEffect(() => {
     if (teamId && !teams.some((team) => String(team.team_id) === teamId)) setTeamId("");
   }, [teams, teamId]);
-  const rows = useMemo(
-    () =>
-      [...(data?.tracks ?? [])].sort((a, b) => {
-        const av = sort === "lift" ? (a.selected_team?.lift ?? -Infinity) : a[sort];
-        const bv = sort === "lift" ? (b.selected_team?.lift ?? -Infinity) : b[sort];
-        return bv - av || a.track_name.localeCompare(b.track_name);
-      }),
-    [data, sort]
+  useEffect(() => {
+    if (teamId) return;
+    if (sort === "lift") setSort("appearances");
+    if (timingSort === "lift") setTimingSort("appearances");
+  }, [teamId, sort, timingSort]);
+  const rows = useMemo(() => sortTracks(data?.tracks ?? [], sort), [data, sort]);
+  const timingRows = useMemo(() => sortTracks(data?.tracks ?? [], timingSort), [data, timingSort]);
+  const timingScaleMax = useMemo(() => {
+    let maximum = 1;
+    for (const row of data?.tracks ?? []) {
+      for (const count of row.timing_counts) maximum = Math.max(maximum, count);
+    }
+    return maximum;
+  }, [data]);
+  const paginationKey = `${league}:${season}:${division}:${teamId}:${minPlays}:${sort}`;
+  const trackPager = usePaginatedRows(rows, paginationKey);
+  const timingPager = usePaginatedRows(
+    timingRows,
+    `${league}:${season}:${division}:${teamId}:${minPlays}:${timingSort}`
   );
   const href = (id: number) => leaguePath(trackPath(id, season, division, teamId, minPlays));
   const summary = data?.summary;
+  const exportScope = [league, season || "all-seasons", division || "all-divisions"];
+
+  const exportTrackRankings = () => {
+    const columns: CsvColumn<TrackAnalyticsRow>[] = [
+      { header: "Rank", value: (_row, index) => index + 1 },
+      { header: "Track", value: (row) => row.track_name },
+      { header: "Played", value: (row) => row.appearances },
+      { header: "Teams", value: (row) => row.unique_teams },
+      { header: "Average race number", value: (row) => row.average_race_number },
+      { header: "Average margin", value: (row) => row.average_margin },
+      { header: "Even races (%)", value: (row) => row.even_race_rate },
+    ];
+    if (teamId) {
+      columns.push({ header: "Team lift", value: (row) => row.selected_team?.lift });
+    }
+    downloadCsv(csvFilename("track-rankings", ...exportScope), columns, rows);
+  };
+
+  const exportTrackTiming = () => {
+    const columns: CsvColumn<TrackAnalyticsRow>[] = [
+      { header: "Rank", value: (_row, index) => index + 1 },
+      { header: "Track", value: (row) => row.track_name },
+      ...Array.from({ length: 12 }, (_, index) => ({
+        header: `Race ${index + 1}`,
+        value: (row: TrackAnalyticsRow) => row.timing_counts[index] ?? 0,
+      })),
+    ];
+    downloadCsv(csvFilename("track-timing", ...exportScope), columns, timingRows);
+  };
 
   const controls = (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -408,53 +569,56 @@ export default function TrackAnalyticsPage() {
                 },
               ]}
             />
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,.8fr)]">
-              <FrequencyMarginPlot tracks={data.tracks} href={href} />
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1">
-                <StandoutList
-                  title={teamId ? "Track strengths" : "Team–track strengths"}
-                  rows={data.standouts.strengths}
-                  positive
-                  href={href}
-                  minimum={minPlays}
-                />
-                <StandoutList
-                  title={teamId ? "Track struggles" : "Team–track struggles"}
-                  rows={data.standouts.struggles}
-                  positive={false}
-                  href={href}
-                  minimum={minPlays}
-                />
+            <div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-[minmax(0,1.05fr)_minmax(276px,.575fr)_minmax(276px,.575fr)]">
+              <div className="md:col-span-2 xl:col-span-1">
+                <FrequencyMarginPlot tracks={data.tracks} href={href} />
               </div>
+              <StandoutList
+                title={teamId ? "Track strengths" : "Team–track strengths"}
+                rows={data.standouts.strengths}
+                positive
+                href={href}
+                minimum={minPlays}
+                resetKey={paginationKey}
+              />
+              <StandoutList
+                title={teamId ? "Track struggles" : "Team–track struggles"}
+                rows={data.standouts.struggles}
+                positive={false}
+                href={href}
+                minimum={minPlays}
+                resetKey={paginationKey}
+              />
             </div>
             <section className={panel}>
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-bold">All tracks</h2>
-                  <p className="mt-1 text-sm text-gray-400">
-                    Tracks meeting the selected play minimum. Select one for its full detail.
-                  </p>
-                </div>
-                <label className="grid gap-1 text-xs font-semibold text-gray-400">
-                  Sort by
-                  <select
-                    className={`${selectClass} min-h-9 py-1`}
-                    value={sort}
-                    onChange={(event) => setSort(event.target.value as SortKey)}
-                  >
-                    <option value="appearances">Most played</option>
-                    <option value="average_margin">Highest average margin</option>
-                    <option value="even_race_rate">Highest even-race rate</option>
-                    <option value="average_race_number">Latest average appearance</option>
-                    <option value="unique_teams">Most unique teams</option>
-                    {teamId && <option value="lift">Best team lift</option>}
-                  </select>
-                </label>
+              <h2 className="text-lg font-bold">All tracks</h2>
+              <p className="mt-1 text-sm text-gray-400">
+                Tracks meeting the selected play minimum. Select one for its full detail.
+              </p>
+              <div className="mt-4">
+                <TablePaginationControls
+                  label="track rankings"
+                  total={rows.length}
+                  page={trackPager.page}
+                  pageCount={trackPager.pageCount}
+                  firstIndex={trackPager.firstIndex}
+                  onPageChange={trackPager.setPage}
+                  onExport={exportTrackRankings}
+                  beforeActions={
+                    <TrackSortSelect
+                      value={sort}
+                      onChange={setSort}
+                      includeTeamLift={Boolean(teamId)}
+                      compact
+                    />
+                  }
+                />
               </div>
-              <div className="mt-4 overflow-x-auto">
+              <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[760px] text-sm">
                   <thead className="border-y border-white/15 bg-white/5 text-xs uppercase tracking-wide text-gray-300">
                     <tr>
+                      <th className="w-12 px-3 py-3 text-right">#</th>
                       <th className="px-3 py-3 text-left">Track</th>
                       <th className="px-3 py-3 text-center">Played</th>
                       <th className="px-3 py-3 text-center">Teams</th>
@@ -468,8 +632,11 @@ export default function TrackAnalyticsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
-                    {rows.map((row) => (
+                    {trackPager.rows.map((row, index) => (
                       <tr key={row.track_id} className="hover:bg-white/5">
+                        <td className="px-3 py-3 text-right text-gray-500">
+                          {trackPager.firstIndex + index + 1}
+                        </td>
                         <td className="px-3 py-3 font-semibold">
                           <Link className="hover:text-blue-300" to={href(row.track_id)}>
                             {row.track_name}
@@ -506,30 +673,95 @@ export default function TrackAnalyticsPage() {
                   </p>
                 )}
               </div>
+              <div className="mt-3">
+                <TablePaginationControls
+                  label="track rankings"
+                  total={rows.length}
+                  page={trackPager.page}
+                  pageCount={trackPager.pageCount}
+                  firstIndex={trackPager.firstIndex}
+                  onPageChange={trackPager.setPage}
+                />
+              </div>
             </section>
             <section className={panel}>
               <h2 className="text-lg font-bold">When tracks appear</h2>
               <p className="mt-1 text-sm text-gray-400">
-                Darker cells mean more appearances in that race slot. This reflects when a track was
-                played; pick ownership is not recorded.
+                Darker cells mean more appearances in that race slot. Equal counts use the same
+                color across the chart. This reflects when a track was played; pick ownership is not
+                recorded.
               </p>
-              <div className="mt-4 overflow-x-auto">
+              <p className="mt-1 text-xs font-semibold text-blue-200">
+                Click a numbered race header to rank tracks by playcount in that race.
+              </p>
+              <div className="mt-4">
+                <TablePaginationControls
+                  label="track timing"
+                  total={timingRows.length}
+                  page={timingPager.page}
+                  pageCount={timingPager.pageCount}
+                  firstIndex={timingPager.firstIndex}
+                  onPageChange={timingPager.setPage}
+                  onExport={exportTrackTiming}
+                  beforeActions={
+                    <TrackSortSelect
+                      value={timingSort}
+                      onChange={setTimingSort}
+                      includeTeamLift={Boolean(teamId)}
+                      includeRaceCounts
+                      compact
+                    />
+                  }
+                />
+              </div>
+              <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[720px] text-xs">
                   <thead>
                     <tr>
+                      <th className="w-10 pb-2 pr-2 text-right">#</th>
                       <th className="pb-2 text-left">Track</th>
-                      {Array.from({ length: 12 }, (_, index) => (
-                        <th key={index} className="pb-2 text-center">
-                          {index + 1}
-                        </th>
-                      ))}
+                      {raceSortOptions.map((option, index) => {
+                        const active = timingSort === option.value;
+                        return (
+                          <th
+                            key={option.value}
+                            scope="col"
+                            aria-sort={active ? "descending" : "none"}
+                            className="pb-2 text-center"
+                          >
+                            <button
+                              type="button"
+                              title={`Sort by ${option.label}`}
+                              aria-label={`Sort tracks by ${option.label}`}
+                              className={`mx-auto flex min-h-8 min-w-8 items-center justify-center rounded border px-1.5 font-bold transition focus:outline-none focus:ring-2 focus:ring-blue-300 ${
+                                active
+                                  ? "border-blue-300 bg-blue-500/30 text-blue-100"
+                                  : "border-white/15 bg-white/5 text-gray-300 hover:border-blue-300/70 hover:bg-blue-500/20 hover:text-white"
+                              }`}
+                              onClick={() => setTimingSort(option.value)}
+                            >
+                              {index + 1}
+                              {active && (
+                                <span className="ml-0.5" aria-hidden="true">
+                                  ↓
+                                </span>
+                              )}
+                            </button>
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.slice(0, 16).map((row) => {
-                      const max = Math.max(1, ...row.timing_counts);
+                    {timingPager.rows.map((row, rowIndex) => {
                       return (
-                        <tr key={row.track_id}>
+                        <tr
+                          key={row.track_id}
+                          className="transition-colors hover:bg-blue-400/15 focus-within:bg-blue-400/15"
+                        >
+                          <td className="py-1.5 pr-2 text-right text-gray-500">
+                            {timingPager.firstIndex + rowIndex + 1}
+                          </td>
                           <th className="max-w-48 truncate py-1.5 pr-3 text-left font-medium">
                             <Link to={href(row.track_id)}>{row.track_name}</Link>
                           </th>
@@ -539,7 +771,7 @@ export default function TrackAnalyticsPage() {
                                 title={`${count} appearances`}
                                 className="flex h-7 min-w-7 items-center justify-center rounded text-white"
                                 style={{
-                                  backgroundColor: `rgba(59, 130, 246, ${count ? 0.2 + (0.8 * count) / max : 0.05})`,
+                                  backgroundColor: `rgba(59, 130, 246, ${count ? 0.2 + (0.8 * count) / timingScaleMax : 0.05})`,
                                 }}
                               >
                                 {count || ""}
@@ -551,6 +783,16 @@ export default function TrackAnalyticsPage() {
                     })}
                   </tbody>
                 </table>
+              </div>
+              <div className="mt-3">
+                <TablePaginationControls
+                  label="track timing"
+                  total={timingRows.length}
+                  page={timingPager.page}
+                  pageCount={timingPager.pageCount}
+                  firstIndex={timingPager.firstIndex}
+                  onPageChange={timingPager.setPage}
+                />
               </div>
             </section>
           </div>

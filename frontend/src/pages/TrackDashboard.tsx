@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { fetchTeamScopes, type TeamScope } from "../api";
+import {
+  type CsvColumn,
+  csvFilename,
+  downloadCsv,
+  TablePaginationControls,
+  usePaginatedRows,
+} from "../components/analytics/TablePagination";
 import { DashboardShell, MetricGrid } from "../components/dashboard/DashboardPrimitives";
 import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { matchHistoryPath } from "../matchHistoryLinks";
-import { fetchTrackDashboard, type TrackDashboardResponse } from "../trackAnalyticsApi";
+import {
+  fetchTrackDashboard,
+  type TeamTrackPerformance,
+  type TrackDashboardResponse,
+  type TrackMarginBucket,
+  type TrackPlayerPerformance,
+} from "../trackAnalyticsApi";
 
 const panel = "rounded-lg border border-white/10 bg-black/75 p-4 shadow-lg backdrop-blur-sm sm:p-5";
 const selectClass =
@@ -15,25 +28,97 @@ function signed(value: number) {
   return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
 }
 
-function BarRows({ rows }: { rows: Array<{ label: string; count: number }> }) {
-  const max = Math.max(1, ...rows.map((row) => row.count));
+function MarginHistogram({ rows, split }: { rows: TrackMarginBucket[]; split: boolean }) {
+  let max = 1;
+  for (const row of rows) max = Math.max(max, row.count);
+  const midpoint = Math.ceil(max / 2);
+  const barColor = (outcome: TrackMarginBucket["outcome"]) => {
+    if (outcome === "loss") return "bg-rose-500/85";
+    if (outcome === "win") return "bg-emerald-500/85";
+    if (outcome === "draw") return "bg-gray-400/80";
+    return "bg-blue-500/80";
+  };
+
   return (
-    <div className="mt-4 space-y-3">
-      {rows.map((row) => (
-        <div
-          key={row.label}
-          className="grid grid-cols-[42px_minmax(0,1fr)_32px] items-center gap-3 text-sm"
-        >
-          <span className="text-gray-300">{row.label}</span>
-          <span className="h-6 overflow-hidden rounded bg-white/5">
-            <span
-              className="block h-full rounded bg-blue-500/75"
-              style={{ width: `${(100 * row.count) / max}%` }}
-            />
-          </span>
-          <strong className="text-right">{row.count}</strong>
+    <div className="mt-5 overflow-x-auto pb-1">
+      <div className={split ? "min-w-[520px]" : "min-w-[360px]"}>
+        <div className="grid grid-cols-[24px_30px_minmax(0,1fr)] gap-x-2">
+          <div
+            className="flex h-48 items-center justify-center text-[10px] font-bold uppercase tracking-[.16em] text-gray-400"
+            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+          >
+            Races
+          </div>
+          <div className="relative h-48 text-[10px] tabular-nums text-gray-500" aria-hidden="true">
+            <span className="absolute right-0 top-0 -translate-y-1/2">{max}</span>
+            {midpoint < max && (
+              <span className="absolute right-0 top-1/2 -translate-y-1/2">{midpoint}</span>
+            )}
+            <span className="absolute bottom-0 right-0 translate-y-1/2">0</span>
+          </div>
+          <div
+            className="relative h-48 border-b border-l border-white/25"
+            role="img"
+            aria-label={
+              split
+                ? "Selected team race margin histogram. Red bars are losses and green bars are wins."
+                : "Race margin histogram"
+            }
+          >
+            <span className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-white/10" />
+            <span className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed border-white/10" />
+            {split && (
+              <span
+                className="pointer-events-none absolute inset-y-0 left-1/2 z-20 border-l-2 border-dotted border-white/70"
+                title="Zero team margin"
+              />
+            )}
+            <div
+              className="absolute inset-0 grid items-end gap-2 px-2"
+              style={{ gridTemplateColumns: `repeat(${rows.length}, minmax(0, 1fr))` }}
+            >
+              {rows.map((row) => (
+                <div key={row.label} className="flex h-full flex-col items-center justify-end">
+                  <strong className="mb-1 text-[11px] tabular-nums text-white">
+                    {row.count || ""}
+                  </strong>
+                  <span
+                    title={`${row.label}: ${row.count} races`}
+                    className={`w-full rounded-t ${barColor(row.outcome)}`}
+                    style={{
+                      height: row.count ? `${Math.max(7, (85 * row.count) / max)}%` : "0%",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div
+            className="col-start-3 mt-2 grid gap-2 px-2 text-center text-[10px] leading-tight text-gray-400"
+            style={{ gridTemplateColumns: `repeat(${rows.length}, minmax(0, 1fr))` }}
+          >
+            {rows.map((row) => (
+              <span key={row.label}>{row.label}</span>
+            ))}
+          </div>
         </div>
-      ))}
+        <p className="ml-[62px] mt-2 text-center text-xs font-semibold text-gray-400">
+          {split ? "Team race margin (loss ← 0 → win)" : "Race margin (points)"}
+        </p>
+        {split && (
+          <div className="ml-[62px] mt-2 flex justify-center gap-4 text-xs text-gray-300">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm bg-rose-500/85" /> Loss
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm bg-gray-400/80" /> Draw
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500/85" /> Win
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -190,6 +275,44 @@ export default function TrackDashboard() {
   comparisonQuery.set("min_races", String(minPlays));
   const metrics = data?.metrics;
   const maxTiming = Math.max(1, ...(metrics?.timing_counts ?? []));
+  const paginationKey = `${numericTrackId}:${league}:${season}:${division}:${teamId}:${minPlays}`;
+  const playerRows = data?.players ?? [];
+  const teamRows = data?.teams ?? [];
+  const playerPager = usePaginatedRows(playerRows, paginationKey);
+  const teamPager = usePaginatedRows(teamRows, paginationKey);
+  const exportScope = [
+    data?.track.track_name ?? `track-${numericTrackId}`,
+    league,
+    season || "all-seasons",
+    division || "all-divisions",
+  ];
+
+  const exportPlayers = () => {
+    const columns: CsvColumn<TrackPlayerPerformance>[] = [
+      { header: "Rank", value: (_row, index) => index + 1 },
+      { header: "Player", value: (row) => row.name },
+      { header: "Average score", value: (row) => row.average_score },
+      { header: "Plays", value: (row) => row.races },
+      { header: "Team wins", value: (row) => row.team_wins },
+      { header: "Average team margin", value: (row) => row.average_team_margin },
+    ];
+    downloadCsv(csvFilename(...exportScope, "player-leaderboard"), columns, playerRows);
+  };
+
+  const exportTeams = () => {
+    const columns: CsvColumn<TeamTrackPerformance>[] = [
+      { header: "Rank", value: (_row, index) => index + 1 },
+      { header: "Team tag", value: (row) => row.team_tag },
+      { header: "Team name", value: (row) => row.team_name },
+      { header: "Races", value: (row) => row.races },
+      { header: "Average score", value: (row) => row.average_score },
+      { header: "Average margin", value: (row) => row.average_margin },
+      { header: "Win rate (%)", value: (row) => row.win_rate },
+      { header: "Lift", value: (row) => row.lift },
+      { header: "Sample", value: (row) => row.sample_status },
+    ];
+    downloadCsv(csvFilename(...exportScope, "team-performance"), columns, teamRows);
+  };
 
   return (
     <DashboardShell
@@ -285,21 +408,116 @@ export default function TrackDashboard() {
               <section className={panel}>
                 <h2 className="text-lg font-bold">Race margin distribution</h2>
                 <p className="mt-1 text-sm text-gray-400">
-                  See whether the average is typical or driven by a few extreme races.
+                  {teamId
+                    ? "Signed margins for the selected team, split into losses, draws, and wins."
+                    : "See whether the average is typical or driven by a few extreme races."}
                 </p>
-                <BarRows rows={data.margin_buckets} />
+                <MarginHistogram rows={data.margin_buckets} split={Boolean(teamId)} />
               </section>
             </div>
+            <section className={panel}>
+              <h2 className="text-lg font-bold">Player leaderboard</h2>
+              <p className="mt-1 text-sm text-gray-400">
+                Ranked by average individual score. Team margin is the signed average race margin
+                while that player was in the lineup. Players shown have at least {minPlays} plays.
+              </p>
+              <div className="mt-4">
+                <TablePaginationControls
+                  label="player leaderboard"
+                  total={playerRows.length}
+                  page={playerPager.page}
+                  pageCount={playerPager.pageCount}
+                  firstIndex={playerPager.firstIndex}
+                  onPageChange={playerPager.setPage}
+                  onExport={exportPlayers}
+                />
+              </div>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[620px] text-sm tabular-nums">
+                  <thead className="border-y border-white/15 bg-white/5 text-xs uppercase text-gray-300">
+                    <tr>
+                      <th className="w-12 px-3 py-3 text-right">#</th>
+                      <th className="px-3 py-3 text-left">Player</th>
+                      <th className="px-3 py-3 text-center">Avg score</th>
+                      <th className="px-3 py-3 text-center">Plays</th>
+                      <th className="px-3 py-3 text-center">Team wins</th>
+                      <th className="px-3 py-3 text-center">Avg team margin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {playerPager.rows.map((row, index) => {
+                      const playerQuery = new URLSearchParams();
+                      if (season) playerQuery.set("season", season);
+                      if (division) playerQuery.set("division", division);
+                      return (
+                        <tr key={row.player_id}>
+                          <td className="px-3 py-3 text-right text-gray-500">
+                            {playerPager.firstIndex + index + 1}
+                          </td>
+                          <td className="px-3 py-3 font-semibold">
+                            <Link
+                              to={leaguePath(
+                                `/players/${row.player_id}${playerQuery.size ? `?${playerQuery}` : ""}`
+                              )}
+                              className="text-blue-200 hover:text-blue-100 hover:underline"
+                            >
+                              {row.name}
+                            </Link>
+                          </td>
+                          <td className="px-3 py-3 text-center font-bold">
+                            {row.average_score?.toFixed(1) ?? "—"}
+                          </td>
+                          <td className="px-3 py-3 text-center">{row.races}</td>
+                          <td className="px-3 py-3 text-center">{row.team_wins}</td>
+                          <td
+                            className={`px-3 py-3 text-center font-mono font-bold ${row.average_team_margin > 0 ? "text-emerald-300" : row.average_team_margin < 0 ? "text-rose-300" : "text-gray-300"}`}
+                          >
+                            {signed(row.average_team_margin)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {!data.players.length && (
+                  <p className="py-8 text-center text-gray-400">
+                    No players meet the current minimum of {minPlays} plays.
+                  </p>
+                )}
+              </div>
+              <div className="mt-3">
+                <TablePaginationControls
+                  label="player leaderboard"
+                  total={playerRows.length}
+                  page={playerPager.page}
+                  pageCount={playerPager.pageCount}
+                  firstIndex={playerPager.firstIndex}
+                  onPageChange={playerPager.setPage}
+                />
+              </div>
+            </section>
             <section className={panel}>
               <h2 className="text-lg font-bold">Team performance</h2>
               <p className="mt-1 text-sm text-gray-400">
                 Lift compares a team&apos;s margin here with its normal race margin in this filtered
                 view. Teams shown have at least {minPlays} plays.
               </p>
-              <div className="mt-4 overflow-x-auto">
+              <div className="mt-4">
+                <TablePaginationControls
+                  label="team performance"
+                  total={teamRows.length}
+                  page={teamPager.page}
+                  pageCount={teamPager.pageCount}
+                  firstIndex={teamPager.firstIndex}
+                  onPageChange={teamPager.setPage}
+                  onExport={exportTeams}
+                />
+              </div>
+              <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[680px] text-sm">
                   <thead className="border-y border-white/15 bg-white/5 text-xs uppercase text-gray-300">
                     <tr>
+                      <th className="w-12 px-3 py-3 text-right">#</th>
                       <th className="px-3 py-3 text-left">Team</th>
                       <th className="px-3 py-3 text-center">Races</th>
                       <th className="px-3 py-3 text-center">Avg score</th>
@@ -310,8 +528,11 @@ export default function TrackDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
-                    {data.teams.map((row) => (
+                    {teamPager.rows.map((row, index) => (
                       <tr key={row.team_id}>
+                        <td className="px-3 py-3 text-right text-gray-500">
+                          {teamPager.firstIndex + index + 1}
+                        </td>
                         <td className="px-3 py-3 font-semibold">
                           {row.team_tag}{" "}
                           <span className="font-normal text-gray-400">{row.team_name}</span>
@@ -335,6 +556,16 @@ export default function TrackDashboard() {
                 {!data.teams.length && (
                   <p className="py-8 text-center text-gray-400">No team results are available.</p>
                 )}
+              </div>
+              <div className="mt-3">
+                <TablePaginationControls
+                  label="team performance"
+                  total={teamRows.length}
+                  page={teamPager.page}
+                  pageCount={teamPager.pageCount}
+                  firstIndex={teamPager.firstIndex}
+                  onPageChange={teamPager.setPage}
+                />
               </div>
             </section>
             <section className={panel}>

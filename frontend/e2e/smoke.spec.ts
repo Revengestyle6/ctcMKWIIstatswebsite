@@ -73,6 +73,17 @@ test("track analytics supports comparison and per-track drill-down", async ({ pa
   await expect(page.getByRole("heading", { name: "Frequency vs. race margin" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "All tracks" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "When tracks appear" })).toBeVisible();
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width >= 1280) {
+    const comparisonPanels = await Promise.all(
+      ["Frequency vs. race margin", "Team–track strengths", "Team–track struggles"].map(
+        async (name) =>
+          page.getByRole("heading", { name }).locator("xpath=ancestor::section[1]").boundingBox()
+      )
+    );
+    const panelTops = comparisonPanels.map((box) => box?.y ?? 0);
+    expect(Math.max(...panelTops) - Math.min(...panelTops)).toBeLessThan(2);
+  }
   await expect(minimumPlays).toHaveValue("2");
   await minimumPlays.fill("3");
   await expect(page).toHaveURL(/min_races=3/);
@@ -87,12 +98,78 @@ test("track analytics supports comparison and per-track drill-down", async ({ pa
   await expect(teamFilter).toBeDisabled();
   await page.getByLabel("Division").selectOption("d1");
   await expect(teamFilter).toBeEnabled();
-  await page.locator("tbody a").first().click();
+
+  const allTracks = page
+    .getByRole("heading", { name: "All tracks" })
+    .locator("xpath=ancestor::section[1]");
+  const trackRows = allTracks.locator("tbody tr");
+  await expect(trackRows).toHaveCount(10);
+  await expect(trackRows.first().locator("td").first()).toHaveText("1");
+  await expect(allTracks.getByText(/Showing 1–10 of \d+/).first()).toBeVisible();
+  const nextTrackPage = allTracks.getByRole("button", { name: "Next track rankings page" }).first();
+  await expect(nextTrackPage).toBeEnabled();
+  await nextTrackPage.click();
+  await expect(trackRows.first().locator("td").first()).toHaveText("11");
+  await expect(
+    allTracks.getByRole("button", { name: "Previous track rankings page" }).first()
+  ).toBeEnabled();
+
+  const trackDownloadPromise = page.waitForEvent("download");
+  await allTracks.getByRole("button", { name: "Export CSV" }).click();
+  const trackDownload = await trackDownloadPromise;
+  expect(trackDownload.suggestedFilename()).toMatch(/^track-rankings-.*\.csv$/);
+
+  const timingTable = page
+    .getByRole("heading", { name: "When tracks appear" })
+    .locator("xpath=ancestor::section[1]");
+  await expect(timingTable.locator("tbody tr")).toHaveCount(10);
+  await expect(timingTable.getByRole("button", { name: "Export CSV" })).toBeVisible();
+
+  const strengths = page
+    .getByRole("heading", { name: "Team–track strengths" })
+    .locator("xpath=ancestor::section[1]");
+  const struggles = page
+    .getByRole("heading", { name: "Team–track struggles" })
+    .locator("xpath=ancestor::section[1]");
+  await expect(strengths.locator("ol > li")).toHaveCount(6);
+  await expect(struggles.locator("ol > li")).toHaveCount(6);
+  const strengthLifts = await strengths.locator("ol > li span.font-mono").allTextContents();
+  const struggleLifts = await struggles.locator("ol > li span.font-mono").allTextContents();
+  expect(strengthLifts.every((value) => Number.parseFloat(value) >= 0)).toBeTruthy();
+  expect(struggleLifts.every((value) => Number.parseFloat(value) < 0)).toBeTruthy();
+  const nextStrengthPage = strengths.getByRole("button", {
+    name: "Next team–track strengths page",
+  });
+  await expect(nextStrengthPage).toBeEnabled();
+  await nextStrengthPage.click();
+  expect(await strengths.locator("ol > li").count()).toBeLessThanOrEqual(6);
+  await expect(strengths.getByText(/Page 2 of \d+/)).toBeVisible();
+
+  await trackRows.first().getByRole("link").first().click();
 
   await expect(page).toHaveURL(/\/tracks\/\d+\?.*league=ctc/);
   await expect(page.getByRole("heading", { name: "Race-slot distribution" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Race margin distribution" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Team performance" })).toBeVisible();
+  const playerLeaderboard = page
+    .getByRole("heading", { name: "Player leaderboard" })
+    .locator("xpath=ancestor::section[1]");
+  await expect(playerLeaderboard).toBeVisible();
+  await expect(playerLeaderboard.getByRole("columnheader", { name: "Avg score" })).toBeVisible();
+  await expect(playerLeaderboard.getByRole("columnheader", { name: "Team wins" })).toBeVisible();
+  await expect(
+    playerLeaderboard.getByRole("columnheader", { name: "Avg team margin" })
+  ).toBeVisible();
+  await expect(playerLeaderboard.getByRole("columnheader", { name: "#" })).toBeVisible();
+  await expect(playerLeaderboard.getByRole("button", { name: "Export CSV" })).toBeVisible();
+  expect(await playerLeaderboard.locator("tbody tr").count()).toBeLessThanOrEqual(10);
+  await expect(playerLeaderboard.locator('tbody a[href^="/players/"]').first()).toBeVisible();
+  const teamPerformance = page
+    .getByRole("heading", { name: "Team performance" })
+    .locator("xpath=ancestor::section[1]");
+  await expect(teamPerformance).toBeVisible();
+  await expect(teamPerformance.getByRole("columnheader", { name: "#" })).toBeVisible();
+  await expect(teamPerformance.getByRole("button", { name: "Export CSV" })).toBeVisible();
+  expect(await teamPerformance.locator("tbody tr").count()).toBeLessThanOrEqual(10);
   await expect(page.getByRole("heading", { name: "Recent races" })).toBeVisible();
 });
 
