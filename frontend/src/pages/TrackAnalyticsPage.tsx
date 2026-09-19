@@ -221,55 +221,103 @@ function FrequencyMarginPlot({
   tracks: TrackAnalyticsRow[];
   href: (id: number) => string;
 }) {
-  const width = 720,
-    height = 260,
-    left = 42,
-    bottom = 28;
-  const maxX = Math.max(1, ...tracks.map((row) => row.appearances));
-  const maxY = Math.max(1, ...tracks.map((row) => row.average_margin));
+  const width = 560;
+  const height = 440;
+  const left = 64;
+  const right = 20;
+  const top = 20;
+  const bottom = 60;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxMargin = Math.max(1, ...tracks.map((row) => row.average_margin));
+  const maxAppearances = Math.max(1, ...tracks.map((row) => row.appearances));
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const appearanceTicks = Array.from(
+    new Set(ticks.map((tick) => Math.round(maxAppearances * tick)))
+  );
+
   return (
-    <section className={panel}>
+    <section className={`${panel} flex h-full flex-col`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold">Frequency vs. race margin</h2>
           <p className="mt-1 text-sm text-gray-400">
-            Frequent tracks move right; higher-swing tracks move up.
+            Higher-margin tracks move right; more frequently played tracks move up.
           </p>
         </div>
         <span className="text-xs text-gray-500">Circle size = teams represented</span>
       </div>
-      <div className="mt-3 overflow-x-auto">
+      <p className="mt-3 rounded-md border border-blue-300/25 bg-blue-500/10 px-3 py-2 text-xs font-semibold leading-5 text-blue-100">
+        Hover over a dot to see that track&apos;s name, races played, and average margin. Click any
+        dot to open the track&apos;s individual analytics page.
+      </p>
+      <div className="mt-2 min-h-0 flex-1 overflow-x-auto">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="min-w-[600px]"
+          className="h-full min-h-[360px] w-full min-w-[430px]"
           role="img"
-          aria-label="Track frequency plotted against average race margin"
+          aria-label="Track appearances plotted vertically against average race margin horizontally"
         >
-          {[0, 0.25, 0.5, 0.75, 1].map((tick) => (
-            <line
-              key={tick}
-              x1={left}
-              x2={width - 12}
-              y1={12 + tick * (height - bottom - 12)}
-              y2={12 + tick * (height - bottom - 12)}
-              stroke="rgba(255,255,255,.1)"
-            />
-          ))}
-          <text x={left} y={height - 7} fill="#9ca3af" fontSize="11">
-            less played
+          {ticks.map((tick) => {
+            const x = left + tick * plotWidth;
+            return (
+              <g key={`margin-${tick}`}>
+                <line x1={x} x2={x} y1={top} y2={top + plotHeight} stroke="rgba(255,255,255,.08)" />
+                <text
+                  x={x}
+                  y={top + plotHeight + 18}
+                  fill="#9ca3af"
+                  fontSize="11"
+                  textAnchor="middle"
+                >
+                  {(maxMargin * tick).toFixed(1)}
+                </text>
+              </g>
+            );
+          })}
+          {appearanceTicks.map((value) => {
+            const y = top + (1 - value / maxAppearances) * plotHeight;
+            return (
+              <g key={`appearances-${value}`}>
+                <line x1={left} x2={left + plotWidth} y1={y} y2={y} stroke="rgba(255,255,255,.1)" />
+                <text x={left - 10} y={y + 4} fill="#9ca3af" fontSize="11" textAnchor="end">
+                  {value}
+                </text>
+              </g>
+            );
+          })}
+          <line x1={left} x2={left} y1={top} y2={top + plotHeight} stroke="rgba(255,255,255,.35)" />
+          <line
+            x1={left}
+            x2={left + plotWidth}
+            y1={top + plotHeight}
+            y2={top + plotHeight}
+            stroke="rgba(255,255,255,.35)"
+          />
+          <text
+            x={left + plotWidth / 2}
+            y={height - 10}
+            fill="#d1d5db"
+            fontSize="12"
+            fontWeight="600"
+            textAnchor="middle"
+          >
+            Average race margin (points)
           </text>
-          <text x={width - 72} y={height - 7} fill="#9ca3af" fontSize="11">
-            more played
-          </text>
-          <text x="5" y="20" fill="#9ca3af" fontSize="11">
-            wide
-          </text>
-          <text x="5" y={height - bottom} fill="#9ca3af" fontSize="11">
-            even
+          <text
+            x="15"
+            y={top + plotHeight / 2}
+            fill="#d1d5db"
+            fontSize="12"
+            fontWeight="600"
+            textAnchor="middle"
+            transform={`rotate(-90 15 ${top + plotHeight / 2})`}
+          >
+            Number of races played
           </text>
           {tracks.map((row) => {
-            const x = left + (row.appearances / maxX) * (width - left - 20);
-            const y = height - bottom - (row.average_margin / maxY) * (height - bottom - 20);
+            const x = left + (row.average_margin / maxMargin) * plotWidth;
+            const y = top + (1 - row.appearances / maxAppearances) * plotHeight;
             const radius = 4 + Math.min(8, row.unique_teams * 0.7);
             return (
               <Link
@@ -281,7 +329,7 @@ function FrequencyMarginPlot({
                   cx={x}
                   cy={y}
                   r={radius}
-                  className="fill-blue-400/70 stroke-blue-100 hover:fill-yellow-300"
+                  className="cursor-pointer fill-blue-400/70 stroke-blue-100 hover:fill-yellow-300"
                   strokeWidth="1"
                 >
                   <title>
@@ -509,8 +557,8 @@ export default function TrackAnalyticsPage() {
           </p>
           <h2 className="mt-1 text-2xl font-bold">Compare every track at a glance</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-300">
-            Frequency, scoring margin, timing, reach, and team-specific performance—with every row
-            opening a focused track dashboard.
+            Compare frequency, scoring margin, timing, reach, and team-specific performance. Click
+            any track to open its dedicated analytics dashboard!
           </p>
         </div>
       }
@@ -569,8 +617,8 @@ export default function TrackAnalyticsPage() {
                 },
               ]}
             />
-            <div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-[minmax(0,1.05fr)_minmax(276px,.575fr)_minmax(276px,.575fr)]">
-              <div className="md:col-span-2 xl:col-span-1">
+            <div className="grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-[minmax(0,1.05fr)_minmax(276px,.575fr)_minmax(276px,.575fr)]">
+              <div className="h-full md:col-span-2 xl:col-span-1">
                 <FrequencyMarginPlot tracks={data.tracks} href={href} />
               </div>
               <StandoutList
@@ -593,7 +641,8 @@ export default function TrackAnalyticsPage() {
             <section className={panel}>
               <h2 className="text-lg font-bold">All tracks</h2>
               <p className="mt-1 text-sm text-gray-400">
-                Tracks meeting the selected play minimum. Select one for its full detail.
+                Tracks meeting the selected play minimum. Click any track name to open its
+                individual analytics page.
               </p>
               <div className="mt-4">
                 <TablePaginationControls
