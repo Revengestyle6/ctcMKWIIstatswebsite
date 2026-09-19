@@ -286,11 +286,58 @@ def list_players(season=None, division=None, league_code="ctc"):
         return sorted(players.values(), key=lambda name: name.lower())
 
 
-def list_player_directory(season=None, division=None, league_code="ctc"):
+def list_player_directory(season=None, division=None, league_code="ctc", all_scopes=False):
     with SessionLocal() as session:
-        scope = _get_scope(session, season=season, division=division, league_code=league_code)
+        if all_scopes:
+            statement = (
+                select(
+                    Player.player_id,
+                    Player.canonical_name,
+                    Player.primary_friend_code,
+                    PlayerSeasonEntry.primary_lounge_name,
+                    PlayerSeasonEntry.primary_mii_name,
+                    Team.team_id,
+                    TeamSeasonEntry.clan_tag,
+                )
+                .join(PlayerSeasonEntry, PlayerSeasonEntry.player_id == Player.player_id)
+                .join(
+                    TeamSeasonEntry,
+                    TeamSeasonEntry.team_season_entry_id == PlayerSeasonEntry.team_season_entry_id,
+                )
+                .join(Team, Team.team_id == TeamSeasonEntry.team_id)
+                .join(Season, Season.season_id == PlayerSeasonEntry.season_id)
+                .join(Division, Division.division_id == PlayerSeasonEntry.division_id)
+                .where(Season.league_code == league_code)
+            )
+            season_code = normalize_season_code(season)
+            division_code = normalize_division_code(division)
+            if season_code:
+                statement = statement.where(Season.season_code == season_code)
+            if division_code:
+                statement = statement.where(Division.division_code == division_code)
+            rows = session.execute(statement).all()
+            canonical_names = {row.player_id: row.canonical_name for row in rows}
+            display_names = _display_names_for_players(
+                session, canonical_names.keys(), canonical_names
+            )
+            valid_players = [
+                PlayerLookupRow(
+                    player_id=row.player_id,
+                    canonical_name=row.canonical_name,
+                    primary_friend_code=row.primary_friend_code,
+                    primary_lounge_name=row.primary_lounge_name,
+                    primary_mii_name=row.primary_mii_name,
+                    team_id=row.team_id,
+                    clan_tag=row.clan_tag,
+                    display_name=display_names.get(row.player_id, ""),
+                )
+                for row in rows
+            ]
+        else:
+            scope = _get_scope(session, season=season, division=division, league_code=league_code)
+            valid_players = _valid_players(session, scope)
         players = {}
-        for row in _valid_players(session, scope):
+        for row in valid_players:
             display_name = _display_player(row)
             if not display_name:
                 continue

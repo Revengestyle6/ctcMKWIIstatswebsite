@@ -172,9 +172,15 @@ export interface PlayerDirectoryEntry {
 export function fetchPlayerDirectory(
   league: string,
   season: string,
-  division: string
+  division: string,
+  options: { allScopes?: boolean } = {}
 ): Promise<PlayerDirectoryEntry[]> {
-  return fetchJson("/api/player-directory", { league, season, division });
+  return fetchJson("/api/player-directory", {
+    league,
+    season,
+    division,
+    all_scopes: options.allScopes ? "true" : undefined,
+  });
 }
 
 export interface TrackOption {
