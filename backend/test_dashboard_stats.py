@@ -44,7 +44,42 @@ from models import (
     Track,
 )
 from test_support import PostgreSQLTestDatabase
-from track_analytics import get_track_dashboard
+from track_analytics import _margin_buckets, _standout_rows, get_track_dashboard
+
+
+class TrackMarginBucketTests(unittest.TestCase):
+    def test_absolute_buckets_use_the_revised_boundaries(self):
+        margins = [0, 5, 6, 10, 11, 15, 16, 20, 21]
+
+        buckets = _margin_buckets([{"margin": margin} for margin in margins])
+
+        self.assertEqual(
+            [(bucket["label"], bucket["count"]) for bucket in buckets],
+            [("0–5", 2), ("6–10", 2), ("11–15", 2), ("16–20", 2), ("21+", 1)],
+        )
+        self.assertEqual({bucket["outcome"] for bucket in buckets}, {"neutral"})
+
+    def test_team_buckets_preserve_signed_win_loss_margins(self):
+        margins = [-21, -20, -16, -15, -11, -10, -6, -5, -1, 0, 1, 5, 6, 10, 11, 15, 16, 20, 21]
+        races = [
+            {
+                "margin": abs(margin),
+                "teams": [
+                    {"team_id": 7, "differential": margin},
+                    {"team_id": 8, "differential": -margin},
+                ],
+            }
+            for margin in margins
+        ]
+
+        buckets = _margin_buckets(races, selected_team_id=7)
+
+        self.assertEqual([bucket["count"] for bucket in buckets], [1, 2, 2, 2, 2, 1, 2, 2, 2, 2, 1])
+        self.assertEqual(
+            [bucket["outcome"] for bucket in buckets],
+            ["loss"] * 5 + ["draw"] + ["win"] * 5,
+        )
+        self.assertEqual(sum(bucket["count"] for bucket in buckets), len(margins))
 
 
 class DashboardRoleContractTests(unittest.TestCase):
@@ -56,6 +91,24 @@ class DashboardRoleContractTests(unittest.TestCase):
     def tearDown(self):
         self.session.close()
         self.database.close()
+
+    def test_track_standouts_split_zero_and_negative_lifts_without_truncation(self):
+        rows = [
+            {
+                "lift": lift,
+                "races": 3,
+                "track_name": f"Track {index}",
+            }
+            for index, lift in enumerate([4.0, 0.0, -1.0, -3.0, -2.0, 2.0, 1.0, -4.0, -5.0])
+        ]
+
+        standouts = _standout_rows(rows, 3)
+
+        self.assertEqual([row["lift"] for row in standouts["strengths"]], [4.0, 2.0, 1.0, 0.0])
+        self.assertEqual(
+            [row["lift"] for row in standouts["struggles"]],
+            [-5.0, -4.0, -3.0, -2.0, -1.0],
+        )
 
     def _seed(self):
         seasons = [
@@ -400,6 +453,45 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.assertEqual(
             {(race["season"], race["division"]) for race in dashboard["recent_races"]},
             {("s1", "d1"), ("s2", "d1")},
+        )
+
+    def test_track_dashboard_ranks_players_with_team_race_context(self):
+        dashboard = get_track_dashboard(
+            self.session,
+            self.track.track_id,
+            league="ctc",
+            min_plays=1,
+        )
+
+        role_switcher = next(
+            row for row in dashboard["players"] if row["player_id"] == self.player_id
+        )
+        self.assertEqual(role_switcher["name"], "Role Switcher")
+        self.assertEqual(role_switcher["races"], 12)
+        self.assertEqual(role_switcher["average_score"], 6.7)
+        alpha_margins = [
+            next(team["differential"] for team in race["teams"] if team["team_id"] == self.alpha_id)
+            for race in dashboard["recent_races"]
+        ]
+        self.assertEqual(role_switcher["team_wins"], sum(margin > 0 for margin in alpha_margins))
+        self.assertEqual(
+            role_switcher["average_team_margin"],
+            round(sum(alpha_margins) / len(alpha_margins), 1),
+        )
+        self.assertEqual(dashboard["players"][0]["player_id"], self.player_id)
+
+        filtered = get_track_dashboard(
+            self.session,
+            self.track.track_id,
+            league="ctc",
+            season="s2",
+            division="d1",
+            team_id=self.alpha_id,
+            min_plays=1,
+        )
+        self.assertEqual(
+            {row["player_id"] for row in filtered["players"]},
+            {player.player_id for player in self.players[:5]},
         )
 
     def _selected_result(self, match_number, race_number):

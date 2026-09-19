@@ -77,6 +77,21 @@ export interface TrackRace {
   }>;
 }
 
+export interface TrackPlayerPerformance {
+  player_id: number;
+  name: string;
+  races: number;
+  average_score: number | null;
+  team_wins: number;
+  average_team_margin: number;
+}
+
+export interface TrackMarginBucket {
+  label: string;
+  count: number;
+  outcome: "neutral" | "loss" | "draw" | "win";
+}
+
 export interface TrackDashboardResponse {
   scope: Scope;
   track: { track_id: number; track_name: string; aliases: string[] };
@@ -87,7 +102,8 @@ export interface TrackDashboardResponse {
     match_set: "regular";
   };
   metrics: TrackAnalyticsRow;
-  margin_buckets: Array<{ label: string; count: number }>;
+  margin_buckets: TrackMarginBucket[];
+  players: TrackPlayerPerformance[];
   teams: TeamTrackPerformance[];
   recent_races: TrackRace[];
 }

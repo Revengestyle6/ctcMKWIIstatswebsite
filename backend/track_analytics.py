@@ -8,6 +8,7 @@ from models import (
     Division,
     Match,
     MatchTeam,
+    Player,
     Race,
     RacePlayerResult,
     RaceTeamResult,
@@ -23,6 +24,7 @@ from player_dashboard_stats import (
     _resolve_scope,
     _scope_payload,
 )
+from player_display_names import _display_names_for_players
 from sqlalchemy import func, select
 
 EVEN_MARGIN = 5
@@ -228,6 +230,96 @@ def _team_track_rows(races, selected_team_id=None):
     return sorted(results, key=lambda row: (-row["lift"], -row["races"], row["track_name"]))
 
 
+def _standout_rows(team_rows, min_plays):
+    reliable = [row for row in team_rows if row["races"] >= min_plays]
+    return {
+        "strengths": sorted(
+            (row for row in reliable if row["lift"] >= 0),
+            key=lambda row: (-row["lift"], -row["races"], row["track_name"]),
+        ),
+        "struggles": sorted(
+            (row for row in reliable if row["lift"] < 0),
+            key=lambda row: (row["lift"], -row["races"], row["track_name"]),
+        ),
+    }
+
+
+def _margin_buckets(races, selected_team_id=None):
+    if selected_team_id is None:
+        margins = [race["margin"] for race in races]
+        return [
+            {
+                "label": "0–5",
+                "count": sum(0 <= margin <= 5 for margin in margins),
+                "outcome": "neutral",
+            },
+            {
+                "label": "6–10",
+                "count": sum(6 <= margin <= 10 for margin in margins),
+                "outcome": "neutral",
+            },
+            {
+                "label": "11–15",
+                "count": sum(11 <= margin <= 15 for margin in margins),
+                "outcome": "neutral",
+            },
+            {
+                "label": "16–20",
+                "count": sum(16 <= margin <= 20 for margin in margins),
+                "outcome": "neutral",
+            },
+            {
+                "label": "21+",
+                "count": sum(margin >= 21 for margin in margins),
+                "outcome": "neutral",
+            },
+        ]
+
+    margins = [
+        team["differential"]
+        for race in races
+        for team in race["teams"]
+        if team["team_id"] == selected_team_id
+    ]
+    return [
+        {"label": "≤−21", "count": sum(margin <= -21 for margin in margins), "outcome": "loss"},
+        {
+            "label": "−20–−16",
+            "count": sum(-20 <= margin <= -16 for margin in margins),
+            "outcome": "loss",
+        },
+        {
+            "label": "−15–−11",
+            "count": sum(-15 <= margin <= -11 for margin in margins),
+            "outcome": "loss",
+        },
+        {
+            "label": "−10–−6",
+            "count": sum(-10 <= margin <= -6 for margin in margins),
+            "outcome": "loss",
+        },
+        {
+            "label": "−5–−1",
+            "count": sum(-5 <= margin <= -1 for margin in margins),
+            "outcome": "loss",
+        },
+        {"label": "0", "count": sum(margin == 0 for margin in margins), "outcome": "draw"},
+        {"label": "1–5", "count": sum(1 <= margin <= 5 for margin in margins), "outcome": "win"},
+        {"label": "6–10", "count": sum(6 <= margin <= 10 for margin in margins), "outcome": "win"},
+        {
+            "label": "11–15",
+            "count": sum(11 <= margin <= 15 for margin in margins),
+            "outcome": "win",
+        },
+        {
+            "label": "16–20",
+            "count": sum(16 <= margin <= 20 for margin in margins),
+            "outcome": "win",
+        },
+        {"label": "21+", "count": sum(margin >= 21 for margin in margins), "outcome": "win"},
+    ]
+
+
 def _track_rows(races, team_rows, selected_team_id=None):
     grouped = defaultdict(list)
     for race in races:
@@ -268,6 +360,81 @@ def _track_rows(races, team_rows, selected_team_id=None):
     return sorted(result, key=lambda row: (-row["appearances"], row["track_name"]))
 
 
+def _player_track_rows(session, races, min_plays, selected_team_id=None):
+    race_ids = [race["race_id"] for race in races]
+    if not race_ids:
+        return []
+
+    statement = (
+        select(
+            RacePlayerResult.player_id,
+            RacePlayerResult.race_id,
+            RacePlayerResult.score,
+            TeamSeasonEntry.team_id,
+            Player.canonical_name,
+        )
+        .join(
+            TeamSeasonEntry,
+            TeamSeasonEntry.team_season_entry_id == RacePlayerResult.team_season_entry_id,
+        )
+        .join(Player, Player.player_id == RacePlayerResult.player_id)
+        .where(RacePlayerResult.race_id.in_(race_ids))
+        .order_by(RacePlayerResult.player_id, RacePlayerResult.race_id)
+    )
+    if selected_team_id is not None:
+        statement = statement.where(TeamSeasonEntry.team_id == selected_team_id)
+    rows = session.execute(statement).all()
+    team_margins = {
+        (race["race_id"], team["team_id"]): team["differential"]
+        for race in races
+        for team in race["teams"]
+    }
+    by_player = defaultdict(list)
+    canonical_names = {}
+    for row in rows:
+        margin = team_margins.get((row.race_id, row.team_id))
+        if margin is None:
+            continue
+        by_player[row.player_id].append((row.score, margin))
+        if row.canonical_name:
+            canonical_names[row.player_id] = row.canonical_name
+
+    display_names = _display_names_for_players(session, by_player, canonical_names)
+    players = []
+    exact_averages = {}
+    for player_id, samples in by_player.items():
+        if len(samples) < min_plays:
+            continue
+        valid_scores = [
+            score for score, _margin in samples if score is not None and 0 <= score <= 15
+        ]
+        average_score = sum(valid_scores) / len(valid_scores) if valid_scores else None
+        margins = [margin for _score, margin in samples]
+        exact_averages[player_id] = average_score
+        players.append(
+            {
+                "player_id": player_id,
+                "name": display_names.get(player_id) or f"Player {player_id}",
+                "races": len(samples),
+                "average_score": _round(average_score),
+                "team_wins": sum(margin > 0 for margin in margins),
+                "average_team_margin": _round(sum(margins) / len(margins)),
+            }
+        )
+
+    players.sort(
+        key=lambda row: (
+            exact_averages[row["player_id"]] is None,
+            -(exact_averages[row["player_id"]] or 0),
+            -row["races"],
+            -row["team_wins"],
+            row["name"].casefold(),
+            row["player_id"],
+        )
+    )
+    return players
+
+
 def get_track_analytics(
     session, *, league="ctc", season=None, division=None, team_id=None, min_plays=2
 ):
@@ -279,7 +446,6 @@ def get_track_analytics(
     tracks = [
         row for row in _track_rows(races, team_rows, team_id) if row["appearances"] >= min_plays
     ]
-    reliable = [row for row in team_rows if row["races"] >= min_plays]
     selected_team = next(
         (team for race in races for team in race["teams"] if team["team_id"] == team_id), None
     )
@@ -333,10 +499,7 @@ def get_track_analytics(
             "closest_average": extreme("average_margin"),
         },
         "tracks": tracks,
-        "standouts": {
-            "strengths": reliable[:8],
-            "struggles": sorted(reliable, key=lambda row: (row["lift"], -row["races"]))[:8],
-        },
+        "standouts": _standout_rows(team_rows, min_plays),
     }
 
 
@@ -378,12 +541,7 @@ def get_track_dashboard(
             "timing_counts": [0] * RACE_SLOTS,
         }
     )
-    buckets = [
-        {"label": "0–5", "count": sum(race["margin"] <= 5 for race in races)},
-        {"label": "6–10", "count": sum(6 <= race["margin"] <= 10 for race in races)},
-        {"label": "11–19", "count": sum(11 <= race["margin"] <= 19 for race in races)},
-        {"label": "20+", "count": sum(race["margin"] >= 20 for race in races)},
-    ]
+    buckets = _margin_buckets(races, team_id)
     aliases = [
         alias
         for alias in session.scalars(
@@ -413,6 +571,7 @@ def get_track_dashboard(
         },
         "metrics": metrics,
         "margin_buckets": buckets,
+        "players": _player_track_rows(session, races, min_plays, team_id),
         "teams": sorted(
             team_rows, key=lambda row: (-row["average_margin"], -row["races"], row["team_name"])
         ),
