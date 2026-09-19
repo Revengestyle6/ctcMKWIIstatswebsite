@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { fetchTeamScopes, resolveAssetUrl } from "../api";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { fetchTeamScopes, resolveAssetUrl, type TeamScope } from "../api";
 import {
+  DashboardEntityNavigator,
+  type DashboardEntityOption,
   DashboardScopeControls,
   DashboardShell,
   DashboardTabs,
@@ -42,12 +44,14 @@ function signedValue(value: number | null): string {
 }
 
 export default function TeamDashboard() {
-  const { league, leaguePath } = useLeague();
+  const { league, leaguePath, config } = useLeague();
+  const navigate = useNavigate();
   const { teamId = "" } = useParams();
   const numericTeamId = Number(teamId);
   const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<TeamOverview | null>(null);
-  const [opponentOptions, setOpponentOptions] = useState<ScopeEntityOption[]>([]);
+  const [teamScopes, setTeamScopes] = useState<TeamScope[]>([]);
+  const [teamScopesLoading, setTeamScopesLoading] = useState(true);
   const [error, setError] = useState("");
   const [rosterResult, setRosterResult] = useState<{ key: string; value: TeamRoster } | null>(null);
   const [tracksResult, setTracksResult] = useState<{ key: string; value: TeamTracks } | null>(null);
@@ -98,20 +102,43 @@ export default function TeamDashboard() {
 
   useEffect(() => {
     fetchTeamScopes()
-      .then((scopes) => {
-        setOpponentOptions(
-          scopes
-            .filter((scope) => scope.league === league && scope.team_id !== numericTeamId)
-            .map((scope) => ({
-              id: scope.team_id,
-              label: `${scope.clan_tag} - ${scope.display_name}`,
-              season: scope.season,
-              division: scope.division,
-            }))
-        );
-      })
-      .catch(() => setOpponentOptions([]));
-  }, [league, numericTeamId]);
+      .then(setTeamScopes)
+      .catch(() => setTeamScopes([]))
+      .finally(() => setTeamScopesLoading(false));
+  }, []);
+
+  const opponentOptions = useMemo<ScopeEntityOption[]>(
+    () =>
+      teamScopes
+        .filter((scope) => scope.league === league && scope.team_id !== numericTeamId)
+        .map((scope) => ({
+          id: scope.team_id,
+          label: `${scope.clan_tag} - ${scope.display_name}`,
+          season: scope.season,
+          division: scope.division,
+        })),
+    [league, numericTeamId, teamScopes]
+  );
+  const teamChoices = useMemo<DashboardEntityOption[]>(() => {
+    const scoped = teamScopes.filter(
+      (scope) =>
+        scope.league === league &&
+        (!season || scope.season === season) &&
+        (!division || scope.division === division)
+    );
+    return Array.from(
+      new Map(
+        scoped.map((scope) => [
+          scope.team_id,
+          {
+            id: scope.team_id,
+            label: `${scope.clan_tag} - ${scope.display_name}`,
+            searchText: `${scope.canonical_tag} ${scope.canonical_name}`,
+          },
+        ])
+      ).values()
+    ).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+  }, [division, league, season, teamScopes]);
 
   useEffect(() => {
     if (!Number.isInteger(numericTeamId) || numericTeamId < 1) {
@@ -298,6 +325,9 @@ export default function TeamDashboard() {
       detail: `${numberValue(metrics.penalties_per_match)} per match`,
     },
   ];
+  const navigatorScope = [config.shortName, season.toUpperCase(), division.toUpperCase()]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <DashboardShell
@@ -359,6 +389,20 @@ export default function TeamDashboard() {
             </details>
           </div>
         </div>
+      }
+      navigator={
+        <DashboardEntityNavigator
+          entityLabel="Team"
+          currentId={numericTeamId}
+          options={teamChoices}
+          scopeLabel={navigatorScope}
+          loading={teamScopesLoading}
+          onNavigate={(id) => {
+            const next = new URLSearchParams(searchParams);
+            next.delete("opponent_team_id");
+            navigate(leaguePath(`/teams/${id}?${next.toString()}`));
+          }}
+        />
       }
       controls={
         <DashboardScopeControls

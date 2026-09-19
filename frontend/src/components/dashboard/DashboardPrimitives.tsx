@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { BackToHomeLink } from "../BackToHomeLink";
 import { LeagueHeaderControls } from "../LeagueHeaderControls";
 
@@ -28,11 +28,18 @@ export interface DashboardTab {
 interface DashboardShellProps {
   title: string;
   identity: ReactNode;
+  navigator?: ReactNode;
   controls: ReactNode;
   children: ReactNode;
 }
 
-export function DashboardShell({ title, identity, controls, children }: DashboardShellProps) {
+export function DashboardShell({
+  title,
+  identity,
+  navigator,
+  controls,
+  children,
+}: DashboardShellProps) {
   return (
     <div className="relative min-h-screen text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 px-4 py-3 backdrop-blur-md">
@@ -44,7 +51,10 @@ export function DashboardShell({ title, identity, controls, children }: Dashboar
       </header>
 
       <section className="border-b border-white/10 bg-zinc-950/90 px-4 py-6 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl">{identity}</div>
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0 flex-1">{identity}</div>
+          {navigator ? <div className="w-full shrink-0 lg:w-80">{navigator}</div> : null}
+        </div>
       </section>
 
       <section className="border-b border-white/10 bg-black/75 px-4 py-4 backdrop-blur-sm">
@@ -53,6 +63,100 @@ export function DashboardShell({ title, identity, controls, children }: Dashboar
 
       <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
     </div>
+  );
+}
+
+export interface DashboardEntityOption {
+  id: number;
+  label: string;
+  searchText?: string;
+}
+
+export function DashboardEntityNavigator({
+  entityLabel,
+  currentId,
+  options,
+  scopeLabel,
+  loading = false,
+  onNavigate,
+}: {
+  entityLabel: string;
+  currentId: number;
+  options: DashboardEntityOption[];
+  scopeLabel: string;
+  loading?: boolean;
+  onNavigate: (id: number) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const choices = useMemo(
+    () =>
+      options.filter(
+        (option) =>
+          option.id !== currentId &&
+          (!normalizedQuery ||
+            `${option.label} ${option.searchText ?? ""}`
+              .toLocaleLowerCase()
+              .includes(normalizedQuery))
+      ),
+    [currentId, normalizedQuery, options]
+  );
+  const pluralLabel = `${entityLabel.toLocaleLowerCase()}s`;
+
+  return (
+    <aside
+      className="rounded-md border border-white/15 bg-black/45 p-3 shadow-sm"
+      aria-label={`Switch ${entityLabel.toLocaleLowerCase()}`}
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="text-sm font-bold text-white">Switch {entityLabel.toLocaleLowerCase()}</h3>
+        <span className="truncate text-xs text-gray-500" title={scopeLabel}>
+          {scopeLabel}
+        </span>
+      </div>
+      <label className="mt-2 block">
+        <span className="sr-only">Filter {pluralLabel}</span>
+        <input
+          type="search"
+          value={query}
+          disabled={loading}
+          autoComplete="off"
+          placeholder={`Filter ${pluralLabel}...`}
+          className="min-h-9 w-full rounded-md border border-white/15 bg-zinc-950 px-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-60"
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
+      <label className="mt-2 block">
+        <span className="sr-only">Open another {entityLabel.toLocaleLowerCase()} dashboard</span>
+        <select
+          value=""
+          disabled={loading || choices.length === 0}
+          className="min-h-9 w-full rounded-md border border-white/15 bg-zinc-950 px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-60"
+          onChange={(event) => {
+            const id = Number(event.target.value);
+            if (Number.isInteger(id) && id > 0) onNavigate(id);
+          }}
+        >
+          <option value="">
+            {loading
+              ? `Loading ${pluralLabel}...`
+              : choices.length
+                ? `Open another ${entityLabel.toLocaleLowerCase()}...`
+                : `No matching ${pluralLabel}`}
+          </option>
+          {choices.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="mt-2 text-xs text-gray-500">
+        {loading
+          ? "Loading available dashboards."
+          : `${choices.length} available. Select one to open it.`}
+      </p>
+    </aside>
   );
 }
 

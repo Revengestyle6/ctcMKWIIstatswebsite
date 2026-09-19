@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { resolveAssetUrl } from "../api";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { fetchPlayerDirectory, resolveAssetUrl } from "../api";
 import {
+  DashboardEntityNavigator,
+  type DashboardEntityOption,
   DashboardScopeControls,
   DashboardShell,
   DashboardTabs,
@@ -41,7 +43,8 @@ function signedValue(value: number): string {
 }
 
 export default function PlayerDashboard() {
-  const { league, leaguePath } = useLeague();
+  const { league, leaguePath, config } = useLeague();
+  const navigate = useNavigate();
   const { playerId = "" } = useParams();
   const numericPlayerId = Number(playerId);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,6 +55,8 @@ export default function PlayerDashboard() {
   const [tracks, setTracks] = useState<PlayerTracks | null>(null);
   const [tabLoading, setTabLoading] = useState(false);
   const [tabError, setTabError] = useState("");
+  const [playerChoices, setPlayerChoices] = useState<DashboardEntityOption[]>([]);
+  const [playerChoicesLoading, setPlayerChoicesLoading] = useState(true);
   const season = searchParams.get("season") ?? "";
   const division = searchParams.get("division") ?? "";
   const teamId = searchParams.get("team_id") ?? "";
@@ -79,6 +84,31 @@ export default function PlayerDashboard() {
   ]);
   const data = overview?.key === overviewQueryKey ? overview.value : null;
   const error = overviewError?.key === overviewQueryKey ? overviewError.message : "";
+
+  useEffect(() => {
+    let cancelled = false;
+    setPlayerChoicesLoading(true);
+    fetchPlayerDirectory(league, season, division, { allScopes: true })
+      .then((players) => {
+        if (cancelled) return;
+        setPlayerChoices(
+          players.map((player) => ({
+            id: player.player_id,
+            label: player.name,
+            searchText: `${player.primary_friend_code ?? ""} ${player.teams.map((team) => team.tag).join(" ")}`,
+          }))
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setPlayerChoices([]);
+      })
+      .finally(() => {
+        if (!cancelled) setPlayerChoicesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [division, league, season]);
 
   useEffect(() => {
     if (!Number.isInteger(numericPlayerId) || numericPlayerId < 1) {
@@ -279,6 +309,9 @@ export default function PlayerDashboard() {
           },
         ];
   const roleLabel = metrics.role === "runner" ? "runner" : "bagger";
+  const navigatorScope = [config.shortName, season.toUpperCase(), division.toUpperCase()]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <DashboardShell
@@ -339,6 +372,20 @@ export default function PlayerDashboard() {
             </details>
           </div>
         </div>
+      }
+      navigator={
+        <DashboardEntityNavigator
+          entityLabel="Player"
+          currentId={numericPlayerId}
+          options={playerChoices}
+          scopeLabel={navigatorScope}
+          loading={playerChoicesLoading}
+          onNavigate={(id) => {
+            const next = new URLSearchParams(searchParams);
+            next.delete("team_id");
+            navigate(leaguePath(`/players/${id}?${next.toString()}`));
+          }}
+        />
       }
       controls={
         <DashboardScopeControls

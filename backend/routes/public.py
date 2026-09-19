@@ -105,9 +105,17 @@ def api_players():
 @public_api.get("/api/player-directory")
 def api_player_directory():
     try:
+        all_scopes = str(request.args.get("all_scopes") or "").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
         return jsonify(
             stats.list_player_directory(
-                season=season_arg(), division=division_arg(), league_code=league_arg()
+                season=season_arg(),
+                division=division_arg(),
+                league_code=league_arg(),
+                all_scopes=all_scopes,
             )
         )
     except Exception as error:

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { fetchTeamScopes, type TeamScope } from "../api";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { fetchTeamScopes, searchTracks, type TeamScope, type TrackOption } from "../api";
 import {
   type CsvColumn,
   csvFilename,
@@ -8,7 +8,11 @@ import {
   TablePaginationControls,
   usePaginatedRows,
 } from "../components/analytics/TablePagination";
-import { DashboardShell, MetricGrid } from "../components/dashboard/DashboardPrimitives";
+import {
+  DashboardEntityNavigator,
+  DashboardShell,
+  MetricGrid,
+} from "../components/dashboard/DashboardPrimitives";
 import { useLeague } from "../context/LeagueContext";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 import { matchHistoryPath } from "../matchHistoryLinks";
@@ -126,7 +130,8 @@ function MarginHistogram({ rows, split }: { rows: TrackMarginBucket[]; split: bo
 export default function TrackDashboard() {
   const { trackId = "" } = useParams();
   const numericTrackId = Number(trackId);
-  const { league, leaguePath } = useLeague();
+  const { league, leaguePath, config } = useLeague();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { seasons, divisions, season, division, setSeason, setDivision, loadingScope, scopeError } =
     useSeasonDivision({
@@ -137,6 +142,9 @@ export default function TrackDashboard() {
     });
   const [teamId, setTeamId] = useState(params.get("team_id") ?? "");
   const [teamScopes, setTeamScopes] = useState<TeamScope[]>([]);
+  const [teamScopesLoaded, setTeamScopesLoaded] = useState(false);
+  const [trackChoices, setTrackChoices] = useState<TrackOption[]>([]);
+  const [trackChoicesLoading, setTrackChoicesLoading] = useState(true);
   const [data, setData] = useState<TrackDashboardResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -147,8 +155,26 @@ export default function TrackDashboard() {
   useEffect(() => {
     fetchTeamScopes()
       .then(setTeamScopes)
-      .catch(() => setTeamScopes([]));
+      .catch(() => setTeamScopes([]))
+      .finally(() => setTeamScopesLoaded(true));
   }, []);
+  useEffect(() => {
+    let cancelled = false;
+    setTrackChoicesLoading(true);
+    searchTracks(league)
+      .then((tracks) => {
+        if (!cancelled) setTrackChoices(tracks.filter((track) => track.league === league));
+      })
+      .catch(() => {
+        if (!cancelled) setTrackChoices([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTrackChoicesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [league]);
   const teams = useMemo(
     () =>
       teamScopes.filter(
@@ -157,8 +183,9 @@ export default function TrackDashboard() {
     [teamScopes, league, season, division]
   );
   useEffect(() => {
-    if (teamId && !teams.some((team) => String(team.team_id) === teamId)) setTeamId("");
-  }, [teams, teamId]);
+    if (teamScopesLoaded && teamId && !teams.some((team) => String(team.team_id) === teamId))
+      setTeamId("");
+  }, [teamScopesLoaded, teams, teamId]);
   useEffect(() => {
     if (loadingScope || !Number.isInteger(numericTrackId)) return;
     const next = new URLSearchParams({
@@ -273,6 +300,9 @@ export default function TrackDashboard() {
   });
   if (teamId) comparisonQuery.set("team_id", teamId);
   comparisonQuery.set("min_races", String(minPlays));
+  const navigatorScope = [config.shortName, season.toUpperCase(), division.toUpperCase()]
+    .filter(Boolean)
+    .join(" · ");
   const metrics = data?.metrics;
   const maxTiming = Math.max(1, ...(metrics?.timing_counts ?? []));
   const paginationKey = `${numericTrackId}:${league}:${season}:${division}:${teamId}:${minPlays}`;
@@ -336,6 +366,20 @@ export default function TrackDashboard() {
             <p className="mt-2 text-xs text-gray-500">Known as: {data.track.aliases.join(", ")}</p>
           ) : null}
         </div>
+      }
+      navigator={
+        <DashboardEntityNavigator
+          entityLabel="Track"
+          currentId={numericTrackId}
+          options={trackChoices.map((track) => ({
+            id: track.track_id,
+            label: track.name,
+            searchText: track.aliases.join(" "),
+          }))}
+          scopeLabel={navigatorScope}
+          loading={trackChoicesLoading}
+          onNavigate={(id) => navigate(leaguePath(`/tracks/${id}?${params.toString()}`))}
+        />
       }
       controls={controls}
     >
