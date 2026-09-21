@@ -223,14 +223,14 @@ function TeamIdentity({
   return (
     <Link
       to={leaguePath(`/teams/${team.team_id}`)}
-      className={`flex items-center gap-2 font-semibold text-white hover:underline ${truncateName ? "min-w-0" : "w-full min-w-0 flex-wrap"} ${centered ? "justify-center" : ""}`}
+      className={`flex items-center gap-2 font-semibold text-white hover:underline ${truncateName ? "min-w-0" : "w-max min-w-full whitespace-nowrap"} ${centered ? "justify-center" : ""}`}
     >
       <img
         src={resolveAssetUrl(team.logo_url)}
         alt=""
         className="h-8 w-8 shrink-0 rounded-full bg-black/35 object-contain"
       />
-      <span className={truncateName ? "truncate" : "min-w-0 break-words"}>{team.name}</span>
+      <span className={truncateName ? "truncate" : "whitespace-nowrap"}>{team.name}</span>
       <span className="shrink-0 text-xs text-gray-400">{team.tag}</span>
       <StatusBadge status={team.status} note={team.status_note} />
     </Link>
@@ -342,19 +342,27 @@ function MatchupMatrix({
         className="matchup-matrix w-full table-fixed border-collapse text-center text-xs"
         style={
           {
-            "--matchup-mobile-min-width": `${13 + standings.length * 6}rem`,
+            "--matchup-team-column-width": "17rem",
+            "--matchup-mobile-min-width": `${17 + standings.length * 5.5}rem`,
           } as CSSProperties
         }
       >
         <colgroup>
-          <col className="w-52" />
+          <col style={{ width: "var(--matchup-team-column-width)" }} />
           {standings.map((team) => (
-            <col key={team.team_season_entry_id} />
+            <col
+              key={team.team_season_entry_id}
+              style={{
+                width: `calc((100% - var(--matchup-team-column-width)) / ${standings.length})`,
+              }}
+            />
           ))}
         </colgroup>
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 w-52 bg-zinc-950 px-3 py-2 text-left">Team</th>
+            <th className="sticky left-0 z-10 whitespace-nowrap bg-zinc-950 px-3 py-2 text-left">
+              Team
+            </th>
             {standings.map((team) => (
               <th
                 key={team.team_season_entry_id}
@@ -368,7 +376,7 @@ function MatchupMatrix({
         <tbody>
           {standings.map((team) => (
             <tr key={team.team_season_entry_id}>
-              <th className="sticky left-0 z-10 w-52 overflow-hidden border border-white/10 bg-zinc-950 py-3 pl-3 pr-4 text-left">
+              <th className="sticky left-0 z-10 overflow-hidden border border-white/10 bg-zinc-950 py-3 pl-3 pr-4 text-left">
                 <TeamIdentity team={team} truncateName={false} />
               </th>
               {standings.map((opponent) => {
@@ -412,7 +420,7 @@ function MatchupMatrix({
                                 ? `Original score ${result.perspective.original_score}–${result.perspective.original_opponent_score}`
                                 : result.label
                             }
-                            className={`block rounded px-2 py-1 font-bold hover:ring-1 league-focus-ring ${
+                            className={`block rounded px-1.5 py-1 font-bold hover:ring-1 league-focus-ring ${
                               result.perspective.outcome === "win"
                                 ? "bg-emerald-950/80 text-emerald-200"
                                 : result.perspective.outcome === "tie"
