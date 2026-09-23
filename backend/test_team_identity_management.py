@@ -13,7 +13,12 @@ from models import (  # noqa: E402
     AdminAuditLog,
     AdminUser,
     Division,
+    Match,
+    MatchTeam,
+    Player,
+    PlayerSeasonEntry,
     Season,
+    SourceFile,
     Team,
     TeamAlias,
     TeamLeagueIdentity,
@@ -52,6 +57,11 @@ class TeamIdentityManagementTests(unittest.TestCase):
             session.query(TeamAlias).delete()
             session.query(TeamLeagueIdentity).delete()
             session.query(TeamLogo).delete()
+            session.query(MatchTeam).delete()
+            session.query(Match).delete()
+            session.query(SourceFile).delete()
+            session.query(PlayerSeasonEntry).delete()
+            session.query(Player).delete()
             session.query(TeamSeasonEntry).delete()
             session.query(Division).delete()
             session.query(Season).delete()
@@ -115,6 +125,111 @@ class TeamIdentityManagementTests(unittest.TestCase):
                     role="owner",
                     status="active",
                 )
+            )
+
+    def test_delete_season_entry_removes_only_selected_membership_and_dependents(self):
+        with self.SessionLocal.begin() as session:
+            player = Player(canonical_name="Roster Player")
+            session.add(player)
+            session.flush()
+            session.add_all(
+                (
+                    PlayerSeasonEntry(
+                        player_id=player.player_id,
+                        team_season_entry_id=self.entry_two_id,
+                        season_id=self.season_two_id,
+                        division_id=self.division_two_id,
+                    ),
+                    TeamLogo(
+                        team_id=self.team_id,
+                        season_id=self.season_two_id,
+                        team_season_entry_id=self.entry_two_id,
+                        asset_path="test/season-logo.png",
+                        alt_text="Season logo",
+                    ),
+                )
+            )
+
+        headers = {"X-Dev-Admin-Email": "owner@example.com"}
+        with (
+            patch.dict(os.environ, {"APP_ENV": "test", "ALLOW_DEV_AUTH": "true"}),
+            patch("admin_auth.SessionLocal", self.SessionLocal),
+            patch("routes.admin.stats.SessionLocal", self.SessionLocal),
+            app.test_client() as client,
+        ):
+            response = client.delete(
+                f"/api/admin/teams/{self.team_id}/season-entries/{self.entry_two_id}",
+                headers=headers,
+            )
+            self.assertEqual(response.status_code, 200, response.get_json())
+            self.assertNotIn(
+                self.entry_two_id,
+                [entry["id"] for entry in response.get_json()["catalog"]["entries"]],
+            )
+            self.assertEqual(len(response.get_json()["detail"]["season_entries"]), 1)
+
+        with self.SessionLocal() as session:
+            self.assertIsNone(session.get(TeamSeasonEntry, self.entry_two_id))
+            self.assertEqual(session.query(PlayerSeasonEntry).count(), 0)
+            self.assertEqual(session.query(TeamLogo).count(), 0)
+            self.assertEqual(session.query(Player).count(), 1)
+            self.assertEqual(session.query(TeamSeasonEntry).count(), 1)
+            self.assertEqual(session.get(Team, self.team_id).canonical_name, "Season Three Name")
+            self.assertIn(
+                "team_season_entry.deleted",
+                [row.action for row in session.query(AdminAuditLog)],
+            )
+
+    def test_delete_season_entry_requires_deleting_matches_first(self):
+        with self.SessionLocal.begin() as session:
+            source = SourceFile(
+                season_id=self.season_two_id,
+                division_id=self.division_two_id,
+                source_path="test/season-entry-match.json",
+                source_filename="season-entry-match.json",
+                file_sha256="season-entry-match",
+                json_shape="single",
+            )
+            session.add(source)
+            session.flush()
+            match = Match(
+                season_id=self.season_two_id,
+                division_id=self.division_two_id,
+                source_file_id=source.source_file_id,
+                match_label="Week 1",
+                races_played=0,
+            )
+            session.add(match)
+            session.flush()
+            session.add(
+                MatchTeam(
+                    match_id=match.match_id,
+                    team_season_entry_id=self.entry_two_id,
+                    raw_team_key="CS2",
+                )
+            )
+
+        headers = {"X-Dev-Admin-Email": "owner@example.com"}
+        with (
+            patch.dict(os.environ, {"APP_ENV": "test", "ALLOW_DEV_AUTH": "true"}),
+            patch("admin_auth.SessionLocal", self.SessionLocal),
+            patch("routes.admin.stats.SessionLocal", self.SessionLocal),
+            app.test_client() as client,
+        ):
+            response = client.delete(
+                f"/api/admin/teams/{self.team_id}/season-entries/{self.entry_two_id}",
+                headers=headers,
+            )
+            self.assertEqual(response.status_code, 400, response.get_json())
+            self.assertIn("Delete the associated matches first", response.get_json()["error"])
+            self.assertIn("Week 1", response.get_json()["error"])
+
+        with self.SessionLocal() as session:
+            self.assertIsNotNone(session.get(TeamSeasonEntry, self.entry_two_id))
+            self.assertEqual(session.query(TeamSeasonEntry).count(), 2)
+            self.assertNotIn(
+                "team_season_entry.deleted",
+                [row.action for row in session.query(AdminAuditLog)],
             )
 
     def test_canonical_update_preserves_previous_tag_as_alias(self):
