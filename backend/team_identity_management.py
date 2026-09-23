@@ -6,6 +6,8 @@ from models import (
     PlayerSeasonEntry,
     PlayoffSeries,
     PlayoffSeriesParticipant,
+    Race,
+    RacePlayerResult,
     Season,
     Team,
     TeamAlias,
@@ -13,7 +15,7 @@ from models import (
     TeamLogo,
     TeamSeasonEntry,
 )
-from sqlalchemy import desc, func, select, update
+from sqlalchemy import delete, desc, func, select, union, update
 
 MAX_TEAM_NAME_LENGTH = 200
 MAX_TEAM_TAG_LENGTH = 64
@@ -295,6 +297,88 @@ def update_season_identity(session, team_id, entry_id, payload):
     apply_canonical_identity_priority(session, session.get(Team, team_id))
     session.flush()
     return get_team_identity(session, team_id), previous
+
+
+def delete_season_identity(session, team_id, entry_id):
+    entry = session.scalar(
+        select(TeamSeasonEntry)
+        .where(
+            TeamSeasonEntry.team_season_entry_id == entry_id,
+            TeamSeasonEntry.team_id == team_id,
+        )
+        .with_for_update()
+    )
+    if entry is None:
+        raise LookupError("Team season entry not found.")
+
+    match_ids = union(
+        select(MatchTeam.match_id).where(MatchTeam.team_season_entry_id == entry_id),
+        select(MatchTeam.match_id)
+        .join(MatchPlayer, MatchPlayer.match_team_id == MatchTeam.match_team_id)
+        .join(
+            PlayerSeasonEntry,
+            PlayerSeasonEntry.player_season_entry_id == MatchPlayer.player_season_entry_id,
+        )
+        .where(PlayerSeasonEntry.team_season_entry_id == entry_id),
+        select(Race.match_id)
+        .join(RacePlayerResult, RacePlayerResult.race_id == Race.race_id)
+        .where(RacePlayerResult.team_season_entry_id == entry_id),
+        select(PlayerSeasonEntry.first_seen_match_id).where(
+            PlayerSeasonEntry.team_season_entry_id == entry_id,
+            PlayerSeasonEntry.first_seen_match_id.is_not(None),
+        ),
+        select(PlayerSeasonEntry.last_seen_match_id).where(
+            PlayerSeasonEntry.team_season_entry_id == entry_id,
+            PlayerSeasonEntry.last_seen_match_id.is_not(None),
+        ),
+    ).subquery()
+    matches = session.execute(
+        select(Match.match_id, Match.match_label)
+        .where(Match.match_id.in_(select(match_ids.c.match_id)))
+        .order_by(Match.match_id)
+        .limit(6)
+    ).all()
+    if matches:
+        labels = ", ".join(f"{label} (ID {match_id})" for match_id, label in matches[:5])
+        suffix = ", and more" if len(matches) > 5 else ""
+        raise ValueError(
+            "Delete the associated matches first before removing this team from the division: "
+            f"{labels}{suffix}."
+        )
+
+    series = session.scalar(
+        select(PlayoffSeries.playoff_series_id)
+        .join(
+            PlayoffSeriesParticipant,
+            PlayoffSeriesParticipant.playoff_series_id == PlayoffSeries.playoff_series_id,
+        )
+        .where(
+            PlayoffSeries.division_id == entry.division_id,
+            PlayoffSeriesParticipant.team_id == team_id,
+        )
+        .limit(1)
+    )
+    if series is not None:
+        raise ValueError(
+            "Remove this team from its playoff series before removing it from the division."
+        )
+
+    deleted = {
+        "team_id": team_id,
+        "season_id": entry.season_id,
+        "division_id": entry.division_id,
+        "display_name": entry.display_name,
+        "clan_tag": entry.clan_tag,
+    }
+    session.execute(delete(TeamLogo).where(TeamLogo.team_season_entry_id == entry_id))
+    session.execute(
+        delete(PlayerSeasonEntry).where(PlayerSeasonEntry.team_season_entry_id == entry_id)
+    )
+    session.delete(entry)
+    session.flush()
+    apply_canonical_identity_priority(session, session.get(Team, team_id))
+    session.flush()
+    return get_team_identity(session, team_id), deleted
 
 
 def _team_match_ids(session, team_id):

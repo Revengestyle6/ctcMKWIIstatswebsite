@@ -936,6 +936,35 @@ def api_team_season_identity_update(team_id, team_season_entry_id):
         return _team_identity_error(error)
 
 
+@admin_api.delete("/api/admin/teams/<int:team_id>/season-entries/<int:team_season_entry_id>")
+@require_admin
+def api_team_season_identity_delete(team_id, team_season_entry_id):
+    try:
+        with stats.SessionLocal.begin() as session:
+            entry = session.get(team_identity_management.TeamSeasonEntry, team_season_entry_id)
+            if entry is None or entry.team_id != team_id:
+                raise LookupError("Team season entry not found.")
+            season = session.get(Season, entry.season_id)
+            league = season.league_code
+            detail, deleted = team_identity_management.delete_season_identity(
+                session, team_id, team_season_entry_id
+            )
+            record_audit(
+                session,
+                g.admin_actor,
+                "team_season_entry.deleted",
+                target_type="team_season_entry",
+                target_id=team_season_entry_id,
+                details=deleted,
+            )
+        cache.clear()
+        with stats.SessionLocal() as session:
+            catalog = competition_setup.get_catalog(session, league)
+        return jsonify({"detail": detail, "catalog": catalog})
+    except Exception as error:
+        return _team_identity_error(error)
+
+
 @admin_api.get("/api/admin/teams/<int:team_id>/logos")
 @require_admin
 def api_team_logos(team_id):

@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchJson, patchJson, postFormData, postJson, resolveAssetUrl } from "../../api";
+import {
+  deleteJson,
+  fetchJson,
+  patchJson,
+  postFormData,
+  postJson,
+  resolveAssetUrl,
+} from "../../api";
 import type { LeagueCode } from "../../config/leagues";
 
 type SetupConference = { id: number; code: string; name: string; sort_order: number };
@@ -48,6 +55,7 @@ type SetupCatalog = {
 };
 type SetupMutation = { created_id: number; catalog: SetupCatalog };
 type SetupUpdate = { updated_id: number; catalog: SetupCatalog };
+type SetupDeletion = { catalog: SetupCatalog };
 type RegistrationLogo = {
   id: number;
   season: { id: number; league: string; season: string; name: string } | null;
@@ -125,6 +133,9 @@ export default function CompetitionSetupManager({
   const [saving, setSaving] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [removalError, setRemovalError] = useState<{ entryId: number; message: string } | null>(
+    null
+  );
   const registrationLogoFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -389,6 +400,31 @@ export default function CompetitionSetupManager({
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not register the team.");
+    } finally {
+      setSaving("");
+    }
+  };
+
+  const removeEntry = async (entry: SetupEntry) => {
+    if (
+      !window.confirm(
+        `Remove ${entry.clan_tag} — ${entry.display_name} from ${entry.season.name} / ${entry.division.name}? This deletes the season entry, its roster records, and season-only logos.`
+      )
+    )
+      return;
+    beginMutation("remove-entry");
+    setRemovalError(null);
+    try {
+      const response = await deleteJson<SetupDeletion>(
+        `/api/admin/teams/${entry.team.id}/season-entries/${entry.id}`
+      );
+      setCatalog(response.catalog);
+      setNotice(`${entry.clan_tag} was removed from ${entry.division.name}.`);
+    } catch (caught) {
+      setRemovalError({
+        entryId: entry.id,
+        message: caught instanceof Error ? caught.message : "Could not remove team from division.",
+      });
     } finally {
       setSaving("");
     }
@@ -1334,8 +1370,8 @@ export default function CompetitionSetupManager({
         <p className="text-xs font-bold uppercase tracking-wider text-amber-200">Team directory</p>
         <h3 className="mt-1 text-lg font-bold">Teams by division</h3>
         <p className="mt-1 text-sm text-gray-400">
-          Choose a {league.toUpperCase()} division to see its registered teams. New divisions and
-          registrations appear here as they are added.
+          Choose a {league.toUpperCase()} division to see its registered teams. Remove an incorrect
+          entry here after deleting any associated matches.
         </p>
         <div className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-2">
           <label className="text-sm font-bold text-gray-200">
@@ -1410,6 +1446,19 @@ export default function CompetitionSetupManager({
                         ? ` · ${entry.competition_status}`
                         : ""}
                     </p>
+                    <button
+                      type="button"
+                      disabled={saving !== ""}
+                      onClick={() => void removeEntry(entry)}
+                      className="mt-3 rounded border border-red-400/40 px-3 py-1.5 text-sm text-red-300 disabled:opacity-40"
+                    >
+                      {saving === "remove-entry" ? "Working…" : "Remove from division"}
+                    </button>
+                    {removalError?.entryId === entry.id ? (
+                      <p role="alert" className="mt-2 text-sm text-red-300">
+                        {removalError.message}
+                      </p>
+                    ) : null}
                   </article>
                 ))
               ) : (

@@ -41,12 +41,14 @@ type SeasonIdentityEditorProps = {
   teamId: number;
   entry: TeamSeasonIdentity;
   onSaved: (detail: TeamIdentityDetail) => void;
+  onRemoved: (detail: TeamIdentityDetail) => void;
 };
 
 function SeasonIdentityEditor({
   teamId,
   entry,
   onSaved,
+  onRemoved,
 }: SeasonIdentityEditorProps): React.JSX.Element {
   const [displayName, setDisplayName] = useState(entry.display_name);
   const [clanTag, setClanTag] = useState(entry.clan_tag);
@@ -67,6 +69,27 @@ function SeasonIdentityEditor({
       onSaved(detail);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not update season identity.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (
+      !window.confirm(
+        `Remove ${entry.clan_tag} — ${entry.display_name} from ${entry.season.name} / ${entry.division.name}? This deletes the season entry, its roster records, and season-only logos.`
+      )
+    )
+      return;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await deleteJson<{ detail: TeamIdentityDetail }>(
+        `/api/admin/teams/${teamId}/season-entries/${entry.id}`
+      );
+      onRemoved(response.detail);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not remove team from division.");
     } finally {
       setSaving(false);
     }
@@ -116,7 +139,19 @@ function SeasonIdentityEditor({
         >
           {saving ? "Saving…" : "Save season identity"}
         </button>
-        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => void remove()}
+          className="rounded border border-red-400/40 px-4 py-2 text-sm text-red-300 disabled:opacity-40"
+        >
+          {saving ? "Working…" : "Remove from division"}
+        </button>
+        {error ? (
+          <p role="alert" className="w-full text-sm text-red-300">
+            {error}
+          </p>
+        ) : null}
       </div>
     </form>
   );
@@ -139,6 +174,7 @@ export default function TeamIdentityManager({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -456,10 +492,14 @@ export default function TeamIdentityManager({
       <section>
         <h3 className="text-lg font-bold">Season identities</h3>
         <p className="mt-1 text-sm text-gray-400">
-          These entries come from imported participation records. Changing one does not alter the
-          conventional identity or another season. If a season tag also appears in uploaded JSON,
-          add it under Aliases so imports resolve it to this team.
+          Remove an incorrect division entry here. Its roster records and season-only logos are
+          removed with it. Delete associated matches first.
         </p>
+        {notice ? (
+          <p role="status" className="mt-2 text-sm text-emerald-300">
+            {notice}
+          </p>
+        ) : null}
         <div className="mt-3 space-y-3">
           {detail?.season_entries.length ? (
             detail.season_entries.map((entry) => (
@@ -467,7 +507,11 @@ export default function TeamIdentityManager({
                 key={`${entry.id}:${entry.display_name}:${entry.clan_tag}`}
                 teamId={teamId}
                 entry={entry}
-                onSaved={setDetail}
+                onSaved={applyDetail}
+                onRemoved={(response) => {
+                  applyDetail(response);
+                  setNotice("Team removed from this division.");
+                }}
               />
             ))
           ) : (
