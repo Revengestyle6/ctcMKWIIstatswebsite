@@ -353,9 +353,9 @@ export default function MatchHistory(): React.JSX.Element {
                         <span
                           key={team.team_id}
                           title={team.competition_status_note || undefined}
-                          className={`rounded-full border px-2.5 py-1 text-xs font-bold uppercase ${team.competition_status === "disqualified" ? "border-red-300/40 bg-red-950/70 text-red-200" : "border-amber-300/40 bg-amber-950/70 text-amber-200"}`}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-bold ${team.competition_status === "disqualified" ? "border-red-300/40 bg-red-950/70 text-red-200" : "border-amber-300/40 bg-amber-950/70 text-amber-200"}`}
                         >
-                          {team.tag}: {team.competition_status}
+                          {team.tag}: <span className="uppercase">{team.competition_status}</span>
                         </span>
                       ))}
                   </div>
