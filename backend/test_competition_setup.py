@@ -7,7 +7,7 @@ from test_support import PostgreSQLTestDatabase, configure_test_environment
 configure_test_environment()
 
 from app import app  # noqa: E402
-from competition_setup import create_team_season_entry  # noqa: E402
+from competition_setup import create_team_season_entry, get_catalog  # noqa: E402
 from import_json_to_db import (  # noqa: E402
     get_or_create_division,
     get_or_create_season,
@@ -27,6 +27,7 @@ from models import (  # noqa: E402
 )
 from sqlalchemy import select  # noqa: E402
 from standings_service import get_division_standings  # noqa: E402
+from stats_queries import _get_scope, list_divisions, list_match_scopes  # noqa: E402
 
 
 class CompetitionSetupTests(unittest.TestCase):
@@ -61,6 +62,38 @@ class CompetitionSetupTests(unittest.TestCase):
                     role="owner",
                     status="active",
                 )
+            )
+
+    def test_division_lists_follow_division_numbers(self):
+        with self.SessionLocal.begin() as session:
+            season = Season(
+                league_code="gsc", season_code="s15", season_number=15, name="GSC Season 15"
+            )
+            session.add(season)
+            session.flush()
+            for code in ("d1", "d10", "d11", "d2", "d9", "d1_10", "d1_2"):
+                session.add(
+                    Division(
+                        season_id=season.season_id,
+                        division_code=code,
+                        division_name=f"Division {code[1:]}",
+                    )
+                )
+
+        expected = ["d1", "d1_2", "d1_10", "d2", "d9", "d10", "d11"]
+        with patch("stats_queries.SessionLocal", self.SessionLocal):
+            self.assertEqual(
+                [row["division"] for row in list_divisions(season="s15", league_code="gsc")],
+                expected,
+            )
+            self.assertEqual([row["division"] for row in list_match_scopes()], expected)
+        with self.SessionLocal() as session:
+            self.assertEqual(
+                _get_scope(session, season="s15", league_code="gsc").division_code, "d1"
+            )
+            self.assertEqual(
+                [row["code"] for row in get_catalog(session, "gsc")["seasons"][0]["divisions"]],
+                expected,
             )
 
     def test_canonical_team_can_register_distinct_subteams_across_divisions(self):

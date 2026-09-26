@@ -1,6 +1,7 @@
 import hashlib
 from io import BytesIO
 
+from division_order import division_order
 from media_storage import get_media_storage
 from models import Division, Season, Team, TeamLogo, TeamSeasonEntry
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -75,7 +76,7 @@ def get_team_logo_detail(session, team_id):
         .order_by(
             case((TeamLogo.season_id.is_(None), 0), else_=1),
             desc(Season.season_number),
-            Division.division_code,
+            *division_order(Division.division_code),
             desc(TeamLogo.priority),
             desc(TeamLogo.team_logo_id),
         )
@@ -85,7 +86,9 @@ def get_team_logo_detail(session, team_id):
         .join(Season, Season.season_id == TeamSeasonEntry.season_id)
         .join(Division, Division.division_id == TeamSeasonEntry.division_id)
         .where(TeamSeasonEntry.team_id == team_id)
-        .order_by(desc(Season.season_number), Season.season_code, Division.division_code)
+        .order_by(
+            desc(Season.season_number), Season.season_code, *division_order(Division.division_code)
+        )
     ).all()
     seasons = []
     seen_season_ids = set()

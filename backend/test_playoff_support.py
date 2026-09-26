@@ -19,6 +19,7 @@ from models import (  # noqa: E402
 )
 from playoff_service import resolve_playoff_series, validate_competition_metadata  # noqa: E402
 from sqlalchemy import func, select  # noqa: E402
+from standings_service import get_division_standings  # noqa: E402
 
 
 class PlayoffSupportTests(unittest.TestCase):
@@ -130,6 +131,32 @@ class PlayoffSupportTests(unittest.TestCase):
                 )
             )
         session.flush()
+
+    def test_standings_bracket_uses_division_entry_name(self):
+        with self.SessionLocal.begin() as session:
+            entry = session.get(TeamSeasonEntry, self.entry_ids[self.team_ids[0]])
+            entry.display_name = "Season 3 Team A"
+            division = session.get(Division, self.division_id)
+            resolve_playoff_series(
+                session, self.season_id, division, self.metadata(), self.team_ids[:2]
+            )
+
+        with self.SessionLocal() as session:
+            standings = get_division_standings(session, league="ctc", season="s3", division="d1")
+
+        seed = next(
+            team
+            for team in standings["playoff_qualification"]["seeds"]
+            if team["team_id"] == self.team_ids[0]
+        )
+        participant = next(
+            team
+            for team in standings["playoffs"]["series"][0]["participants"]
+            if team["team_id"] == self.team_ids[0]
+        )
+        self.assertEqual(seed["name"], "Season 3 Team A")
+        self.assertEqual(participant["name"], seed["name"])
+        self.assertEqual(participant["tag"], seed["tag"])
 
     def test_metadata_rejects_playoff_week_even_best_of_and_tie(self):
         match = self.metadata()

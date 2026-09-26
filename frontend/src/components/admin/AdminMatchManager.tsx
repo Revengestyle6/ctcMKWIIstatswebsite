@@ -86,7 +86,7 @@ export default function AdminMatchManager(): React.JSX.Element {
         .filter((scope) => scope.league === league && (!season || scope.season === season))
         .map((scope) => scope.division)
     )
-  ).sort();
+  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   useEffect(() => {
     let cancelled = false;
