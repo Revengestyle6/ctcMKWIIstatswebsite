@@ -1,5 +1,6 @@
 import re
 
+from division_order import division_order
 from models import (
     Division,
     Match,
@@ -248,7 +249,7 @@ def get_entity(session, entity_type, entity_id):
                 Season.league_code,
                 Season.season_number,
                 Season.season_code,
-                Division.division_code,
+                *division_order(Division.division_code),
                 TeamSeasonEntry.clan_tag,
             )
         ).all()

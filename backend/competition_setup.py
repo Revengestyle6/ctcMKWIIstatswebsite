@@ -2,6 +2,7 @@ import re
 from collections import defaultdict
 from datetime import date
 
+from division_order import division_order
 from models import (
     Division,
     DivisionConference,
@@ -239,7 +240,7 @@ def get_catalog(session, league):
         divisions = session.scalars(
             select(Division)
             .where(Division.season_id.in_(season_ids))
-            .order_by(Division.division_code, Division.division_id)
+            .order_by(*division_order(Division.division_code), Division.division_id)
         ).all()
         for division in divisions:
             divisions_by_season[division.season_id].append(division)
@@ -287,7 +288,7 @@ def get_catalog(session, league):
         .where(Season.league_code == league_code)
         .order_by(
             desc(Season.season_number).nulls_last(),
-            Division.division_code,
+            *division_order(Division.division_code),
             func.lower(TeamSeasonEntry.display_name),
         )
     ).all()

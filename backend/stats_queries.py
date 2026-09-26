@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from database import get_session_factory
+from division_order import division_order
 from match_sets import apply_match_set, normalize_match_set
 from models import (
     Division,
@@ -117,7 +118,7 @@ def _get_scope(session, season=None, division=None, league_code="ctc"):
     division_stmt = select(Division).where(Division.season_id == season_obj.season_id)
     if division_code is not None:
         division_stmt = division_stmt.where(Division.division_code == division_code)
-    division_stmt = division_stmt.order_by(Division.division_code).limit(1)
+    division_stmt = division_stmt.order_by(*division_order(Division.division_code)).limit(1)
     division_obj = session.execute(division_stmt).scalar_one_or_none()
 
     if division_obj is None:
@@ -504,7 +505,9 @@ def list_match_scopes():
                 Division.division_name,
             )
             .join(Division, Division.season_id == Season.season_id)
-            .order_by(Season.league_code, Season.season_number, Division.division_code)
+            .order_by(
+                Season.league_code, Season.season_number, *division_order(Division.division_code)
+            )
         ).all()
         return [
             {
@@ -540,7 +543,7 @@ def list_team_scopes():
             .order_by(
                 Season.league_code,
                 Season.season_number,
-                Division.division_code,
+                *division_order(Division.division_code),
                 TeamSeasonEntry.clan_tag,
             )
         ).all()
@@ -568,7 +571,7 @@ def list_divisions(season=None, league_code="ctc"):
         rows = session.execute(
             select(Division.division_code, Division.division_name)
             .where(Division.season_id == scope.season_id)
-            .order_by(Division.division_code)
+            .order_by(*division_order(Division.division_code))
         ).all()
         return [{"division": row.division_code, "name": row.division_name} for row in rows]
 
@@ -762,7 +765,7 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
             participants = session.execute(
                 select(
                     Team.team_id,
-                    Team.canonical_name,
+                    TeamSeasonEntry.display_name,
                     TeamSeasonEntry.clan_tag,
                     PlayoffSeriesParticipant.participant_slot,
                 )
@@ -771,6 +774,7 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
                     TeamSeasonEntry,
                     and_(
                         TeamSeasonEntry.team_id == Team.team_id,
+                        TeamSeasonEntry.season_id == scope.season_id,
                         TeamSeasonEntry.division_id == scope.division_id,
                     ),
                 )
@@ -824,7 +828,7 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
                     "participants": [
                         {
                             "team_id": row.team_id,
-                            "name": row.canonical_name,
+                            "name": row.display_name,
                             "tag": row.clan_tag,
                             "slot": row.participant_slot,
                             "wins": wins[row.team_id],
