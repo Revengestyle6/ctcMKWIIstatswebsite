@@ -1,126 +1,82 @@
-# CTC Mario Kart Wii Statistics
+# Mario Kart Wii statistics
 
-React and Flask application for Custom Track Cup match history, player, team, and
-track analytics. Archived Table Bot JSON is the durable input record; SQLAlchemy
-provides the operational analytics model.
+A React and Flask application for CTC and GSC match history, standings, and player,
+team, and track analytics. The JSON editor prepares and validates matches; public
+submissions enter an administrator review queue. PostgreSQL holds operational
+state and accepted JSON provides durable audit/rebuild evidence.
 
-## Prerequisites
+**The hosted application is still in staging.** See the
+[production gates](docs/roadmap/README.md) for remaining operational work.
 
-- Python 3.11
-- Node.js 22 and npm
-- Playwright Chromium only when running browser smoke tests
-- Docker Desktop or Docker Engine with Compose for local PostgreSQL
+## Start here
 
-## Local Setup
+| Need | Guide |
+| --- | --- |
+| Run the project | [Complete local setup](docs/development/local-development-startup.md) |
+| Understand the whole repo | [Repository map](docs/architecture/repository-map.md) and [architecture diagrams](docs/architecture/README.md) |
+| Understand the domain | [Competition and identity glossary](CONTEXT.md) |
+| Work on the JSON editor | [Editor documentation](docs/json-editor/README.md): workflow, validations, data sources and JSON compilation |
+| Make and verify a change | [Contributing](CONTRIBUTING.md) |
+| Find a runbook or feature guide | [Documentation index](docs/README.md) |
 
-Create a Python environment at the repository root:
+## Local quick start
+
+Requires Python 3.11, Node.js 22/npm, and Docker with Compose for PostgreSQL 18.
+From the repository root:
 
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r backend/requirements-dev.txt
-```
-
-Install the frontend reproducibly:
-
-```bash
-cd frontend
 npm ci
-```
-
-Start PostgreSQL 18, apply the schema, and load the archived JSON and reviewed
-registries:
-
-```bash
+npm ci --prefix frontend
 docker compose up -d postgres
 export APP_ENV=local
 export DATABASE_URL=postgresql+psycopg://ctc_local:ctc_local@127.0.0.1:55432/ctc_dev
 export FIREBASE_PROJECT_ID=mkw-stats
-.venv/bin/alembic upgrade head
-.venv/bin/python backend/import_json_to_db.py --database-url "$DATABASE_URL"
+alembic upgrade head
+python backend/import_json_to_db.py --database-url "$DATABASE_URL"
 ```
 
-Use the appropriate virtual-environment executable on Windows or when your local
-environment has a different path. The credentials above are intentionally local
-development values, not production secrets. Stop the database with
-`docker compose stop postgres`; its ignored named volume preserves local data.
+Wait for `docker compose ps postgres` to report healthy before migrating. The
+credentials above are local development defaults. Importing historical data is a
+setup operation, not a normal startup step.
 
-PostgreSQL is required for local development and tests. Historical SQLite files
-remain ignored under `backend/data/` as recovery artifacts only; active code does
-not open them.
-
-## Run Locally
-
-Start the API from `backend/`:
-
-```bash
-export APP_ENV=local
-export DATABASE_URL=postgresql+psycopg://ctc_local:ctc_local@127.0.0.1:55432/ctc_dev
-export FIREBASE_PROJECT_ID=mkw-stats
-../.venv/bin/python -m flask --app app run
-```
-
-In another terminal, start the frontend from `frontend/`:
-
-```bash
-npm run dev
-```
-
-Vite serves the UI at `http://127.0.0.1:3000` and proxies `/api` to Flask at
-`http://127.0.0.1:5000`. Hosted builds use same-origin `/api` requests by default.
-Real local Google sign-in additionally requires the ignored
-`frontend/.env.development.local` Firebase web configuration. Follow the
-[local development startup runbook](docs/md/local-development-startup.md) for
-the one-time Firebase setup, complete startup sequence, and error meanings.
-
-## Verification
+In one terminal, activate the environment, export the variables above, and run:
 
 ```bash
 cd backend
-../.venv/bin/ruff check .
-../.venv/bin/ruff format . --check
-../.venv/bin/python -m unittest discover -v
-cd ../frontend
-npm run check
-npm run build
+python -m flask --app app run
+```
+
+In another terminal, from the repository root:
+
+```bash
+npm run dev --prefix frontend
+```
+
+Open `http://localhost:3000`. Vite proxies `/api` to Flask on port 5000. Real Google
+sign-in needs the public Firebase web configuration described in the
+[local setup runbook](docs/development/local-development-startup.md). Use the Python
+executable/activation path appropriate to your operating system.
+
+## Verification and maintenance
+
+[CONTRIBUTING](CONTRIBUTING.md#required-end-of-work-ci-validation) lists the required
+migration, drift, archive import, backend, frontend, and production-build checks
+against a disposable PostgreSQL database. Browser regressions additionally run with:
+
+```bash
+cd frontend
 PYTHON_BIN=../.venv/bin/python npm run test:e2e
 ```
 
-Install the Playwright browser once with `npx playwright install chromium`.
+Install Chromium once with `npx playwright install chromium`. Set `APP_ENV=test`
+and `DATABASE_URL` to a local disposable database for browser checks; the Playwright
+configuration can reuse existing servers on ports 5000/4173, so ensure those are
+your intended test processes. Baseline capture is a separate deliberate action,
+documented in [regression evidence](docs/baselines/README.md).
 
-The browser smoke command covers ten representative routes in desktop and mobile
-Chromium. `npm run baseline:ui` is reserved for deliberate baseline capture and
-must not be used to approve visual changes without reviewing the images.
-
-CI starts a clean PostgreSQL 18 service, applies and drift-checks the Alembic
-schema, imports the accepted archive, and runs every backend test against isolated
-PostgreSQL schemas.
-
-## Common Maintenance Commands
-
-Run commands from `backend/` unless noted otherwise:
-
-```bash
-../.venv/bin/python scripts/inspect_db.py
-../.venv/bin/python scripts/reconcile_json_archive.py
-../.venv/bin/python scripts/run_phase3_maintenance.py
-../.venv/bin/python scripts/convert_txt_json.py --help
-```
-
-See [backend/scripts/README.md](backend/scripts/README.md) before running commands
-that write archive or database data.
-
-## Documentation
-
-- [Documentation map](docs/md/README.md)
-- [Current architecture](docs/md/architecture.md)
-- [Local development startup](docs/md/local-development-startup.md)
-- [Data pipeline](docs/md/data-pipeline.md)
-- [Production readiness plan](docs/md/production-readiness-plan.md)
-- [Phase 4 resource inventory](docs/md/phase-4-resource-inventory.md)
-- [Architecture decisions](docs/adr/README.md)
-- [Regression baselines](docs/baselines/README.md)
-- [Historical documentation](docs/archive/README.md)
-
-Local databases, backups, virtual environments, caches, IDE state, build output,
-and Playwright output are intentionally excluded from Git.
+See the [maintenance command catalog](backend/scripts/README.md) before running
+commands that write archive or database state. Deployment follows the
+[staging workflow](docs/operations/deployment.md); production cutover remains separate.

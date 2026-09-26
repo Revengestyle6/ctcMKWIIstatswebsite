@@ -7,6 +7,7 @@ from pathlib import PurePosixPath
 
 from admin_auth import record_audit
 from import_json_to_db import detect_new_entries, import_editor_match
+from match_review import mkc_profiles_from_entries, unapproved_entries
 from match_upload import (
     AdditionCapture,
     find_match_conflict,
@@ -38,7 +39,6 @@ from models import (
     TeamSeasonEntry,
     Track,
 )
-from routes.common import mkc_profiles_from_entries, unapproved_entries
 from sqlalchemy import delete, func, select, update
 
 

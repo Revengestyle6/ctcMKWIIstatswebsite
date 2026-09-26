@@ -1,5 +1,11 @@
 # Cloud Run Staging Workloads
 
+Cloud resource names and provider-side settings below are recorded provisioning
+evidence from July–August 2026, not a fresh cloud audit. Check the
+[dated resource inventory](../../docs/operations/phase-4-resource-inventory.md)
+and reconcile live settings before operating on them. Repository configuration
+files remain the source for the behavior they explicitly define.
+
 Cloud Run Jobs execute containers to completion. They are used for schema
 migrations and controlled historical rebuilds because those operations must be
 explicit, observable, and separate from HTTP service startup.

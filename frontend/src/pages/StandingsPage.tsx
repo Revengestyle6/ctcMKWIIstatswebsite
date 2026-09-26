@@ -6,9 +6,9 @@ import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import SeasonDivisionSelector from "../components/SeasonDivisionSelector";
 import TeamCompetitionStatusManager from "../components/TeamCompetitionStatusManager";
 import { useLeague } from "../context/LeagueContext";
+import { matchHistoryPath } from "../features/match-history/matchHistoryLinks";
 import { useAdminSession } from "../hooks/useAdminSession";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
-import { matchHistoryPath } from "../matchHistoryLinks";
 
 type CompetitionStatus = "active" | "dropped" | "disqualified";
 type Standing = {

@@ -1009,7 +1009,7 @@ test("match history loads regular-season data directly after all matches", async
   await expect(matchSelection).toBeEnabled();
   const firstRegularMatch = matchSelection
     .locator("option")
-    .filter({ hasText: /^W\d+ - / })
+    .filter({ hasText: /^M\d+ - / })
     .first();
   const firstRegularMatchId = await firstRegularMatch.getAttribute("value");
   expect(firstRegularMatchId).not.toBeNull();
@@ -1020,7 +1020,7 @@ test("match history loads regular-season data directly after all matches", async
 
   await expect(page).not.toHaveURL(/match_set=/);
   await expect(matchSelection).toBeEnabled();
-  await expect(matchSelection.locator("option:checked")).toHaveText(/^W\d+ - /);
+  await expect(matchSelection.locator("option:checked")).toHaveText(/^M\d+ - /);
   await expect(page.getByText(/S3 \/ D1 \/ Match \d+/)).toBeVisible();
 });
 

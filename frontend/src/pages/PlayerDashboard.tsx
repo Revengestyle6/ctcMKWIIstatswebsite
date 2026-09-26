@@ -19,8 +19,9 @@ import {
   PlayerTracksView,
   TabState,
 } from "../components/dashboard/DashboardTabViews";
-import { type MatchSet, MatchSetToggle } from "../components/MatchSetToggle";
+import { MatchSetToggle } from "../components/MatchSetToggle";
 import { RoleModeToggle } from "../components/RoleModeToggle";
+import { parseMatchSet } from "../config/matchSets";
 import { useLeague } from "../context/LeagueContext";
 import {
   fetchPlayerOverview,
@@ -32,7 +33,7 @@ import {
   type PlayerTracks,
   prefetchPlayerDashboardMatchSets,
 } from "../dashboardApi";
-import { matchHistoryPath } from "../matchHistoryLinks";
+import { matchHistoryPath } from "../features/match-history/matchHistoryLinks";
 
 function numberValue(value: number | null, suffix = ""): string {
   return value === null ? "-" : `${value}${suffix}`;
@@ -61,12 +62,7 @@ export default function PlayerDashboard() {
   const division = searchParams.get("division") ?? "";
   const teamId = searchParams.get("team_id") ?? "";
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
-  const matchSet: MatchSet =
-    searchParams.get("match_set") === "playoffs"
-      ? "playoffs"
-      : searchParams.get("match_set") === "all"
-        ? "all"
-        : "regular";
+  const matchSet = parseMatchSet(searchParams.get("match_set"));
   const minRaces = Math.min(500, Math.max(1, Number(searchParams.get("min_races")) || 2));
   const requestedTab = searchParams.get("tab") ?? "overview";
   const activeTab = ["overview", "performance", "tracks"].includes(requestedTab)

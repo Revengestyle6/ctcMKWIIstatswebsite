@@ -1,5 +1,5 @@
 import { fetchCachedJson } from "./api";
-import type { MatchSet } from "./components/MatchSetToggle";
+import { MATCH_SETS, type MatchSet } from "./config/matchSets";
 
 export type PlayerRoleMode = "runner" | "bagger";
 
@@ -338,30 +338,8 @@ export type LegacyTeamRosterPlayer = TeamRosterPlayer & {
   role: PlayerRoleMode;
 };
 
-export interface LegacyTrackPlayerRow {
-  player_id: number;
-  name: string | null;
-  role: PlayerRoleMode;
-  races: number;
-  scored_races: number;
-  points_per_race: number | null;
-  twelve_race_pace: number | null;
-  bag_point_rate: number | null;
-  zero_point_rate: number | null;
-  average_placement: number | null;
-  total_points: number;
-  excluded_score_rows: number;
-  role_coverage?: RoleCoverage;
-}
-
 export interface LegacyTeamTrackRow {
   track: string;
-  average: number;
-  races: number;
-}
-
-export interface LegacyTrackTeamRow {
-  name: string;
   average: number;
   races: number;
 }
@@ -395,8 +373,6 @@ export function fetchTeamRoster(teamId: number, query: DashboardQuery): Promise<
 export function fetchTeamTracks(teamId: number, query: DashboardQuery): Promise<TeamTracks> {
   return fetchCachedJson(`/api/teams/${teamId}/tracks`, query);
 }
-
-const MATCH_SETS: MatchSet[] = ["regular", "playoffs", "all"];
 
 export function prefetchPlayerDashboardMatchSets(playerId: number, query: DashboardQuery): void {
   for (const matchSet of MATCH_SETS) {

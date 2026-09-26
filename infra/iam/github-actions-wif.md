@@ -1,5 +1,11 @@
 # GitHub Actions Workload Identity Federation
 
+Cloud resource names and provider-side settings below are recorded provisioning
+evidence from July–August 2026, not a fresh cloud audit. Check the
+[dated resource inventory](../../docs/operations/phase-4-resource-inventory.md)
+and reconcile live settings before operating on them. Repository configuration
+files remain the source for the behavior they explicitly define.
+
 ## What It Is And Why It Exists
 
 GitHub Actions is the repository automation runner. It executes tests and
