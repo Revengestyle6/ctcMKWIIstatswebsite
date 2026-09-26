@@ -1,4 +1,5 @@
 import { getAdminAuthHeaders } from "./authClient";
+import { MATCH_SETS, type MatchSet } from "./config/matchSets";
 
 export const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
@@ -84,9 +85,9 @@ export function fetchCachedJson<T>(
 export function prefetchMatchSetVariants(
   path: string,
   params: Record<string, QueryValue>,
-  selected: "regular" | "playoffs" | "all"
+  selected: MatchSet
 ): void {
-  for (const matchSet of ["regular", "playoffs", "all"] as const) {
+  for (const matchSet of MATCH_SETS) {
     if (matchSet !== selected) {
       void fetchCachedJson(path, { ...params, match_set: matchSet });
     }

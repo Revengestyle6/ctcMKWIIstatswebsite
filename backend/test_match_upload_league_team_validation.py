@@ -5,8 +5,8 @@ from test_support import PostgreSQLTestDatabase, configure_test_environment
 configure_test_environment()
 
 from import_json_to_db import detect_new_entries, get_or_create_team  # noqa: E402
+from match_review import unapproved_entries  # noqa: E402
 from models import Season, Team, TeamLeagueIdentity  # noqa: E402
-from routes.common import unapproved_entries  # noqa: E402
 
 
 class MatchUploadLeagueTeamValidationTests(unittest.TestCase):

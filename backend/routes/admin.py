@@ -19,6 +19,7 @@ from database_health_reviews import set_issue_review
 from extensions import cache
 from flask import Blueprint, g, jsonify, request
 from import_json_to_db import detect_new_entries, import_preview_match
+from match_review import mkc_profiles_from_entries, unapproved_entries
 from match_upload import (
     prepare_upload_document,
     serialize_addition_log,
@@ -30,10 +31,8 @@ from sqlalchemy import func, select
 from routes.common import (
     error_response,
     match_request_payload,
-    mkc_profiles_from_entries,
     player_identity_links_from_payload,
     team_identity_resolutions_from_payload,
-    unapproved_entries,
 )
 
 logger = logging.getLogger(__name__)

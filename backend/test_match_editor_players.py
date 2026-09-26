@@ -12,6 +12,7 @@ from match_editor_catalog import (  # noqa: E402
     list_player_team_memberships,
     list_team_roster_pool,
 )
+from match_review import unapproved_entries  # noqa: E402
 from models import (  # noqa: E402
     Division,
     Player,
@@ -23,7 +24,6 @@ from models import (  # noqa: E402
     TeamLeagueIdentity,
     TeamSeasonEntry,
 )
-from routes.common import unapproved_entries  # noqa: E402
 from sqlalchemy import func, select  # noqa: E402
 
 

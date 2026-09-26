@@ -1,4 +1,4 @@
-export type MatchSet = "regular" | "playoffs" | "all";
+import type { MatchSet } from "../config/matchSets";
 
 const OPTIONS: Array<{ value: MatchSet; label: string }> = [
   { value: "regular", label: "Regular season" },

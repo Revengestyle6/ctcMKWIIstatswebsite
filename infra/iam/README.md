@@ -1,9 +1,15 @@
 # Phase 4 Service Identities
 
+Cloud resource names and provider-side settings below are recorded provisioning
+evidence from July–August 2026, not a fresh cloud audit. Check the
+[dated resource inventory](../../docs/operations/phase-4-resource-inventory.md)
+and reconcile live settings before operating on them. Repository configuration
+files remain the source for the behavior they explicitly define.
+
 All application and automation identities are user-managed service accounts in
 project `mkw-stats`. No downloadable service-account keys exist.
 
-| Service account | Intended workload | Current access |
+| Service account | Intended workload | Recorded access |
 | --- | --- | --- |
 | `ctc-api-staging@mkw-stats.iam.gserviceaccount.com` | Staging Cloud Run API | Cloud SQL Client; object access on the staging archive and staging media buckets; accessor on the staging database URL and rate-limit HMAC secrets |
 | `ctc-api-prod@mkw-stats.iam.gserviceaccount.com` | Production Cloud Run API | Cloud SQL Client; object access on the production archive and production media buckets; accessor on the production database URL and rate-limit HMAC secrets |
