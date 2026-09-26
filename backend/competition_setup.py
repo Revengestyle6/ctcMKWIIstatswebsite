@@ -485,7 +485,7 @@ def create_team(session, payload):
     existing_identity = session.scalar(
         select(TeamLeagueIdentity).where(
             func.lower(TeamLeagueIdentity.league_code) == league,
-            func.lower(TeamLeagueIdentity.tag) == tag.casefold(),
+            func.lower(TeamLeagueIdentity.tag) == tag.lower(),
         )
     )
     if existing_identity is not None:
@@ -530,8 +530,8 @@ def create_team_season_entry(session, payload):
         select(TeamSeasonEntry).where(
             TeamSeasonEntry.team_id == team_id,
             TeamSeasonEntry.season_id == season_id,
-            func.lower(TeamSeasonEntry.display_name) == display_name.casefold(),
-            func.lower(TeamSeasonEntry.clan_tag) == clan_tag.casefold(),
+            func.lower(TeamSeasonEntry.display_name) == display_name.lower(),
+            func.lower(TeamSeasonEntry.clan_tag) == clan_tag.lower(),
         )
     )
     if existing_season_identity is not None:
@@ -560,7 +560,7 @@ def create_team_season_entry(session, payload):
         select(TeamSeasonEntry).where(
             TeamSeasonEntry.season_id == season_id,
             TeamSeasonEntry.division_id == division_id,
-            func.lower(TeamSeasonEntry.clan_tag) == clan_tag.casefold(),
+            func.lower(TeamSeasonEntry.clan_tag) == clan_tag.lower(),
         )
     )
     if conflicting_tag is not None:
@@ -568,7 +568,7 @@ def create_team_season_entry(session, payload):
     identity = session.scalar(
         select(TeamLeagueIdentity).where(
             func.lower(TeamLeagueIdentity.league_code) == season.league_code.casefold(),
-            func.lower(TeamLeagueIdentity.tag) == clan_tag.casefold(),
+            func.lower(TeamLeagueIdentity.tag) == clan_tag.lower(),
         )
     )
     if identity is not None and identity.team_id != team_id:

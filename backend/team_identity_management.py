@@ -44,7 +44,7 @@ def _latest_season_identity(session, team_id, league_code=None):
         .limit(1)
     )
     if league_code:
-        statement = statement.where(func.lower(Season.league_code) == league_code.casefold())
+        statement = statement.where(func.lower(Season.league_code) == league_code.lower())
     return session.scalar(statement)
 
 
@@ -55,13 +55,13 @@ def _preserve_team_tag(session, team_id, tag):
     canonical_owner = session.scalar(
         select(Team.team_id).where(
             Team.team_id != team_id,
-            func.lower(Team.canonical_tag) == value.casefold(),
+            func.lower(Team.canonical_tag) == value.lower(),
         )
     )
     if canonical_owner is not None:
         return
     existing = session.scalar(
-        select(TeamAlias).where(func.lower(TeamAlias.alias_value) == value.casefold())
+        select(TeamAlias).where(func.lower(TeamAlias.alias_value) == value.lower())
     )
     if existing is None:
         session.add(TeamAlias(team_id=team_id, alias_value=value))
@@ -75,12 +75,12 @@ def _set_canonical_identity(session, team, canonical_name, canonical_tag):
     promoted_alias = session.scalar(
         select(TeamAlias).where(
             TeamAlias.team_id == team.team_id,
-            func.lower(TeamAlias.alias_value) == tag.casefold(),
+            func.lower(TeamAlias.alias_value) == tag.lower(),
         )
     )
     if promoted_alias is not None:
         session.delete(promoted_alias)
-    if team.canonical_tag.casefold() != tag.casefold():
+    if team.canonical_tag.lower() != tag.lower():
         _preserve_team_tag(session, team.team_id, team.canonical_tag)
     team.canonical_name = name
     team.canonical_tag = tag
@@ -182,7 +182,7 @@ def update_canonical_identity(session, team_id, payload):
         payload, "canonical_tag", "Canonical team tag", MAX_TEAM_TAG_LENGTH
     )
     conflicting_alias = session.scalar(
-        select(TeamAlias).where(func.lower(TeamAlias.alias_value) == canonical_tag.casefold())
+        select(TeamAlias).where(func.lower(TeamAlias.alias_value) == canonical_tag.lower())
     )
     if conflicting_alias is not None and conflicting_alias.team_id != team_id:
         raise ValueError("That tag is already an alias for another team.")
@@ -203,7 +203,7 @@ def update_canonical_preference(session, team_id, payload):
     if team is None:
         raise LookupError("Team not found.")
     raw_league = payload.get("league")
-    league_code = str(raw_league or "").strip().casefold() or None
+    league_code = str(raw_league or "").strip().lower() or None
     if league_code is not None and league_code not in SUPPORTED_LEAGUES:
         raise ValueError("Canonical league preference must be CTC, GSC, or automatic.")
     previous = {
@@ -240,12 +240,12 @@ def add_league_identity(session, team_id, payload):
     team = session.get(Team, team_id)
     if team is None:
         raise LookupError("Team not found.")
-    league_code = _required_text(payload, "league", "League", 32).casefold()
+    league_code = _required_text(payload, "league", "League", 32).lower()
     tag = _required_text(payload, "tag", "League team tag", MAX_TEAM_TAG_LENGTH)
     existing = session.scalar(
         select(TeamLeagueIdentity).where(
             func.lower(TeamLeagueIdentity.league_code) == league_code,
-            func.lower(TeamLeagueIdentity.tag) == tag.casefold(),
+            func.lower(TeamLeagueIdentity.tag) == tag.lower(),
         )
     )
     if existing is not None:
@@ -286,7 +286,7 @@ def update_season_identity(session, team_id, entry_id, payload):
             TeamSeasonEntry.team_season_entry_id != entry_id,
             TeamSeasonEntry.season_id == entry.season_id,
             TeamSeasonEntry.division_id == entry.division_id,
-            func.lower(TeamSeasonEntry.clan_tag) == clan_tag.casefold(),
+            func.lower(TeamSeasonEntry.clan_tag) == clan_tag.lower(),
         )
     )
     if conflicting_entry is not None:
@@ -599,7 +599,7 @@ def merge_team(session, source_team_id, payload):
         select(TeamAlias).where(TeamAlias.team_id == source_team_id)
     ).all()
     target_aliases = {
-        alias.alias_value.casefold(): alias
+        alias.alias_value.lower(): alias
         for alias in session.scalars(
             select(TeamAlias).where(TeamAlias.team_id == target_team_id)
         ).all()
@@ -607,28 +607,28 @@ def merge_team(session, source_team_id, payload):
     aliases_moved = 0
     aliases_consolidated = 0
     for alias in source_aliases:
-        if alias.alias_value.casefold() in target_aliases:
+        if alias.alias_value.lower() in target_aliases:
             session.delete(alias)
             aliases_consolidated += 1
         else:
             alias.team_id = target_team_id
-            target_aliases[alias.alias_value.casefold()] = alias
+            target_aliases[alias.alias_value.lower()] = alias
             aliases_moved += 1
-    if target.canonical_tag.casefold() != source.canonical_tag.casefold():
+    if target.canonical_tag.lower() != source.canonical_tag.lower():
         _preserve_team_tag(session, target_team_id, source.canonical_tag)
 
     source_league_identities = session.scalars(
         select(TeamLeagueIdentity).where(TeamLeagueIdentity.team_id == source_team_id)
     ).all()
     target_league_keys = {
-        (identity.league_code.casefold(), identity.tag.casefold())
+        (identity.league_code.lower(), identity.tag.lower())
         for identity in session.scalars(
             select(TeamLeagueIdentity).where(TeamLeagueIdentity.team_id == target_team_id)
         ).all()
     }
     league_identities_consolidated = 0
     for identity in source_league_identities:
-        key = (identity.league_code.casefold(), identity.tag.casefold())
+        key = (identity.league_code.lower(), identity.tag.lower())
         if key in target_league_keys:
             session.delete(identity)
             league_identities_consolidated += 1
