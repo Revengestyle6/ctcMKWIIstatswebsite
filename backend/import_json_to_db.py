@@ -284,12 +284,13 @@ def get_or_create_team(
 ) -> Team:
     team = session.get(Team, linked_team_id) if linked_team_id is not None else None
     if team is None:
+        # PostgreSQL lower() does not fold Greek final sigma as Python casefold() does.
         team = session.scalar(
             select(Team)
             .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
             .where(
                 func.lower(TeamLeagueIdentity.league_code) == league_code.casefold(),
-                func.lower(TeamLeagueIdentity.tag) == canonical_tag.casefold(),
+                func.lower(TeamLeagueIdentity.tag) == canonical_tag.lower(),
             )
         )
     if team:
@@ -297,7 +298,7 @@ def get_or_create_team(
             select(TeamLeagueIdentity).where(
                 TeamLeagueIdentity.team_id == team.team_id,
                 func.lower(TeamLeagueIdentity.league_code) == league_code.casefold(),
-                func.lower(TeamLeagueIdentity.tag) == canonical_tag.casefold(),
+                func.lower(TeamLeagueIdentity.tag) == canonical_tag.lower(),
             )
         )
         if league_identity is None:
@@ -784,8 +785,7 @@ def import_match(
             league_code,
             canonical_tag,
             display_name,
-            linked_team_id=alias.get("team_id")
-            or team_identity_links.get(canonical_tag.casefold()),
+            linked_team_id=alias.get("team_id") or team_identity_links.get(canonical_tag.lower()),
         )
         team_entry = get_or_create_team_entry(
             session,
@@ -1144,7 +1144,7 @@ def import_editor_match(
 def _new_entry(entry_type: str, value: str, *scope: str, **details: Any) -> dict[str, Any]:
     key_parts = [entry_type, *scope, value]
     return {
-        "key": ":".join(str(part).strip().casefold() for part in key_parts),
+        "key": ":".join(str(part).strip().lower() for part in key_parts),
         "type": entry_type,
         "value": value,
         **details,
@@ -1299,7 +1299,7 @@ def detect_new_entries(
                 .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
                 .where(
                     func.lower(TeamLeagueIdentity.league_code) == league_code.casefold(),
-                    func.lower(TeamLeagueIdentity.tag) == canonical_tag.casefold(),
+                    func.lower(TeamLeagueIdentity.tag) == canonical_tag.lower(),
                 )
             )
         if team is not None:
@@ -1311,7 +1311,7 @@ def detect_new_entries(
                     select(Team)
                     .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
                     .where(
-                        func.lower(TeamLeagueIdentity.tag) == canonical_tag.casefold(),
+                        func.lower(TeamLeagueIdentity.tag) == canonical_tag.lower(),
                         func.lower(TeamLeagueIdentity.league_code) != league_code.casefold(),
                     )
                     .order_by(Team.team_id)

@@ -8,7 +8,13 @@ configure_test_environment()
 
 from alias_management import add_alias  # noqa: E402
 from app import app  # noqa: E402
-from import_json_to_db import get_or_create_team, get_or_create_team_entry  # noqa: E402
+from import_json_to_db import (  # noqa: E402  # noqa: E402
+    detect_new_entries,
+    get_or_create_team,
+    get_or_create_team_entry,
+    import_preview_match,
+)
+from match_upload import validate_committable_match  # noqa: E402
 from models import (  # noqa: E402
     AdminAuditLog,
     AdminUser,
@@ -126,6 +132,87 @@ class TeamIdentityManagementTests(unittest.TestCase):
                     status="active",
                 )
             )
+
+    def test_unicode_team_tag_works_in_preview_and_identity_controls(self):
+        with self.SessionLocal.begin() as session:
+            season = Season(
+                league_code="gsc", season_code="s15", season_number=15, name="GSC Season 15"
+            )
+            session.add(season)
+            session.flush()
+            division = Division(
+                season_id=season.season_id, division_code="d9", division_name="Division 9"
+            )
+            session.add(division)
+            session.flush()
+            team_ids = {}
+            for tag, name in (("zio", "zio"), ("βς", "Banana Syndicate")):
+                team = Team(canonical_name=name, canonical_tag=tag)
+                session.add(team)
+                session.flush()
+                team_ids[tag] = team.team_id
+                session.add_all(
+                    (
+                        TeamLeagueIdentity(team_id=team.team_id, league_code="gsc", tag=tag),
+                        TeamSeasonEntry(
+                            team_id=team.team_id,
+                            season_id=season.season_id,
+                            division_id=division.division_id,
+                            display_name=name,
+                            clan_tag=tag,
+                        ),
+                    )
+                )
+
+        match_data = {
+            "league": "gsc",
+            "season": "s15",
+            "division": "d9",
+            "match_label": "Unicode team preview",
+            "match_type": "regular",
+            "result_type": "mutual_tie",
+            "match_number": 1,
+            "format": "5v5",
+            "races_played": 0,
+            "tracks": [],
+            "teams": {
+                "zio": {"total_score": 0, "players": {}},
+                "βς": {"total_score": 0, "players": {}},
+            },
+        }
+        with self.SessionLocal.begin() as session:
+            validate_committable_match(match_data)
+            self.assertEqual(detect_new_entries(session, match_data), [])
+            match = import_preview_match(session, match_data)
+            session.flush()
+            imported_ids = {
+                entry.team_id
+                for entry in session.query(TeamSeasonEntry)
+                .join(
+                    MatchTeam,
+                    MatchTeam.team_season_entry_id == TeamSeasonEntry.team_season_entry_id,
+                )
+                .filter(MatchTeam.match_id == match.match_id)
+                .all()
+            }
+            self.assertEqual(imported_ids, set(team_ids.values()))
+            self.assertEqual(
+                session.query(TeamLeagueIdentity).filter_by(league_code="gsc", tag="βς").count(),
+                1,
+            )
+            self.assertEqual(get_or_create_team(session, "gsc", "βς").team_id, team_ids["βς"])
+            with self.assertRaisesRegex(ValueError, "already linked to this team"):
+                add_league_identity(session, team_ids["βς"], {"league": "gsc", "tag": "βς"})
+            with self.assertRaisesRegex(ValueError, "already this team's canonical tag"):
+                add_alias(session, "teams", team_ids["βς"], {"value": "βς"})
+            team = session.get(Team, team_ids["βς"])
+            team.canonical_identity_override = True
+            detail, _ = update_canonical_identity(
+                session,
+                team_ids["βς"],
+                {"canonical_name": "Banana Syndicate", "canonical_tag": "βς"},
+            )
+            self.assertEqual(detail["team"]["canonical_tag"], "βς")
 
     def test_delete_season_entry_removes_only_selected_membership_and_dependents(self):
         with self.SessionLocal.begin() as session:

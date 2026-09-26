@@ -133,7 +133,7 @@ def unapproved_entries(
         }
     )
     team_identity_links = {
-        entry["value"].casefold(): entry["resolution"]["team_id"]
+        entry["value"].lower(): entry["resolution"]["team_id"]
         for entry in new_entries
         if entry["key"] in approved_keys
         and entry.get("kind") == "cross_league_team_match"

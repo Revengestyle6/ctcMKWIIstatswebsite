@@ -91,7 +91,7 @@ def list_entities(session, entity_type, query="", limit=200, league_code=None):
         if entity_type != "tracks":
             raise ValueError("League filtering is available only for tracks.")
         statement = statement.where(func.lower(Track.league_code) == normalized_league)
-    normalized_query = str(query or "").strip().casefold()
+    normalized_query = str(query or "").strip().lower()
     if normalized_query:
         pattern = f"%{normalized_query}%"
         if entity_type == "players":
@@ -793,7 +793,7 @@ def add_alias(session, entity_type, entity_id, payload):
     alias_identity = _alias_identity_column(entity_type, alias_model)
     conditions = [
         alias_identity == entity_id,
-        func.lower(alias_model.alias_value) == value.casefold(),
+        func.lower(alias_model.alias_value) == value.lower(),
     ]
     alias_type = "alias"
     if entity_type == "players":
@@ -806,7 +806,7 @@ def add_alias(session, entity_type, entity_id, payload):
         raise ValueError("That alias is already assigned to this object.")
     if entity_type == "teams":
         conflicting = session.scalar(
-            select(alias_model).where(func.lower(alias_model.alias_value) == value.casefold())
+            select(alias_model).where(func.lower(alias_model.alias_value) == value.lower())
         )
         if conflicting is not None:
             raise ValueError("That alias is already assigned to another object.")
@@ -817,7 +817,7 @@ def add_alias(session, entity_type, entity_id, payload):
             .join(Track, Track.track_id == TrackAlias.track_id)
             .where(
                 func.lower(Track.league_code) == track.league_code.casefold(),
-                func.lower(TrackAlias.alias_value) == value.casefold(),
+                func.lower(TrackAlias.alias_value) == value.lower(),
             )
         )
         if conflicting is not None:
@@ -825,7 +825,7 @@ def add_alias(session, entity_type, entity_id, payload):
         canonical_track = session.scalar(
             select(Track).where(
                 func.lower(Track.league_code) == track.league_code.casefold(),
-                func.lower(Track.canonical_name) == value.casefold(),
+                func.lower(Track.canonical_name) == value.lower(),
             )
         )
         if canonical_track is not None:
@@ -834,7 +834,7 @@ def add_alias(session, entity_type, entity_id, payload):
             raise ValueError("That value is another track's canonical name in this league.")
     if entity_type == "teams":
         canonical_team = session.scalar(
-            select(Team).where(func.lower(Team.canonical_tag) == value.casefold())
+            select(Team).where(func.lower(Team.canonical_tag) == value.lower())
         )
         if canonical_team is not None:
             if canonical_team.team_id == entity_id:
