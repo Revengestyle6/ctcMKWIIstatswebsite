@@ -1,5 +1,11 @@
 # Phase 4 Runtime Secrets
 
+Cloud resource names and provider-side settings below are recorded provisioning
+evidence from July–August 2026, not a fresh cloud audit. Check the
+[dated resource inventory](../../docs/operations/phase-4-resource-inventory.md)
+and reconcile live settings before operating on them. Repository configuration
+files remain the source for the behavior they explicitly define.
+
 All secrets use user-managed replication in `us-central1`. Version `1` was
 created and enabled July 25, 2026.
 

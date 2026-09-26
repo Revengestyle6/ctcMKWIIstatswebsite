@@ -5,6 +5,7 @@ import stats_db as stats
 from admin_auth import AdminActor, record_audit
 from archive_storage import ArchiveStorage, accepted_object_key
 from import_json_to_db import import_editor_match
+from match_review import duplicate_commit_response, mkc_profiles_from_entries, unapproved_entries
 from match_upload import (
     AdditionCapture,
     find_duplicate_source,
@@ -15,7 +16,6 @@ from match_upload import (
     validate_committable_match,
 )
 from models import Match, ReviewSubmission, SourceFile
-from routes.common import duplicate_commit_response, mkc_profiles_from_entries, unapproved_entries
 from sqlalchemy import select
 
 

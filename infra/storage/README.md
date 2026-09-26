@@ -1,6 +1,13 @@
 # Cloud Storage Configuration
 
-The production topology uses five private, regional Standard-class buckets:
+Cloud resource names and provider-side settings below are recorded provisioning
+evidence from July–August 2026, not a fresh cloud audit. Check the
+[dated resource inventory](../../docs/operations/phase-4-resource-inventory.md)
+and reconcile live settings before operating on them. Repository configuration
+files remain the source for the behavior they explicitly define.
+
+The recorded staging and future-production topology uses five private, regional
+Standard-class buckets:
 
 | Bucket | Purpose |
 | --- | --- |
@@ -31,8 +38,9 @@ The July 25, 2026 staging rebuild temporarily uploaded 464 repository files unde
 `bootstrap/JSON`. The controlled bootstrap job imported 244 authoritative sources,
 promoted all 244 to `accepted/`, and reported zero failures. After database and
 object counts were verified, the temporary prefix was deleted. Those temporary
-objects remain recoverable for the bucket's seven-day soft-delete window; the
-244 live `accepted/` objects are the durable staging archive.
+objects were recoverable only during the bucket's seven-day soft-delete window,
+which has elapsed. The 244 accepted objects were the verified count for that
+rebuild, not a claim about the current bucket inventory.
 
 Lifecycle configuration can be reconciled explicitly:
 

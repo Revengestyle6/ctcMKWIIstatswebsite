@@ -14,8 +14,8 @@ import {
   MetricGrid,
 } from "../components/dashboard/DashboardPrimitives";
 import { useLeague } from "../context/LeagueContext";
+import { matchHistoryPath } from "../features/match-history/matchHistoryLinks";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
-import { matchHistoryPath } from "../matchHistoryLinks";
 import {
   fetchTrackDashboard,
   type TeamTrackPerformance,

@@ -1,71 +1,34 @@
-# Regression Baselines
+# Regression baselines
 
-This directory contains snapshots used to detect unintended changes during the
-production-readiness cleanup and refactor.
+`phase-0-2026-07-19/` preserves the approved historical baseline: 17 API responses,
+archive/registry fingerprints, SQLite-era table and integrity evidence, identity
+partition comparisons, and desktop/mobile screenshots for ten routes. These files
+are evidence from that date, not assertions that today's expanded product has the
+same schema, counts, or presentation.
 
-## Phase 0 Baseline
+Do not replace baseline fixtures to make an unintended change pass. Normal
+verification uses the current PostgreSQL tests and browser smoke suite in
+[CONTRIBUTING](../../CONTRIBUTING.md).
 
-The July 19, 2026 baseline contains:
+## Historical capture tooling
 
-- Canonical JSON responses from 17 representative read-only API requests.
-- A manifest with endpoint, status, byte size, and SHA-256 for each fixture.
-- SQLite integrity and foreign-key results.
-- Counts for every SQLAlchemy table.
-- Database-health status and stable issue keys.
-- A fingerprint of the archived JSON tree and identity/normalization registries.
-- A comparison between the working player identity partition and a clean rebuild.
-- A post-approval verification showing that the confirmed identity registry produces
-  exactly the working 268-player partition.
-- Desktop and mobile screenshots for ten representative application routes.
+The original SQLite capture and comparison utilities are retained as
+[non-executable source snapshots](../archive/sqlite-retired/README.md). Their old
+`--db`/`--rebuild` examples are not supported PostgreSQL commands. Rebuild a current
+disposable database with Alembic and the importer described in
+[local setup](../development/local-development-startup.md).
 
-The health response replaces its capture timestamp and absolute local database path
-with placeholders. Other data is preserved so regressions remain visible.
+## Deliberate UI capture
 
-## Capture Command
-
-From `backend/`:
-
-```bash
-../.venv-wsl/bin/python scripts/capture_phase0_baseline.py
-```
-
-The script is deliberately read-only with respect to the working database. It also
-removes `DATABASE_URL` from its own process before importing the application so a
-developer cannot accidentally snapshot staging or production.
-
-To reproduce and compare player identities without overwriting the working database:
+The current Playwright capture file is
+[capture-baseline.spec.ts](../../frontend/e2e/capture-baseline.spec.ts). Install
+Chromium once, configure a local database/API, then from `frontend/` run:
 
 ```bash
-../.venv-wsl/bin/python import_json_to_db.py \
-  --db /tmp/ctc_phase0_rebuild.sqlite \
-  --rebuild
-
-../.venv-wsl/bin/python scripts/compare_identity_partitions.py \
-  data/ctc_stats.sqlite \
-  /tmp/ctc_phase0_rebuild.sqlite
-```
-
-Do not automatically replace baseline fixtures after a refactor. Review the semantic
-diff first. Update a fixture only when the changed behavior is intentional and
-documented.
-
-## UI Capture Command
-
-Install the Playwright Chromium runtime once:
-
-```bash
-cd frontend
 npx playwright install chromium
+PYTHON_BIN=../.venv/bin/python npm run baseline:ui
 ```
 
-Then capture the UI baseline with the local API and Vite server managed by
-Playwright:
-
-```bash
-PYTHON_BIN=../.venv-wsl/bin/python npm run baseline:ui
-```
-
-Use a different `PYTHON_BIN` when the virtual environment lives elsewhere. The
-capture covers ten routes in desktop and Pixel 7 viewports, dismisses the music
-prompt, disables CSS animations during capture, and writes approved JPEGs under the
-dated baseline's `ui/` directory.
+This command writes into the dated baseline directory. Review every changed image
+before accepting new evidence. It is deliberately separate from `npm run test:e2e`
+and does not approve visual changes automatically.

@@ -19,3 +19,12 @@ supersedes it.
 - [ADR 0002: PostgreSQL and durable JSON archive](0002-postgresql-and-durable-json-archive.md)
 - [ADR 0003: Firebase administrator authentication](0003-firebase-administrator-authentication.md)
 - [ADR 0004: Administrator access and public review queue](0004-administrator-access-and-public-review-queue.md)
+
+## Reading historical decisions against current code
+
+ADR 0002 originally allowed selected SQLite development/tests. The subsequent
+PostgreSQL-only implementation retired those adapters and tools; current setup and
+tests require PostgreSQL. Preserve that ADR's historical reasoning and consult the
+[data model](../architecture/data-model.md) and [local setup](../development/local-development-startup.md)
+for the implemented state. Likewise, accepted production direction does not mean
+production cutover has occurred; see the [staging roadmap](../roadmap/README.md).

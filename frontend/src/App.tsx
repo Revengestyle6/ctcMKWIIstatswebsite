@@ -4,20 +4,20 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import { LeagueProvider } from "./context/LeagueContext";
 
-const BestMatchups = lazy(() => import("./components/BestMatchups"));
+const BestMatchups = lazy(() => import("./pages/BestMatchups"));
 const AdminAccessPage = lazy(() => import("./pages/AdminAccessPage"));
 const AdminAliasManagementPage = lazy(() => import("./pages/AdminAliasManagementPage"));
 const AdminReviewQueuePage = lazy(() => import("./pages/AdminReviewQueuePage"));
 const DatabaseHealthDashboard = lazy(() => import("./pages/DatabaseHealthDashboard"));
 const HomePage = lazy(() => import("./pages/HomePage"));
-const MatchHistory = lazy(() => import("./components/MatchHistory"));
-const MatchJsonEditor = lazy(() => import("./components/MatchJsonEditor"));
+const MatchHistory = lazy(() => import("./features/match-history/MatchHistory"));
+const MatchJsonEditor = lazy(() => import("./features/match-editor/MatchJsonEditor"));
 const MusicPlayer = lazy(() => import("./components/MusicPlayer"));
 const PlayerDashboard = lazy(() => import("./pages/PlayerDashboard"));
-const PlayerStats = lazy(() => import("./components/PlayerStats"));
+const PlayerStats = lazy(() => import("./pages/PlayerStats"));
 const StandingsPage = lazy(() => import("./pages/StandingsPage"));
 const TeamDashboard = lazy(() => import("./pages/TeamDashboard"));
-const TopTeamPlayers = lazy(() => import("./components/TopTeamPlayers"));
+const TopTeamPlayers = lazy(() => import("./pages/TopTeamPlayers"));
 const TrackAnalyticsPage = lazy(() => import("./pages/TrackAnalyticsPage"));
 const TrackDashboard = lazy(() => import("./pages/TrackDashboard"));
 const PlayerDirectory = lazy(() =>

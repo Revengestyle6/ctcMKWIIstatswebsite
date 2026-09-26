@@ -1,5 +1,11 @@
 # Artifact Registry And Cloud Build
 
+Cloud resource names and provider-side settings below are recorded provisioning
+evidence from July–August 2026, not a fresh cloud audit. Check the
+[dated resource inventory](../../docs/operations/phase-4-resource-inventory.md)
+and reconcile live settings before operating on them. Repository configuration
+files remain the source for the behavior they explicitly define.
+
 Artifact Registry is Google Cloud's private package and Docker-image repository.
 This project uses it to preserve immutable Flask API/job images in the same region
 as Cloud Run. Digest pinning proves which exact bytes a job or service executes.
@@ -18,7 +24,11 @@ repository. They do not use the Editor-privileged default Compute service accoun
 | Repository | `ctc-backend` |
 | Format | Docker |
 | Tag policy | Immutable |
-| Serving image digest | `sha256:3be6fc168e1a703d973b15aeca16d8efaa98bdca7a84517862ce2a0654a37e9b` |
+| Recorded provisioning image digest | `sha256:3be6fc168e1a703d973b15aeca16d8efaa98bdca7a84517862ce2a0654a37e9b` |
+
+The digest above is provisioning evidence, not the current serving revision.
+Resolve the image attached to the active Cloud Run revision when investigating a
+release; CI deploys a new digest for each accepted image build.
 
 Build from the repository root with a unique tag, then deploy by the returned
 digest:

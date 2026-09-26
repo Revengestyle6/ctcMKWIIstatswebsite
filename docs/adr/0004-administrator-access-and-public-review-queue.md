@@ -54,5 +54,5 @@ survive Cloud Run lifecycle events.
 ## Acceptance
 
 Accepted by the owner on July 19, 2026. Detailed schema and workflow proposals are
-recorded in `docs/md/phase-3-technical-specification.md`. The owner approved the
+recorded in `docs/archive/production-readiness/phase-3-technical-specification.md`. The owner approved the
 specification checkpoint before implementation began.

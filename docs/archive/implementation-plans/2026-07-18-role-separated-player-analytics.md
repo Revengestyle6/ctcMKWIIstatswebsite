@@ -27,7 +27,7 @@
 - Modify `frontend/src/components/PlayerStats.tsx`: replace mixed averages and formatted strings with structured role-specific data.
 - Modify `frontend/src/components/TopTeamPlayers.tsx`: role-specific player roster ranking while leaving team track totals complete.
 - Modify `frontend/src/components/TopTracks.tsx`: role-specific player rankings while leaving team rankings complete.
-- Modify `docs/md/dashboard-analytics-methodology.md`: publish the final formulas and shock-data limitation.
+- Modify `docs/features/dashboard-analytics-methodology.md`: publish the final formulas and shock-data limitation.
 
 ### Task 1: Shared Role Classification And Metric Engine
 
@@ -867,7 +867,7 @@ git commit -m "feat: separate legacy player analytics by role"
 ### Task 8: Methodology And End-To-End Verification
 
 **Files:**
-- Modify: `docs/md/dashboard-analytics-methodology.md`
+- Modify: `docs/features/dashboard-analytics-methodology.md`
 
 - [ ] **Step 1: Update the published analytics formulas**
 
