@@ -262,6 +262,36 @@ class SiblingTeamEntryTests(unittest.TestCase):
                 match_number_override=1,
             )
 
+    def test_archive_correction_merges_extra_raw_team_into_one_of_two_entries(self):
+        from import_json_to_db import (
+            JSON_ROOT,
+            PlayerIdentities,
+            import_file,
+            load_archive_team_aliases,
+        )
+        from models import Match, MatchPlayer
+
+        path = JSON_ROOT / "ctc/s1/d1_2/W8 6c O.json"
+        imported, skipped = import_file(
+            self.session,
+            path,
+            load_archive_team_aliases(self.session),
+            PlayerIdentities(),
+        )
+        self.assertEqual((imported, skipped), (1, 0))
+        match = self.session.scalar(select(Match))
+        sides = self.session.scalars(
+            select(MatchTeam).where(MatchTeam.match_id == match.match_id)
+        ).all()
+        self.assertEqual(len(sides), 2)
+        self.assertEqual(len({side.team_season_entry_id for side in sides}), 2)
+        merged = next(side for side in sides if side.raw_team_key == "6¢|1")
+        self.assertEqual(merged.final_score, 394)
+        players = self.session.scalars(
+            select(MatchPlayer).where(MatchPlayer.match_team_id == merged.match_team_id)
+        ).all()
+        self.assertEqual(len(players), 6)
+
     def test_unaccounted_sibling_match_keeps_two_records_and_entry_rosters(self):
         document = aggregate_document("totals")
         document.update(league="gsc", season="s16", division="d1")

@@ -854,9 +854,13 @@ def import_match(
         review_notes.append(
             f"Expected 2 resolved teams, found {len(set(resolved_team_keys))} from {len(teams)} raw team objects."
         )
-    if len({entry.team_season_entry_id for _alias, _team, entry in resolved_teams.values()}) != len(
-        resolved_teams
-    ):
+    resolved_entry_count = len(
+        {entry.team_season_entry_id for _alias, _team, entry in resolved_teams.values()}
+    )
+    # Historical parsing corrections can merge extra raw team blocks into either
+    # of two competing entries. Reject alias collapse when it loses an opponent,
+    # while preserving those archive corrections and their players/scores.
+    if resolved_entry_count != len(resolved_teams) and resolved_entry_count != 2:
         raise ValueError("A match must resolve to two distinct team season entries.")
 
     kind = match_type(match_data)
