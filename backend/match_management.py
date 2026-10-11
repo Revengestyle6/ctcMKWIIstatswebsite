@@ -38,6 +38,9 @@ from models import (
     Team,
     TeamSeasonEntry,
     Track,
+    UnaccountedMatch,
+    UnaccountedPlayerScore,
+    UnaccountedTeamAward,
 )
 from sqlalchemy import delete, func, select, update
 
@@ -93,6 +96,22 @@ def match_inventory(session, match_id: int) -> dict:
         ),
         "penalties": _ids(session, Penalty.penalty_id, Penalty.match_id == match_id),
     }
+    for model, column, condition in (
+        (UnaccountedMatch, UnaccountedMatch.match_id, UnaccountedMatch.match_id == match_id),
+        (
+            UnaccountedPlayerScore,
+            UnaccountedPlayerScore.unaccounted_player_score_id,
+            UnaccountedPlayerScore.match_player_id.in_(player_ids),
+        ),
+        (
+            UnaccountedTeamAward,
+            UnaccountedTeamAward.unaccounted_team_award_id,
+            UnaccountedTeamAward.match_team_id.in_(team_ids),
+        ),
+    ):
+        counts[model.__tablename__] = _count(session, model, condition)
+        record_ids[model.__tablename__] = _ids(session, column, condition)
+
     teams = session.execute(
         select(Team.team_id, Team.canonical_name, TeamSeasonEntry.clan_tag)
         .join(TeamSeasonEntry, TeamSeasonEntry.team_id == Team.team_id)
@@ -262,6 +281,14 @@ def _delete_match_rows(session, match: Match):
     session.execute(delete(RacePlayerResult).where(RacePlayerResult.race_id.in_(race_ids)))
     session.execute(delete(RaceTeamResult).where(RaceTeamResult.race_id.in_(race_ids)))
     session.execute(delete(Penalty).where(Penalty.match_id == match_id))
+    player_ids = select(MatchPlayer.match_player_id).where(MatchPlayer.match_team_id.in_(team_ids))
+    session.execute(
+        delete(UnaccountedPlayerScore).where(UnaccountedPlayerScore.match_player_id.in_(player_ids))
+    )
+    session.execute(
+        delete(UnaccountedTeamAward).where(UnaccountedTeamAward.match_team_id.in_(team_ids))
+    )
+    session.execute(delete(UnaccountedMatch).where(UnaccountedMatch.match_id == match_id))
     session.execute(delete(MatchPlayer).where(MatchPlayer.match_team_id.in_(team_ids)))
     session.execute(delete(Race).where(Race.match_id == match_id))
     session.execute(delete(MatchTableRef).where(MatchTableRef.match_id == match_id))

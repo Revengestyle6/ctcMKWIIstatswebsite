@@ -382,6 +382,12 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
       team_id: String(teamId),
       min_races: String(data.minimum_races),
     });
+    if (
+      data.players.some(
+        (player) => player.player_id === playerId && player.metrics.unaccounted_matches
+      )
+    )
+      params.set("include_unaccounted", "true");
     if (data.scope.season) params.set("season", data.scope.season);
     if (data.scope.division) params.set("division", data.scope.division);
     return `/players/${playerId}?${params.toString()}`;
@@ -458,6 +464,11 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
                           className="font-semibold text-blue-300 hover:text-blue-200"
                         >
                           {row.name}
+                          {row.metrics.unaccounted_matches ? (
+                            <span className="block text-xs text-amber-300">
+                              Includes {row.metrics.unaccounted_matches} unaccounted
+                            </span>
+                          ) : null}
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-gray-400">
@@ -477,6 +488,7 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
                         {row.last_appearance.match_number
                           ? `M${row.last_appearance.match_number}`
                           : ""}
+                        {row.last_appearance.score_source === "unaccounted" ? " · Unaccounted" : ""}
                       </td>
                     </tr>
                   )
@@ -511,6 +523,11 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
                           className="font-semibold text-blue-300 hover:text-blue-200"
                         >
                           {row.name}
+                          {row.metrics.unaccounted_matches ? (
+                            <span className="block text-xs text-amber-300">
+                              Includes {row.metrics.unaccounted_matches} unaccounted
+                            </span>
+                          ) : null}
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-gray-400">
@@ -542,6 +559,7 @@ export function TeamRosterView({ data, teamId }: { data: TeamRoster; teamId: num
                         {row.last_appearance.match_number
                           ? `M${row.last_appearance.match_number}`
                           : ""}
+                        {row.last_appearance.score_source === "unaccounted" ? " · Unaccounted" : ""}
                       </td>
                     </tr>
                   )

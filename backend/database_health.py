@@ -444,6 +444,7 @@ def _match_and_result_issues(session):
             """
                 SELECT m.match_id AS id, m.match_label AS label, count(r.race_id) AS value
                 FROM matches m LEFT JOIN races r ON r.match_id = m.match_id
+                WHERE NOT EXISTS (SELECT 1 FROM unaccounted_matches u WHERE u.match_id = m.match_id)
                 GROUP BY m.match_id HAVING count(r.race_id) != m.races_played
             """,
             "The number of race rows differs from matches.races_played.",

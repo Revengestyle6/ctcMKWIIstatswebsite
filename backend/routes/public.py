@@ -15,6 +15,7 @@ from track_analytics import get_track_analytics, get_track_dashboard
 from routes.common import (
     division_arg,
     error_response,
+    include_unaccounted_arg,
     league_arg,
     match_set_arg,
     minimum_races_arg,
@@ -82,6 +83,7 @@ def player_avg():
             season=season_arg(),
             role=role_arg(),
             match_set=match_set_arg(),
+            include_unaccounted=include_unaccounted_arg(),
             league=league_arg(),
         )
         return jsonify(result)
@@ -188,6 +190,7 @@ def api_player_dashboard_overview(player_id):
                 min_races=minimum_races_arg(),
                 role=role_arg(),
                 match_set=match_set_arg(),
+                include_unaccounted=include_unaccounted_arg(),
             )
         )
     except Exception as error:
@@ -206,6 +209,7 @@ def api_player_dashboard_performance(player_id):
                 team_id=optional_int_arg("team_id"),
                 role=role_arg(),
                 match_set=match_set_arg(),
+                include_unaccounted=include_unaccounted_arg(),
             )
         )
     except Exception as error:
@@ -243,6 +247,7 @@ def api_team_dashboard_overview(team_id):
                 opponent_team_id=optional_int_arg("opponent_team_id"),
                 min_races=minimum_races_arg(),
                 match_set=match_set_arg(),
+                include_unaccounted=include_unaccounted_arg(),
             )
         )
     except Exception as error:
@@ -262,6 +267,7 @@ def api_team_dashboard_roster(team_id):
                 min_races=minimum_races_arg(),
                 role=role_arg(),
                 match_set=match_set_arg(),
+                include_unaccounted=include_unaccounted_arg(),
             )
         )
     except Exception as error:
@@ -355,6 +361,7 @@ def api_top_team_players():
                 season=season_arg(),
                 role=role,
                 match_set=match_set_arg(),
+                include_unaccounted=include_unaccounted_arg(),
                 league=league_arg(),
             )
         )

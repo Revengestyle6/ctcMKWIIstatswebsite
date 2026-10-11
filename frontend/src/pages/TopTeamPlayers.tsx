@@ -6,6 +6,7 @@ import { LegacyStatHeader } from "../components/LegacyStatHeader";
 import { MatchSetToggle } from "../components/MatchSetToggle";
 import { RoleModeToggle } from "../components/RoleModeToggle";
 import SeasonDivisionSelector from "../components/SeasonDivisionSelector";
+import { UnaccountedToggle } from "../components/UnaccountedToggle";
 import { type MatchSet, parseMatchSet } from "../config/matchSets";
 import { useLeague } from "../context/LeagueContext";
 import type { LegacyTeamRosterPlayer, LegacyTeamTrackRow, PlayerRoleMode } from "../dashboardApi";
@@ -22,6 +23,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
   const matchSet = parseMatchSet(searchParams.get("match_set"));
+  const includeUnaccounted = searchParams.get("include_unaccounted") === "true";
   const [teams, setTeams] = useState<string[]>([]);
   const [selectedTeam, setSelectedTeam] = useState("");
   const [teamIds, setTeamIds] = useState<Record<string, number>>({});
@@ -46,6 +48,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
     minRaces,
     role,
     matchSet,
+    includeUnaccounted,
   ]);
   const trackKey = JSON.stringify([league, selectedTeam, season, division, matchSet]);
   const topPlayers = playerResult?.key === playerKey ? playerResult.rows : [];
@@ -122,6 +125,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
       division,
       role,
       match_set: matchSet,
+      include_unaccounted: includeUnaccounted ? "true" : undefined,
     })
       .then((rows) => {
         if (!cancelled) setPlayerResult({ key: playerKey, rows });
@@ -143,7 +147,17 @@ export default function TopTeamPlayers(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [league, selectedTeam, season, division, minRaces, role, matchSet, playerKey]);
+  }, [
+    league,
+    selectedTeam,
+    season,
+    division,
+    minRaces,
+    role,
+    matchSet,
+    includeUnaccounted,
+    playerKey,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -255,6 +269,7 @@ export default function TopTeamPlayers(): React.JSX.Element {
               />
             </div>
             <RoleModeToggle value={role} onChange={updateRole} disabled={playersLoading} />
+            <UnaccountedToggle />
             <MatchSetToggle
               value={matchSet}
               onChange={updateMatchSet}
@@ -379,6 +394,7 @@ function PlayerTable({
               const metrics = row.metrics;
               const query = new URLSearchParams({ season, division, role });
               query.set("match_set", matchSet);
+              if (metrics.unaccounted_matches) query.set("include_unaccounted", "true");
               if (teamId) query.set("team_id", String(teamId));
               return (
                 <tr
@@ -391,6 +407,11 @@ function PlayerTable({
                       className="text-blue-200 hover:text-blue-100"
                     >
                       {row.name}
+                      {row.metrics.unaccounted_matches ? (
+                        <span className="block text-xs text-amber-300">
+                          Includes {row.metrics.unaccounted_matches} unaccounted
+                        </span>
+                      ) : null}
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-right">{row.matches}</td>

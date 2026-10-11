@@ -33,8 +33,14 @@ def validate_submission(session, match_data: dict) -> tuple[bytes, str, list[str
     if new_entries:
         warnings.append(f"Administrators must review {len(new_entries)} new database entries.")
     tracks = match_data.get("tracks") or []
-    if result_type(match_data) == "played" and len(tracks) != 12:
-        warnings.append(f"This match contains {len(tracks)} races instead of the usual 12.")
+    unaccounted = match_data.get("score_source") == "unaccounted"
+    if unaccounted:
+        warnings.append(
+            "Unaccounted match: race and track data are unavailable; only totals and recorded GPs can contribute to analytics."
+        )
+    race_count = match_data["races_played"] if unaccounted else len(tracks)
+    if result_type(match_data) == "played" and race_count != 12:
+        warnings.append(f"This match contains {race_count} races instead of the usual 12.")
     if any((team.get("penalties") or 0) for team in (match_data.get("teams") or {}).values()):
         warnings.append("One or more teams has penalty points.")
     missing_roles = 0

@@ -13,12 +13,14 @@ from models import (
     RacePlayerResult,
     Team,
     TeamSeasonEntry,
+    UnaccountedMatch,
 )
 from player_dashboard_stats import _team_logo_url
 from player_display_names import _display_names_for_players
 from player_role_analytics import confirmed_5v5_race_ids, role_coverage, valid_race_score
 from sqlalchemy import select
 from stats_queries import _get_scope, list_playoff_series
+from unaccounted_matches import aggregate_player_rows
 
 INACTIVE_STATUSES = frozenset({"dropped", "disqualified"})
 LEADERBOARD_ROLES = ("runner", "bagger")
@@ -34,6 +36,7 @@ def _empty_record(entry, team, logo_url, conference=None):
         "logo_url": logo_url,
         "status": entry.competition_status,
         "status_note": entry.competition_status_note,
+        "unaccounted_matches": 0,
         "played": 0,
         "wins": 0,
         "ties": 0,
@@ -264,6 +267,23 @@ def _role_gp_average(points, role_race_count):
     return round(points / role_gps, 2) if role_gps else None
 
 
+def _leaderboard_player(player_id, entry_id, team_id, tag, status):
+    return {
+        "player_id": player_id,
+        "team_id": team_id,
+        "team_season_entry_id": entry_id,
+        "team_tag": tag,
+        "team_status": status,
+        "gp_keys": set(),
+        "aggregate_gps": 0,
+        "unaccounted_match_ids": set(),
+        "runner_points": 0,
+        "runner_races": 0,
+        "bagger_points": 0,
+        "bagger_races": 0,
+    }
+
+
 def _player_leaderboard(session, scope, records):
     excluded_races = analytics_excluded_race_ids(session)
     rows = session.execute(
@@ -308,18 +328,13 @@ def _player_leaderboard(session, scope, records):
         key = (result.player_id, row.team_season_entry_id)
         data = player_data.setdefault(
             key,
-            {
-                "player_id": result.player_id,
-                "team_id": row.team_id,
-                "team_season_entry_id": row.team_season_entry_id,
-                "team_tag": row.clan_tag,
-                "team_status": row.competition_status,
-                "gp_keys": set(),
-                "runner_points": 0,
-                "runner_races": 0,
-                "bagger_points": 0,
-                "bagger_races": 0,
-            },
+            _leaderboard_player(
+                result.player_id,
+                row.team_season_entry_id,
+                row.team_id,
+                row.clan_tag,
+                row.competition_status,
+            ),
         )
         participated = result.position is not None or result.score is not None
         role = classification.get(result.race_player_result_id, "unknown")
@@ -331,12 +346,38 @@ def _player_leaderboard(session, scope, records):
             data[f"{role}_points"] += int(result.score)
         canonical_names[result.player_id] = row.canonical_name
 
+    aggregate_team_matches = {}
+    aggregate_rows = aggregate_player_rows(session, scope)
+    for row in aggregate_rows:
+        score = row.UnaccountedPlayerScore
+        entry_id = row.team_season_entry_id
+        aggregate_team_matches[(entry_id, row.match_id)] = row.races_played / 4
+        key = (row.player_id, entry_id)
+        data = player_data.setdefault(
+            key,
+            _leaderboard_player(
+                row.player_id, entry_id, row.team_id, row.clan_tag, row.competition_status
+            ),
+        )
+        data[f"{score.role}_points"] += score.points
+        data[f"{score.role}_races"] += score.races
+        data["unaccounted_match_ids"].add(row.match_id)
+        if score.gp_number and score.races:
+            data["gp_keys"].add((row.match_id, score.gp_number))
+        elif not score.gp_number:
+            data["aggregate_gps"] += score.races / 4
+        canonical_names[row.player_id] = row.canonical_name
+    aggregate_team_gps = defaultdict(float)
+    for (entry_id, _match_id), count in aggregate_team_matches.items():
+        aggregate_team_gps[entry_id] += count
+
     display_names = _display_names_for_players(session, canonical_names.keys(), canonical_names)
     leaderboard = []
     for data in player_data.values():
         entry_gp_races = team_gp_races[data["team_season_entry_id"]]
-        team_gp_count = len(entry_gp_races)
-        played_gps = len(data.pop("gp_keys"))
+        team_gp_count = len(entry_gp_races) + aggregate_team_gps[data["team_season_entry_id"]]
+        played_gps = len(data.pop("gp_keys")) + data.pop("aggregate_gps")
+        data["unaccounted_matches"] = len(data.pop("unaccounted_match_ids"))
         role_gp_counts = {
             role: _race_equivalent_gps(data[f"{role}_races"]) for role in LEADERBOARD_ROLES
         }
@@ -440,6 +481,11 @@ def get_division_standings(session, *, league, season, division):
         by_match[row.match_id].append(row)
         match_metadata[row.match_id] = row
 
+    unaccounted_ids = set(
+        session.scalars(
+            select(UnaccountedMatch.match_id).where(UnaccountedMatch.match_id.in_(by_match))
+        )
+    )
     matches = []
     for match_id, teams in by_match.items():
         teams = [team for team in teams if team.team_season_entry_id in records]
@@ -458,6 +504,8 @@ def get_division_standings(session, *, league, season, division):
             entry_id = team.team_season_entry_id
             opponent_id = opponent.team_season_entry_id
             record = records[entry_id]
+            if match_id in unaccounted_ids:
+                record["unaccounted_matches"] += 1
             match_teams.append(
                 {
                     "team_id": record["team_id"],
@@ -478,6 +526,7 @@ def get_division_standings(session, *, league, season, division):
                 "match_id": match_id,
                 "match_number": metadata.match_number,
                 "label": metadata.match_label,
+                "score_source": "unaccounted" if match_id in unaccounted_ids else "accounted",
                 "result_type": metadata.result_type,
                 "standings_adjusted": adjusted,
                 "teams": match_teams,

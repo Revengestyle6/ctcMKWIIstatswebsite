@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass
 
 from database import get_session_factory
@@ -24,6 +25,9 @@ from models import (
     TeamSeasonEntry,
     Track,
     TrackAlias,
+    UnaccountedMatch,
+    UnaccountedPlayerScore,
+    UnaccountedTeamAward,
 )
 from player_display_names import _display_names_for_players
 from sqlalchemy import and_, desc, func, select
@@ -627,7 +631,12 @@ def _playoff_match_display_label(
 ):
     series_label = _playoff_series_display_label(stage, series_number, config)
     if series_label and series_match_number:
-        return f"{series_label} — Match {series_match_number}"
+        suffix = (
+            stored_label[stored_label.index(" [Unaccounted") :]
+            if " [Unaccounted" in stored_label
+            else ""
+        )
+        return f"{series_label} — Match {series_match_number}{suffix}"
     return stored_label
 
 
@@ -701,9 +710,18 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
             scores_by_match.setdefault(row.match_id, []).append(str(row.final_score))
             statuses_by_match.setdefault(row.match_id, []).append(row.competition_status)
 
+        aggregate_modes = dict(
+            session.execute(
+                select(UnaccountedMatch.match_id, UnaccountedMatch.entry_mode).where(
+                    UnaccountedMatch.match_id.in_(match_ids)
+                )
+            ).all()
+        )
         team_query = team.strip().lower() if team else ""
         matches = [
             {
+                "score_source": "unaccounted" if row.match_id in aggregate_modes else "accounted",
+                "entry_mode": aggregate_modes.get(row.match_id),
                 "match_id": row.match_id,
                 "match_type": row.match_type,
                 "result_type": row.result_type,
@@ -926,6 +944,33 @@ def get_match_detail(match_id, session=None):
             if playoff_series is not None
             else None
         )
+        aggregate = session.get(UnaccountedMatch, match_id)
+        aggregate_scores = defaultdict(list)
+        aggregate_awards = defaultdict(list)
+        if aggregate:
+            for row in session.scalars(
+                select(UnaccountedPlayerScore)
+                .join(
+                    MatchPlayer,
+                    MatchPlayer.match_player_id == UnaccountedPlayerScore.match_player_id,
+                )
+                .join(MatchTeam, MatchTeam.match_team_id == MatchPlayer.match_team_id)
+                .where(MatchTeam.match_id == match_id)
+            ):
+                aggregate_scores[row.match_player_id].append(
+                    {
+                        key: getattr(row, key)
+                        for key in ("gp_number", "role", "points", "races", "disconnection_points")
+                    }
+                )
+            for row in session.scalars(
+                select(UnaccountedTeamAward)
+                .join(MatchTeam, MatchTeam.match_team_id == UnaccountedTeamAward.match_team_id)
+                .where(MatchTeam.match_id == match_id)
+            ):
+                aggregate_awards[row.match_team_id].append(
+                    {key: getattr(row, key) for key in ("gp_number", "points", "reason")}
+                )
         race_rows = session.execute(
             select(Race.race_id, Race.race_number, Race.track_name_raw, Track.canonical_name)
             .join(Track, Track.track_id == Race.track_id)
@@ -1058,6 +1103,7 @@ def get_match_detail(match_id, session=None):
                     "total": row.raw_total_score,
                     "penalties": row.player_penalty_points,
                     "subbed_out": row.subbed_out,
+                    "aggregate_scores": aggregate_scores[row.match_player_id],
                     "scores": scores_by_match_player.get(row.match_player_id, []),
                     "positions": positions_by_match_player.get(row.match_player_id, []),
                     "roles": roles_by_match_player.get(row.match_player_id, []),
@@ -1084,6 +1130,7 @@ def get_match_detail(match_id, session=None):
                     "team_penalties": row.team_penalty_points,
                     "final_score": row.final_score,
                     "penalty": team_penalties.get(row.match_team_id, {"points": 0, "notes": ""}),
+                    "aggregate_awards": aggregate_awards[row.match_team_id],
                     "missing_player": {
                         "scores": missing_scores_by_team.get(row.match_team_id, []),
                         "reasons": missing_reasons_by_team.get(row.match_team_id, []),
@@ -1116,6 +1163,8 @@ def get_match_detail(match_id, session=None):
                 cumulative.append(running)
 
         return {
+            "score_source": "unaccounted" if aggregate else "accounted",
+            "entry_mode": aggregate.entry_mode if aggregate else None,
             "match_id": match.match_id,
             "league": season.league_code if season else "",
             "match_type": match.match_type,

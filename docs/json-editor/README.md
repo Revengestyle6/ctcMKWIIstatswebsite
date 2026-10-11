@@ -1,5 +1,7 @@
 # JSON editor
 
+Matches without race JSON use the [unaccounted match entry reference](unaccounted-matches.md), including GP/total modes, awards, validation, and analytics eligibility.
+
 The JSON editor turns a match document into a reviewed, reproducible database import. Local editing and server previews are public. A review submission stores a proposal; only an authenticated application administrator can accept a match into analytics. The database transaction commits before the accepted archive object is promoted.
 
 ## Reading order
@@ -45,12 +47,14 @@ flowchart LR
 | --- | --- |
 | [MatchJsonEditor.tsx](../../frontend/src/features/match-editor/MatchJsonEditor.tsx) | Route screen at `/json-editor`; owns draft state, effects, UI actions, approval decisions, preview/submit/edit sequencing. |
 | [matchJsonEditorModel.ts](../../frontend/src/features/match-editor/matchJsonEditorModel.ts) | `parseMatchJson`, `racesFromMatch`, `compileMatch`; converts source JSON to editable races and back without network calls. |
+| [UnaccountedScoreEntry.tsx](../../frontend/src/features/match-editor/UnaccountedScoreEntry.tsx), [unaccountedMatchModel.ts](../../frontend/src/features/match-editor/unaccountedMatchModel.ts) | GP/total role entry, aggregate draft compilation, and mode changes. |
 | [matchJsonEditorValidation.ts](../../frontend/src/features/match-editor/matchJsonEditorValidation.ts) | `validation`, `playoffConsistencyIssues`, identity/track matching, issue and review response types. |
 | [ExistingPlayerPicker.tsx](../../frontend/src/features/match-editor/ExistingPlayerPicker.tsx), [TeamScopePool.tsx](../../frontend/src/features/match-editor/TeamScopePool.tsx), [TeamRosterPool.tsx](../../frontend/src/features/match-editor/TeamRosterPool.tsx) | Editor-only selection UI; existing player search, scoped team choice, and previously recorded roster. |
 | [api.ts](../../frontend/src/api.ts) | HTTP transport, authentication headers, catalog request/response types. |
 | [matchHistoryViews.tsx](../../frontend/src/features/match-history/matchHistoryViews.tsx) | Shared preview rendering; the editor uses the same match detail presentation as history. |
 | [routes/admin.py](../../backend/routes/admin.py) | Public detection/preview endpoints and administrator commit/edit routes. The filename does **not** mean every route requires authentication. |
 | [match_review.py](../../backend/match_review.py) | Approval policy, explicit identity links, duplicate-player protection, and MKCentral profile handoff. |
+| [unaccounted_matches.py](../../backend/unaccounted_matches.py) | Aggregate validation, dedicated storage, inclusion filters, and score-summary additions. |
 | [match_upload.py](../../backend/match_upload.py) | Committable-document checks, canonical bytes/fingerprint, source naming, duplicates, and addition logs. |
 | [import_json_to_db.py](../../backend/import_json_to_db.py) | Detect additions, resolve catalogs, and write match-owned records through the common importer. |
 | [acceptance_service.py](../../backend/acceptance_service.py) | Revalidation, import transaction, idempotency, audit, and post-commit archive promotion. |

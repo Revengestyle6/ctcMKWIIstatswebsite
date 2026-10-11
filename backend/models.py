@@ -488,6 +488,63 @@ class MatchPlayer(Base):
     )
 
 
+class UnaccountedMatch(Base):
+    __tablename__ = "unaccounted_matches"
+
+    match_id = Column(Integer, ForeignKey("matches.match_id"), primary_key=True)
+    entry_mode = Column(Text, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("entry_mode IN ('gp', 'totals')", name="ck_unaccounted_entry_mode"),
+    )
+
+
+class UnaccountedPlayerScore(Base):
+    __tablename__ = "unaccounted_player_scores"
+
+    unaccounted_player_score_id = Column(Integer, primary_key=True)
+    match_player_id = Column(Integer, ForeignKey("match_players.match_player_id"), nullable=False)
+    gp_number = Column(Integer, nullable=False)
+    role = Column(Text, nullable=False)
+    points = Column(Integer, nullable=False)
+    races = Column(Integer, nullable=False)
+    disconnection_points = Column(Integer, nullable=False, default=0)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "match_player_id", "gp_number", "role", name="uq_unaccounted_player_period_role"
+        ),
+        CheckConstraint("gp_number >= 0", name="ck_unaccounted_player_period"),
+        CheckConstraint("role IN ('runner', 'bagger')", name="ck_unaccounted_player_role"),
+        CheckConstraint(
+            "races >= 0 AND points >= 0 AND points <= races * 15",
+            name="ck_unaccounted_player_score",
+        ),
+        CheckConstraint(
+            "disconnection_points >= 0 AND disconnection_points <= points",
+            name="ck_unaccounted_disconnect",
+        ),
+    )
+
+
+class UnaccountedTeamAward(Base):
+    __tablename__ = "unaccounted_team_awards"
+
+    unaccounted_team_award_id = Column(Integer, primary_key=True)
+    match_team_id = Column(Integer, ForeignKey("match_teams.match_team_id"), nullable=False)
+    gp_number = Column(Integer, nullable=False)
+    points = Column(Integer, nullable=False)
+    reason = Column(Text, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("gp_number >= 0 AND points >= 0", name="ck_unaccounted_team_award"),
+        CheckConstraint(
+            "reason IN ('short_roster', 'unreplaced_disconnect', 'unknown')",
+            name="ck_unaccounted_award_reason",
+        ),
+    )
+
+
 class Track(Base):
     __tablename__ = "tracks"
 

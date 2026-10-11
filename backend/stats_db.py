@@ -73,6 +73,7 @@ def findplayeravg(
     role="runner",
     match_set="regular",
     league="ctc",
+    include_unaccounted=False,
 ):
     role = normalize_role(role)
     match_set = normalize_match_set(match_set)
@@ -116,6 +117,7 @@ def findplayeravg(
                 role=role,
                 match_set=match_set,
                 session=session,
+                include_unaccounted=include_unaccounted,
             )
             metrics = overview["metrics"]
 
@@ -231,6 +233,7 @@ def top_team_players(
     role="runner",
     match_set="regular",
     league="ctc",
+    include_unaccounted=False,
 ):
     role = normalize_role(role)
     with SessionLocal() as session:
@@ -245,6 +248,7 @@ def top_team_players(
             role=role,
             match_set=match_set,
             session=session,
+            include_unaccounted=include_unaccounted,
         )["players"]
         return [{**player, "role": role} for player in players]
 
@@ -364,8 +368,18 @@ def findtopteamplayers(
     role="runner",
     match_set="regular",
     league="ctc",
+    include_unaccounted=False,
 ):
-    return top_team_players(team, min_races, division, season, role, match_set, league=league)
+    return top_team_players(
+        team,
+        min_races,
+        division,
+        season,
+        role,
+        match_set,
+        league=league,
+        include_unaccounted=include_unaccounted,
+    )
 
 
 def findtoptracks(

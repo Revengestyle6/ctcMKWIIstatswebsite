@@ -21,6 +21,9 @@ export interface BaseRoleMetrics {
   points_per_race: number | null;
   average_placement: number | null;
   excluded_score_rows: number;
+  unaccounted_matches?: number;
+  unaccounted_points?: number;
+  unaccounted_races?: number;
 }
 
 export interface RunnerMetrics extends BaseRoleMetrics {
@@ -199,6 +202,7 @@ export interface TeamOverview {
     match_set: MatchSet;
   };
   metrics: {
+    unaccounted_matches?: number;
     matches: number;
     races: number;
     average_final_score: number | null;
@@ -217,6 +221,7 @@ export interface TeamOverview {
 }
 
 export interface DashboardQuery extends Record<string, string | number | undefined> {
+  include_unaccounted?: string;
   league?: string;
   season?: string;
   division?: string;
@@ -271,12 +276,14 @@ export interface TeamRosterPlayer {
   metrics: PlayerRoleMetrics;
   role_coverage: RoleCoverage;
   first_appearance: {
+    score_source?: "accounted" | "unaccounted";
     match_id: number;
     season: string;
     division: string;
     match_number: number | null;
   };
   last_appearance: {
+    score_source?: "accounted" | "unaccounted";
     match_id: number;
     season: string;
     division: string;

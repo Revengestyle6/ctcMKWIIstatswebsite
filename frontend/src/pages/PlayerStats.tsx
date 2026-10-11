@@ -10,6 +10,7 @@ import { LegacyStatHeader } from "../components/LegacyStatHeader";
 import { MatchSetToggle } from "../components/MatchSetToggle";
 import { RoleModeToggle } from "../components/RoleModeToggle";
 import SeasonDivisionSelector from "../components/SeasonDivisionSelector";
+import { UnaccountedContribution, UnaccountedToggle } from "../components/UnaccountedToggle";
 import { type MatchSet, parseMatchSet } from "../config/matchSets";
 import { useLeague } from "../context/LeagueContext";
 import type {
@@ -31,6 +32,7 @@ export default function PlayerStats() {
   const [searchParams, setSearchParams] = useSearchParams();
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
   const matchSet = parseMatchSet(searchParams.get("match_set"));
+  const includeUnaccounted = searchParams.get("include_unaccounted") === "true";
   const [playerDirectory, setPlayerDirectory] = useState<PlayerDirectoryEntry[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState("");
   const [playerSearch, setPlayerSearch] = useState("");
@@ -41,7 +43,15 @@ export default function PlayerStats() {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const queryKey = JSON.stringify([league, selectedPlayer, season, division, role, matchSet]);
+  const queryKey = JSON.stringify([
+    league,
+    selectedPlayer,
+    season,
+    division,
+    role,
+    matchSet,
+    includeUnaccounted,
+  ]);
   const currentStats = stats?.key === queryKey ? stats : null;
 
   useEffect(() => {
@@ -105,6 +115,7 @@ export default function PlayerStats() {
         division,
         role,
         match_set: matchSet,
+        include_unaccounted: includeUnaccounted ? "true" : undefined,
       }),
     ])
       .then(([tracks, average]) => {
@@ -127,7 +138,7 @@ export default function PlayerStats() {
     return () => {
       cancelled = true;
     };
-  }, [league, selectedPlayer, season, division, role, matchSet, queryKey]);
+  }, [league, selectedPlayer, season, division, role, matchSet, includeUnaccounted, queryKey]);
 
   function updateRole(nextRole: PlayerRoleMode) {
     const next = new URLSearchParams(searchParams);
@@ -226,6 +237,7 @@ export default function PlayerStats() {
               </p>
             </div>
             <RoleModeToggle value={role} onChange={updateRole} disabled={loading} />
+            <UnaccountedToggle />
             <MatchSetToggle value={matchSet} onChange={updateMatchSet} disabled={loading} />
           </div>
         </div>
@@ -239,6 +251,7 @@ export default function PlayerStats() {
 
         {!loading && currentStats && metrics && (
           <>
+            <UnaccountedContribution count={metrics.unaccounted_matches} />
             <section className="mt-6 rounded-lg border border-blue-400/50 bg-black/70 p-6 shadow-md backdrop-blur-sm">
               <h2 className="mb-4 text-2xl font-bold text-blue-400">
                 {currentStats.average.player_name}{" "}

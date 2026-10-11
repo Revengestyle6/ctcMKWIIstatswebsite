@@ -252,6 +252,7 @@ export default function MatchHistory(): React.JSX.Element {
                   <option key={match.match_id} value={match.match_id}>
                     {roundLabel ? `${roundLabel} - ` : ""}
                     {match.teams} ({match.scores})
+                    {match.score_source === "unaccounted" ? " — Unaccounted" : ""}
                     {match.result_type === "free_win"
                       ? " — Free win"
                       : match.result_type === "mutual_tie"
@@ -369,7 +370,10 @@ export default function MatchHistory(): React.JSX.Element {
                     {selectedSummary?.scores ? ` / ${selectedSummary.scores}` : ""}
                   </p>
                 </div>
-                <div className="rounded-md border border-white/15 bg-black/35 p-3">
+                <div
+                  hidden={displayedMatchDetail.score_source === "unaccounted"}
+                  className="rounded-md border border-white/15 bg-black/35 p-3"
+                >
                   <h3 className="text-xs font-bold uppercase tracking-wide text-blue-200">
                     Display configuration
                   </h3>
@@ -507,7 +511,9 @@ export default function MatchHistory(): React.JSX.Element {
               />
             )}
 
-            <TrackList tracks={displayedMatchDetail.tracks} />
+            {displayedMatchDetail.score_source !== "unaccounted" ? (
+              <TrackList tracks={displayedMatchDetail.tracks} />
+            ) : null}
           </div>
         )}
 

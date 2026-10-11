@@ -31,6 +31,7 @@ from models import (
 )
 from playoff_service import ensure_match_label, validate_competition_metadata
 from sqlalchemy import event, select
+from unaccounted_matches import is_unaccounted, validate_unaccounted_match
 
 DEFAULT_JSON_ROOT = BASE_DIR / "JSON"
 ARCHIVE_COMPONENT_RE = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -129,6 +130,11 @@ def validate_committable_match(match_data: dict[str, Any]) -> None:
     except ValueError as error:
         errors.append(str(error))
         kind = "played"
+    validate_unaccounted_match(match_data)
+    if is_unaccounted(match_data):
+        if errors:
+            raise ValueError(" ".join(dict.fromkeys(errors)))
+        return
     if kind != "played":
         if errors:
             raise ValueError(" ".join(dict.fromkeys(errors)))

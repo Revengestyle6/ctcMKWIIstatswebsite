@@ -21,6 +21,7 @@ import {
 } from "../components/dashboard/DashboardTabViews";
 import { MatchSetToggle } from "../components/MatchSetToggle";
 import { RoleModeToggle } from "../components/RoleModeToggle";
+import { UnaccountedContribution, UnaccountedToggle } from "../components/UnaccountedToggle";
 import { parseMatchSet } from "../config/matchSets";
 import { useLeague } from "../context/LeagueContext";
 import {
@@ -63,6 +64,7 @@ export default function PlayerDashboard() {
   const teamId = searchParams.get("team_id") ?? "";
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
   const matchSet = parseMatchSet(searchParams.get("match_set"));
+  const includeUnaccounted = searchParams.get("include_unaccounted") === "true";
   const minRaces = Math.min(500, Math.max(1, Number(searchParams.get("min_races")) || 2));
   const requestedTab = searchParams.get("tab") ?? "overview";
   const activeTab = ["overview", "performance", "tracks"].includes(requestedTab)
@@ -77,6 +79,7 @@ export default function PlayerDashboard() {
     minRaces,
     role,
     matchSet,
+    includeUnaccounted,
   ]);
   const data = overview?.key === overviewQueryKey ? overview.value : null;
   const error = overviewError?.key === overviewQueryKey ? overviewError.message : "";
@@ -123,6 +126,7 @@ export default function PlayerDashboard() {
       min_races: minRaces,
       role,
       match_set: matchSet,
+      include_unaccounted: includeUnaccounted ? "true" : undefined,
     })
       .then((response) => {
         if (!cancelled) setOverview({ key: overviewQueryKey, value: response });
@@ -134,6 +138,7 @@ export default function PlayerDashboard() {
           min_races: minRaces,
           role,
           match_set: matchSet,
+          include_unaccounted: includeUnaccounted ? "true" : undefined,
         });
       })
       .catch((requestError: unknown) => {
@@ -162,6 +167,7 @@ export default function PlayerDashboard() {
     minRaces,
     role,
     matchSet,
+    includeUnaccounted,
     overviewQueryKey,
   ]);
 
@@ -182,7 +188,10 @@ export default function PlayerDashboard() {
     };
     const request =
       activeTab === "performance"
-        ? fetchPlayerPerformance(numericPlayerId, query)
+        ? fetchPlayerPerformance(numericPlayerId, {
+            ...query,
+            include_unaccounted: includeUnaccounted ? "true" : undefined,
+          })
         : fetchPlayerTracks(numericPlayerId, query);
     request
       .then((response) => {
@@ -202,7 +211,18 @@ export default function PlayerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, numericPlayerId, league, season, division, teamId, minRaces, role, matchSet]);
+  }, [
+    activeTab,
+    numericPlayerId,
+    league,
+    season,
+    division,
+    teamId,
+    minRaces,
+    role,
+    matchSet,
+    includeUnaccounted,
+  ]);
 
   function updateQuery(name: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -395,6 +415,7 @@ export default function PlayerDashboard() {
           disabled={loading}
           extraControl={
             <div className="flex flex-wrap items-end gap-3">
+              <UnaccountedToggle />
               <MatchSetToggle
                 value={matchSet}
                 disabled={loading}
@@ -421,6 +442,7 @@ export default function PlayerDashboard() {
           {error}
         </div>
       )}
+      <UnaccountedContribution count={metrics.unaccounted_matches} />
       <DashboardTabs
         tabs={[
           { id: "overview", label: "Overview" },

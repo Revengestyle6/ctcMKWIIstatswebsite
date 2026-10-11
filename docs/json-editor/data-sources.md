@@ -1,5 +1,7 @@
 # JSON editor data sources and provenance
 
+Matches without race JSON use the [unaccounted match entry reference](unaccounted-matches.md), including GP/total modes, awards, validation, and analytics eligibility.
+
 The match document supplies race facts. The application's PostgreSQL catalogs supply identity and competition context. MKCentral is a server-side enrichment lookup for unknown friend codes; the editor does not fetch live race results, download Table Bot tables, or query MKCentral directly.
 
 Transport is defined in [frontend api.ts](../../frontend/src/api.ts). Public catalog routes are in [routes/public.py](../../backend/routes/public.py), query implementations in [stats_queries.py](../../backend/stats_queries.py), roster/membership queries in [match_editor_catalog.py](../../backend/match_editor_catalog.py), and database definitions in [models.py](../../backend/models.py).
@@ -138,6 +140,7 @@ Timeout is controlled by `MKC_API_TIMEOUT_SECONDS` (default 6 seconds, minimum 1
 | Queue JSON | Archive adapter `queue/pending/<uuid>.json` | Validated submission before queue-row flush. |
 | Queue metadata | `ReviewSubmission`, `SubmissionRateLimit` | Submission; status/audit updated by administrator/maintenance. |
 | Accepted match facts | `Match`, `MatchTeam`, `MatchPlayer`, `Race`, `RacePlayerResult`, `RaceTeamResult`, `Penalty`, `MatchTableRef` | Administrator acceptance transaction. |
+| Unaccounted aggregate facts | `UnaccountedMatch`, `UnaccountedPlayerScore`, `UnaccountedTeamAward`; shared metadata/totals use the existing match tables | Same administrator acceptance transaction and accepted archive. |
 | Approved shared catalog changes | Season/division/team/player/track identities and participation records | Same acceptance transaction via importer. |
 | Source provenance | `SourceFile`, `Match.raw_json` | Acceptance transaction; archive status updated after promotion. |
 | Audit | `DatabaseAdditionLog`, `AdminAuditLog` | Accepted import/correction and administrator queue actions. |

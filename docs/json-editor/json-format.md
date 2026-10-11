@@ -1,5 +1,7 @@
 # Match JSON format and draft compilation
 
+Matches without race JSON use the [unaccounted match entry reference](unaccounted-matches.md), including GP/total modes, awards, validation, and analytics eligibility.
+
 This reference describes the interactive editor's current document format. It replaces the earlier combined JSON/database design notes; the complete relational reference is [data model](../architecture/data-model.md). The implementation is [matchJsonEditorModel.ts](../../frontend/src/features/match-editor/matchJsonEditorModel.ts), with persistence in [import_json_to_db.py](../../backend/import_json_to_db.py).
 
 ## Documents, drafts, and database records

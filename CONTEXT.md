@@ -19,9 +19,23 @@ divisions are distinct groupings, not aliases for either individual division.
 **Conference**: One of the two team groupings in a conference-based division.
 
 **Match**: A contest between two teams, recorded either as played races with any
-penalties or as an awarded result without races. Historical source material can contain incomplete or malformed
-contests that require review.
+penalties, as an unaccounted played result, or as an awarded result without races.
+Historical source material can contain incomplete or malformed contests that
+require review.
 _Avoid_: War (except when quoting source material)
+
+**Accounted match**: A played match supported by recorded race scores, positions,
+and tracks.
+
+**Unaccounted match**: A played match whose race JSON is unavailable, with final
+scores and individual role totals supplied from surviving match records.
+
+**GP**: A scoring period of up to four consecutive races within a match.
+
+**GP entry**: Unaccounted scores recorded separately for each GP and player role.
+
+**Total entry**: Unaccounted scores recorded for the whole match and player role
+when GP splits are unavailable.
 
 **Match number**: The positive number identifying a regular-season match in its
 competition context; it is not a globally unique match identity.

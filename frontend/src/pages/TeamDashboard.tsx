@@ -21,6 +21,7 @@ import {
 } from "../components/dashboard/DashboardTabViews";
 import { MatchSetToggle } from "../components/MatchSetToggle";
 import { RoleModeToggle } from "../components/RoleModeToggle";
+import { UnaccountedContribution, UnaccountedToggle } from "../components/UnaccountedToggle";
 import { parseMatchSet } from "../config/matchSets";
 import { useLeague } from "../context/LeagueContext";
 import {
@@ -63,6 +64,7 @@ export default function TeamDashboard() {
   const opponentId = searchParams.get("opponent_team_id") ?? "";
   const role: PlayerRoleMode = searchParams.get("role") === "bagger" ? "bagger" : "runner";
   const matchSet = parseMatchSet(searchParams.get("match_set"));
+  const includeUnaccounted = searchParams.get("include_unaccounted") === "true";
   const minRaces = Math.min(500, Math.max(1, Number(searchParams.get("min_races")) || 2));
   const requestedTab = searchParams.get("tab") ?? "overview";
   const activeTab = ["overview", "roster", "tracks"].includes(requestedTab)
@@ -77,6 +79,7 @@ export default function TeamDashboard() {
     minRaces,
     role,
     matchSet,
+    includeUnaccounted,
   ]);
   const tracksQueryKey = JSON.stringify([
     numericTeamId,
@@ -151,6 +154,7 @@ export default function TeamDashboard() {
       min_races: minRaces,
       role,
       match_set: matchSet,
+      include_unaccounted: includeUnaccounted ? "true" : undefined,
     })
       .then((response) => {
         if (!cancelled) setData(response);
@@ -162,6 +166,7 @@ export default function TeamDashboard() {
           min_races: minRaces,
           role,
           match_set: matchSet,
+          include_unaccounted: includeUnaccounted ? "true" : undefined,
         });
       })
       .catch((requestError: unknown) => {
@@ -173,7 +178,17 @@ export default function TeamDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [numericTeamId, league, season, division, opponentId, minRaces, role, matchSet]);
+  }, [
+    numericTeamId,
+    league,
+    season,
+    division,
+    opponentId,
+    minRaces,
+    role,
+    matchSet,
+    includeUnaccounted,
+  ]);
 
   useEffect(() => {
     if (activeTab !== "roster" || !Number.isInteger(numericTeamId) || numericTeamId < 1) return;
@@ -189,6 +204,7 @@ export default function TeamDashboard() {
       min_races: minRaces,
       role,
       match_set: matchSet,
+      include_unaccounted: includeUnaccounted ? "true" : undefined,
     })
       .then((response) => {
         if (!cancelled) setRosterResult({ key: requestKey, value: response });
@@ -220,6 +236,7 @@ export default function TeamDashboard() {
     minRaces,
     role,
     matchSet,
+    includeUnaccounted,
     rosterQueryKey,
   ]);
 
@@ -411,6 +428,7 @@ export default function TeamDashboard() {
           minRaces={minRaces}
           extraControl={
             <div className="flex flex-wrap items-end gap-3">
+              <UnaccountedToggle />
               <MatchSetToggle
                 value={matchSet}
                 disabled={tabLoading}
@@ -437,6 +455,7 @@ export default function TeamDashboard() {
           {error}
         </div>
       )}
+      <UnaccountedContribution count={metrics.unaccounted_matches} />
       <DashboardTabs
         tabs={[
           { id: "overview", label: "Overview" },

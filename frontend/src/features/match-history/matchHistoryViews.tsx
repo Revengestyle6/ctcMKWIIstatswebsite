@@ -1,7 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import type { AggregateAward, AggregateScore } from "../match-editor/unaccountedMatchModel";
+import { UnaccountedScorecard } from "./UnaccountedScorecard";
 
 export type MatchSummary = {
+  score_source?: "accounted" | "unaccounted";
+  entry_mode?: "gp" | "totals" | null;
   match_id: number;
   match_type: "regular" | "playoff";
   result_type: "played" | "free_win" | "mutual_tie";
@@ -28,6 +32,7 @@ export type Track = {
 };
 
 export type MatchPlayer = {
+  aggregate_scores?: AggregateScore[];
   player_id: number;
   name: string;
   friend_code: string;
@@ -40,6 +45,7 @@ export type MatchPlayer = {
 };
 
 export type MatchTeam = {
+  aggregate_awards?: AggregateAward[];
   team_id: number;
   tag: string;
   name: string;
@@ -62,6 +68,8 @@ export type MatchTeam = {
 };
 
 export type MatchDetail = {
+  score_source?: "accounted" | "unaccounted";
+  entry_mode?: "gp" | "totals" | null;
   match_id: number;
   league: string;
   match_type: "regular" | "playoff";
@@ -502,6 +510,8 @@ export function TraditionalTable({
   teamColors: TeamColors;
   chartMode: ChartMode;
 }): React.JSX.Element {
+  if (match.score_source === "unaccounted")
+    return <UnaccountedScorecard match={match} teamColors={teamColors} />;
   const columns = buildScoreColumns(match, groupByGp);
   const chartValues = chartDifferentialValues(match.differential, chartMode);
   const chartFinalPenaltyOffset =
@@ -829,6 +839,8 @@ export function VerticalScorecard({
   teamColors: TeamColors;
   chartMode: ChartMode;
 }): React.JSX.Element {
+  if (match.score_source === "unaccounted")
+    return <UnaccountedScorecard match={match} teamColors={teamColors} />;
   const leftTeam = match.teams[0];
   const rightTeam = match.teams[1];
   if (!leftTeam || !rightTeam)

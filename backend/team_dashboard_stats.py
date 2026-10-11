@@ -16,6 +16,7 @@ from models import (
     Team,
     TeamSeasonEntry,
     Track,
+    UnaccountedMatch,
 )
 from player_dashboard_stats import (
     DashboardError,
@@ -39,6 +40,7 @@ from player_role_analytics import (
     valid_race_score,
 )
 from sqlalchemy import select
+from unaccounted_matches import accounted_match_filter, add_aggregate_metrics, aggregate_player_rows
 
 SessionLocal = get_session_factory()
 PLACEHOLDER_LOGO = "/media/shared/team-logo-placeholder.svg"
@@ -131,7 +133,7 @@ def _team_identity(session, team, scope):
     }
 
 
-def _team_match_rows(session, team_id, scope, match_set="regular"):
+def _team_match_rows(session, team_id, scope, match_set="regular", include_unaccounted=False):
     statement = (
         select(
             Match.match_id,
@@ -164,11 +166,13 @@ def _team_match_rows(session, team_id, scope, match_set="regular"):
         statement = statement.where(Match.season_id == scope.season_id)
     if scope.division_id is not None:
         statement = statement.where(Match.division_id == scope.division_id)
-    statement = apply_match_set(statement, match_set)
+    statement = accounted_match_filter(apply_match_set(statement, match_set), include_unaccounted)
     return session.execute(statement.order_by(Match.match_id)).all()
 
 
-def _team_ranking(session, team_id, scope, min_races, match_set="regular"):
+def _team_ranking(
+    session, team_id, scope, min_races, match_set="regular", include_unaccounted=False
+):
     if scope.season_id is None or scope.division_id is None:
         return None
     statement = (
@@ -188,7 +192,9 @@ def _team_ranking(session, team_id, scope, min_races, match_set="regular"):
         )
         .where(Match.season_id == scope.season_id, Match.division_id == scope.division_id)
     )
-    match_rows = session.execute(apply_match_set(statement, match_set)).all()
+    match_rows = session.execute(
+        accounted_match_filter(apply_match_set(statement, match_set), include_unaccounted)
+    ).all()
     by_match = defaultdict(list)
     for row in match_rows:
         by_match[row.match_id].append(row)
@@ -231,6 +237,7 @@ def get_team_overview(
     min_races=12,
     match_set="regular",
     session=None,
+    include_unaccounted=False,
 ):
     match_set = normalize_match_set(match_set)
     if session is None:
@@ -244,6 +251,7 @@ def get_team_overview(
                 min_races=min_races,
                 match_set=match_set,
                 session=owned_session,
+                include_unaccounted=include_unaccounted,
             )
 
     team = session.get(Team, team_id)
@@ -256,8 +264,13 @@ def get_team_overview(
         if not session.get(Team, opponent_team_id):
             raise DashboardError("Unknown opponent filter.")
 
-    rows = _team_match_rows(session, team_id, scope, match_set)
+    rows = _team_match_rows(session, team_id, scope, match_set, include_unaccounted)
     match_ids = [row.match_id for row in rows]
+    unaccounted_ids = set(
+        session.scalars(
+            select(UnaccountedMatch.match_id).where(UnaccountedMatch.match_id.in_(match_ids))
+        )
+    )
     teams_by_match = defaultdict(list)
     for row in _match_team_rows(session, match_ids):
         teams_by_match[row.match_id].append(row)
@@ -278,6 +291,7 @@ def get_team_overview(
             {
                 "match_id": row.match_id,
                 "label": row.match_label,
+                "score_source": "unaccounted" if row.match_id in unaccounted_ids else "accounted",
                 "season": row.season_code,
                 "season_number": row.season_number,
                 "division": row.division_code,
@@ -327,9 +341,11 @@ def get_team_overview(
             **_scope_payload(scope),
             "opponent_team_id": opponent_team_id,
             "match_set": match_set,
+            "include_unaccounted": include_unaccounted,
         },
         "metrics": {
             "matches": len(matches),
+            "unaccounted_matches": sum(row["match_id"] in unaccounted_ids for row in matches),
             "races": sum(row["races"] for row in matches),
             "average_final_score": _round(sum(scores) / len(scores)) if scores else None,
             "average_differential": _round(sum(differentials) / len(differentials))
@@ -349,7 +365,9 @@ def get_team_overview(
             "largest_loss": min((row["differential"] for row in losses), default=None),
         },
         "record": record,
-        "ranking": _team_ranking(session, team_id, scope, min_races, match_set),
+        "ranking": _team_ranking(
+            session, team_id, scope, min_races, match_set, include_unaccounted
+        ),
         "recent_matches": matches[:5],
         "score_trend": [
             {
@@ -362,8 +380,10 @@ def get_team_overview(
     }
 
 
-def _filtered_team_match_ids(session, team_id, scope, opponent_team_id=None, match_set="regular"):
-    rows = _team_match_rows(session, team_id, scope, match_set)
+def _filtered_team_match_ids(
+    session, team_id, scope, opponent_team_id=None, match_set="regular", include_unaccounted=False
+):
+    rows = _team_match_rows(session, team_id, scope, match_set, include_unaccounted)
     match_ids = [row.match_id for row in rows]
     if opponent_team_id is None or not match_ids:
         return match_ids
@@ -438,6 +458,16 @@ def _bulk_bagger_counterpart_summaries(session, classified_rows, confirmed_ids):
     return summaries
 
 
+def _roster_appearance(row):
+    return {
+        "match_id": row.match_id,
+        "season": row.season_code,
+        "division": row.division_code,
+        "match_number": row.match_number,
+        "score_source": "unaccounted" if getattr(row, "entry_mode", None) else "accounted",
+    }
+
+
 def get_team_roster(
     team_id,
     league="ctc",
@@ -448,6 +478,7 @@ def get_team_roster(
     role="runner",
     match_set="regular",
     session=None,
+    include_unaccounted=False,
 ):
     role = normalize_role(role)
     match_set = normalize_match_set(match_set)
@@ -463,6 +494,7 @@ def get_team_roster(
                 role=role,
                 match_set=match_set,
                 session=owned_session,
+                include_unaccounted=include_unaccounted,
             )
     if not session.get(Team, team_id):
         raise DashboardNotFound("Team not found.")
@@ -472,7 +504,9 @@ def get_team_roster(
             raise DashboardError("A team cannot be its own opponent filter.")
         if not session.get(Team, opponent_team_id):
             raise DashboardError("Unknown opponent filter.")
-    match_ids = _filtered_team_match_ids(session, team_id, scope, opponent_team_id, match_set)
+    match_ids = _filtered_team_match_ids(
+        session, team_id, scope, opponent_team_id, match_set, include_unaccounted
+    )
     if not match_ids:
         empty_coverage, _ = role_coverage([], set())
         return {
@@ -482,6 +516,7 @@ def get_team_roster(
                 **_scope_payload(scope),
                 "opponent_team_id": opponent_team_id,
                 "match_set": match_set,
+                "include_unaccounted": include_unaccounted,
             },
             "minimum_races": min_races,
             "role_coverage": empty_coverage,
@@ -536,10 +571,20 @@ def get_team_roster(
             continue
         by_player[row.player_id]["classified"].append(item)
 
+    aggregates = (
+        aggregate_player_rows(session, scope, match_set, team_id=team_id, match_ids=match_ids)
+        if include_unaccounted
+        else []
+    )
+    aggregate_by_player = defaultdict(list)
+    for row in aggregates:
+        aggregate_by_player[row.player_id].append(row)
+        if row.UnaccountedPlayerScore.role == role and row.UnaccountedPlayerScore.races:
+            by_player[row.player_id]
     display_names = _display_names_for_players(
         session,
         by_player,
-        {row.player_id: row.canonical_name for row in rows if row.canonical_name},
+        {row.player_id: row.canonical_name for row in [*rows, *aggregates] if row.canonical_name},
     )
 
     counterpart_summaries = (
@@ -560,21 +605,33 @@ def get_team_roster(
     players = []
     for player_id, data in by_player.items():
         player_rows = [row for row, _role, _source in data["classified"]]
-        metrics = summarize_role_rows(data["classified"], role)
+        metrics = add_aggregate_metrics(
+            summarize_role_rows(data["classified"], role), aggregate_by_player[player_id], role
+        )
         if metrics["scored_races"] < min_races:
             continue
         if role == "bagger":
-            metrics.update(counterpart_summaries[player_id])
+            metrics.update(
+                counterpart_summaries.get(
+                    player_id,
+                    {
+                        "counterpart_races": 0,
+                        "opponent_points_for": 0,
+                        "opponent_points_against": 0,
+                        "opponent_point_differential": 0,
+                    },
+                )
+            )
         player_coverage, _ = role_coverage(
             [item[0] for item in all_by_player[player_id]], confirmed
         )
         ordered = sorted(
-            player_rows,
+            [*player_rows, *aggregate_by_player[player_id]],
             key=lambda row: (
                 row.season_number or 0,
                 row.match_number or 0,
                 row.match_id,
-                row.race_number,
+                getattr(row, "race_number", 0),
             ),
         )
         first = ordered[0]
@@ -584,21 +641,13 @@ def get_team_roster(
                 "player_id": player_id,
                 "name": display_names.get(player_id) or f"Player {player_id}",
                 "friend_codes": codes_by_player[player_id],
-                "matches": len({row.match_id for row in player_rows}),
+                "matches": len(
+                    {row.match_id for row in [*player_rows, *aggregate_by_player[player_id]]}
+                ),
                 "metrics": metrics,
                 "role_coverage": player_coverage,
-                "first_appearance": {
-                    "match_id": first.match_id,
-                    "season": first.season_code,
-                    "division": first.division_code,
-                    "match_number": first.match_number,
-                },
-                "last_appearance": {
-                    "match_id": last.match_id,
-                    "season": last.season_code,
-                    "division": last.division_code,
-                    "match_number": last.match_number,
-                },
+                "first_appearance": _roster_appearance(first),
+                "last_appearance": _roster_appearance(last),
             }
         )
     sort_metric = "twelve_race_pace" if role == "runner" else "points_per_race"
@@ -617,6 +666,7 @@ def get_team_roster(
             **_scope_payload(scope),
             "opponent_team_id": opponent_team_id,
             "match_set": match_set,
+            "include_unaccounted": include_unaccounted,
         },
         "minimum_races": min_races,
         "role_coverage": coverage,

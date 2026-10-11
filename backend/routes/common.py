@@ -101,3 +101,10 @@ def team_identity_resolutions_from_payload(payload):
     if not isinstance(resolutions, dict):
         raise ValueError("Team identity resolutions must be an object keyed by review entry.")
     return resolutions
+
+
+def include_unaccounted_arg():
+    value = str(request.args.get("include_unaccounted") or "false").lower()
+    if value not in {"true", "false", "1", "0"}:
+        raise DashboardError("include_unaccounted must be true or false.")
+    return value in {"true", "1"}
