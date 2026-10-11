@@ -10,14 +10,14 @@ from models import (
 from sqlalchemy import desc, select
 
 
-def list_team_roster_pool(session, league, season, division, team_id):
+def list_team_roster_pool(session, league, season, division, team_id, team_season_entry_id=None):
     league_code = str(league or "").strip().lower()
     season_code = str(season or "").strip().lower()
     division_code = str(division or "").strip().lower()
     if not league_code or not season_code or not division_code or not team_id:
         raise ValueError("League, season, division, and team ID are required.")
 
-    team_entry = session.scalar(
+    statement = (
         select(TeamSeasonEntry)
         .join(Season, Season.season_id == TeamSeasonEntry.season_id)
         .join(Division, Division.division_id == TeamSeasonEntry.division_id)
@@ -28,8 +28,14 @@ def list_team_roster_pool(session, league, season, division, team_id):
             TeamSeasonEntry.team_id == team_id,
         )
     )
-    if team_entry is None:
+    if team_season_entry_id is not None:
+        statement = statement.where(TeamSeasonEntry.team_season_entry_id == team_season_entry_id)
+    team_entries = session.scalars(statement).all()
+    if len(team_entries) > 1:
+        raise ValueError("Choose a team season entry to load its roster.")
+    if not team_entries:
         return []
+    team_entry = team_entries[0]
 
     rows = session.execute(
         select(PlayerSeasonEntry, Player)
@@ -111,13 +117,14 @@ def list_player_team_memberships(session, league, season, division, player_ids):
     }
     seen = set()
     for player_id, team_entry, team in rows:
-        membership_key = (player_id, team.team_id)
+        membership_key = (player_id, team_entry.team_season_entry_id)
         if membership_key in seen:
             continue
         seen.add(membership_key)
         memberships[player_id]["teams"].append(
             {
                 "team_id": team.team_id,
+                "team_season_entry_id": team_entry.team_season_entry_id,
                 "canonical_name": team.canonical_name,
                 "canonical_tag": team.canonical_tag,
                 "display_name": team_entry.display_name,

@@ -157,7 +157,7 @@ function StandoutList({
       <ol className="mt-3 grid h-96 flex-none grid-rows-6 divide-y divide-white/10">
         {pager.rows.map((row) => (
           <li
-            key={`${row.team_id}-${row.track_id}`}
+            key={`${row.team_season_entry_id}-${row.track_id}`}
             className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 py-2.5"
           >
             <div className="min-w-0">
@@ -415,8 +415,15 @@ export default function TrackAnalyticsPage() {
 
   const teams = useMemo(
     () =>
-      teamScopes.filter(
-        (team) => team.league === league && team.season === season && team.division === division
+      Array.from(
+        new Map(
+          teamScopes
+            .filter(
+              (team) =>
+                team.league === league && team.season === season && team.division === division
+            )
+            .map((team) => [team.team_id, team])
+        ).values()
       ),
     [teamScopes, league, season, division]
   );
@@ -526,7 +533,7 @@ export default function TrackAnalyticsPage() {
           <option value="">All teams</option>
           {teams.map((team) => (
             <option key={team.team_id} value={team.team_id}>
-              {team.clan_tag} — {team.display_name}
+              {team.canonical_tag} — {team.canonical_name}
             </option>
           ))}
         </select>

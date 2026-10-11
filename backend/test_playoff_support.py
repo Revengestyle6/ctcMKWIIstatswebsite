@@ -63,6 +63,7 @@ class PlayoffSupportTests(unittest.TestCase):
             self.division_id = division.division_id
             self.team_ids = []
             self.entry_ids = {}
+            self.participant_entry_ids = []
             for tag in ("A", "B", "C", "D"):
                 team = Team(canonical_name=f"Team {tag}", canonical_tag=tag)
                 session.add(team)
@@ -79,6 +80,7 @@ class PlayoffSupportTests(unittest.TestCase):
                 session.flush()
                 self.team_ids.append(team.team_id)
                 self.entry_ids[team.team_id] = entry.team_season_entry_id
+                self.participant_entry_ids.append(entry.team_season_entry_id)
 
     def tearDown(self):
         for table in reversed(list(Season.metadata.sorted_tables)):
@@ -138,7 +140,7 @@ class PlayoffSupportTests(unittest.TestCase):
             entry.display_name = "Season 3 Team A"
             division = session.get(Division, self.division_id)
             resolve_playoff_series(
-                session, self.season_id, division, self.metadata(), self.team_ids[:2]
+                session, self.season_id, division, self.metadata(), self.participant_entry_ids[:2]
             )
 
         with self.SessionLocal() as session:
@@ -183,7 +185,7 @@ class PlayoffSupportTests(unittest.TestCase):
         with self.SessionLocal.begin() as session:
             division = session.get(Division, self.division_id)
             resolve_playoff_series(
-                session, self.season_id, division, self.metadata(), self.team_ids[:2]
+                session, self.season_id, division, self.metadata(), self.participant_entry_ids[:2]
             )
             with self.assertRaisesRegex(ValueError, "do not match"):
                 resolve_playoff_series(
@@ -191,7 +193,7 @@ class PlayoffSupportTests(unittest.TestCase):
                     self.season_id,
                     division,
                     self.metadata(),
-                    self.team_ids[2:],
+                    self.participant_entry_ids[2:],
                 )
             with self.assertRaisesRegex(ValueError, "already assigned"):
                 resolve_playoff_series(
@@ -199,7 +201,7 @@ class PlayoffSupportTests(unittest.TestCase):
                     self.season_id,
                     division,
                     self.metadata(series=2),
-                    [self.team_ids[0], self.team_ids[2]],
+                    [self.participant_entry_ids[0], self.participant_entry_ids[2]],
                 )
 
     def test_editor_database_check_rejects_duplicate_number_format_and_pairing(self):
@@ -213,7 +215,7 @@ class PlayoffSupportTests(unittest.TestCase):
             config.finals_bye_count = 1
             division = session.get(Division, self.division_id)
             series, _ = resolve_playoff_series(
-                session, self.season_id, division, first_match, self.team_ids[:2]
+                session, self.season_id, division, first_match, self.participant_entry_ids[:2]
             )
             self.add_series_match(session, series, 1, 101, 99)
 
@@ -237,7 +239,7 @@ class PlayoffSupportTests(unittest.TestCase):
         with self.SessionLocal.begin() as session:
             division = session.get(Division, self.division_id)
             series, _ = resolve_playoff_series(
-                session, self.season_id, division, self.metadata(), self.team_ids[:2]
+                session, self.season_id, division, self.metadata(), self.participant_entry_ids[:2]
             )
             self.add_series_match(session, series, 1, 101, 99)
             series, _ = resolve_playoff_series(
@@ -245,7 +247,7 @@ class PlayoffSupportTests(unittest.TestCase):
                 self.season_id,
                 division,
                 self.metadata(match_number=2),
-                self.team_ids[:2],
+                self.participant_entry_ids[:2],
             )
             self.add_series_match(session, series, 2, 105, 95)
             with self.assertRaisesRegex(ValueError, "already been clinched"):
@@ -254,20 +256,20 @@ class PlayoffSupportTests(unittest.TestCase):
                     self.season_id,
                     division,
                     self.metadata(match_number=3),
-                    self.team_ids[:2],
+                    self.participant_entry_ids[:2],
                 )
 
     def test_missing_earlier_series_match_can_be_reuploaded_after_later_matches(self):
         with self.SessionLocal.begin() as session:
             division = session.get(Division, self.division_id)
             series, _ = resolve_playoff_series(
-                session, self.season_id, division, self.metadata(), self.team_ids[:2]
+                session, self.season_id, division, self.metadata(), self.participant_entry_ids[:2]
             )
             self.add_series_match(session, series, 2, 101, 99)
             self.add_series_match(session, series, 3, 105, 95)
 
             resolved, metadata = resolve_playoff_series(
-                session, self.season_id, division, self.metadata(), self.team_ids[:2]
+                session, self.season_id, division, self.metadata(), self.participant_entry_ids[:2]
             )
 
             self.assertEqual(resolved.playoff_series_id, series.playoff_series_id)
@@ -277,7 +279,7 @@ class PlayoffSupportTests(unittest.TestCase):
         with self.SessionLocal.begin() as session:
             division = session.get(Division, self.division_id)
             series, _ = resolve_playoff_series(
-                session, self.season_id, division, self.metadata(), self.team_ids[:2]
+                session, self.season_id, division, self.metadata(), self.participant_entry_ids[:2]
             )
             self.add_series_match(session, series, 1, 101, 99)
             source = SourceFile(

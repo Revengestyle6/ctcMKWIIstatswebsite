@@ -177,8 +177,15 @@ export default function TrackDashboard() {
   }, [league]);
   const teams = useMemo(
     () =>
-      teamScopes.filter(
-        (team) => team.league === league && team.season === season && team.division === division
+      Array.from(
+        new Map(
+          teamScopes
+            .filter(
+              (team) =>
+                team.league === league && team.season === season && team.division === division
+            )
+            .map((team) => [team.team_id, team])
+        ).values()
       ),
     [teamScopes, league, season, division]
   );
@@ -274,7 +281,7 @@ export default function TrackDashboard() {
           <option value="">All teams</option>
           {teams.map((team) => (
             <option key={team.team_id} value={team.team_id}>
-              {team.clan_tag} — {team.display_name}
+              {team.canonical_tag} — {team.canonical_name}
             </option>
           ))}
         </select>
@@ -573,7 +580,7 @@ export default function TrackDashboard() {
                   </thead>
                   <tbody className="divide-y divide-white/10">
                     {teamPager.rows.map((row, index) => (
-                      <tr key={row.team_id}>
+                      <tr key={row.team_season_entry_id}>
                         <td className="px-3 py-3 text-right text-gray-500">
                           {teamPager.firstIndex + index + 1}
                         </td>

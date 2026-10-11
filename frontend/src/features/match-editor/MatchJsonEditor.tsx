@@ -328,7 +328,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
       if (
         !currentTeamScope ||
         recordedTeams.length === 0 ||
-        recordedTeams.some((team) => team.team_id === currentTeamScope.team_id)
+        recordedTeams.some(
+          (team) => team.team_season_entry_id === currentTeamScope.team_season_entry_id
+        )
       ) {
         return [];
       }
@@ -669,7 +671,13 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 const matches = series.matches.filter((entry) => entry.match_id !== editMatchId);
                 return matches.length === series.matches.length
                   ? series
-                  : { ...series, matches, status: "in_progress" as const, winner_team_id: null };
+                  : {
+                      ...series,
+                      matches,
+                      status: "in_progress" as const,
+                      winner_team_id: null,
+                      winner_team_season_entry_id: null,
+                    };
               }),
             }
           : context;
@@ -1741,12 +1749,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
       ),
     [match.division, match.league, match.season, teamScopes]
   );
-  const assignedTeamIds = useMemo(
+  const assignedEntryIds = useMemo(
     () =>
       new Set(
         Object.entries(match.teams ?? {}).flatMap(([teamKey, team]) => {
           const resolved = findTeamScope(availableTeams, teamTag(teamKey, team));
-          return resolved ? [resolved.team_id] : [];
+          return resolved ? [resolved.team_season_entry_id] : [];
         })
       ),
     [availableTeams, match.teams]
@@ -2607,8 +2615,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   {availableTeams.length > 0 ? (
                     <TeamScopePool
                       teams={availableTeams}
-                      selectedTeamId={resolvedTeam?.team_id}
-                      assignedTeamIds={assignedTeamIds}
+                      selectedEntryId={resolvedTeam?.team_season_entry_id}
+                      assignedEntryIds={assignedEntryIds}
                       onSelect={(selected) =>
                         updateTeam(teamKey, (current) => ({
                           ...current,
@@ -2772,11 +2780,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   ) : null}
                   {!specialResult && resolvedTeam && leagueValid && seasonValid && divisionValid ? (
                     <TeamRosterPool
-                      key={`${match.league}:${match.season}:${match.division}:${resolvedTeam.team_id}`}
+                      key={`${match.league}:${match.season}:${match.division}:${resolvedTeam.team_season_entry_id}`}
                       league={match.league ?? ""}
                       season={match.season ?? ""}
                       division={match.division ?? ""}
                       teamId={resolvedTeam.team_id}
+                      teamSeasonEntryId={resolvedTeam.team_season_entry_id}
                       currentFriendCodes={configuredFriendCodes}
                       currentPlayerIds={configuredPlayerIds}
                       onAdd={(player) => addRosterPlayer(teamKey, player)}

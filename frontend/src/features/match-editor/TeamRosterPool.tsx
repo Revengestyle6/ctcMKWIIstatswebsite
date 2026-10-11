@@ -7,6 +7,7 @@ type Props = {
   season: string;
   division: string;
   teamId: number;
+  teamSeasonEntryId: number;
   currentFriendCodes: string[];
   currentPlayerIds: number[];
   onAdd: (player: TeamRosterPlayer) => void;
@@ -17,6 +18,7 @@ export default function TeamRosterPool({
   season,
   division,
   teamId,
+  teamSeasonEntryId,
   currentFriendCodes,
   currentPlayerIds,
   onAdd,
@@ -53,7 +55,15 @@ export default function TeamRosterPool({
     setLoading(true);
     setError("");
     try {
-      setPlayers(await fetchTeamRosterPool({ league, season, division, team_id: teamId }));
+      setPlayers(
+        await fetchTeamRosterPool({
+          league,
+          season,
+          division,
+          team_id: teamId,
+          team_season_entry_id: teamSeasonEntryId,
+        })
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load this roster.");
     } finally {

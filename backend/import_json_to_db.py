@@ -5,6 +5,7 @@ import json
 import math
 import re
 import uuid
+from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -180,6 +181,33 @@ def load_database_team_aliases(
             "display_name": row.canonical_name,
             "note": "Database-managed team alias.",
         }
+    # A season tag identifies a competing entry, even when its canonical team
+    # owns other entries in the same division. Prefer it over global aliases.
+    entry_rows = session.execute(
+        select(TeamSeasonEntry, Season.league_code, Season.season_code, Division.division_code)
+        .join(Season, Season.season_id == TeamSeasonEntry.season_id)
+        .join(Division, Division.division_id == TeamSeasonEntry.division_id)
+    ).all()
+    names_by_scope = defaultdict(list)
+    scoped_tag_keys = {
+        (league, season, division, entry.clan_tag.casefold())
+        for entry, league, season, division in entry_rows
+    }
+    for entry, league, season, division in entry_rows:
+        names_by_scope[(league, season, division, entry.display_name.casefold())].append(entry)
+        aliases[(league, season, division, "", entry.clan_tag)] = {
+            "team_id": entry.team_id,
+            "canonical_tag": entry.clan_tag,
+            "display_name": entry.display_name,
+            "note": "Season team entry.",
+        }
+    for (league, season, division, name), entries in names_by_scope.items():
+        if len(entries) == 1 and (league, season, division, name) not in scoped_tag_keys:
+            entry = entries[0]
+            aliases.setdefault(
+                (league, season, division, "", name),
+                aliases[(league, season, division, "", entry.clan_tag)],
+            )
     return aliases
 
 
@@ -229,17 +257,14 @@ def resolve_team_alias(
     division_key = (league_code, season_code, division_code, "", raw_team_key)
     league_key = (league_code, "", "", "", raw_team_key)
     global_key = ("", "", "", "", raw_team_key)
-    return (
-        aliases.get(exact_key)
-        or aliases.get(division_key)
-        or aliases.get(league_key)
-        or aliases.get(global_key)
-        or {
-            "canonical_tag": raw_team_key,
-            "display_name": raw_team_key,
-            "note": "",
-        }
-    )
+    for key in (exact_key, division_key, league_key, global_key):
+        if key in aliases:
+            return aliases[key]
+        normalized_key = tuple(value.casefold() for value in key)
+        for candidate, alias in aliases.items():
+            if tuple(value.casefold() for value in candidate) == normalized_key:
+                return alias
+    return {"canonical_tag": raw_team_key, "display_name": raw_team_key, "note": ""}
 
 
 def get_or_create_season(session, league_code: str, season_code: str) -> Season:
@@ -344,12 +369,27 @@ def get_or_create_team_entry(
     display_name: str,
     hex_color: str | None,
 ) -> TeamSeasonEntry:
+    if canonical_tag.casefold() == team.canonical_tag.casefold():
+        candidates = session.scalars(
+            select(TeamSeasonEntry).where(
+                TeamSeasonEntry.team_id == team.team_id,
+                TeamSeasonEntry.season_id == season.season_id,
+                TeamSeasonEntry.division_id == division.division_id,
+            )
+        ).all()
+        if len(candidates) == 1:
+            canonical_tag = candidates[0].clan_tag
+        elif len(candidates) > 1 and not any(
+            entry.clan_tag.casefold() == canonical_tag.casefold() for entry in candidates
+        ):
+            raise ValueError("Choose a season team tag; this canonical team has multiple entries.")
     existing_team_entry = session.scalar(
         select(TeamSeasonEntry)
         .where(
             TeamSeasonEntry.team_id == team.team_id,
             TeamSeasonEntry.season_id == season.season_id,
             TeamSeasonEntry.division_id == division.division_id,
+            func.lower(TeamSeasonEntry.clan_tag) == canonical_tag.lower(),
         )
         .order_by(TeamSeasonEntry.team_season_entry_id)
         .limit(1)
@@ -371,6 +411,8 @@ def get_or_create_team_entry(
         )
     )
     if entry:
+        if entry.team_id != team.team_id:
+            raise ValueError(f"{canonical_tag} is registered to another canonical team.")
         if division.is_conference_based and entry.conference_id is None:
             raise ValueError(
                 f"{canonical_tag} must be assigned to a conference before importing matches."
@@ -812,6 +854,10 @@ def import_match(
         review_notes.append(
             f"Expected 2 resolved teams, found {len(set(resolved_team_keys))} from {len(teams)} raw team objects."
         )
+    if len({entry.team_season_entry_id for _alias, _team, entry in resolved_teams.values()}) != len(
+        resolved_teams
+    ):
+        raise ValueError("A match must resolve to two distinct team season entries.")
 
     kind = match_type(match_data)
     match_number = (
@@ -827,7 +873,7 @@ def import_match(
             season.season_id,
             division,
             match_data,
-            [resolved_teams[key][1].team_id for key in teams],
+            [resolved_teams[key][2].team_season_entry_id for key in teams],
         )
         match_number = None
         series_match_number = playoff_metadata["series_match_number"]
@@ -1309,7 +1355,7 @@ def detect_new_entries(
 
     aliases = load_database_team_aliases(session)
     label = str(match_data.get("match_label") or "Match preview").strip() or "Match preview"
-    existing_team_ids = []
+    existing_entry_ids = []
     for raw_team_key in match_data.get("teams") or {}:
         alias = resolve_team_alias(
             aliases, league_code, season_code, division_code, label, raw_team_key
@@ -1326,8 +1372,6 @@ def detect_new_entries(
                     func.lower(TeamLeagueIdentity.tag) == canonical_tag.lower(),
                 )
             )
-        if team is not None:
-            existing_team_ids.append(team.team_id)
         cross_league_candidates = []
         if team is None:
             candidate_teams = (
@@ -1370,8 +1414,13 @@ def detect_new_entries(
                     TeamSeasonEntry.team_id == team.team_id,
                     TeamSeasonEntry.season_id == season.season_id,
                     TeamSeasonEntry.division_id == division.division_id,
+                    func.lower(TeamSeasonEntry.clan_tag) == canonical_tag.lower(),
                 )
             )
+        if team_entry is not None:
+            if team_entry.team_season_entry_id in existing_entry_ids:
+                raise ValueError("A match must resolve to two distinct team season entries.")
+            existing_entry_ids.append(team_entry.team_season_entry_id)
         if team_entry is None:
             entry = _new_entry(
                 "team",
@@ -1423,7 +1472,7 @@ def detect_new_entries(
             entries[entry["key"]] = entry
 
     if competition_metadata["match_type"] == "playoff":
-        validate_playoff_against_existing(session, division, match_data, existing_team_ids)
+        validate_playoff_against_existing(session, division, match_data, existing_entry_ids)
 
     identities = load_player_identities()
     for team_data in (match_data.get("teams") or {}).values():

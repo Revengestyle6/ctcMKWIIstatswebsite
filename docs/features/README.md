@@ -6,6 +6,7 @@
 | Runner/bagger metrics and exclusions | [Analytics methodology](dashboard-analytics-methodology.md) | Role and dashboard queries |
 | Playoff series and match sets | [Playoff support](playoff-support-implementation.md) | Playoff rules, importer, editor and filters |
 | Team names, tags and cross-league identity | [Team identity](team-identity-management.md) | Team identity management and catalog |
+| Multiple entries under one canonical team | [Sibling season entries and analytics impact](sibling-team-season-entries.md) | Registration, editor, reports and playoffs |
 | Player profile names and alias history | [MKCentral names](mkcentral-player-names.md) | Player naming, registry and synchronization |
 | League themes, music and navigation | [League and media](league-and-media-management.md) | League configuration and shared shell |
 | Uploaded and historical team logos | [Team logos](team-logo-management.md) | Team logos and media storage |

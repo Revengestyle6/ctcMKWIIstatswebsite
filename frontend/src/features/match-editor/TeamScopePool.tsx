@@ -4,15 +4,15 @@ import type { TeamScope } from "../../api";
 
 type Props = {
   teams: TeamScope[];
-  selectedTeamId?: number;
-  assignedTeamIds: ReadonlySet<number>;
+  selectedEntryId?: number;
+  assignedEntryIds: ReadonlySet<number>;
   onSelect: (team: TeamScope) => void;
 };
 
 export default function TeamScopePool({
   teams,
-  selectedTeamId,
-  assignedTeamIds,
+  selectedEntryId,
+  assignedEntryIds,
   onSelect,
 }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
@@ -55,8 +55,9 @@ export default function TeamScopePool({
           ) : null}
           <div className="mt-2 max-h-72 space-y-2 overflow-y-auto">
             {visibleTeams.map((team) => {
-              const selected = team.team_id === selectedTeamId;
-              const assignedElsewhere = !selected && assignedTeamIds.has(team.team_id);
+              const selected = team.team_season_entry_id === selectedEntryId;
+              const assignedElsewhere =
+                !selected && assignedEntryIds.has(team.team_season_entry_id);
               return (
                 <div
                   key={team.team_season_entry_id}

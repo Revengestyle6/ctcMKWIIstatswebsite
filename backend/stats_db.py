@@ -92,6 +92,7 @@ def findplayeravg(
                 season=scope.season_code,
                 division=scope.division_code,
                 team_id=team_row.team_id if team_row else None,
+                team_season_entry_id=team_row.team_season_entry_id if team_row else None,
                 min_races=0,
                 role=role,
                 match_set=match_set,
@@ -114,6 +115,7 @@ def findplayeravg(
                 season=scope.season_code,
                 division=scope.division_code,
                 team_id=team_row.team_id if team_row else None,
+                team_season_entry_id=team_row.team_season_entry_id if team_row else None,
                 role=role,
                 match_set=match_set,
                 session=session,
@@ -241,6 +243,7 @@ def top_team_players(
         team_row = _resolve_team(session, team, scope)
         players = dashboards.get_team_roster(
             team_row.team_id,
+            team_season_entry_id=team_row.team_season_entry_id,
             league=league,
             season=scope.season_code,
             division=scope.division_code,

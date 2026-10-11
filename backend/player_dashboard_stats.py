@@ -335,7 +335,9 @@ def _player_identity(session, player, league_code="ctc"):
     }
 
 
-def _player_race_rows(session, player_id, scope, team_id=None, match_set="regular"):
+def _player_race_rows(
+    session, player_id, scope, team_id=None, match_set="regular", team_season_entry_id=None
+):
     statement = (
         select(
             RacePlayerResult.race_id,
@@ -382,6 +384,8 @@ def _player_race_rows(session, player_id, scope, team_id=None, match_set="regula
         statement = statement.where(Match.division_id == scope.division_id)
     if team_id is not None:
         statement = statement.where(Team.team_id == team_id)
+    if team_season_entry_id is not None:
+        statement = statement.where(TeamSeasonEntry.team_season_entry_id == team_season_entry_id)
     statement = apply_match_set(statement, match_set)
     statement = apply_analytics_race_filter(statement, session)
     return session.execute(statement.order_by(Match.match_id, Race.race_number)).all()
@@ -401,6 +405,7 @@ def _match_team_rows(session, match_ids):
             Team.canonical_name,
             TeamSeasonEntry.display_name,
             TeamSeasonEntry.clan_tag,
+            TeamSeasonEntry.team_season_entry_id,
         )
         .join(
             TeamSeasonEntry,
@@ -427,6 +432,7 @@ def _player_ranking(
     team_id=None,
     match_set="regular",
     include_unaccounted=False,
+    team_season_entry_id=None,
 ):
     if scope.season_id is None or scope.division_id is None:
         return None
@@ -454,6 +460,8 @@ def _player_ranking(
     )
     if team_id is not None:
         statement = statement.where(TeamSeasonEntry.team_id == team_id)
+    if team_season_entry_id is not None:
+        statement = statement.where(TeamSeasonEntry.team_season_entry_id == team_season_entry_id)
     statement = apply_match_set(statement, match_set)
     statement = apply_analytics_race_filter(statement, session)
     rows = list(session.execute(statement).all())
@@ -464,7 +472,9 @@ def _player_ranking(
         by_player[classified_row[0].player_id].append(classified_row)
 
     aggregates = (
-        aggregate_player_rows(session, scope, match_set, team_id=team_id)
+        aggregate_player_rows(
+            session, scope, match_set, team_id=team_id, team_season_entry_id=team_season_entry_id
+        )
         if include_unaccounted
         else []
     )
@@ -550,6 +560,7 @@ def get_player_overview(
     match_set="regular",
     session=None,
     include_unaccounted=False,
+    team_season_entry_id=None,
 ):
     role = normalize_role(role)
     match_set = normalize_match_set(match_set)
@@ -561,6 +572,7 @@ def get_player_overview(
                 season=season,
                 division=division,
                 team_id=team_id,
+                team_season_entry_id=team_season_entry_id,
                 min_races=min_races,
                 role=role,
                 match_set=match_set,
@@ -575,12 +587,26 @@ def get_player_overview(
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
 
-    rows = _player_race_rows(session, player_id, scope, team_id=team_id, match_set=match_set)
+    rows = _player_race_rows(
+        session,
+        player_id,
+        scope,
+        team_id=team_id,
+        match_set=match_set,
+        team_season_entry_id=team_season_entry_id,
+    )
     confirmed = confirmed_5v5_race_ids(session, rows)
     coverage, classified = role_coverage(rows, confirmed)
     selected = [item for item in classified if item[1] == role]
     aggregates = (
-        aggregate_player_rows(session, scope, match_set, player_id=player_id, team_id=team_id)
+        aggregate_player_rows(
+            session,
+            scope,
+            match_set,
+            player_id=player_id,
+            team_id=team_id,
+            team_season_entry_id=team_season_entry_id,
+        )
         if include_unaccounted
         else []
     )
@@ -709,6 +735,7 @@ def get_player_overview(
             min_races,
             role,
             team_id=team_id,
+            team_season_entry_id=team_season_entry_id,
             match_set=match_set,
             include_unaccounted=include_unaccounted,
         ),
@@ -737,6 +764,7 @@ def get_player_performance(
     match_set="regular",
     session=None,
     include_unaccounted=False,
+    team_season_entry_id=None,
 ):
     role = normalize_role(role)
     match_set = normalize_match_set(match_set)
@@ -748,6 +776,7 @@ def get_player_performance(
                 season=season,
                 division=division,
                 team_id=team_id,
+                team_season_entry_id=team_season_entry_id,
                 role=role,
                 match_set=match_set,
                 session=owned_session,
@@ -758,12 +787,26 @@ def get_player_performance(
     scope = _resolve_scope(session, league=league, season=season, division=division)
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
-    rows = _player_race_rows(session, player_id, scope, team_id=team_id, match_set=match_set)
+    rows = _player_race_rows(
+        session,
+        player_id,
+        scope,
+        team_id=team_id,
+        match_set=match_set,
+        team_season_entry_id=team_season_entry_id,
+    )
     confirmed = confirmed_5v5_race_ids(session, rows)
     coverage, classified = role_coverage(rows, confirmed)
     selected_rows = [row for row, classified_role, _source in classified if classified_role == role]
     aggregates = (
-        aggregate_player_rows(session, scope, match_set, player_id=player_id, team_id=team_id)
+        aggregate_player_rows(
+            session,
+            scope,
+            match_set,
+            player_id=player_id,
+            team_id=team_id,
+            team_season_entry_id=team_season_entry_id,
+        )
         if include_unaccounted
         else []
     )
@@ -837,6 +880,7 @@ def get_player_tracks(
     role="runner",
     match_set="regular",
     session=None,
+    team_season_entry_id=None,
 ):
     role = normalize_role(role)
     match_set = normalize_match_set(match_set)
@@ -848,6 +892,7 @@ def get_player_tracks(
                 season=season,
                 division=division,
                 team_id=team_id,
+                team_season_entry_id=team_season_entry_id,
                 min_races=min_races,
                 role=role,
                 match_set=match_set,
@@ -858,7 +903,14 @@ def get_player_tracks(
     scope = _resolve_scope(session, league=league, season=season, division=division)
     if team_id is not None and not session.get(Team, team_id):
         raise DashboardError("Unknown team filter.")
-    rows = _player_race_rows(session, player_id, scope, team_id=team_id, match_set=match_set)
+    rows = _player_race_rows(
+        session,
+        player_id,
+        scope,
+        team_id=team_id,
+        match_set=match_set,
+        team_season_entry_id=team_season_entry_id,
+    )
     confirmed = confirmed_5v5_race_ids(session, rows)
     coverage, classified = role_coverage(rows, confirmed)
     tracks = defaultdict(list)

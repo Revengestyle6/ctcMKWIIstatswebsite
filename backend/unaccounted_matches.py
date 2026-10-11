@@ -193,7 +193,13 @@ def accounted_match_filter(statement, include_unaccounted=False):
 
 
 def aggregate_player_rows(
-    session, scope, match_set="regular", player_id=None, team_id=None, match_ids=None
+    session,
+    scope,
+    match_set="regular",
+    player_id=None,
+    team_id=None,
+    match_ids=None,
+    team_season_entry_id=None,
 ):
     statement = (
         select(
@@ -235,6 +241,7 @@ def aggregate_player_rows(
         (Match.division_id, scope.division_id),
         (MatchPlayer.player_id, player_id),
         (Team.team_id, team_id),
+        (TeamSeasonEntry.team_season_entry_id, team_season_entry_id),
     ):
         if value is not None:
             statement = statement.where(column == value)

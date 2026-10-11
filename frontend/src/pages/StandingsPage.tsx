@@ -59,6 +59,7 @@ type LeaderboardPlayer = {
   name: string;
   team_id: number;
   team_tag: string;
+  team_season_entry_id: number;
   team_status: CompetitionStatus;
   gps_played: number;
   team_gps: number;
@@ -85,7 +86,14 @@ type PlayoffSeries = {
   best_of: number;
   status: "in_progress" | "complete";
   winner_team_id: number | null;
-  participants: Array<{ team_id: number; tag: string; name: string; wins: number }>;
+  winner_team_season_entry_id: number | null;
+  participants: Array<{
+    team_season_entry_id: number;
+    team_id: number;
+    tag: string;
+    name: string;
+    wins: number;
+  }>;
   matches: Array<{
     match_id: number;
     label: string;
@@ -108,6 +116,7 @@ type StandingsResponse = {
     team_count: number | null;
     seeds: Array<{
       seed: number;
+      team_season_entry_id: number;
       team_id: number;
       tag: string;
       name: string;
@@ -618,7 +627,7 @@ function PlayerLeaderboard({
               return (
                 <tr
                   ref={index === 0 ? firstRowRef : undefined}
-                  key={`${player.player_id}:${player.team_id}`}
+                  key={`${player.player_id}:${player.team_season_entry_id}`}
                   className={`border-b ${leaderboardRankClass(rank)}`}
                 >
                   <td className="px-1 py-2 text-center font-black">{rank}</td>
@@ -736,8 +745,8 @@ function PlayoffBracket({
           <div className="mt-4 space-y-2">
             {item.participants.map((team) => (
               <div
-                key={team.team_id}
-                className={`flex items-center justify-between rounded border px-3 py-2 ${item.winner_team_id === team.team_id ? "border-emerald-300/50 bg-emerald-950/35" : "border-white/10"}`}
+                key={team.team_season_entry_id}
+                className={`flex items-center justify-between rounded border px-3 py-2 ${item.winner_team_season_entry_id === team.team_season_entry_id ? "border-emerald-300/50 bg-emerald-950/35" : "border-white/10"}`}
               >
                 <span className="font-semibold">
                   {team.name} <span className="text-xs text-gray-400">{team.tag}</span>
@@ -972,7 +981,7 @@ export default function StandingsPage(): React.JSX.Element {
                 <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   {data.playoff_qualification.seeds.map((team) => (
                     <div
-                      key={team.team_id}
+                      key={team.team_season_entry_id}
                       className="rounded border border-white/10 bg-black/30 p-3"
                     >
                       <p className="text-xs uppercase tracking-wide text-gray-400">

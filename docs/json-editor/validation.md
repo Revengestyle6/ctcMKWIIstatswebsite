@@ -65,7 +65,7 @@ It does not validate every nested scalar or array item at load time. For example
 
 The browser fetches context for league/season/division. A failed context request blocks playoff validation with “Existing playoff series could not be checked.” The current check is keyed to error status; loading/empty context is not itself a proof of validity, and the backend repeats all relevant checks.
 
-For an existing series, the browser requires the configured division format, the series' best-of value, no duplicate match number, the next sequential number (`existing count + 1` in the validator), an unclinched series, and the established pair of resolved team IDs. The UI assigns the first missing series number and locks format/best-of/forced series number where context provides them. Edit mode removes the match being edited from browser context and marks its affected series in progress for preview.
+For an existing series, the browser requires the configured division format, the series' best-of value, no duplicate match number, the next sequential number (`existing count + 1` in the validator), an unclinched series, and the established pair of resolved season entry IDs. The UI assigns the first missing series number and locks format/best-of/forced series number where context provides them. Edit mode removes the match being edited from browser context and marks its affected series in progress for preview.
 
 ### Teams and players
 
@@ -73,7 +73,7 @@ For an existing series, the browser requires the configured division format, the
 | --- | --- |
 | Every team has a tag | Whitespace-only extracted tag fails. |
 | No duplicated tags | Comparison trims/lowercases; distinct draft keys cannot produce the same tag. |
-| Team cannot play itself | When scoped lookup resolves both tags to the same global team ID. |
+| Season entry cannot play itself | When scoped lookup resolves both tags to the same season entry ID. Distinct entries sharing a canonical team are valid opponents. |
 | Friend code formatted correctly | Exactly four digits, hyphen, four digits, hyphen, four digits. |
 | Friend code appears once | Checked across all teams in the draft. |
 | Player identity appears once | Confirmed identities and proposed existing-player links cannot reuse one player ID across different codes. |
@@ -166,8 +166,8 @@ Player-link input must be an object keyed by a code actually in the match. `crea
 | Registered conference teams | In conference-based divisions, each team must already be registered with conference assignment; upload does not infer/register that assignment. |
 | Conference matchup frequency | Regular matches require two conference-assigned teams. A same-conference pairing allows two existing schedule occurrences; cross-conference allows one. Import rejects another once the allowance has already been used. |
 | Division playoff configuration | Division and playoff format must already exist in Database Management and match the document. |
-| Distinct playoff teams | Import resolves exactly two different global team IDs. |
-| Semifinal exclusivity | Team cannot occupy another semifinal series in the same division. |
+| Distinct playoff entries | Import resolves exactly two different season entry IDs, which may share a canonical team ID. |
+| Semifinal exclusivity | A season entry cannot occupy another semifinal series in the same division; another entry of the canonical team may qualify independently. |
 | Semifinal seeding | When applicable standings seeds are available: four-team format uses 1 vs 4 and 2 vs 3; three-team format uses 2 vs 3. The importer checks this for new semifinal series. Without regular results in a nonconference division, this check is skipped; missing seed information also does not invent a pairing. |
 | Finals prerequisites | All configured semifinal series exist and have winners. Four-team finalists are the semifinal winners; three-team finalists include semifinal winner and a team outside that semifinal (the bye team). |
 | Existing series | Same best-of and same two teams; no duplicate series match number; next missing number required; clinched series rejects another match except when filling an earlier missing number before a later recorded match. |
