@@ -89,7 +89,10 @@ def _load_rows(session, scope, team_id=None, track_id=None):
             Track.track_id,
             Track.canonical_name.label("track_name"),
             Team.team_id,
+            MatchTeam.match_team_id,
+            TeamSeasonEntry.team_season_entry_id,
             Team.canonical_name,
+            Team.canonical_tag,
             TeamSeasonEntry.display_name,
             TeamSeasonEntry.clan_tag,
             score.label("score"),
@@ -152,7 +155,7 @@ def _race_records(rows):
         grouped[row.race_id].append(row)
     records = []
     for race_rows in grouped.values():
-        teams = list({row.team_id: row for row in race_rows}.values())
+        teams = list({row.match_team_id: row for row in race_rows}.values())
         if len(teams) != 2:
             continue
         first, second = teams
@@ -171,6 +174,10 @@ def _race_records(rows):
                 "teams": [
                     {
                         "team_id": first.team_id,
+                        "canonical_name": first.canonical_name,
+                        "canonical_tag": first.canonical_tag,
+                        "match_team_id": first.match_team_id,
+                        "team_season_entry_id": first.team_season_entry_id,
                         "team_name": _team_name(
                             first.display_name, first.clan_tag, first.canonical_name
                         ),
@@ -180,6 +187,10 @@ def _race_records(rows):
                     },
                     {
                         "team_id": second.team_id,
+                        "canonical_name": second.canonical_name,
+                        "canonical_tag": second.canonical_tag,
+                        "match_team_id": second.match_team_id,
+                        "team_season_entry_id": second.team_season_entry_id,
                         "team_name": _team_name(
                             second.display_name, second.clan_tag, second.canonical_name
                         ),
@@ -199,21 +210,21 @@ def _team_track_rows(races, selected_team_id=None):
         for team in race["teams"]:
             if selected_team_id is not None and team["team_id"] != selected_team_id:
                 continue
-            identity[team["team_id"]] = team
-            overall[team["team_id"]].append(team["differential"])
-            by_track[(team["team_id"], race["track_id"])].append(
-                (team["score"], team["differential"])
-            )
+            entry_id = team["team_season_entry_id"]
+            identity[entry_id] = team
+            overall[entry_id].append(team["differential"])
+            by_track[(entry_id, race["track_id"])].append((team["score"], team["differential"]))
     names = {race["track_id"]: race["track_name"] for race in races}
     results = []
-    for (team_id, track_id), samples in by_track.items():
+    for (entry_id, track_id), samples in by_track.items():
         scores, margins = zip(*samples)
-        baseline = sum(overall[team_id]) / len(overall[team_id])
+        baseline = sum(overall[entry_id]) / len(overall[entry_id])
         average_margin = sum(margins) / len(margins)
-        team = identity[team_id]
+        team = identity[entry_id]
         results.append(
             {
-                "team_id": team_id,
+                "team_id": team["team_id"],
+                "team_season_entry_id": entry_id,
                 "team_name": team["team_name"],
                 "team_tag": team["team_tag"],
                 "track_id": track_id,
@@ -324,11 +335,38 @@ def _track_rows(races, team_rows, selected_team_id=None):
     grouped = defaultdict(list)
     for race in races:
         grouped[race["track_id"]].append(race)
-    selected = {
-        row["track_id"]: row
-        for row in team_rows
-        if selected_team_id is not None and row["team_id"] == selected_team_id
-    }
+    selected_races = defaultdict(list)
+    if selected_team_id is not None:
+        for race in races:
+            for team in race["teams"]:
+                if team["team_id"] == selected_team_id:
+                    selected_races[race["track_id"]].append(team)
+    canonical_rows = [row for row in team_rows if row["team_id"] == selected_team_id]
+    baseline_samples = sum(row["races"] for row in canonical_rows)
+    baseline = (
+        sum(row["baseline_margin"] * row["races"] for row in canonical_rows) / baseline_samples
+        if baseline_samples
+        else 0
+    )
+    selected = {}
+    for track_id, samples in selected_races.items():
+        average_margin = sum(team["differential"] for team in samples) / len(samples)
+        selected[track_id] = {
+            "team_id": selected_team_id,
+            "team_name": samples[0]["canonical_name"],
+            "team_tag": samples[0]["canonical_tag"],
+            "track_id": track_id,
+            "track_name": grouped[track_id][0]["track_name"],
+            "sample_status": "established" if len(samples) >= STANDOUT_MIN_RACES else "early",
+            "races": len(samples),
+            "average_score": _round(sum(team["score"] for team in samples) / len(samples)),
+            "average_margin": _round(average_margin),
+            "win_rate": _round(
+                100 * sum(team["differential"] > 0 for team in samples) / len(samples)
+            ),
+            "baseline_margin": _round(baseline),
+            "lift": _round(average_margin - baseline),
+        }
     result = []
     for track_id, samples in grouped.items():
         margins = [race["margin"] for race in samples]
@@ -371,6 +409,7 @@ def _player_track_rows(session, races, min_plays, selected_team_id=None):
             RacePlayerResult.race_id,
             RacePlayerResult.score,
             TeamSeasonEntry.team_id,
+            RacePlayerResult.match_team_id,
             Player.canonical_name,
         )
         .join(
@@ -385,14 +424,14 @@ def _player_track_rows(session, races, min_plays, selected_team_id=None):
         statement = statement.where(TeamSeasonEntry.team_id == selected_team_id)
     rows = session.execute(statement).all()
     team_margins = {
-        (race["race_id"], team["team_id"]): team["differential"]
+        (race["race_id"], team["match_team_id"]): team["differential"]
         for race in races
         for team in race["teams"]
     }
     by_player = defaultdict(list)
     canonical_names = {}
     for row in rows:
-        margin = team_margins.get((row.race_id, row.team_id))
+        margin = team_margins.get((row.race_id, row.match_team_id))
         if margin is None:
             continue
         by_player[row.player_id].append((row.score, margin))
@@ -446,25 +485,7 @@ def get_track_analytics(
     tracks = [
         row for row in _track_rows(races, team_rows, team_id) if row["appearances"] >= min_plays
     ]
-    selected_team = next(
-        (team for race in races for team in race["teams"] if team["team_id"] == team_id), None
-    )
-    if team_id is not None and selected_team is None:
-        team_row = session.execute(
-            select(TeamSeasonEntry.display_name, TeamSeasonEntry.clan_tag, Team.canonical_name)
-            .join(Team, Team.team_id == TeamSeasonEntry.team_id)
-            .where(
-                TeamSeasonEntry.team_id == team_id,
-                TeamSeasonEntry.season_id == scope.season_id,
-                TeamSeasonEntry.division_id == scope.division_id,
-            )
-        ).first()
-        if team_row:
-            selected_team = {
-                "team_name": _team_name(
-                    team_row.display_name, team_row.clan_tag, team_row.canonical_name
-                )
-            }
+    selected_team = session.get(Team, team_id) if team_id is not None else None
 
     def extreme(key, reverse=False):
         return (
@@ -481,7 +502,7 @@ def get_track_analytics(
         "scope": {
             **_scope_payload(scope),
             "team_id": team_id,
-            "team_name": selected_team and selected_team["team_name"],
+            "team_name": selected_team.canonical_name if selected_team else None,
         },
         "definitions": {
             "even_margin": EVEN_MARGIN,

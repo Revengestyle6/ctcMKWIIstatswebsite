@@ -149,10 +149,10 @@ def validate_competition_metadata(match_data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _series_team_ids(session, series_id: int) -> tuple[int, ...]:
+def _series_entry_ids(session, series_id: int) -> tuple[int, ...]:
     return tuple(
         session.scalars(
-            select(PlayoffSeriesParticipant.team_id)
+            select(PlayoffSeriesParticipant.team_season_entry_id)
             .where(PlayoffSeriesParticipant.playoff_series_id == series_id)
             .order_by(PlayoffSeriesParticipant.participant_slot)
         ).all()
@@ -160,18 +160,18 @@ def _series_team_ids(session, series_id: int) -> tuple[int, ...]:
 
 
 def _series_wins(session, series: PlayoffSeries) -> dict[int, int]:
-    wins = {team_id: 0 for team_id in _series_team_ids(session, series.playoff_series_id)}
+    wins = {entry_id: 0 for entry_id in _series_entry_ids(session, series.playoff_series_id)}
     by_match: dict[int, list[tuple[int, int | None]]] = {}
     match_rows = session.execute(
-        select(Match.match_id, TeamSeasonEntry.team_id, MatchTeam.final_score)
+        select(Match.match_id, TeamSeasonEntry.team_season_entry_id, MatchTeam.final_score)
         .join(MatchTeam, MatchTeam.match_id == Match.match_id)
         .join(
             TeamSeasonEntry, TeamSeasonEntry.team_season_entry_id == MatchTeam.team_season_entry_id
         )
         .where(Match.playoff_series_id == series.playoff_series_id)
     )
-    for existing_match_id, team_id, score in match_rows:
-        by_match.setdefault(existing_match_id, []).append((team_id, score))
+    for existing_match_id, entry_id, score in match_rows:
+        by_match.setdefault(existing_match_id, []).append((entry_id, score))
     for scores in by_match.values():
         if len(scores) == 2 and scores[0][1] != scores[1][1]:
             winner = max(scores, key=lambda item: item[1] if item[1] is not None else -1)[0]
@@ -182,14 +182,14 @@ def _series_wins(session, series: PlayoffSeries) -> dict[int, int]:
 def _series_winner(session, series: PlayoffSeries) -> int | None:
     wins = _series_wins(session, series)
     needed = series.best_of // 2 + 1
-    return next((team_id for team_id, count in wins.items() if count >= needed), None)
+    return next((entry_id for entry_id, count in wins.items() if count >= needed), None)
 
 
 def _validate_new_semifinal_participants(
-    session, division_id: int, series_number: int, team_ids: set[int]
+    session, division_id: int, series_number: int, entry_ids: set[int]
 ) -> None:
     rows = session.execute(
-        select(PlayoffSeries.series_number, PlayoffSeriesParticipant.team_id)
+        select(PlayoffSeries.series_number, PlayoffSeriesParticipant.team_season_entry_id)
         .join(
             PlayoffSeriesParticipant,
             PlayoffSeriesParticipant.playoff_series_id == PlayoffSeries.playoff_series_id,
@@ -198,19 +198,19 @@ def _validate_new_semifinal_participants(
             PlayoffSeries.division_id == division_id,
             PlayoffSeries.stage == "semifinals",
             PlayoffSeries.series_number != series_number,
-            PlayoffSeriesParticipant.team_id.in_(team_ids),
+            PlayoffSeriesParticipant.team_season_entry_id.in_(entry_ids),
         )
     ).all()
     if rows:
         occupied = ", ".join(
-            f"team {team_id} in Semifinals Series {existing_number}"
-            for existing_number, team_id in rows
+            f"team {entry_id} in Semifinals Series {existing_number}"
+            for existing_number, entry_id in rows
         )
         raise ValueError(f"A semifinal team is already assigned to another series: {occupied}.")
 
 
 def _validate_semifinal_seeding(
-    session, season_id: int, division: Division, series_number: int, team_ids: set[int]
+    session, season_id: int, division: Division, series_number: int, entry_ids: set[int]
 ) -> None:
     from standings_service import get_division_standings
 
@@ -230,7 +230,10 @@ def _validate_semifinal_seeding(
         season=season.season_code,
         division=division.division_code,
     )
-    seeds = {seed["seed"]: seed["team_id"] for seed in standings["playoff_qualification"]["seeds"]}
+    seeds = {
+        seed["seed"]: seed["team_season_entry_id"]
+        for seed in standings["playoff_qualification"]["seeds"]
+    }
     team_count = standings["playoff_qualification"]["team_count"]
     expected_seed_numbers = (
         {1: (1, 4), 2: (2, 3)} if team_count == 4 else {1: (2, 3)} if team_count == 3 else {}
@@ -238,8 +241,8 @@ def _validate_semifinal_seeding(
     expected_numbers = expected_seed_numbers.get(series_number)
     if expected_numbers is None or not all(seed in seeds for seed in expected_numbers):
         return
-    expected_team_ids = {seeds[seed] for seed in expected_numbers}
-    if team_ids != expected_team_ids:
+    expected_entry_ids = {seeds[seed] for seed in expected_numbers}
+    if entry_ids != expected_entry_ids:
         pairing = " vs ".join(f"seed {seed}" for seed in expected_numbers)
         raise ValueError(f"Semifinals Series {series_number} must be {pairing}.")
 
@@ -247,7 +250,7 @@ def _validate_semifinal_seeding(
 def _validate_finals_participants(
     session,
     config: DivisionPlayoffConfig,
-    team_ids: set[int],
+    entry_ids: set[int],
 ) -> None:
     semifinals = session.scalars(
         select(PlayoffSeries)
@@ -262,15 +265,15 @@ def _validate_finals_participants(
     winners = [_series_winner(session, series) for series in semifinals]
     if any(winner is None for winner in winners):
         raise ValueError("All semifinal series must be decided before the finals can be added.")
-    if config.format_code == "four_team" and team_ids != set(winners):
+    if config.format_code == "four_team" and entry_ids != set(winners):
         raise ValueError("The finals teams must be the winners of both semifinal series.")
     if config.format_code == "three_team":
-        semifinal_team_ids = set(_series_team_ids(session, semifinals[0].playoff_series_id))
+        semifinal_entry_ids = set(_series_entry_ids(session, semifinals[0].playoff_series_id))
         semifinal_winner = winners[0]
-        if semifinal_winner not in team_ids:
+        if semifinal_winner not in entry_ids:
             raise ValueError("The winner of the semifinal series must appear in the finals.")
-        other_finalists = team_ids - {semifinal_winner}
-        if not other_finalists or other_finalists & semifinal_team_ids:
+        other_finalists = entry_ids - {semifinal_winner}
+        if not other_finalists or other_finalists & semifinal_entry_ids:
             raise ValueError(
                 "The other finals team in a 3-team playoff must be the team that received the bye."
             )
@@ -281,13 +284,27 @@ def resolve_playoff_series(
     season_id: int,
     division: Division,
     match_data: dict[str, Any],
-    team_ids: list[int],
+    entry_ids: list[int],
 ) -> tuple[PlayoffSeries, dict[str, Any]]:
     metadata = validate_competition_metadata(match_data)
     if metadata["match_type"] != "playoff":
         raise ValueError("Cannot resolve a playoff series for a regular-season match.")
-    if len(set(team_ids)) != 2:
-        raise ValueError("A playoff match must resolve to exactly two distinct teams.")
+    if len(set(entry_ids)) != 2:
+        raise ValueError(
+            "A playoff match must resolve to exactly two distinct team season entries."
+        )
+
+    registered_ids = set(
+        session.scalars(
+            select(TeamSeasonEntry.team_season_entry_id).where(
+                TeamSeasonEntry.division_id == division.division_id,
+                TeamSeasonEntry.season_id == season_id,
+                TeamSeasonEntry.team_season_entry_id.in_(entry_ids),
+            )
+        )
+    )
+    if registered_ids != set(entry_ids):
+        raise ValueError("Playoff participants must be registered in the selected division.")
 
     definition: PlayoffFormatDefinition = metadata["format"]
     config = session.get(DivisionPlayoffConfig, division.division_id)
@@ -310,7 +327,7 @@ def resolve_playoff_series(
         )
         .with_for_update()
     )
-    submitted_team_ids = set(team_ids)
+    submitted_entry_ids = set(entry_ids)
     if series is None:
         if metadata["stage"] == "semifinals":
             _validate_semifinal_seeding(
@@ -318,13 +335,13 @@ def resolve_playoff_series(
                 season_id,
                 division,
                 metadata["series_number"],
-                submitted_team_ids,
+                submitted_entry_ids,
             )
             _validate_new_semifinal_participants(
-                session, division.division_id, metadata["series_number"], submitted_team_ids
+                session, division.division_id, metadata["series_number"], submitted_entry_ids
             )
         else:
-            _validate_finals_participants(session, config, submitted_team_ids)
+            _validate_finals_participants(session, config, submitted_entry_ids)
         label = (
             f"Semifinals Series {metadata['series_number']}"
             if metadata["stage"] == "semifinals"
@@ -340,11 +357,12 @@ def resolve_playoff_series(
         )
         session.add(series)
         session.flush()
-        for slot, team_id in enumerate(team_ids, start=1):
+        for slot, entry_id in enumerate(entry_ids, start=1):
             session.add(
                 PlayoffSeriesParticipant(
                     playoff_series_id=series.playoff_series_id,
-                    team_id=team_id,
+                    team_id=session.get(TeamSeasonEntry, entry_id).team_id,
+                    team_season_entry_id=entry_id,
                     participant_slot=slot,
                 )
             )
@@ -352,7 +370,7 @@ def resolve_playoff_series(
     else:
         if series.best_of != metadata["best_of"]:
             raise ValueError(f"This series is already configured as best of {series.best_of}.")
-        if set(_series_team_ids(session, series.playoff_series_id)) != submitted_team_ids:
+        if set(_series_entry_ids(session, series.playoff_series_id)) != submitted_entry_ids:
             raise ValueError(
                 "The teams do not match the teams already established for this series."
             )
@@ -385,7 +403,7 @@ def validate_playoff_against_existing(
     session,
     division: Division | None,
     match_data: dict[str, Any],
-    team_ids: list[int],
+    entry_ids: list[int],
 ) -> None:
     metadata = validate_competition_metadata(match_data)
     if metadata["match_type"] != "playoff":
@@ -405,9 +423,9 @@ def validate_playoff_against_existing(
         raise ValueError(
             f"This division's playoff format is already locked as {config.format_code}."
         )
-    if len(set(team_ids)) != 2:
+    if len(set(entry_ids)) != 2:
         return
-    submitted_team_ids = set(team_ids)
+    submitted_entry_ids = set(entry_ids)
     series = session.scalar(
         select(PlayoffSeries).where(
             PlayoffSeries.division_id == division.division_id,
@@ -418,14 +436,14 @@ def validate_playoff_against_existing(
     if series is None:
         if metadata["stage"] == "semifinals":
             _validate_new_semifinal_participants(
-                session, division.division_id, metadata["series_number"], submitted_team_ids
+                session, division.division_id, metadata["series_number"], submitted_entry_ids
             )
         else:
-            _validate_finals_participants(session, config, submitted_team_ids)
+            _validate_finals_participants(session, config, submitted_entry_ids)
         return
     if series.best_of != metadata["best_of"]:
         raise ValueError(f"This series is already configured as best of {series.best_of}.")
-    if set(_series_team_ids(session, series.playoff_series_id)) != submitted_team_ids:
+    if set(_series_entry_ids(session, series.playoff_series_id)) != submitted_entry_ids:
         raise ValueError("The teams do not match the teams already established for this series.")
     existing_numbers = set(
         session.scalars(

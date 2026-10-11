@@ -2,6 +2,7 @@ import { fetchJson } from "./api";
 
 export interface TeamTrackPerformance {
   team_id: number;
+  team_season_entry_id: number;
   team_name: string;
   team_tag: string;
   track_id: number;
@@ -27,7 +28,16 @@ export interface TrackAnalyticsRow {
   even_race_rate: number;
   blowout_rate: number;
   timing_counts: number[];
-  selected_team?: TeamTrackPerformance;
+  selected_team?: Pick<
+    TeamTrackPerformance,
+    | "team_id"
+    | "races"
+    | "average_score"
+    | "average_margin"
+    | "win_rate"
+    | "baseline_margin"
+    | "lift"
+  >;
 }
 
 interface Scope {

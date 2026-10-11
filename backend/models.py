@@ -134,11 +134,16 @@ class PlayoffSeriesParticipant(Base):
         Integer, ForeignKey("playoff_series.playoff_series_id"), nullable=False
     )
     team_id = Column(Integer, ForeignKey("teams.team_id"), nullable=False)
+    team_season_entry_id = Column(
+        Integer, ForeignKey("team_season_entries.team_season_entry_id"), nullable=False
+    )
     participant_slot = Column(Integer, nullable=False)
     last_update_at = last_update_column()
 
     __table_args__ = (
-        UniqueConstraint("playoff_series_id", "team_id", name="uq_playoff_series_participant_team"),
+        UniqueConstraint(
+            "playoff_series_id", "team_season_entry_id", name="uq_playoff_series_participant_entry"
+        ),
         UniqueConstraint(
             "playoff_series_id", "participant_slot", name="uq_playoff_series_participant_slot"
         ),

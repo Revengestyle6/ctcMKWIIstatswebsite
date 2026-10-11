@@ -515,17 +515,6 @@ def create_team_season_entry(session, payload):
         raise ValueError("Division must belong to the selected season.")
     display_name = _required_text(payload, "display_name", "Season team name")
     clan_tag = _required_text(payload, "clan_tag", "Season team tag", 64)
-    existing_division_membership = session.scalar(
-        select(TeamSeasonEntry).where(
-            TeamSeasonEntry.team_id == team_id,
-            TeamSeasonEntry.season_id == season_id,
-            TeamSeasonEntry.division_id == division_id,
-        )
-    )
-    if existing_division_membership is not None:
-        raise ValueError(
-            f"{team.canonical_name} is already registered in {division.division_name}."
-        )
     existing_season_identity = session.scalar(
         select(TeamSeasonEntry).where(
             TeamSeasonEntry.team_id == team_id,
@@ -537,7 +526,7 @@ def create_team_season_entry(session, payload):
     if existing_season_identity is not None:
         raise ValueError(
             f"{team.canonical_name} is already registered for {season.name} with that "
-            "season display name and tag. Change at least one for another division."
+            "season display name and tag. Change at least one for another entry."
         )
     conference_id = _positive_int(payload, "conference_id", "Conference", required=False)
     if division.is_conference_based:

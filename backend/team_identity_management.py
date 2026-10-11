@@ -354,7 +354,7 @@ def delete_season_identity(session, team_id, entry_id):
         )
         .where(
             PlayoffSeries.division_id == entry.division_id,
-            PlayoffSeriesParticipant.team_id == team_id,
+            PlayoffSeriesParticipant.team_season_entry_id == entry_id,
         )
         .limit(1)
     )
@@ -465,16 +465,20 @@ def team_merge_comparison(session, source_team_id, target_team_id):
 
     source_scopes = set(
         session.execute(
-            select(TeamSeasonEntry.season_id, TeamSeasonEntry.division_id).where(
-                TeamSeasonEntry.team_id == source_team_id
-            )
+            select(
+                TeamSeasonEntry.season_id,
+                TeamSeasonEntry.division_id,
+                func.lower(TeamSeasonEntry.clan_tag),
+            ).where(TeamSeasonEntry.team_id == source_team_id)
         ).all()
     )
     target_scopes = set(
         session.execute(
-            select(TeamSeasonEntry.season_id, TeamSeasonEntry.division_id).where(
-                TeamSeasonEntry.team_id == target_team_id
-            )
+            select(
+                TeamSeasonEntry.season_id,
+                TeamSeasonEntry.division_id,
+                func.lower(TeamSeasonEntry.clan_tag),
+            ).where(TeamSeasonEntry.team_id == target_team_id)
         ).all()
     )
     blockers = []
@@ -637,7 +641,7 @@ def merge_team(session, source_team_id, payload):
             target_league_keys.add(key)
 
     target_entries = {
-        (entry.season_id, entry.division_id): entry
+        (entry.season_id, entry.division_id, entry.clan_tag.casefold()): entry
         for entry in session.scalars(
             select(TeamSeasonEntry).where(TeamSeasonEntry.team_id == target_team_id)
         ).all()
@@ -662,11 +666,18 @@ def merge_team(session, source_team_id, payload):
     player_memberships_consolidated = 0
     match_appearances_updated = 0
     for entry in source_entries:
-        target_entry = target_entries.get((entry.season_id, entry.division_id))
+        target_entry = target_entries.get(
+            (entry.season_id, entry.division_id, entry.clan_tag.casefold())
+        )
         if target_entry is None:
             entry.team_id = target_team_id
-            target_entries[(entry.season_id, entry.division_id)] = entry
+            target_entries[(entry.season_id, entry.division_id, entry.clan_tag.casefold())] = entry
             continue
+        session.execute(
+            update(PlayoffSeriesParticipant)
+            .where(PlayoffSeriesParticipant.team_season_entry_id == entry.team_season_entry_id)
+            .values(team_season_entry_id=target_entry.team_season_entry_id)
+        )
         consolidated = _merge_player_memberships(session, entry, target_entry)
         player_memberships_consolidated += consolidated
         match_result = session.execute(

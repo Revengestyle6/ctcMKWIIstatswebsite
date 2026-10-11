@@ -132,6 +132,7 @@ class MatchEditorPlayerTests(unittest.TestCase):
                         "teams": [
                             {
                                 "team_id": team.team_id,
+                                "team_season_entry_id": team_entry.team_season_entry_id,
                                 "canonical_name": "Cosmic Speed",
                                 "canonical_tag": "CS",
                                 "display_name": "Cosmic Speed",

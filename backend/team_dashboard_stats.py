@@ -70,19 +70,13 @@ def _team_identity(session, team, scope):
         key=lambda row: (row.season_number or 0, row.team_season_entry_id),
         reverse=True,
     )
-    scoped_entry = (
-        next(
-            (
-                row
-                for row in entries
-                if row.season_id == scope.season_id
-                and (scope.division_code is None or row.division_code == scope.division_code)
-            ),
-            None,
-        )
-        if scope.season_id is not None
-        else None
-    )
+    scoped_entries = [
+        row
+        for row in entries
+        if row.season_id == scope.season_id
+        and (scope.division_code is None or row.division_code == scope.division_code)
+    ]
+    scoped_entry = scoped_entries[0] if len(scoped_entries) == 1 else None
     return {
         "team_id": team.team_id,
         "name": team.canonical_name,
@@ -94,6 +88,15 @@ def _team_identity(session, team, scope):
             if scoped_entry
             else team.canonical_name
         ),
+        "current_entries": [
+            {
+                "team_season_entry_id": row.team_season_entry_id,
+                "name": row.display_name,
+                "tag": row.clan_tag,
+                "division": row.division_code,
+            }
+            for row in scoped_entries
+        ],
         "current_entry": (
             {
                 "season": scoped_entry.season_code,
@@ -117,6 +120,7 @@ def _team_identity(session, team, scope):
         ),
         "appearances": [
             {
+                "team_season_entry_id": row.team_season_entry_id,
                 "season": row.season_code,
                 "division": row.division_code,
                 "name": _team_display_name(row.display_name, row.clan_tag, team.canonical_name),
@@ -149,6 +153,7 @@ def _team_match_rows(session, team_id, scope, match_set="regular", include_unacc
             Season.season_number,
             Division.division_code,
             TeamSeasonEntry.clan_tag,
+            TeamSeasonEntry.team_season_entry_id,
         )
         .join(Match, Match.match_id == MatchTeam.match_id)
         .join(Season, Season.season_id == Match.season_id)
@@ -202,7 +207,11 @@ def _team_ranking(
     for teams in by_match.values():
         for row in teams:
             opponent_score = max(
-                (_final_score(opponent) for opponent in teams if opponent.team_id != row.team_id),
+                (
+                    _final_score(opponent)
+                    for opponent in teams
+                    if opponent.match_team_id != row.match_team_id
+                ),
                 default=None,
             )
             if opponent_score is None:
@@ -259,8 +268,6 @@ def get_team_overview(
         raise DashboardNotFound("Team not found.")
     scope = _resolve_scope(session, league=league, season=season, division=division)
     if opponent_team_id is not None:
-        if opponent_team_id == team_id:
-            raise DashboardError("A team cannot be its own opponent filter.")
         if not session.get(Team, opponent_team_id):
             raise DashboardError("Unknown opponent filter.")
 
@@ -278,7 +285,9 @@ def get_team_overview(
     matches = []
     for row in rows:
         opponents = [
-            candidate for candidate in teams_by_match[row.match_id] if candidate.team_id != team_id
+            candidate
+            for candidate in teams_by_match[row.match_id]
+            if candidate.match_team_id != row.match_team_id
         ]
         if opponent_team_id is not None and not any(
             candidate.team_id == opponent_team_id for candidate in opponents
@@ -290,6 +299,9 @@ def get_team_overview(
         matches.append(
             {
                 "match_id": row.match_id,
+                "match_team_id": row.match_team_id,
+                "team_season_entry_id": row.team_season_entry_id,
+                "team_tag": row.clan_tag,
                 "label": row.match_label,
                 "score_source": "unaccounted" if row.match_id in unaccounted_ids else "accounted",
                 "season": row.season_code,
@@ -305,6 +317,7 @@ def get_team_overview(
                 "opponents": [
                     {
                         "team_id": candidate.team_id,
+                        "team_season_entry_id": candidate.team_season_entry_id,
                         "name": _team_display_name(
                             candidate.display_name,
                             candidate.clan_tag,
@@ -372,6 +385,8 @@ def get_team_overview(
         "score_trend": [
             {
                 "match_id": row["match_id"],
+                "match_team_id": row["match_team_id"],
+                "team_tag": row["team_tag"],
                 "label": row["label"],
                 "differential": row["differential"],
             }
@@ -384,13 +399,23 @@ def _filtered_team_match_ids(
     session, team_id, scope, opponent_team_id=None, match_set="regular", include_unaccounted=False
 ):
     rows = _team_match_rows(session, team_id, scope, match_set, include_unaccounted)
-    match_ids = [row.match_id for row in rows]
+    match_ids = list({row.match_id for row in rows})
     if opponent_team_id is None or not match_ids:
         return match_ids
-    teams_by_match = defaultdict(set)
-    for row in _match_team_rows(session, match_ids):
-        teams_by_match[row.match_id].add(row.team_id)
-    return [match_id for match_id in match_ids if opponent_team_id in teams_by_match[match_id]]
+    teams_by_match = defaultdict(list)
+    for candidate in _match_team_rows(session, match_ids):
+        teams_by_match[candidate.match_id].append(candidate)
+    return list(
+        {
+            row.match_id
+            for row in rows
+            if any(
+                candidate.match_team_id != row.match_team_id
+                and candidate.team_id == opponent_team_id
+                for candidate in teams_by_match[row.match_id]
+            )
+        }
+    )
 
 
 def _bulk_bagger_counterpart_summaries(session, classified_rows, confirmed_ids):
@@ -479,6 +504,7 @@ def get_team_roster(
     match_set="regular",
     session=None,
     include_unaccounted=False,
+    team_season_entry_id=None,
 ):
     role = normalize_role(role)
     match_set = normalize_match_set(match_set)
@@ -493,6 +519,7 @@ def get_team_roster(
                 min_races=min_races,
                 role=role,
                 match_set=match_set,
+                team_season_entry_id=team_season_entry_id,
                 session=owned_session,
                 include_unaccounted=include_unaccounted,
             )
@@ -500,8 +527,6 @@ def get_team_roster(
         raise DashboardNotFound("Team not found.")
     scope = _resolve_scope(session, league=league, season=season, division=division)
     if opponent_team_id is not None:
-        if opponent_team_id == team_id:
-            raise DashboardError("A team cannot be its own opponent filter.")
         if not session.get(Team, opponent_team_id):
             raise DashboardError("Unknown opponent filter.")
     match_ids = _filtered_team_match_ids(
@@ -558,6 +583,8 @@ def get_team_roster(
         )
         .order_by(Season.season_number, Match.match_number, Match.match_id, Race.race_number)
     )
+    if team_season_entry_id is not None:
+        statement = statement.where(TeamSeasonEntry.team_season_entry_id == team_season_entry_id)
     statement = apply_analytics_race_filter(statement, session)
     rows = session.execute(statement).all()
     confirmed = confirmed_5v5_race_ids(session, rows)
@@ -572,7 +599,14 @@ def get_team_roster(
         by_player[row.player_id]["classified"].append(item)
 
     aggregates = (
-        aggregate_player_rows(session, scope, match_set, team_id=team_id, match_ids=match_ids)
+        aggregate_player_rows(
+            session,
+            scope,
+            match_set,
+            team_id=team_id,
+            match_ids=match_ids,
+            team_season_entry_id=team_season_entry_id,
+        )
         if include_unaccounted
         else []
     )

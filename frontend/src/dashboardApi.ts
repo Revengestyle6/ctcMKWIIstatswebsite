@@ -151,6 +151,7 @@ export interface PlayerRecentMatch {
 }
 
 export interface TeamAppearance {
+  team_season_entry_id: number;
   season: string;
   division: string;
   name: string;
@@ -163,6 +164,8 @@ export interface TeamAppearance {
 
 export interface TeamRecentMatch {
   match_id: number;
+  match_team_id: number;
+  team_tag: string;
   label: string;
   season: string;
   season_number: number | null;
@@ -184,6 +187,12 @@ export interface TeamOverview {
     tag: string;
     display_name: string;
     logo_url: string;
+    current_entries: Array<{
+      team_season_entry_id: number;
+      name: string;
+      tag: string;
+      division: string;
+    }>;
     current_entry: {
       season: string;
       division: string;

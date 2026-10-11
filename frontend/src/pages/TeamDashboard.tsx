@@ -108,15 +108,22 @@ export default function TeamDashboard() {
 
   const opponentOptions = useMemo<ScopeEntityOption[]>(
     () =>
-      teamScopes
-        .filter((scope) => scope.league === league && scope.team_id !== numericTeamId)
-        .map((scope) => ({
-          id: scope.team_id,
-          label: `${scope.clan_tag} - ${scope.display_name}`,
-          season: scope.season,
-          division: scope.division,
-        })),
-    [league, numericTeamId, teamScopes]
+      Array.from(
+        new Map(
+          teamScopes
+            .filter((scope) => scope.league === league)
+            .map((scope) => [
+              `${scope.team_id}:${scope.season}:${scope.division}`,
+              {
+                id: scope.team_id,
+                label: `${scope.canonical_tag} - ${scope.canonical_name}`,
+                season: scope.season,
+                division: scope.division,
+              },
+            ])
+        ).values()
+      ),
+    [league, teamScopes]
   );
   const teamChoices = useMemo<DashboardEntityOption[]>(() => {
     const scoped = teamScopes.filter(
@@ -131,7 +138,7 @@ export default function TeamDashboard() {
           scope.team_id,
           {
             id: scope.team_id,
-            label: `${scope.clan_tag} - ${scope.display_name}`,
+            label: `${scope.canonical_tag} - ${scope.canonical_name}`,
             searchText: `${scope.canonical_tag} ${scope.canonical_name}`,
           },
         ])
@@ -314,13 +321,14 @@ export default function TeamDashboard() {
   const displayTag = currentEntry?.tag || identity.tag;
   const showConventionalIdentity =
     identity.display_name !== identity.name || displayTag !== identity.tag;
+  const combinesEntries = identity.current_entries.length > 1;
   const metricItems = [
     {
       label: "Record",
       value: `${record.wins}-${record.losses}-${record.ties}`,
       detail: numberValue(metrics.win_rate, "% win rate"),
     },
-    { label: "Matches", value: String(metrics.matches), detail: `${metrics.races} races` },
+    { label: "Team appearances", value: String(metrics.matches), detail: `${metrics.races} races` },
     {
       label: "Average score",
       value: numberValue(metrics.average_final_score),
@@ -355,6 +363,13 @@ export default function TeamDashboard() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="text-3xl font-bold text-white">{identity.display_name}</h2>
+              {combinesEntries ? (
+                <p className="text-sm text-gray-300">
+                  Combined results for{" "}
+                  {identity.current_entries.map((entry) => entry.tag).join(", ")}. A match between
+                  these entries counts once for each side.
+                </p>
+              ) : null}
               <span className="text-xl font-bold text-blue-300">{displayTag}</span>
               {currentEntry && currentEntry.competition_status !== "active" ? (
                 <span
@@ -389,10 +404,7 @@ export default function TeamDashboard() {
               <summary className="cursor-pointer font-semibold text-gray-200">Team history</summary>
               <div className="mt-2 flex flex-wrap gap-2 border-l border-white/15 pl-3">
                 {appearances.map((entry) => (
-                  <span
-                    key={`${entry.season}-${entry.division}`}
-                    className="border-r border-white/15 pr-2"
-                  >
+                  <span key={entry.team_season_entry_id} className="border-r border-white/15 pr-2">
                     {entry.season.toUpperCase()} {entry.division.toUpperCase()}: {entry.name} (
                     {entry.tag})
                     {entry.competition_status !== "active" ? ` — ${entry.competition_status}` : ""}
@@ -532,7 +544,7 @@ export default function TeamDashboard() {
                   </thead>
                   <tbody>
                     {data.recent_matches.map((match) => (
-                      <tr key={match.match_id} className="border-t border-white/10">
+                      <tr key={match.match_team_id} className="border-t border-white/10">
                         <td className="px-4 py-3 text-gray-300">
                           {match.season.toUpperCase()} {match.division.toUpperCase()}{" "}
                           {match.match_number ? `M${match.match_number}` : ""}
@@ -551,6 +563,7 @@ export default function TeamDashboard() {
                           >
                             {match.label}
                           </Link>
+                          <p className="text-xs text-gray-400">Playing as {match.team_tag}</p>
                         </td>
                         <td className="px-4 py-3">
                           {match.opponents.map((opponent) => (

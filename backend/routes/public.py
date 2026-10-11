@@ -150,6 +150,7 @@ def api_team_roster_pool():
                     request.args.get("season"),
                     request.args.get("division"),
                     request.args.get("team_id", type=int),
+                    request.args.get("team_season_entry_id", type=int),
                 )
             )
     except Exception as error:

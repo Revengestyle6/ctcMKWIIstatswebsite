@@ -326,8 +326,8 @@ class LegacyRoleDelegationTests(unittest.TestCase):
             session=self.session,
         )
 
-    def test_team_and_track_legacy_rankings_delegate_canonical_ids(self):
-        team = SimpleNamespace(team_id=4)
+    def test_team_and_track_legacy_rankings_delegate_canonical_and_entry_ids(self):
+        team = SimpleNamespace(team_id=4, team_season_entry_id=41)
         track = SimpleNamespace(track_id=9)
         session_patch, scope_patch = self._session_patches()
         with (
@@ -341,6 +341,7 @@ class LegacyRoleDelegationTests(unittest.TestCase):
             players = stats_db.top_team_players("a", role="bagger")
         self.assertEqual(players, [{"player_id": 7, "role": "bagger"}])
         self.assertEqual(roster.call_args.args, (4,))
+        self.assertEqual(roster.call_args.kwargs["team_season_entry_id"], 41)
         self.assertEqual(roster.call_args.kwargs["role"], "bagger")
 
         session_patch, scope_patch = self._session_patches()

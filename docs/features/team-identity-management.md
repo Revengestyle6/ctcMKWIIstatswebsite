@@ -17,6 +17,11 @@ Imported season names that merely repeat their tag are also treated as placehold
 and fall back to the conventional name. A genuinely distinct season name remains
 the primary dashboard label, with the conventional identity shown underneath.
 
+A canonical team can own multiple entries in the same division when their season
+tags differ. Standings and playoffs treat them as separate competitors; canonical
+dashboards combine their appearances and use canonical presentation when several
+entries match the scope. See the [full analytics and editor impact investigation](sibling-team-season-entries.md).
+
 ## Editing Rules
 
 - Names and tags are required; names allow up to 200 characters and tags up to 64.
@@ -60,7 +65,7 @@ The merge:
 - keeps the destination team ID, league preference, and override setting;
 - moves distinct aliases, league identity links, season identities, and logos;
 - repoints season-linked player and match history and playoff participants;
-- consolidates entries occupying the same season and division, with the
+- consolidates entries occupying the same season, division and tag, with the
   destination season identity winning; and
 - recalculates the destination canonical identity unless its override is enabled.
 

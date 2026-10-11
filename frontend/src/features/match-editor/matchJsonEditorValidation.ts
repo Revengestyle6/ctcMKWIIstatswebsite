@@ -211,9 +211,11 @@ export function playoffConsistencyIssues(
   const submittedIds = Object.entries(match.teams ?? {}).flatMap(([teamKey, team]) => {
     const tag = teamTag(teamKey, team);
     const resolved = findTeamScope(scopedTeams, tag);
-    return resolved ? [resolved.team_id] : [];
+    return resolved ? [resolved.team_season_entry_id] : [];
   });
-  const establishedIds = new Set(series.participants.map((participant) => participant.team_id));
+  const establishedIds = new Set(
+    series.participants.map((participant) => participant.team_season_entry_id)
+  );
   if (
     submittedIds.length === 2 &&
     (submittedIds.some((teamId) => !establishedIds.has(teamId)) ||
@@ -240,15 +242,15 @@ export function normalized(value: string | undefined): string {
 export function findTeamScope(scopes: TeamScope[], value: string): TeamScope | undefined {
   const target = normalized(value);
   if (!target) return undefined;
-  return (
-    scopes.find(
-      (scope) => normalized(scope.clan_tag) === target || normalized(scope.canonical_tag) === target
-    ) ??
-    scopes.find(
-      (scope) =>
-        normalized(scope.display_name) === target || normalized(scope.canonical_name) === target
-    )
+  const tagMatch = scopes.find((scope) => normalized(scope.clan_tag) === target);
+  if (tagMatch) return tagMatch;
+  const nameMatches = scopes.filter((scope) => normalized(scope.display_name) === target);
+  if (nameMatches.length === 1) return nameMatches[0];
+  const canonicalMatches = scopes.filter(
+    (scope) =>
+      normalized(scope.canonical_tag) === target || normalized(scope.canonical_name) === target
   );
+  return canonicalMatches.length === 1 ? canonicalMatches[0] : undefined;
 }
 
 const TRACK_IDENTIFIER_PATTERN = /^[0-9a-f]{40}$/i;
@@ -653,13 +655,13 @@ export function validation(
           approvedMessage
         );
       } else {
-        const prior = resolvedTeamIds.get(resolved.team_id);
+        const prior = resolvedTeamIds.get(resolved.team_season_entry_id);
         if (prior)
           issues.push({
             level: "error",
-            message: `A team cannot play itself: ${prior} and ${tag} resolve to the same database team.`,
+            message: `A season team entry cannot play itself: ${prior} and ${tag} resolve to the same season entry.`,
           });
-        resolvedTeamIds.set(resolved.team_id, tag);
+        resolvedTeamIds.set(resolved.team_season_entry_id, tag);
       }
     });
   }

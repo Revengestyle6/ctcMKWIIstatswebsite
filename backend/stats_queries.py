@@ -355,7 +355,10 @@ def list_player_directory(season=None, division=None, league_code="ctc", all_sco
                     "teams": [],
                 },
             )
-            if not any(team["team_id"] == row.team_id for team in entry["teams"]):
+            if not any(
+                team["team_id"] == row.team_id and team["tag"] == row.clan_tag
+                for team in entry["teams"]
+            ):
                 entry["teams"].append({"team_id": row.team_id, "tag": row.clan_tag})
         return sorted(players.values(), key=lambda entry: entry["name"].lower())
 
@@ -783,6 +786,7 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
             participants = session.execute(
                 select(
                     Team.team_id,
+                    TeamSeasonEntry.team_season_entry_id,
                     TeamSeasonEntry.display_name,
                     TeamSeasonEntry.clan_tag,
                     PlayoffSeriesParticipant.participant_slot,
@@ -790,11 +794,8 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
                 .join(Team, Team.team_id == PlayoffSeriesParticipant.team_id)
                 .join(
                     TeamSeasonEntry,
-                    and_(
-                        TeamSeasonEntry.team_id == Team.team_id,
-                        TeamSeasonEntry.season_id == scope.season_id,
-                        TeamSeasonEntry.division_id == scope.division_id,
-                    ),
+                    TeamSeasonEntry.team_season_entry_id
+                    == PlayoffSeriesParticipant.team_season_entry_id,
                 )
                 .where(PlayoffSeriesParticipant.playoff_series_id == series.playoff_series_id)
                 .order_by(PlayoffSeriesParticipant.participant_slot)
@@ -807,7 +808,12 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
                 .order_by(Match.series_match_number)
             ).all()
             score_rows = session.execute(
-                select(Match.match_id, Team.team_id, MatchTeam.final_score)
+                select(
+                    Match.match_id,
+                    Team.team_id,
+                    TeamSeasonEntry.team_season_entry_id,
+                    MatchTeam.final_score,
+                )
                 .join(MatchTeam, MatchTeam.match_id == Match.match_id)
                 .join(
                     TeamSeasonEntry,
@@ -817,12 +823,12 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
                 .where(Match.playoff_series_id == series.playoff_series_id)
             ).all()
             scores_by_match = {}
-            wins = {row.team_id: 0 for row in participants}
+            wins = {row.team_season_entry_id: 0 for row in participants}
             for row in score_rows:
                 scores_by_match.setdefault(row.match_id, []).append(row)
             for scores in scores_by_match.values():
                 if len(scores) == 2 and scores[0].final_score != scores[1].final_score:
-                    winner = max(scores, key=lambda row: row.final_score).team_id
+                    winner = max(scores, key=lambda row: row.final_score).team_season_entry_id
                     wins[winner] += 1
             needed = series.best_of // 2 + 1
             winner_id = next(
@@ -841,15 +847,24 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
                     ),
                     "best_of": series.best_of,
                     "wins_needed": needed,
-                    "winner_team_id": winner_id,
+                    "winner_team_id": next(
+                        (
+                            row.team_id
+                            for row in participants
+                            if row.team_season_entry_id == winner_id
+                        ),
+                        None,
+                    ),
+                    "winner_team_season_entry_id": winner_id,
                     "status": "complete" if winner_id is not None else "in_progress",
                     "participants": [
                         {
                             "team_id": row.team_id,
+                            "team_season_entry_id": row.team_season_entry_id,
                             "name": row.display_name,
                             "tag": row.clan_tag,
                             "slot": row.participant_slot,
-                            "wins": wins[row.team_id],
+                            "wins": wins[row.team_season_entry_id],
                         }
                         for row in participants
                     ],
@@ -867,11 +882,13 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
                             "teams": [
                                 {
                                     "team_id": score.team_id,
+                                    "team_season_entry_id": score.team_season_entry_id,
                                     "tag": next(
                                         (
                                             participant.clan_tag
                                             for participant in participants
-                                            if participant.team_id == score.team_id
+                                            if participant.team_season_entry_id
+                                            == score.team_season_entry_id
                                         ),
                                         "",
                                     ),

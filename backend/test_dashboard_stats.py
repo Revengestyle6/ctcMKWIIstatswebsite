@@ -14,7 +14,6 @@ import stats_db
 import stats_queries
 from analytics_eligibility import analytics_excluded_race_ids
 from dashboard_stats import (
-    DashboardError,
     get_player_overview,
     get_player_performance,
     get_player_tracks,
@@ -1120,13 +1119,11 @@ class DashboardRoleContractTests(unittest.TestCase):
         self.assertEqual(filtered["population"], 3)
         self.assertTrue(filtered["eligible"])
 
-    def test_roster_rejects_self_opponent_but_allows_empty_existing_opponent(self):
-        with self.assertRaisesRegex(DashboardError, "A team cannot be its own opponent filter"):
-            get_team_roster(
-                self.alpha_id,
-                opponent_team_id=self.alpha_id,
-                session=self.session,
-            )
+    def test_roster_self_opponent_selects_only_matches_between_sibling_entries(self):
+        siblings = get_team_roster(
+            self.alpha_id, opponent_team_id=self.alpha_id, session=self.session
+        )
+        self.assertEqual(siblings["players"], [])
 
         empty = get_team_roster(
             self.alpha_id,

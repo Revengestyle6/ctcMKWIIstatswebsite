@@ -223,8 +223,10 @@ export interface PlayoffSeriesSummary {
   best_of: number;
   status: "in_progress" | "complete";
   winner_team_id: number | null;
+  winner_team_season_entry_id: number | null;
   participants: Array<{
     team_id: number;
+    team_season_entry_id: number;
     tag: string;
     name: string;
     slot: number;
@@ -288,6 +290,7 @@ export function fetchTeamRosterPool(params: {
   season: string;
   division: string;
   team_id: number;
+  team_season_entry_id?: number;
 }): Promise<TeamRosterPlayer[]> {
   return fetchJson("/api/team-roster-pool", params);
 }
@@ -296,6 +299,7 @@ export interface PlayerTeamMembership {
   player_id: number;
   teams: Array<{
     team_id: number;
+    team_season_entry_id: number;
     canonical_name: string;
     canonical_tag: string;
     display_name: string;

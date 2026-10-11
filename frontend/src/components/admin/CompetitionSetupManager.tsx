@@ -920,8 +920,8 @@ export default function CompetitionSetupManager({
                       `${entry.division.code.toUpperCase()} as ${entry.display_name} (${entry.clan_tag})`
                   )
                   .join(", ")}
-                . To register another divisional subteam, change the season display name or season
-                tag.
+                . Another entry can use the same canonical team in this division. Choose a distinct
+                season tag; its display name may also differ.
               </p>
             ) : null}
             <label className="text-sm font-bold text-gray-200 sm:col-span-2">
@@ -1067,7 +1067,6 @@ export default function CompetitionSetupManager({
               !registrationDivision ||
               (registrationDivision.division.is_conference_based && !registrationConferenceId) ||
               !registrationLogoReady ||
-              registeredDivisionTeamIds.has(Number(registrationTeamId)) ||
               registrationIdentityAlreadyUsed
             }
             className="mt-4 rounded bg-emerald-500 px-4 py-2 font-bold text-black disabled:opacity-40"

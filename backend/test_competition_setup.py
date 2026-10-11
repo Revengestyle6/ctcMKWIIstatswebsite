@@ -174,17 +174,19 @@ class CompetitionSetupTests(unittest.TestCase):
                         "clan_tag": "CT",
                     },
                 )
-            with self.assertRaisesRegex(ValueError, "already registered in Division 1"):
-                create_team_season_entry(
-                    session,
-                    {
-                        "team_id": team.team_id,
-                        "season_id": season.season_id,
-                        "division_id": divisions[0].division_id,
-                        "display_name": "Another Subteam",
-                        "clan_tag": "CT3",
-                    },
-                )
+            same_division, *_ = create_team_season_entry(
+                session,
+                {
+                    "team_id": team.team_id,
+                    "season_id": season.season_id,
+                    "division_id": divisions[0].division_id,
+                    "display_name": "Another Subteam",
+                    "clan_tag": "CT3",
+                },
+            )
+            self.assertEqual(same_division.team_id, first.team_id)
+            self.assertEqual(same_division.division_id, first.division_id)
+            self.assertNotEqual(same_division.team_season_entry_id, first.team_season_entry_id)
 
     def test_admin_can_build_preseason_structure_before_match_import(self):
         headers = {"X-Dev-Admin-Email": "owner@example.com"}
