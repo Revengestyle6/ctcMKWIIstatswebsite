@@ -34,6 +34,7 @@ from models import (
     TeamSeasonEntry,
     Track,
     TrackAlias,
+    UnaccountedMatch,
 )
 from player_naming import (
     MKC_ALIAS_TYPE,
@@ -51,6 +52,12 @@ from playoff_service import (
 )
 from sqlalchemy import func, or_, select, update
 from team_identity_management import apply_canonical_identity_priority
+from unaccounted_matches import (
+    is_unaccounted,
+    store_player_scores,
+    store_team_awards,
+    validate_unaccounted_match,
+)
 
 JSON_ROOT = BASE_DIR / "JSON"
 HISTORICAL_TEAM_CORRECTIONS_PATH = BASE_DIR / "data" / "team_aliases.csv"
@@ -757,6 +764,8 @@ def import_match(
     player_mkc_profiles: dict[str, dict[str, Any]] | None = None,
     match_id_override: int | None = None,
 ):
+    validate_unaccounted_match(match_data)
+    unaccounted = is_unaccounted(match_data)
     teams = match_data.get("teams") or {}
     tracks = match_data.get("tracks") or []
     match_label = (
@@ -765,7 +774,7 @@ def import_match(
         or (path.stem if match_index == 0 else f"{path.stem} #{match_index + 1}")
     )
     review_notes = []
-    if match_data.get("races_played") != len(tracks):
+    if not unaccounted and match_data.get("races_played") != len(tracks):
         review_notes.append(
             f"races_played={match_data.get('races_played')} but tracks length={len(tracks)}."
         )
@@ -832,6 +841,11 @@ def import_match(
             [resolved_teams[key][2] for key in teams],
         )
 
+    if unaccounted:
+        mode_label = "GP" if match_data["entry_mode"] == "gp" else "totals"
+        if "[Unaccounted" not in match_label:
+            match_label += f" [Unaccounted · {mode_label}]"
+
     explicit_review_notes = str(match_data.get("review_notes") or "").strip()
     combined_review_notes = [explicit_review_notes] if explicit_review_notes else []
     combined_review_notes.extend(note for note in review_notes if note not in explicit_review_notes)
@@ -855,12 +869,16 @@ def import_match(
         races_played=match_data.get("races_played") or len(tracks),
         raw_json=json.dumps(match_data, ensure_ascii=False, separators=(",", ":")),
         import_status="needs_review"
-        if len(set(resolved_team_keys)) != 2 or match_data.get("races_played") != len(tracks)
+        if len(set(resolved_team_keys)) != 2
+        or (not unaccounted and match_data.get("races_played") != len(tracks))
         else "imported",
         review_notes=" ".join(combined_review_notes) if combined_review_notes else None,
     )
     session.add(match)
     session.flush()
+
+    if unaccounted:
+        session.add(UnaccountedMatch(match_id=match.match_id, entry_mode=match_data["entry_mode"]))
 
     for ref_order, ref_value in enumerate(match_data.get("rxx") or [], start=1):
         session.add(
@@ -920,6 +938,9 @@ def import_match(
                     source_field="team.penalties",
                 )
             )
+
+        if unaccounted:
+            store_team_awards(session, match_team, team_data)
 
         explicit_missing_results = team_data.get("missing_player_results") or []
         if explicit_missing_results:
@@ -994,6 +1015,9 @@ def import_match(
             )
             session.add(match_player)
             session.flush()
+
+            if unaccounted:
+                store_player_scores(session, match_player, player_data)
 
             friend_code_row = session.scalar(
                 select(PlayerFriendCode).where(PlayerFriendCode.friend_code == friend_code)

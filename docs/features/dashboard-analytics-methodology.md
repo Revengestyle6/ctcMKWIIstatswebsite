@@ -173,3 +173,15 @@ a track unless the source data identifies the exact race.
   `frontend/public/images/team-logos/`. Uploaded normalized logos are served through
   `/api/team-logos/{team_logo_id}/content` from the configured media adapter. See
   [Team Logo Management](team-logo-management.md) for storage and upload rules.
+
+## Unaccounted match inclusion
+
+Eligible player/team summaries support `include_unaccounted=true`, default false.
+[Unaccounted match entry](../json-editor/unaccounted-matches.md) defines the scoring
+contract and full eligibility matrix. Both GP and total entries add role points,
+credited race counts, and match outcomes; only GP entries add GP-number averages
+and complete GP scores. Race-number, track, placement, distribution, and counterpart
+queries use actual race facts exclusively. Classification coverage and placement/
+bag-point occurrence denominators also remain race-based. Match labels and
+aggregate contribution counts disclose inclusion. Standings and divisional indivs
+include accepted aggregate matches regardless of the dashboard toggle.

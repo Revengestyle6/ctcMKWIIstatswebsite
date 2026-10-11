@@ -1,8 +1,8 @@
 # Data model and database reference
 
 Source reference: [models.py](../../backend/models.py) and Alembic head
-[`20260913_0017`](../../backend/migrations/versions/20260913_0017_team_entry_logos.py),
-reviewed September 26, 2026. The root [glossary](../../CONTEXT.md) defines domain
+[`20261010_0018`](../../backend/migrations/versions/20261010_0018_unaccounted_matches.py),
+reviewed October 10, 2026. The root [glossary](../../CONTEXT.md) defines domain
 terms; this document describes their persistence. For incoming document fields and
 validation, use the [JSON format](../json-editor/json-format.md) and
 [editor guide](../json-editor/README.md).
@@ -135,6 +135,9 @@ erDiagram
     players ||--o{ match_players : appears
     player_season_entries o|--o{ match_players : attributes
     matches ||--o{ races : orders
+    matches ||--o| unaccounted_matches : marks
+    match_players ||--o{ unaccounted_player_scores : role_period_scores
+    match_teams ||--o{ unaccounted_team_awards : team_awards
     tracks ||--o{ races : played
     races ||--o{ race_player_results : records
     match_players ||--o{ race_player_results : earns
@@ -456,7 +459,7 @@ JSON archive.
 
 ## Migrations and verification
 
-The linear revision chain ends at `20260913_0017`. Each filename below links to
+The linear revision chain ends at `20261010_0018`. Each filename below links to
 the migration; Alembic's `revision` field is the date/number portion.
 
 | Revision | Change |
@@ -478,6 +481,7 @@ the migration; Alembic's `revision` field is the date/number portion.
 | [0015](../../backend/migrations/versions/20260905_0015_match_edit_hardening.py) | Provenance, attribution and update timestamps for match editing. |
 | [0016](../../backend/migrations/versions/20260912_0016_division_conferences.py) | Two-conference divisions and entry membership. |
 | [0017](../../backend/migrations/versions/20260913_0017_team_entry_logos.py) | Team season entry logo scope. |
+| [0018](../../backend/migrations/versions/20261010_0018_unaccounted_matches.py) | Unaccounted match markers, role scores, and missing-player awards. |
 
 Useful checks:
 
@@ -500,3 +504,27 @@ the active configuration rejects SQLite. See [ADR 0002](../adr/0002-postgresql-a
 for the storage decision and [ADR 0004](../adr/0004-administrator-access-and-public-review-queue.md)
 for environment/access separation. ADR 0002's original SQLite allowance is
 historical; the current runtime does not support SQLite.
+
+## Unaccounted match facts
+
+```mermaid
+erDiagram
+    matches ||--o| unaccounted_matches : marks
+    match_players ||--o{ unaccounted_player_scores : role_period_totals
+    match_teams ||--o{ unaccounted_team_awards : missing_player_awards
+```
+
+`unaccounted_matches` uses `match_id` as its primary/foreign key and stores
+`entry_mode` (`gp` or `totals`). `unaccounted_player_scores` has a primary ID,
+`match_player_id`, `gp_number`, `role`, `points`, `races`, and
+`disconnection_points`; player/period/role is unique. Role is runner/bagger;
+counts/points are nonnegative, points cannot exceed 15 per credited race, and
+DC points cannot exceed points. `unaccounted_team_awards` has a primary ID,
+`match_team_id`, `gp_number`, `points`, and a supported missing-player `reason`.
+
+Period 0 denotes a match total; positive periods denote supplied GPs. The
+application validates mode/period consistency, player/team attendance, and derived
+final totals. No aggregate entry creates race facts. Shared matches, teams,
+players, penalties, and archive provenance retain their existing relationships.
+The [unaccounted entry reference](../json-editor/unaccounted-matches.md) defines
+analytics eligibility, correction behavior, and API inclusion.

@@ -14,6 +14,7 @@ import {
   SCORE_TABLES,
   teamTag,
 } from "./matchJsonEditorModel";
+import { aggregateIssues } from "./unaccountedMatchModel";
 
 export type IdentityState = {
   status: "idle" | "checking" | "confirmed" | "new" | "conflict";
@@ -550,7 +551,9 @@ export function validation(
       ...playoffConsistencyIssues(match, teamScopes, playoffContext, playoffContextLoaded)
     );
   }
-  if (!isSpecial && races.length !== 12)
+  if (match.score_source === "unaccounted")
+    issues.push(...aggregateIssues(match).map((message) => ({ level: "error" as const, message })));
+  if (!isSpecial && match.score_source !== "unaccounted" && races.length !== 12)
     issues.push({
       level: "warning",
       message: `This match contains ${races.length} races instead of the usual 12.`,

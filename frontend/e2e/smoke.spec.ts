@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { MatchDetail, MatchSummary } from "../src/features/match-history/matchHistoryViews";
 
 const routes = [
   "/",
@@ -1420,4 +1421,268 @@ test("json editor locks a three-team semifinal to Series 1", async ({ page }) =>
   expect(generated.playoff_series_number).toBe(1);
   expect(generated.teams.Alpha.total_score).toBe(15);
   expect(generated.teams.Beta.total_score).toBe(12);
+});
+
+test("json editor supports unaccounted GP scores, collapsible entries, missing player points, and total fallback", async ({
+  page,
+}) => {
+  await page.goto("/json-editor?league=ctc");
+  await page
+    .getByLabel("Match data coverage", { exact: true })
+    .selectOption({ label: "Limited coverage" });
+  await expect(page.getByLabel("Point entry", { exact: true })).toHaveValue("gp");
+  await expect(page.getByRole("heading", { name: "Race Entry", exact: true })).toHaveCount(0);
+
+  const document = {
+    league: "ctc",
+    season: "s3",
+    division: "d1",
+    match_number: 12,
+    format: "5v5",
+    result_type: "played",
+    score_source: "unaccounted",
+    entry_mode: "gp",
+    races_played: 12,
+    tracks: [],
+    teams: {
+      OriginalA: {
+        table_tag_str: "A #4F8CFF",
+        penalties: 10,
+        players: {
+          "1111-2222-3330": {
+            lounge_name: "Aggregate Player",
+            aggregate_scores: [
+              { gp_number: 1, role: "runner", points: 40, races: 4, disconnection_points: 3 },
+              { gp_number: 2, role: "runner", points: 30, races: 4, disconnection_points: 0 },
+              { gp_number: 3, role: "runner", points: 15, races: 3, disconnection_points: 0 },
+              { gp_number: 3, role: "bagger", points: 5, races: 1, disconnection_points: 0 },
+            ],
+          },
+        },
+        aggregate_awards: [{ gp_number: 1, points: 6, reason: "short_roster" }],
+      },
+      B: {
+        table_tag_str: "B #F45D8C",
+        penalties: 0,
+        players: {
+          "1111-2222-3331": {
+            lounge_name: "Other Player",
+            aggregate_scores: [
+              { gp_number: 1, role: "bagger", points: 1, races: 4, disconnection_points: 0 },
+            ],
+          },
+        },
+      },
+    },
+  };
+  await page.getByRole("button", { name: "Paste JSON", exact: true }).click();
+  await page.getByLabel("Raw match JSON").fill(JSON.stringify(document));
+  await page.getByRole("button", { name: "Load pasted JSON" }).click();
+  await expect(page.getByLabel("1111-2222-3330 GP 1 runner points", { exact: true })).toHaveValue(
+    "40"
+  );
+  const playerEntry = page.getByRole("group", { name: "Aggregate Player points", exact: true });
+  const playerHeader = playerEntry.locator(":scope > summary");
+  const dcPoints = page.getByLabel("1111-2222-3330 GP 1 runner disconnection_points", {
+    exact: true,
+  });
+  await expect(page.getByLabel("1111-2222-3330 GP 1 runner points", { exact: true })).toBeHidden();
+  await expect(playerHeader).toContainText("Total 90");
+  await expect(playerHeader).toContainText("Run 85 pts · 11 races");
+  await expect(playerHeader).toContainText("Bag 5 pts · 1 race");
+  const gpThreeSummary = playerHeader.getByText("GP 3 · 20", { exact: true }).locator("..");
+  await expect(gpThreeSummary).toContainText("Run 15");
+  await expect(gpThreeSummary).toContainText("Bag 5");
+  await playerHeader.press("Enter");
+  await expect(page.getByLabel("1111-2222-3330 GP 1 runner points", { exact: true })).toBeVisible();
+  await expect(page.getByText("Player penalty", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Penalty", { exact: true }).first()).toHaveValue("10");
+  await expect(dcPoints).toBeHidden();
+  await expect(playerEntry.getByText("DC points (optional)")).toContainText("3 included");
+  const entryBounds = await playerEntry.boundingBox();
+  expect(entryBounds?.height).toBeLessThan(380);
+  const pointsTable = playerEntry.locator("table").first();
+  expect(await pointsTable.evaluate((table) => table.scrollWidth <= table.clientWidth)).toBe(true);
+  await page.getByLabel("1111-2222-3330 GP 2 runner points", { exact: true }).fill("35");
+  await expect(page.getByText("Final team score: 91", { exact: true })).toBeVisible();
+  await playerHeader.press("Enter");
+  await expect(page.getByLabel("1111-2222-3330 GP 2 runner points", { exact: true })).toBeHidden();
+  await expect(playerHeader).toContainText("Total 95");
+  await expect(playerHeader).toContainText("Run 90 pts · 11 races");
+  await expect(playerHeader.getByText("GP 2 · 35", { exact: true })).toBeVisible();
+  const otherPlayerHeader = page
+    .getByRole("group", { name: "Other Player points", exact: true })
+    .locator(":scope > summary");
+  await otherPlayerHeader.click();
+  await expect(page.getByLabel("1111-2222-3331 GP 1 bagger points", { exact: true })).toBeVisible();
+  await page.getByLabel("1111-2222-3331 GP 1 bagger points", { exact: true }).fill("2");
+  await expect(page.getByLabel("1111-2222-3330 GP 2 runner points", { exact: true })).toBeHidden();
+  await playerHeader.press("Space");
+  await expect(page.getByLabel("1111-2222-3330 GP 2 runner points", { exact: true })).toHaveValue(
+    "35"
+  );
+  await page.getByText("Generated JSON Preview", { exact: true }).click();
+  const generated = page.locator("pre").filter({ hasText: '"score_source": "unaccounted"' });
+  const compiled = JSON.parse(await generated.innerText());
+  expect(compiled.tracks).toEqual([]);
+  expect(compiled.races_played).toBe(12);
+  expect(compiled.teams.A.total_score).toBe(91);
+  expect(compiled.teams.A.players["1111-2222-3330"].total_score).toBe(95);
+  expect(compiled.teams.A.players["1111-2222-3330"].race_scores).toBeUndefined();
+  expect(compiled.teams.A.players["1111-2222-3330"].aggregate_scores[0].disconnection_points).toBe(
+    3
+  );
+  const missingPoints = page
+    .getByRole("heading", { name: "Missing player points", exact: true })
+    .first()
+    .locator("..");
+  await missingPoints.getByRole("button", { name: "Add missing player points" }).click();
+  await missingPoints.getByLabel("Points", { exact: true }).last().fill("2");
+  await expect(page.getByText("Final team score: 93", { exact: true })).toBeVisible();
+  await missingPoints.getByRole("button", { name: "Remove points" }).last().click();
+  await expect(page.getByText("Final team score: 91", { exact: true })).toBeVisible();
+  await playerEntry.getByText("DC points (optional)").click();
+  await expect(dcPoints).toHaveValue("3");
+  await dcPoints.fill("4");
+  await expect(page.getByText("Final team score: 91", { exact: true })).toBeVisible();
+  await playerHeader.click();
+  await expect(dcPoints).toBeHidden();
+  await playerHeader.click();
+  await expect(dcPoints).toHaveValue("4");
+  await dcPoints.fill("");
+  await playerEntry.getByText("DC points (optional)").click();
+  await expect(dcPoints).toBeHidden();
+  const withoutDc = JSON.parse(await generated.innerText());
+  expect(withoutDc.teams.A.players["1111-2222-3330"].aggregate_scores).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ gp_number: 1, role: "runner", disconnection_points: 0 }),
+    ])
+  );
+  expect(withoutDc.teams.A.total_score).toBe(91);
+
+  await page.getByRole("button", { name: "Add Player", exact: true }).first().click();
+  const newPlayerEntry = page.getByRole("group", { name: "NEW-1 points", exact: true });
+  const newPlayerHeader = newPlayerEntry.locator(":scope > summary");
+  await expect(page.getByLabel("NEW-1 GP 1 runner points", { exact: true })).toBeHidden();
+  await expect(newPlayerHeader).toContainText("Total 0");
+  await expect(newPlayerHeader).toContainText("Run 0 pts · 0 races");
+  await expect(newPlayerHeader).toContainText("Bag 0 pts · 0 races");
+  for (const gp of [1, 2, 3]) {
+    await expect(newPlayerHeader.getByText(`GP ${gp} · 0`, { exact: true })).toBeVisible();
+  }
+  await newPlayerHeader.click();
+  await page.getByLabel("NEW-1 GP 1 runner races", { exact: true }).fill("1");
+  await page.getByLabel("NEW-1 GP 1 runner points", { exact: true }).fill("10");
+  await newPlayerHeader.click();
+  await expect(newPlayerHeader).toContainText("Total 10");
+  await expect(newPlayerHeader).toContainText("Run 10 pts · 1 race");
+  await expect(newPlayerHeader.getByText("GP 1 · 10", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("NEW-1 GP 1 runner points", { exact: true })).toBeHidden();
+
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.getByLabel("Point entry", { exact: true }).selectOption("totals");
+  await page.getByLabel("1111-2222-3330 total runner races", { exact: true }).fill("12");
+  await page.getByLabel("1111-2222-3330 total runner points", { exact: true }).fill("100");
+  await expect(playerHeader).toContainText("Total 100");
+  await expect(playerHeader).toContainText("Run 100 pts · 12 races");
+  await expect(playerHeader).toContainText("Bag 0 pts · 0 races");
+  await expect(playerHeader.getByText(/^GP \d/)).toHaveCount(0);
+  await expect(
+    page.getByLabel("1111-2222-3330 total runner disconnection_points", { exact: true })
+  ).toBeHidden();
+  const withoutTotalsDc = JSON.parse(await generated.innerText());
+  expect(
+    withoutTotalsDc.teams.A.players["1111-2222-3330"].aggregate_scores[0].disconnection_points
+  ).toBe(0);
+  await playerEntry.getByText("DC points (optional)").click();
+  await page
+    .getByLabel("1111-2222-3330 total runner disconnection_points", { exact: true })
+    .fill("3");
+  await playerEntry.getByText("DC points (optional)").click();
+  await expect(page.getByText("Final team score: 90", { exact: true })).toBeVisible();
+  const totals = JSON.parse(await generated.innerText());
+  expect(totals.entry_mode).toBe("totals");
+  expect(totals.teams.A.aggregate_awards).toEqual([]);
+  expect(totals.teams.A.players["1111-2222-3330"].aggregate_scores[0].gp_number).toBe(0);
+  expect(totals.teams.A.players["1111-2222-3330"].aggregate_scores[0].disconnection_points).toBe(3);
+});
+
+test("unaccounted analytics inclusion is opt-in and survives navigation", async ({ page }) => {
+  await page.goto("/stats?league=ctc&season=s3&division=d1");
+  const toggle = page.getByRole("checkbox", { name: /Include unaccounted matches/ });
+  await expect(toggle).not.toBeChecked();
+  await toggle.click();
+  await expect(toggle).toBeChecked();
+  await expect(page).toHaveURL(/include_unaccounted=true/);
+  await page.reload();
+  await expect(toggle).toBeChecked();
+  await toggle.click();
+  await expect(toggle).not.toBeChecked();
+  await expect(page).not.toHaveURL(/include_unaccounted=/);
+});
+
+test("unaccounted match history shows GP or total scores without race charts", async ({ page }) => {
+  const response = await page.request.get("/api/matches?league=ctc&season=s3&division=d1");
+  const summaries: MatchSummary[] = await response.json();
+  const sourceResponse = await page.request.get(`/api/matches/${summaries[0].match_id}`);
+  const source: MatchDetail = await sourceResponse.json();
+  const details: MatchDetail[] = (["gp", "totals"] as const).map((mode, index) => ({
+    ...source,
+    match_id: 900001 + index,
+    score_source: "unaccounted",
+    entry_mode: mode,
+    races_played: 12,
+    tracks: [],
+    differential: [],
+    teams: source.teams.map((team) => ({
+      ...team,
+      team_penalties: 0,
+      final_score: mode === "gp" ? 126 : 106,
+      aggregate_awards: [{ gp_number: mode === "gp" ? 1 : 0, points: 6, reason: "short_roster" }],
+      players: [
+        {
+          ...team.players[0],
+          total: mode === "gp" ? 120 : 100,
+          penalties: 0,
+          scores: [],
+          positions: [],
+          roles: [],
+          aggregate_scores: (mode === "gp" ? [1, 2, 3] : [0]).map((gp) => ({
+            gp_number: gp,
+            role: "runner",
+            points: gp ? 40 : 100,
+            races: gp ? 4 : 12,
+            disconnection_points: 3,
+          })),
+        },
+      ],
+    })),
+  }));
+  await page.route("**/api/matches?**", (route) =>
+    route.fulfill({
+      json: details.map((detail) => ({
+        ...summaries[0],
+        match_id: detail.match_id,
+        score_source: "unaccounted",
+        entry_mode: detail.entry_mode,
+      })),
+    })
+  );
+  await page.route(/\/api\/matches\/90000[12]$/, (route) => {
+    const matchId = Number(new URL(route.request().url()).pathname.split("/").at(-1));
+    return route.fulfill({ json: details.find((detail) => detail.match_id === matchId) });
+  });
+  await page.goto("/matches?league=ctc&season=s3&division=d1&match=900001");
+  await expect(page.getByText(/Unaccounted match · GP scores/)).toBeVisible();
+  for (const gp of [1, 2, 3])
+    await expect(page.getByRole("columnheader", { name: `GP ${gp}`, exact: true })).toBeVisible();
+  await expect(page.getByText("DC 3", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Missing player points", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Display configuration", { exact: true })).not.toBeVisible();
+  await expect(page.getByLabel(/match score differential chart/i)).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Tracks", exact: true })).toHaveCount(0);
+  await page.getByLabel("Match", { exact: true }).selectOption("900002");
+  await expect(page.getByText(/Unaccounted match · Total scores only/)).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: /^GP / })).toHaveCount(0);
+  await expect(page.getByRole("columnheader", { name: "Run total", exact: true })).toBeVisible();
 });

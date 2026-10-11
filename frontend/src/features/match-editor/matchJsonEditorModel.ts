@@ -1,6 +1,12 @@
+import {
+  type AggregateAward,
+  type AggregateScore,
+  compileUnaccounted,
+} from "./unaccountedMatchModel";
 export type RaceRole = "runner" | "bagger" | null;
 
 export type MatchPlayerJson = {
+  aggregate_scores?: AggregateScore[];
   table_str?: string;
   mii_name?: string;
   lounge_name?: string;
@@ -19,6 +25,7 @@ export type MatchPlayerJson = {
 };
 
 export type TeamJson = {
+  aggregate_awards?: AggregateAward[];
   table_tag_str?: string;
   table_penalty_str?: string;
   total_score?: number;
@@ -38,6 +45,8 @@ export type TeamMissingPlayerResultJson = {
 };
 
 export type MatchJson = {
+  score_source?: "accounted" | "unaccounted";
+  entry_mode?: "gp" | "totals";
   title_str?: string;
   format?: string;
   races_played?: number;
@@ -86,6 +95,13 @@ export function parseMatchJson(rawJson: string): MatchJson {
     }
     for (const [teamKey, team] of Object.entries(parsed.teams)) {
       if (!isJsonObject(team)) throw new Error(`Team "${teamKey}" must be a JSON object.`);
+      if (
+        team.aggregate_awards !== undefined &&
+        (!Array.isArray(team.aggregate_awards) ||
+          team.aggregate_awards.some((award) => !isJsonObject(award)))
+      ) {
+        throw new Error(`Team "${teamKey}" aggregate_awards must be an array of objects.`);
+      }
       if (team.players === undefined) continue;
       if (!isJsonObject(team.players)) {
         throw new Error(`Team "${teamKey}" field "players" must be an object.`);
@@ -93,6 +109,13 @@ export function parseMatchJson(rawJson: string): MatchJson {
       for (const [friendCode, player] of Object.entries(team.players)) {
         if (!isJsonObject(player)) {
           throw new Error(`Player "${friendCode}" on team "${teamKey}" must be a JSON object.`);
+        }
+        if (
+          player.aggregate_scores !== undefined &&
+          (!Array.isArray(player.aggregate_scores) ||
+            player.aggregate_scores.some((score) => !isJsonObject(score)))
+        ) {
+          throw new Error(`Player "${friendCode}" aggregate_scores must be an array of objects.`);
         }
       }
     }
@@ -222,6 +245,7 @@ export function allPlayers(
 }
 
 export function racesFromMatch(match: MatchJson): RaceDraft[] {
+  if (match.score_source === "unaccounted") return [];
   const count = match.races_played ?? match.tracks?.length ?? 12;
   const players = allPlayers(match);
   const fallbackRoom = expectedRoomSize(match.format);
@@ -321,6 +345,16 @@ function gpGroups(scores: Array<number | null>): Array<Array<number | null>> {
 
 export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
   const normalizedMatch = normalizeMatchNumber(match);
+  if (normalizedMatch.score_source === "unaccounted") {
+    const teams = Object.fromEntries(
+      Object.entries(normalizedMatch.teams ?? {}).map(([key, team]) => {
+        const tag = teamTag(key, team);
+        const color = teamColor(team);
+        return [tag, { ...team, table_tag_str: `${tag} ${color}`, hex_color: color }];
+      })
+    );
+    return compileUnaccounted({ ...normalizedMatch, teams }, automaticMatchLabel(normalizedMatch));
+  }
   const specialResult =
     normalizedMatch.result_type === "free_win" || normalizedMatch.result_type === "mutual_tie";
   if (specialResult) {

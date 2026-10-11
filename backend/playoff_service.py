@@ -76,7 +76,10 @@ def automatic_match_label(match_data: dict[str, Any]) -> str:
 def ensure_match_label(match_data: dict[str, Any]) -> str:
     """Preserve an imported label, or add an automatic label for a new document."""
     existing = str(match_data.get("match_label") or "").strip()
-    label = existing or automatic_match_label(match_data)
+    label = re.sub(r" \[Unaccounted[^]]*\]$", "", existing or automatic_match_label(match_data))
+    if match_data.get("score_source") == "unaccounted":
+        mode_label = "GP" if match_data.get("entry_mode") == "gp" else "totals"
+        label = f"{label} [Unaccounted · {mode_label}]"
     if label:
         match_data["match_label"] = label
     return label

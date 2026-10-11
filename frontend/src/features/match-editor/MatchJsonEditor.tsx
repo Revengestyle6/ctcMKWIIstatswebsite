@@ -78,6 +78,8 @@ import {
 } from "./matchJsonEditorValidation";
 import TeamRosterPool from "./TeamRosterPool";
 import TeamScopePool from "./TeamScopePool";
+import { UnaccountedScoreEntry } from "./UnaccountedScoreEntry";
+import { hasAggregateScores, resetScoreEntries } from "./unaccountedMatchModel";
 
 const inputClass =
   "mt-1 w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white outline-none focus:border-blue-300";
@@ -252,7 +254,15 @@ export default function MatchJsonEditor(): React.JSX.Element {
     return counts;
   }, [players]);
   const compiled = useMemo(() => compileMatch(match, races), [match, races]);
+  const unaccounted = match.score_source === "unaccounted";
   const specialResult = match.result_type === "free_win" || match.result_type === "mutual_tie";
+  const identityChecksPending =
+    !specialResult &&
+    players.some(
+      ({ playerKey, friendCode }) =>
+        validFriendCode(friendCode) &&
+        (!identityStates[playerKey] || identityStates[playerKey].status === "checking")
+    );
   const selectedPlayoffSeries = useMemo(
     () =>
       playoffContext?.series.find(
@@ -1596,7 +1606,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setEditSummaryOpen(false);
   }
   async function requestTablePreview(): Promise<void> {
-    if (membershipStatus === "loading" || (editMatchId && !sourceFingerprint)) return;
+    if (
+      identityChecksPending ||
+      membershipStatus === "loading" ||
+      (editMatchId && !sourceFingerprint)
+    )
+      return;
     const requestVersion = editorVersion.current;
     scrollToPreviewAfterReview.current = true;
     setPreviewLoading(true);
@@ -1827,6 +1842,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 disabled={
                   previewLoading ||
                   (Boolean(editMatchId) && !sourceFingerprint) ||
+                  identityChecksPending ||
                   membershipStatus === "loading" ||
                   errorCount > 0 ||
                   Boolean(commitResult)
@@ -2157,6 +2173,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
                     const firstTeam = Object.keys(match.teams ?? {})[0];
                     updateMatch({
                       result_type: resultType,
+                      score_source: resultType === "played" ? match.score_source : "accounted",
+                      entry_mode: resultType === "played" ? match.entry_mode : undefined,
                       free_win_winner:
                         resultType === "free_win"
                           ? (match.free_win_winner ?? firstTeam)
@@ -2344,6 +2362,64 @@ export default function MatchJsonEditor(): React.JSX.Element {
               </>
             )}
             {!specialResult ? (
+              <>
+                <label className="text-sm font-semibold text-gray-200">
+                  Match data coverage
+                  <select
+                    aria-label="Match data coverage"
+                    value={match.score_source ?? "accounted"}
+                    className={inputClass}
+                    onChange={(event) => {
+                      const source = event.target.value as "accounted" | "unaccounted";
+                      if (
+                        (hasAggregateScores(match) ||
+                          races.some(
+                            (race) =>
+                              race.placements.some(Boolean) ||
+                              race.unplacedResults.length ||
+                              race.missingPlayerResults.length
+                          )) &&
+                        !window.confirm(
+                          "Changing match data coverage clears the score entries. Continue?"
+                        )
+                      )
+                        return;
+                      const next = resetScoreEntries(match, source);
+                      setMatch(next);
+                      setRaces(racesFromMatch(next));
+                    }}
+                  >
+                    <option value="accounted">Full coverage</option>
+                    <option value="unaccounted">Limited coverage</option>
+                  </select>
+                </label>
+                {unaccounted ? (
+                  <label className="text-sm font-semibold text-gray-200">
+                    Point entry
+                    <select
+                      aria-label="Point entry"
+                      value={match.entry_mode ?? "gp"}
+                      className={inputClass}
+                      onChange={(event) => {
+                        const mode = event.target.value as "gp" | "totals";
+                        if (
+                          hasAggregateScores(match) &&
+                          !window.confirm(
+                            "Changing point entry clears role scores and missing player points. Continue?"
+                          )
+                        )
+                          return;
+                        setMatch(resetScoreEntries(match, "unaccounted", mode));
+                      }}
+                    >
+                      <option value="gp">GP points (default)</option>
+                      <option value="totals">Total points (fallback)</option>
+                    </select>
+                  </label>
+                ) : null}
+              </>
+            ) : null}
+            {!specialResult ? (
               <label className="text-sm font-semibold text-gray-200">
                 Format
                 <select
@@ -2363,8 +2439,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 <input
                   type="number"
                   min={1}
-                  value={races.length}
-                  onChange={(e) => resizeRaces(Number(e.target.value))}
+                  value={unaccounted ? (match.races_played ?? 12) : races.length}
+                  onChange={(e) =>
+                    unaccounted
+                      ? updateMatch({ races_played: Number(e.target.value) })
+                      : resizeRaces(Number(e.target.value))
+                  }
                   className={inputClass}
                 />
               </label>
@@ -2654,7 +2734,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                                 {state?.status === "conflict" && (
                                   <span className="text-red-300">{state.message}</span>
                                 )}
-                                {isFfa(match.format) && (
+                                {!unaccounted && isFfa(match.format) && (
                                   <label className="flex items-center gap-2">
                                     Player penalty
                                     <input
@@ -2681,6 +2761,14 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         );
                       })}
                     </div>
+                  ) : null}
+                  {unaccounted ? (
+                    <UnaccountedScoreEntry
+                      match={match}
+                      team={team}
+                      updatePlayer={(fc, update) => updatePlayer(teamKey, fc, update)}
+                      updateTeam={(update) => updateTeam(teamKey, update)}
+                    />
                   ) : null}
                   {!specialResult && resolvedTeam && leagueValid && seasonValid && divisionValid ? (
                     <TeamRosterPool
@@ -2719,7 +2807,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
           </datalist>
         </section>
 
-        {!specialResult ? (
+        {!specialResult && !unaccounted ? (
           <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-bold">Race Entry</h2>
@@ -3254,6 +3342,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   disabled={
                     previewLoading ||
                     (Boolean(editMatchId) && !sourceFingerprint) ||
+                    identityChecksPending ||
                     membershipStatus === "loading" ||
                     playoffContextStatus === "loading" ||
                     errorCount > 0 ||
@@ -3312,7 +3401,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   </p>
                 )}
               </div>
-              {tablePreview && (
+              {tablePreview && tablePreview.score_source !== "unaccounted" && (
                 <div className="flex flex-wrap gap-2">
                   <div className="inline-flex overflow-hidden rounded-md border border-white/20 bg-black/40">
                     <button
@@ -3499,7 +3588,9 @@ export default function MatchJsonEditor(): React.JSX.Element {
                     chartMode={previewChartMode}
                   />
                 )}
-                <TrackList tracks={tablePreview.tracks} />
+                {tablePreview.score_source !== "unaccounted" ? (
+                  <TrackList tracks={tablePreview.tracks} />
+                ) : null}
               </div>
             )}
           </section>

@@ -15,3 +15,5 @@ For competition setup, conference standings, match editing/deletion, and access
 administration, see the module/route maps in [backend architecture](../architecture/backend.md)
 and [frontend architecture](../architecture/frontend.md). The guides describe
 implemented behavior; [future ideas](../roadmap/README.md) are separate.
+
+- [Unaccounted match entry and analytics eligibility](../json-editor/unaccounted-matches.md)

@@ -1,5 +1,7 @@
 # JSON editor validation reference
 
+Matches without race JSON use the [unaccounted match entry reference](unaccounted-matches.md), including GP/total modes, awards, validation, and analytics eligibility.
+
 Validation runs at several different seams. Browser checks provide editing feedback; server checks protect each operation. The sets are not identical, and a successful queue submission is not proof that an import will succeed. This document inventories the implemented rules without silently strengthening them.
 
 ## Validation stages
@@ -144,7 +146,7 @@ Player-link input must be an object keyed by a code actually in the match. `crea
 
 - Nonblank league, season, and division.
 - Competition metadata and special-result validation, described below.
-- For played matches: at least one track; every track is a nonblank string; `races_played` equals track count.
+- For accounted played matches: at least one track; every track is a nonblank string; `races_played` equals track count.
 - A format matching `NvM` requires exactly two team objects.
 - Every team object key is nonblank.
 - Every friend code matches the expected format and appears once globally.
@@ -215,6 +217,7 @@ The rolled-back preview and final import both flush real relational records, so 
 | Match teams/players/references | Unique match + raw team key; unique match team + raw friend code; unique match + reference order. |
 | Races/player results | Unique match + race number; unique race + match player. Roles runner/bagger/unknown; role source manual/inferred/unknown. |
 | Missing-player results | Result type missing_player; reason short_roster/unreplaced_disconnect/unknown. Multiple team awards for one race are permitted. |
+| Unaccounted facts | One match marker with GP/total mode; unique player/period/role; nonnegative points/counts; at most 15 points per credited race; DC portion no larger than points; supported award reasons. Mode/period, attendance, and score reconciliation also run in the application. |
 | Penalties | Scope team/player/race/unknown. |
 | Playoff series | Unique division + stage + series number; stage semifinals/finals; positive series number; positive odd best-of. |
 | Playoff participants | Unique series + team, unique series + participant slot; slot 1 or 2. |

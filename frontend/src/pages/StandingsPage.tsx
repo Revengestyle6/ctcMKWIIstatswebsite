@@ -12,6 +12,7 @@ import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
 type CompetitionStatus = "active" | "dropped" | "disqualified";
 type Standing = {
+  unaccounted_matches?: number;
   rank: number;
   conference_rank?: number;
   team_id: number;
@@ -53,6 +54,7 @@ type MatchResult = {
   }>;
 };
 type LeaderboardPlayer = {
+  unaccounted_matches?: number;
   player_id: number;
   name: string;
   team_id: number;
@@ -232,6 +234,11 @@ function TeamIdentity({
       />
       <span className={truncateName ? "truncate" : "whitespace-nowrap"}>{team.name}</span>
       <span className="shrink-0 text-xs text-gray-400">{team.tag}</span>
+      {team.unaccounted_matches ? (
+        <span className="text-xs text-amber-300">
+          Includes {team.unaccounted_matches} unaccounted
+        </span>
+      ) : null}
       <StatusBadge status={team.status} note={team.status_note} />
     </Link>
   );
@@ -624,6 +631,11 @@ function PlayerLeaderboard({
                       className="block w-full font-semibold text-white hover:underline"
                     >
                       <AutoFitLeaderboardText text={player.name} />
+                      {player.unaccounted_matches ? (
+                        <span className="block text-xs text-amber-300">
+                          Includes {player.unaccounted_matches} unaccounted
+                        </span>
+                      ) : null}
                     </Link>
                     {!roleEligible ? (
                       <span

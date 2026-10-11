@@ -1,5 +1,7 @@
 # JSON editor workflow
 
+Matches without race JSON use the [unaccounted match entry reference](unaccounted-matches.md), including GP/total modes, awards, validation, and analytics eligibility.
+
 Start with the [editor index](README.md). This guide follows one document from load to an accepted match and explains the alternative correction path. Source: [editor orchestration](../../frontend/src/features/match-editor/MatchJsonEditor.tsx), [queue routes](../../backend/routes/reviews.py), [match routes](../../backend/routes/admin.py), and [acceptance](../../backend/acceptance_service.py).
 
 ## 1. Load a document
