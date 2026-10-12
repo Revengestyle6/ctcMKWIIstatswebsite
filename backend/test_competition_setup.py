@@ -7,7 +7,7 @@ from test_support import PostgreSQLTestDatabase, configure_test_environment
 configure_test_environment()
 
 from app import app  # noqa: E402
-from competition_setup import create_team_season_entry, get_catalog  # noqa: E402
+from competition_setup import create_team, create_team_season_entry, get_catalog  # noqa: E402
 from import_json_to_db import (  # noqa: E402
     get_or_create_division,
     get_or_create_season,
@@ -95,6 +95,91 @@ class CompetitionSetupTests(unittest.TestCase):
                 [row["code"] for row in get_catalog(session, "gsc")["seasons"][0]["divisions"]],
                 expected,
             )
+
+    def test_register_existing_teams_with_sigma_tags(self):
+        with self.SessionLocal.begin() as session:
+            season = get_or_create_season(session, "gsc", "s16")
+            division = get_or_create_division(session, season, "d2")
+            for name, tag in (
+                ("Zero Tolerance", "ZΣ"),
+                ("Banana Syndicate", "Bς"),
+                ("Banana Syndicate Greek Beta", "βς"),
+            ):
+                with self.subTest(tag=tag):
+                    team = Team(canonical_name=name, canonical_tag=tag)
+                    session.add(team)
+                    session.flush()
+                    session.add(
+                        TeamLeagueIdentity(team_id=team.team_id, league_code="gsc", tag=tag)
+                    )
+                    session.flush()
+                    entry, *_ = create_team_season_entry(
+                        session,
+                        {
+                            "team_id": team.team_id,
+                            "season_id": season.season_id,
+                            "division_id": division.division_id,
+                            "display_name": name,
+                            "clan_tag": tag,
+                        },
+                    )
+                    self.assertEqual(entry.clan_tag, tag)
+                    self.assertEqual(entry.team_id, team.team_id)
+                    self.assertEqual(
+                        len(
+                            session.scalars(
+                                select(TeamLeagueIdentity).where(
+                                    TeamLeagueIdentity.team_id == team.team_id
+                                )
+                            ).all()
+                        ),
+                        1,
+                    )
+
+    def test_final_sigma_registration_checks_existing_entries_and_ownership(self):
+        with self.SessionLocal.begin() as session:
+            season = get_or_create_season(session, "gsc", "s16")
+            division = get_or_create_division(session, season, "d2")
+            other_division = get_or_create_division(session, season, "d3")
+            team = Team(canonical_name="Zero Tolerance", canonical_tag="ZΣ")
+            other_team = Team(canonical_name="Other Team", canonical_tag="OT")
+            session.add_all([team, other_team])
+            session.flush()
+            session.add(TeamLeagueIdentity(team_id=team.team_id, league_code="gsc", tag="ZΣ"))
+            session.add(
+                TeamSeasonEntry(
+                    team_id=team.team_id,
+                    season_id=season.season_id,
+                    division_id=division.division_id,
+                    display_name="Zero Tolerance",
+                    clan_tag="ZΣ",
+                )
+            )
+            session.flush()
+            payload = {
+                "team_id": team.team_id,
+                "season_id": season.season_id,
+                "division_id": division.division_id,
+                "display_name": "Zero Tolerance",
+                "clan_tag": "ZΣ",
+            }
+            with self.assertRaisesRegex(ValueError, "already registered"):
+                create_team_season_entry(session, payload)
+            with self.assertRaisesRegex(ValueError, "already used"):
+                create_team_season_entry(session, {**payload, "display_name": "Another Entry"})
+            with self.assertRaisesRegex(ValueError, "linked to another team"):
+                create_team_season_entry(
+                    session,
+                    {
+                        **payload,
+                        "team_id": other_team.team_id,
+                        "division_id": other_division.division_id,
+                    },
+                )
+            with self.assertRaisesRegex(ValueError, "already linked"):
+                create_team(
+                    session, {"league": "gsc", "canonical_name": "Duplicate", "canonical_tag": "ZΣ"}
+                )
 
     def test_canonical_team_can_register_distinct_subteams_across_divisions(self):
         with self.SessionLocal.begin() as session:
