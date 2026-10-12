@@ -36,6 +36,7 @@ type Standing = {
   conference: { id: number; code: string; name: string; sort_order: number } | null;
 };
 type MatchResult = {
+  score_source?: "accounted" | "unaccounted";
   match_id: number;
   match_number: number;
   label: string;
@@ -243,11 +244,6 @@ function TeamIdentity({
       />
       <span className={truncateName ? "truncate" : "whitespace-nowrap"}>{team.name}</span>
       <span className="shrink-0 text-xs text-gray-400">{team.tag}</span>
-      {team.unaccounted_matches ? (
-        <span className="text-xs text-amber-300">
-          Includes {team.unaccounted_matches} unaccounted
-        </span>
-      ) : null}
       <StatusBadge status={team.status} note={team.status_note} />
     </Link>
   );
@@ -446,6 +442,9 @@ function MatchupMatrix({
                           >
                             {result.perspective.adjusted_score}–
                             {result.perspective.adjusted_opponent_score}
+                            {result.score_source === "unaccounted" ? (
+                              <span title="Match without race level data">*</span>
+                            ) : null}
                             <span className="ml-1 text-[0.6rem] opacity-75">
                               {`(${
                                 result.result_type === "mutual_tie"
@@ -640,11 +639,6 @@ function PlayerLeaderboard({
                       className="block w-full font-semibold text-white hover:underline"
                     >
                       <AutoFitLeaderboardText text={player.name} />
-                      {player.unaccounted_matches ? (
-                        <span className="block text-xs text-amber-300">
-                          Includes {player.unaccounted_matches} unaccounted
-                        </span>
-                      ) : null}
                     </Link>
                     {!roleEligible ? (
                       <span

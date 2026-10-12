@@ -438,9 +438,9 @@ export default function TeamDashboard() {
           entityId={opponentId}
           entityOptions={opponentOptions}
           minRaces={minRaces}
+          trailingControl={data.scope.has_unaccounted_matches ? <UnaccountedToggle /> : null}
           extraControl={
             <div className="flex flex-wrap items-end gap-3">
-              <UnaccountedToggle />
               <MatchSetToggle
                 value={matchSet}
                 disabled={tabLoading}

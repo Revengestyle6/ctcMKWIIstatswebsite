@@ -598,18 +598,15 @@ def get_player_overview(
     confirmed = confirmed_5v5_race_ids(session, rows)
     coverage, classified = role_coverage(rows, confirmed)
     selected = [item for item in classified if item[1] == role]
-    aggregates = (
-        aggregate_player_rows(
-            session,
-            scope,
-            match_set,
-            player_id=player_id,
-            team_id=team_id,
-            team_season_entry_id=team_season_entry_id,
-        )
-        if include_unaccounted
-        else []
+    available_aggregates = aggregate_player_rows(
+        session,
+        scope,
+        match_set,
+        player_id=player_id,
+        team_id=team_id,
+        team_season_entry_id=team_season_entry_id,
     )
+    aggregates = available_aggregates if include_unaccounted else []
     metrics = add_aggregate_metrics(summarize_role_rows(classified, role), aggregates, role)
     if role == "bagger":
         metrics.update(bagger_counterpart_summary(session, player_id, classified))
@@ -724,6 +721,7 @@ def get_player_overview(
             "team_id": team_id,
             "match_set": match_set,
             "include_unaccounted": include_unaccounted,
+            "has_unaccounted_matches": bool(available_aggregates),
         },
         "metrics": metrics,
         "role_coverage": coverage,

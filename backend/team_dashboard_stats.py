@@ -271,7 +271,7 @@ def get_team_overview(
         if not session.get(Team, opponent_team_id):
             raise DashboardError("Unknown opponent filter.")
 
-    rows = _team_match_rows(session, team_id, scope, match_set, include_unaccounted)
+    rows = _team_match_rows(session, team_id, scope, match_set, include_unaccounted=True)
     match_ids = [row.match_id for row in rows]
     unaccounted_ids = set(
         session.scalars(
@@ -283,6 +283,7 @@ def get_team_overview(
         teams_by_match[row.match_id].append(row)
 
     matches = []
+    has_unaccounted_matches = False
     for row in rows:
         opponents = [
             candidate
@@ -293,6 +294,10 @@ def get_team_overview(
             candidate.team_id == opponent_team_id for candidate in opponents
         ):
             continue
+        if row.match_id in unaccounted_ids:
+            has_unaccounted_matches = True
+            if not include_unaccounted:
+                continue
         own_final = _final_score(row)
         opponent_final = max((_final_score(candidate) for candidate in opponents), default=None)
         match_result = _result(own_final, opponent_final)
@@ -355,6 +360,7 @@ def get_team_overview(
             "opponent_team_id": opponent_team_id,
             "match_set": match_set,
             "include_unaccounted": include_unaccounted,
+            "has_unaccounted_matches": has_unaccounted_matches,
         },
         "metrics": {
             "matches": len(matches),

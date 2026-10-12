@@ -238,6 +238,7 @@ interface ScopeControlsProps {
   entityOptions?: ScopeEntityOption[];
   minRaces: number;
   extraControl?: ReactNode;
+  trailingControl?: ReactNode;
   disabled?: boolean;
   onSeasonChange: (value: string) => void;
   onDivisionChange: (value: string) => void;
@@ -254,6 +255,7 @@ export function DashboardScopeControls({
   entityOptions = [],
   minRaces,
   extraControl,
+  trailingControl,
   disabled,
   onSeasonChange,
   onDivisionChange,
@@ -338,20 +340,23 @@ export function DashboardScopeControls({
 
       {extraControl}
 
-      <label className="flex min-w-36 flex-col gap-1 text-sm font-semibold text-gray-300">
-        Minimum races
-        <input
-          className={`${controlClass} w-full text-center`}
-          type="number"
-          min={1}
-          max={500}
-          value={minRaces}
-          disabled={disabled}
-          onChange={(event) =>
-            onMinRacesChange(Math.min(500, Math.max(1, Number(event.target.value) || 1)))
-          }
-        />
-      </label>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex min-w-36 flex-col gap-1 text-sm font-semibold text-gray-300">
+          Minimum races
+          <input
+            className={`${controlClass} w-full text-center`}
+            type="number"
+            min={1}
+            max={500}
+            value={minRaces}
+            disabled={disabled}
+            onChange={(event) =>
+              onMinRacesChange(Math.min(500, Math.max(1, Number(event.target.value) || 1)))
+            }
+          />
+        </label>
+        {trailingControl}
+      </div>
     </div>
   );
 }
