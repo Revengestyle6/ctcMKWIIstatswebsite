@@ -17,7 +17,7 @@ export function UnaccountedToggle() {
         }}
       />
       <span>
-        Include unaccounted matches
+        include matches without race level data
         <span className="block text-xs text-gray-400">
           Adds total scores and available GP scores. Race and track analytics use recorded races
           only.

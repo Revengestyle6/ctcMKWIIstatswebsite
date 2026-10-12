@@ -107,6 +107,7 @@ export interface PlayerOverview {
   };
   role: PlayerRoleMode;
   scope: {
+    has_unaccounted_matches?: boolean;
     season: string | null;
     division: string | null;
     team_id: number | null;
@@ -205,6 +206,7 @@ export interface TeamOverview {
     appearances: TeamAppearance[];
   };
   scope: {
+    has_unaccounted_matches?: boolean;
     season: string | null;
     division: string | null;
     opponent_team_id: number | null;

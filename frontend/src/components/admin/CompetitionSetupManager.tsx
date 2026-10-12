@@ -920,8 +920,8 @@ export default function CompetitionSetupManager({
                       `${entry.division.code.toUpperCase()} as ${entry.display_name} (${entry.clan_tag})`
                   )
                   .join(", ")}
-                . Another entry can use the same canonical team in this division. Choose a distinct
-                season tag; its display name may also differ.
+                . Another entry can use the same canonical team in this division. The tag can remain
+                the same, but the team name must differ from existing entries for this season.
               </p>
             ) : null}
             <label className="text-sm font-bold text-gray-200 sm:col-span-2">

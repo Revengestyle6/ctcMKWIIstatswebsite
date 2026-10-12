@@ -149,6 +149,63 @@ class AggregateWorkflowTests(unittest.TestCase):
             .limit(1)
         )
 
+    def test_dashboard_unaccounted_availability_respects_scope(self):
+        self.import_document(aggregate_document())
+        other_division = aggregate_document(number=2)
+        other_division["division"] = "d2"
+        other_division["teams"]["A"]["players"] = {
+            "1111-2222-4444": other_division["teams"]["A"]["players"].pop("1111-2222-3330")
+        }
+        self.import_document(other_division)
+        with self.SessionLocal() as session:
+            player = self.player_id(session)
+            from models import TeamSeasonEntry
+
+            team_ids = list(session.scalars(select(TeamSeasonEntry.team_id).distinct()))
+            own_team_id = session.scalar(
+                select(TeamSeasonEntry.team_id)
+                .join(MatchTeam)
+                .join(MatchPlayer)
+                .where(MatchPlayer.player_id == player)
+                .limit(1)
+            )
+            other_team_id = next(team_id for team_id in team_ids if team_id != own_team_id)
+            params = {"league": "ctc", "season": "s99", "division": "d1", "session": session}
+            for included in (False, True):
+                query = {**params, "include_unaccounted": included}
+                self.assertTrue(
+                    get_player_overview(player, **query)["scope"]["has_unaccounted_matches"]
+                )
+                self.assertFalse(
+                    get_player_overview(player, **{**query, "division": "d2"})["scope"][
+                        "has_unaccounted_matches"
+                    ]
+                )
+                self.assertFalse(
+                    get_player_overview(player, match_set="playoffs", **query)["scope"][
+                        "has_unaccounted_matches"
+                    ]
+                )
+                for team_id in team_ids:
+                    self.assertTrue(
+                        get_team_overview(team_id, **query)["scope"]["has_unaccounted_matches"]
+                    )
+                    self.assertFalse(
+                        get_team_overview(team_id, opponent_team_id=team_id, **query)["scope"][
+                            "has_unaccounted_matches"
+                        ]
+                    )
+                    self.assertFalse(
+                        get_team_overview(team_id, match_set="playoffs", **query)["scope"][
+                            "has_unaccounted_matches"
+                        ]
+                    )
+                self.assertFalse(
+                    get_player_overview(player, team_id=other_team_id, **query)["scope"][
+                        "has_unaccounted_matches"
+                    ]
+                )
+
     def test_gp_and_totals_preserve_scores_without_race_facts(self):
         for mode in ("gp", "totals"):
             self.import_document(aggregate_document(mode, 1 if mode == "gp" else 2))
@@ -159,6 +216,8 @@ class AggregateWorkflowTests(unittest.TestCase):
             params = {"league": "ctc", "season": "s99", "division": "d1", "session": session}
             excluded = get_player_overview(player, **params)
             included = get_player_overview(player, include_unaccounted=True, **params)
+            self.assertTrue(excluded["scope"]["has_unaccounted_matches"])
+            self.assertTrue(included["scope"]["has_unaccounted_matches"])
             self.assertEqual(excluded["metrics"]["total_points"], 0)
             self.assertEqual(included["metrics"]["total_points"], 240)
             self.assertEqual(included["metrics"]["scored_races"], 24)
