@@ -186,8 +186,17 @@ export function normalizeMatchForEditor(match: MatchJson): MatchJson {
 }
 
 export function automaticMatchLabel(match: MatchJson): string {
-  const existing = String(match.match_label ?? "").trim();
-  if (existing) return existing;
+  let existing = String(match.match_label ?? "")
+    .trim()
+    .replace(/ — (Free win|Mutual tie)$/, "");
+  const resultLabel =
+    match.result_type === "free_win"
+      ? "Free win"
+      : match.result_type === "mutual_tie"
+        ? "Mutual tie"
+        : "";
+  if (resultLabel) existing = existing.replace(/ \[Unaccounted[^\]]*\]$/, "");
+  if (existing) return [existing, resultLabel].filter(Boolean).join(" — ");
   if (match.match_type === "playoff") {
     const seriesLabel =
       match.playoff_stage === "finals"
@@ -208,12 +217,6 @@ export function automaticMatchLabel(match: MatchJson): string {
     .map(([teamKey, team]) => teamTag(teamKey, team))
     .filter(Boolean)
     .join(" vs ");
-  const resultLabel =
-    match.result_type === "free_win"
-      ? "Free win"
-      : match.result_type === "mutual_tie"
-        ? "Mutual tie"
-        : "";
   return [[numberLabel, matchup].filter(Boolean).join(" "), resultLabel]
     .filter(Boolean)
     .join(" — ");
@@ -362,16 +365,6 @@ function gpGroups(scores: Array<number | null>): Array<Array<number | null>> {
 
 export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
   const normalizedMatch = normalizeMatchForEditor(match);
-  if (normalizedMatch.score_source === "unaccounted") {
-    const teams = Object.fromEntries(
-      Object.entries(normalizedMatch.teams ?? {}).map(([key, team]) => {
-        const tag = teamTag(key, team);
-        const color = teamColor(team);
-        return [tag, { ...team, table_tag_str: `${tag} ${color}`, hex_color: color }];
-      })
-    );
-    return compileUnaccounted({ ...normalizedMatch, teams }, automaticMatchLabel(normalizedMatch));
-  }
   const specialResult =
     normalizedMatch.result_type === "free_win" || normalizedMatch.result_type === "mutual_tie";
   if (specialResult) {
@@ -397,6 +390,8 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
     return {
       ...normalizedMatch,
       match_type: "regular",
+      score_source: "accounted",
+      entry_mode: undefined,
       free_win_winner:
         normalizedMatch.result_type === "free_win" && normalizedMatch.free_win_winner
           ? teamTag(
@@ -412,6 +407,19 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
       tracks: [],
       teams,
     };
+  }
+  if (normalizedMatch.score_source === "unaccounted") {
+    const teams = Object.fromEntries(
+      Object.entries(normalizedMatch.teams ?? {}).map(([key, team]) => {
+        const tag = teamTag(key, team);
+        const color = teamColor(team);
+        return [tag, { ...team, table_tag_str: `${tag} ${color}`, hex_color: color }];
+      })
+    );
+    return compileUnaccounted(
+      { ...normalizedMatch, free_win_winner: undefined, teams },
+      automaticMatchLabel(normalizedMatch)
+    );
   }
   const orderedRaces = [...races].sort((left, right) => left.raceNumber - right.raceNumber);
   const teams = Object.fromEntries(
@@ -508,6 +516,7 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
   );
   return {
     ...normalizedMatch,
+    free_win_winner: undefined,
     match_label: automaticMatchLabel(normalizedMatch),
     rxx: (normalizedMatch.rxx ?? []).map((code) => code.trim()).filter(Boolean),
     title_str: `#title ${orderedRaces.length} races\n`,
