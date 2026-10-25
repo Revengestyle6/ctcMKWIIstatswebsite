@@ -41,7 +41,7 @@ import {
   expectedRoomSize,
   type MatchJson,
   type MatchPlayerJson,
-  normalizeMatchNumber,
+  normalizeMatchForEditor,
   parseMatchJson,
   type RaceDraft,
   racesFromMatch,
@@ -500,7 +500,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
           match?: MatchJson;
         };
         if (draft.match && draft.submissionId) {
-          const normalizedMatch = normalizeMatchNumber(draft.match);
+          const normalizedMatch = normalizeMatchForEditor(draft.match);
           setMatch(normalizedMatch);
           setRaces(racesFromMatch(normalizedMatch));
           setFileName(draft.filename || "Queued match JSON");
@@ -1297,7 +1297,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       : mii;
   }
   function resetEditor(nextMatch: MatchJson, nextFileName: string): void {
-    const normalizedMatch = normalizeMatchNumber(nextMatch);
+    const normalizedMatch = normalizeMatchForEditor(nextMatch);
     setMatch(normalizedMatch);
     setRaces(racesFromMatch(normalizedMatch));
     setFileName(nextFileName);
@@ -1710,7 +1710,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setApprovalDecisions((current) => ({ ...current, [entry.key]: "approved" }));
   }
 
-  const raceIndexes = raceView === "all" ? races.map((_, index) => index) : [activeRace];
+  const raceIndexes =
+    raceView === "all" ? races.map((_, index) => index) : races[activeRace] ? [activeRace] : [];
   const errorCount = issues.filter((issue) => issue.level === "error").length;
   const reviewButtonLabel = commitResult
     ? editMatchId
@@ -2179,7 +2180,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   onChange={(event) => {
                     const resultType = event.target.value as "played" | "free_win" | "mutual_tie";
                     const firstTeam = Object.keys(match.teams ?? {})[0];
-                    updateMatch({
+                    const nextMatch: MatchJson = {
+                      ...match,
                       result_type: resultType,
                       score_source: resultType === "played" ? match.score_source : "accounted",
                       entry_mode: resultType === "played" ? match.entry_mode : undefined,
@@ -2196,7 +2198,23 @@ export default function MatchJsonEditor(): React.JSX.Element {
                                 { ...team, penalties: 0, table_penalty_str: "" },
                               ])
                             ),
-                    });
+                    };
+                    if (resultType === "played" && specialResult) {
+                      nextMatch.match_label = nextMatch.match_label?.replace(
+                        / — (Free win|Mutual tie)$/,
+                        ""
+                      );
+                      if (nextMatch.score_source !== "unaccounted") {
+                        const nextRaces = races.length
+                          ? races
+                          : racesFromMatch({ ...nextMatch, races_played: 12 });
+                        nextMatch.races_played = nextRaces.length;
+                        nextMatch.tracks = nextRaces.map((race) => race.trackName);
+                        setRaces(nextRaces);
+                        setActiveRace(0);
+                      }
+                    }
+                    setMatch(nextMatch);
                   }}
                   className={inputClass}
                 >
