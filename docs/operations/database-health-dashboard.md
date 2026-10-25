@@ -152,6 +152,27 @@ bucket.
 Fuzzy matching uses Unicode normalization and a conservative similarity
 threshold. Results are warnings only and must be reviewed manually.
 
+#### Teams
+
+- a team season entry whose tag matches a league identity owned by a different
+  canonical team (warning and non-dismissible).
+
+Matching uses the database's case-insensitive rules within the same league.
+Each finding identifies the league, season, division, season entry, league
+identity, and both team IDs. This ownership conflict can block match previews.
+
+Review both records in **Database Management → Teams**, including their league
+identities, season entries, and match history. If they represent the same team,
+select the duplicate as the source and the team to retain as the destination,
+then review the merge comparison and resolve any blockers before confirming the
+audited merge. If they represent distinct teams, correct the conflicting season
+registration or league identity instead. See [Team Identity Management](../features/team-identity-management.md)
+for editing and merge rules.
+
+After repairing ownership, refresh Database Health to confirm the finding clears
+and retry any affected match preview. Dismissing the finding cannot resolve this
+conflict.
+
 #### Players
 
 - player records with no `mkc_name` alias (critical and non-dismissible);
@@ -218,6 +239,7 @@ Recommended handling by finding type:
 | Duplicate race placement | Compare all players in the named race, including disconnect/substitution fields. | Correct the source table or importer mapping. It cannot be dismissed. |
 | Inferred-role mismatch | Check explicit role, placement, and `role_source`. | Correct source role data or rerun the role repair/import. It cannot be dismissed. |
 | Similar tracks | Compare full names, console prefix, course number, aliases, and race history. | Register an alias/rename a typo, or dismiss that exact pair if both are real tracks. |
+| Season team tag belongs to another canonical team | Compare the named season entry and league identity, both team IDs, and their participation history. | Use the audited team-merge workflow for duplicate records; otherwise correct the conflicting registration or league identity. Refresh the dashboard and retry the affected preview. It cannot be dismissed. |
 | Duplicate canonical player | Compare friend codes, aliases, seasons, teams, and match history. | Merge identities through the reviewed identity workflow, or dismiss if distinct people legitimately share a name. |
 | Missing MKCentral player name | Find the player's MKCentral profile and verify one of its MKW friend codes. | Add that friend code to the player in Alias Management, then run the individual MKCentral refresh. It cannot be dismissed. |
 | Shared MKCentral player name | Compare the affected players and confirm that their MKCentral IDs differ. | Keep and dismiss the warning when legitimate; otherwise correct the friend-code assignment or merge the duplicate. Automatic canonical names fall back to lounge names while shared. |
@@ -288,7 +310,7 @@ so future unrelated corruption cannot be silently excluded.
 ## Review Decisions And Dismissals
 
 Only judgment-based catalog checks are dismissible. Foreign-key failures,
-archive mismatches, and impossible match/result values
+archive mismatches, team identity ownership conflicts, and impossible match/result values
 must be corrected at their source. This prevents a dismissal from hiding future
 data corruption.
 
