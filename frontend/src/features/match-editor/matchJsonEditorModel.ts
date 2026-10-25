@@ -158,13 +158,30 @@ export function expectedRoomSize(format = "5v5"): number {
   return format.toLowerCase() === "ffa" ? 12 : 10;
 }
 
-export function normalizeMatchNumber(match: MatchJson): MatchJson {
+export function normalizeMatchForEditor(match: MatchJson): MatchJson {
   const normalized = { ...match };
   const legacyWeek = normalized.week;
   if (normalized.match_number === undefined && typeof legacyWeek === "number") {
     normalized.match_number = legacyWeek;
   }
   delete normalized.week;
+  if (normalized.result_type === "free_win") {
+    const teams = Object.entries(normalized.teams ?? {});
+    const winner = teams.find(
+      ([key, team]) =>
+        key === normalized.free_win_winner || teamTag(key, team) === normalized.free_win_winner
+    );
+    // Older compiled documents renamed team keys without updating the recipient.
+    // Recover only an unambiguous, explicitly awarded 150–0 result.
+    const awarded = teams.filter(([, team]) => team.total_score === 150);
+    const recordedWinner =
+      teams.length === 2 &&
+      awarded.length === 1 &&
+      teams.every(([, team]) => team.total_score === 150 || team.total_score === 0)
+        ? awarded[0]
+        : undefined;
+    normalized.free_win_winner = (winner ?? recordedWinner)?.[0];
+  }
   return normalized;
 }
 
@@ -344,7 +361,7 @@ function gpGroups(scores: Array<number | null>): Array<Array<number | null>> {
 }
 
 export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
-  const normalizedMatch = normalizeMatchNumber(match);
+  const normalizedMatch = normalizeMatchForEditor(match);
   if (normalizedMatch.score_source === "unaccounted") {
     const teams = Object.fromEntries(
       Object.entries(normalizedMatch.teams ?? {}).map(([key, team]) => {
@@ -380,6 +397,13 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
     return {
       ...normalizedMatch,
       match_type: "regular",
+      free_win_winner:
+        normalizedMatch.result_type === "free_win" && normalizedMatch.free_win_winner
+          ? teamTag(
+              normalizedMatch.free_win_winner,
+              normalizedMatch.teams?.[normalizedMatch.free_win_winner] ?? {}
+            )
+          : undefined,
       match_label: automaticMatchLabel(normalizedMatch),
       format: "5v5",
       title_str: "#title 0 races\n",

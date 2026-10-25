@@ -156,6 +156,14 @@ The importer also recognizes legacy missing-player placeholders. It subtracts th
 
 For `free_win` and `mutual_tie`, compilation generates regular-season `5v5` metadata, zero races, empty tracks/references/players, zero penalties, and minimal team objects. A free win gives the selected winner 150 and the other team 0. A mutual tie gives both teams 0. Regular match number and two distinct team identities still matter.
 
+The compiled `free_win_winner` uses the serialized team key. When loading older
+documents whose recipient still names an internal key such as `TeamA`, the editor
+recovers the recipient only from an unambiguous recorded 150–0 result. Otherwise,
+the administrator must choose the recipient. Converting a special result to a
+played match retains its teams, removes the special-result label suffix, and
+restores existing race drafts or starts twelve blank races for entering the played
+data. The change is saved only after the usual preview and administrator save.
+
 A compact example is a complete special-result document, not a race-based example with omitted required player rows:
 
 ```json
