@@ -1274,7 +1274,11 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                     type="search"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Canonical name, code, or alias"
+                    placeholder={
+                      entityType === "teams"
+                        ? "Name, tag, alias, or team ID"
+                        : "Canonical name, code, or alias"
+                    }
                     className="mt-2 w-full rounded border border-white/20 bg-black/50 px-3 py-2"
                   />
                 </label>
@@ -1295,7 +1299,11 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                     >
                       <span className="block font-bold">{entity.label}</span>
                       <span className="mt-1 block text-xs text-gray-400">
-                        {entityType === "players" ? `Player ID ${entity.id} · ` : ""}
+                        {entityType === "players"
+                          ? `Player ID ${entity.id} · `
+                          : entityType === "teams"
+                            ? `Team ID ${entity.id} · `
+                            : ""}
                         {entity.secondary ? `${entity.secondary} · ` : ""}
                         {entity.alias_count} {entity.alias_count === 1 ? "alias" : "aliases"}
                       </span>
@@ -1309,9 +1317,9 @@ export default function AdminAliasManagementPage(): React.JSX.Element {
                   <>
                     <div className="flex flex-wrap items-center gap-3">
                       <h2 className="text-2xl font-bold">{selected.label}</h2>
-                      {entityType === "players" ? (
+                      {entityType === "players" || entityType === "teams" ? (
                         <span className="rounded border border-blue-300/30 bg-blue-950/40 px-2 py-1 text-xs font-semibold text-blue-200">
-                          Player ID {selected.id}
+                          {entityType === "teams" ? "Team" : "Player"} ID {selected.id}
                         </span>
                       ) : null}
                     </div>

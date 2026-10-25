@@ -10,14 +10,20 @@ from database_health_reviews import load_reviews
 from match_upload import reconcile_archive, serialize_addition_log
 from models import (
     DatabaseAdditionLog,
+    Division,
     Match,
     Player,
     PlayerAlias,
     PlayerFriendCode,
+    Season,
     SourceFile,
+    Team,
+    TeamLeagueIdentity,
+    TeamSeasonEntry,
     Track,
 )
 from sqlalchemy import func, inspect, select, text
+from sqlalchemy.orm import aliased
 
 TRACK_SIMILARITY_THRESHOLD = 0.92
 MAX_ISSUE_ENTITIES = 20
@@ -137,6 +143,56 @@ def _addition_data(session, limit):
         "by_entity_type": by_type,
         "recent": [serialize_addition_log(row) for row in rows],
     }
+
+
+def _team_identity_issues(session):
+    registered_team = aliased(Team)
+    identity_owner = aliased(Team)
+    conflicts = session.execute(
+        select(
+            TeamSeasonEntry, TeamLeagueIdentity, Season, Division, registered_team, identity_owner
+        )
+        .join(Season, Season.season_id == TeamSeasonEntry.season_id)
+        .join(Division, Division.division_id == TeamSeasonEntry.division_id)
+        .join(
+            TeamLeagueIdentity,
+            (func.lower(TeamLeagueIdentity.league_code) == func.lower(Season.league_code))
+            & (func.lower(TeamLeagueIdentity.tag) == func.lower(TeamSeasonEntry.clan_tag))
+            & (TeamLeagueIdentity.team_id != TeamSeasonEntry.team_id),
+        )
+        .join(registered_team, registered_team.team_id == TeamSeasonEntry.team_id)
+        .join(identity_owner, identity_owner.team_id == TeamLeagueIdentity.team_id)
+        .order_by(TeamSeasonEntry.team_season_entry_id, TeamLeagueIdentity.team_league_identity_id)
+    ).all()
+    return [
+        _issue(
+            f"team-identity-conflict:{entry.team_season_entry_id}:{identity.team_league_identity_id}",
+            "warning",
+            "teams",
+            "Season team tag belongs to another canonical team",
+            f"{season.league_code.upper()} {season.season_code.upper()} "
+            f"{division.division_code.upper()} registers tag {entry.clan_tag} to team "
+            f"{registered.team_id} ({registered.canonical_name}), but league identity "
+            f"{identity.team_league_identity_id} assigns that tag to team "
+            f"{owner.team_id} ({owner.canonical_name}). This conflict can block match previews. "
+            "Review both team records and merge them if they represent the same team; "
+            "otherwise correct the conflicting registration or league identity.",
+            count=2,
+            entities=[
+                {
+                    "id": registered.team_id,
+                    "label": f"Registered team: {registered.canonical_name}",
+                    "value": f"Season entry {entry.team_season_entry_id} · {entry.clan_tag}",
+                },
+                {
+                    "id": owner.team_id,
+                    "label": f"League identity owner: {owner.canonical_name}",
+                    "value": f"League identity {identity.team_league_identity_id} · {identity.tag}",
+                },
+            ],
+        )
+        for entry, identity, season, division, registered, owner in conflicts
+    ]
 
 
 def _catalog_issues(session):
@@ -633,6 +689,7 @@ def build_database_health(
         )
 
     issues.extend(_catalog_issues(session))
+    issues.extend(_team_identity_issues(session))
     issues.extend(_match_and_result_issues(session))
 
     archive = {"status": "skipped", "missing_files": [], "hash_mismatches": [], "orphan_files": []}
