@@ -34,7 +34,7 @@ Unknown top-level/team/player keys are generally retained by object spreads duri
 | `league`, `season`, `division` | Competition scope. The editor uses the selected site league; season/division metadata fields turn digits into `sN`/`dN`. Backend scope resolution trims and lowercases codes. |
 | `match_type` | `regular` or `playoff`; omission is treated as regular by the server. |
 | `match_number` | Positive regular-season number. Legacy numeric `week` is copied here only when absent, then removed from editor output. Playoff documents omit it. |
-| `match_label` | Preserves an existing nonblank label; otherwise generated from regular match number and first two tags, or playoff stage/series/match. Special results append a result label. |
+| `match_label` | Preserves an existing nonblank base label; otherwise generated from regular match number and first two tags, or playoff stage/series/match. Compilation updates the Free win/Mutual tie suffix for the selected result type and removes any Unaccounted suffix from special results. |
 | `result_type` | `played`, `free_win`, or `mutual_tie`; omission is played server-side. |
 | `free_win_winner` | Editor team key or tag identifying the 150-point team; meaningful for `free_win`. |
 | `format` | Commonly `5v5`. A `NvM` string supplies expected room size `N+M`; `ffa` defaults to 12; other values fall back to 10. Only room sizes with a score table are selectable. |
@@ -163,6 +163,14 @@ the administrator must choose the recipient. Converting a special result to a
 played match retains its teams, removes the special-result label suffix, and
 restores existing race drafts or starts twelve blank races for entering the played
 data. The change is saved only after the usual preview and administrator save.
+
+Switching result types before saving preserves the played draft's races, players,
+penalties, table references, data coverage, and GP/total score entries, along with
+the selected free-win recipient. Compilation emits only the fields appropriate to
+the selected result: special results use accounted metadata with no entry mode,
+and only free wins include a recipient. Saving a special result still stores no
+played race or player data; the retained draft can be restored only while it
+remains open in the editor.
 
 A compact example is a complete special-result document, not a race-based example with omitted required player rows:
 

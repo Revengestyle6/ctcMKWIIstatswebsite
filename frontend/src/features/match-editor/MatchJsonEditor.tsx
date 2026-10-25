@@ -2183,27 +2183,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
                     const nextMatch: MatchJson = {
                       ...match,
                       result_type: resultType,
-                      score_source: resultType === "played" ? match.score_source : "accounted",
-                      entry_mode: resultType === "played" ? match.entry_mode : undefined,
                       free_win_winner:
-                        resultType === "free_win"
-                          ? (match.free_win_winner ?? firstTeam)
-                          : undefined,
-                      teams:
-                        resultType === "played"
-                          ? match.teams
-                          : Object.fromEntries(
-                              Object.entries(match.teams ?? {}).map(([teamKey, team]) => [
-                                teamKey,
-                                { ...team, penalties: 0, table_penalty_str: "" },
-                              ])
-                            ),
+                        match.free_win_winner ??
+                        (resultType === "free_win" ? firstTeam : undefined),
                     };
                     if (resultType === "played" && specialResult) {
-                      nextMatch.match_label = nextMatch.match_label?.replace(
-                        / — (Free win|Mutual tie)$/,
-                        ""
-                      );
                       if (nextMatch.score_source !== "unaccounted") {
                         const nextRaces = races.length
                           ? races
