@@ -27,6 +27,7 @@ from models import (
     Season,
     SourceFile,
     Team,
+    TeamLeagueIdentity,
     TeamSeasonEntry,
     Track,
 )
@@ -41,6 +42,86 @@ class DatabaseHealthTests(unittest.TestCase):
     def tearDown(self):
         self.session.close()
         self.database.close()
+
+    def test_season_team_tag_conflict_identifies_both_canonical_teams(self):
+        season = Season(
+            league_code="gsc", season_code="s15", season_number=15, name="GSC Season 15"
+        )
+        registered = Team(canonical_name="Dinner with JayZ", canonical_tag="JαyZ")
+        duplicate = Team(canonical_name="JαyZ", canonical_tag="JαyZ")
+        self.session.add_all((season, registered, duplicate))
+        self.session.flush()
+        division = Division(
+            season_id=season.season_id, division_code="d3", division_name="Division 3"
+        )
+        self.session.add(division)
+        self.session.flush()
+        entry = TeamSeasonEntry(
+            team_id=registered.team_id,
+            season_id=season.season_id,
+            division_id=division.division_id,
+            display_name="Dinner with JayZ",
+            clan_tag="JαyZ",
+        )
+        identity = TeamLeagueIdentity(team_id=duplicate.team_id, league_code="gsc", tag="JαyZ")
+        self.session.add_all((entry, identity))
+        self.session.commit()
+        report = build_database_health(self.session, include_archive=False)
+        conflict = next((issue for issue in report["issues"] if issue["category"] == "teams"), None)
+        self.assertIsNotNone(conflict)
+        self.assertEqual(
+            conflict["key"],
+            f"team-identity-conflict:{entry.team_season_entry_id}:{identity.team_league_identity_id}",
+        )
+        self.assertEqual(conflict["severity"], "warning")
+        self.assertFalse(conflict["dismissible"])
+        self.assertEqual(
+            {entity["id"] for entity in conflict["entities"]},
+            {registered.team_id, duplicate.team_id},
+        )
+        self.assertIn("GSC S15 D3", conflict["detail"])
+        self.assertIn("JαyZ", conflict["detail"])
+        identity.team_id = registered.team_id
+        self.session.commit()
+        repaired = build_database_health(self.session, include_archive=False)
+        self.assertFalse(any(issue["category"] == "teams" for issue in repaired["issues"]))
+
+    def test_team_tag_conflicts_use_database_case_rules_and_stay_within_league(self):
+        season = Season(
+            league_code="gsc", season_code="s16", season_number=16, name="GSC Season 16"
+        )
+        registered = Team(canonical_name="Zero Tolerance", canonical_tag="ZΣ")
+        other = Team(canonical_name="Other Team", canonical_tag="OT")
+        self.session.add_all((season, registered, other))
+        self.session.flush()
+        division = Division(
+            season_id=season.season_id, division_code="d2", division_name="Division 2"
+        )
+        self.session.add(division)
+        self.session.flush()
+        self.session.add_all(
+            (
+                TeamSeasonEntry(
+                    team_id=registered.team_id,
+                    season_id=season.season_id,
+                    division_id=division.division_id,
+                    display_name="Zero Tolerance",
+                    clan_tag="ZΣ",
+                ),
+                TeamLeagueIdentity(team_id=other.team_id, league_code="ctc", tag="ZΣ"),
+                TeamLeagueIdentity(team_id=registered.team_id, league_code="gsc", tag="zσ"),
+            )
+        )
+        self.session.commit()
+        report = build_database_health(self.session, include_archive=False)
+        self.assertFalse(any(issue["category"] == "teams" for issue in report["issues"]))
+        self.session.query(TeamLeagueIdentity).filter_by(
+            league_code="gsc"
+        ).one().team_id = other.team_id
+        self.session.commit()
+        report = build_database_health(self.session, include_archive=False)
+        conflicts = [issue for issue in report["issues"] if issue["category"] == "teams"]
+        self.assertEqual(len(conflicts), 1)
 
     def test_report_counts_records_and_surfaces_duplicate_catalog_names(self):
         first_player = Player(canonical_name="Example")

@@ -131,6 +131,19 @@ class AliasManagementTests(unittest.TestCase):
             self.match_id = match.match_id
             self.race_id = race.race_id
 
+    def test_team_search_finds_unregistered_team_by_id(self):
+        with self.SessionLocal() as session:
+            duplicate = Team(canonical_name="JαyZ", canonical_tag="JαyZ")
+            session.add(duplicate)
+            session.flush()
+            results = alias_management.list_entities(session, "teams", query=str(duplicate.team_id))
+            self.assertEqual([row["id"] for row in results], [duplicate.team_id])
+            self.assertEqual(results[0]["label"], "JαyZ — JαyZ")
+            self.assertIn(
+                duplicate.team_id,
+                {row["id"] for row in alias_management.list_entities(session, "teams")},
+            )
+
     def test_player_alias_types_are_grouped_and_searchable(self):
         with self.SessionLocal.begin() as session:
             detail, _alias = alias_management.add_alias(

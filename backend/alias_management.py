@@ -112,6 +112,8 @@ def list_entities(session, entity_type, query="", limit=200, league_code=None):
                 func.lower(model.canonical_tag).like(pattern),
                 func.bool_or(func.lower(func.coalesce(alias_model.alias_value, "")).like(pattern)),
             )
+            if re.fullmatch(r"[0-9]{1,10}", normalized_query):
+                predicate = or_(predicate, identity == int(normalized_query))
         else:
             predicate = or_(
                 func.lower(model.canonical_name).like(pattern),
