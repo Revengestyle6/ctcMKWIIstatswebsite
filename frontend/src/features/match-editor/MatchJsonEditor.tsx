@@ -1,7 +1,8 @@
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
+  ApiError,
   type DatabaseAddition,
   fetchDatabaseAdditions,
   fetchJson,
@@ -135,6 +136,10 @@ function fieldHasError(issues: Issue[], field: IssueField): boolean {
   return issues.some((issue) => issue.field === field && issue.level === "error");
 }
 
+function lookupFailure(error: unknown, context: string, level: Issue["level"] = "error"): Issue {
+  return { level, message: error instanceof Error ? `${context}: ${error.message}` : context };
+}
+
 function FieldIssues({
   field,
   issues,
@@ -177,6 +182,22 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [identityStates, setIdentityStates] = useState<Record<string, IdentityState>>({});
   const [trackOptions, setTrackOptions] = useState<TrackOption[]>([]);
   const [tracksLoaded, setTracksLoaded] = useState(false);
+  const [lookupIssues, setLookupIssues] = useState<Record<string, Issue>>({});
+  const setLookupIssue = useCallback((key: string, issue: Issue | null) => {
+    setLookupIssues((current) => {
+      if (!issue && !(key in current)) return current;
+      const next = { ...current };
+      if (issue) next[key] = issue;
+      else delete next[key];
+      return next;
+    });
+  }, []);
+  const reportPlayerSearchError = useCallback(
+    (message: string | null) => {
+      setLookupIssue("player-search", message ? { level: "error", message } : null);
+    },
+    [setLookupIssue]
+  );
   const [matchScopes, setMatchScopes] = useState<MatchScope[]>([]);
   const [scopesLoaded, setScopesLoaded] = useState(false);
   const [playoffContext, setPlayoffContext] = useState<PlayoffSeriesResponse | null>(null);
@@ -384,6 +405,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
         compiled
       ),
       ...unusualTeamIssues,
+      ...(previewMetadata?.submission_warnings ?? []).map(
+        (message): Issue => ({
+          level: "warning",
+          message,
+        })
+      ),
     ],
     [
       match,
@@ -401,12 +428,74 @@ export default function MatchJsonEditor(): React.JSX.Element {
       playoffContextStatus,
       compiled,
       unusualTeamIssues,
+      previewMetadata?.submission_warnings,
     ]
   );
   const configuredFriendCodes = useMemo(
     () => players.map((player) => player.friendCode),
     [players]
   );
+  // Request failures are visible diagnostics, but must not disable the action
+  // that retries them. Match-validation issues continue to gate submission.
+  const displayedIssues = useMemo(() => {
+    const caughtErrors = [
+      loadError,
+      previewError,
+      commitError,
+      identityMappingError,
+      auth.session?.error,
+    ]
+      .filter((message): message is string => Boolean(message))
+      .map((message): Issue => ({ level: "error", message }));
+    const identityIssues = players.flatMap(({ friendCode, playerKey }): Issue[] => {
+      const identity = identityStates[playerKey];
+      return identity?.message && (identity.status === "conflict" || identity.status === "new")
+        ? [
+            {
+              level: identity.status === "conflict" ? "error" : "warning",
+              message: `${friendCode}: ${identity.message}`,
+            },
+          ]
+        : [];
+    });
+    const resultWarnings: Issue[] = [];
+    if (tablePreview?.review_notes || tablePreview?.import_status === "needs_review") {
+      resultWarnings.push({
+        level: "warning",
+        message:
+          tablePreview.review_notes || "The server marked this match for administrator review.",
+      });
+    }
+    if (commitResult?.archive_status === "repair_required") {
+      resultWarnings.push({
+        level: "warning",
+        message: commitResult.message || "Match saved; archive reconciliation is required.",
+      });
+    }
+    return Array.from(
+      new Map(
+        [
+          ...issues,
+          ...caughtErrors,
+          ...Object.values(lookupIssues),
+          ...identityIssues,
+          ...resultWarnings,
+        ].map((issue) => [`${issue.level}:${issue.message}`, issue])
+      ).values()
+    );
+  }, [
+    issues,
+    loadError,
+    previewError,
+    commitError,
+    identityMappingError,
+    lookupIssues,
+    players,
+    identityStates,
+    auth.session?.error,
+    tablePreview,
+    commitResult,
+  ]);
   const duplicatePlayerLabels = useMemo(() => {
     const playersByIdentity = new Map<number, typeof players>();
     players.forEach((player) => {
@@ -460,6 +549,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     if (!scopeExists || configuredPlayerIds.length === 0) {
       setPlayerTeamMemberships({});
       setMembershipStatus("idle");
+      setLookupIssue("memberships", null);
       return;
     }
 
@@ -479,16 +569,29 @@ export default function MatchJsonEditor(): React.JSX.Element {
           )
         );
         setMembershipStatus("loaded");
+        setLookupIssue("memberships", null);
       })
-      .catch(() => {
+      .catch((error) => {
         if (cancelled) return;
         setPlayerTeamMemberships({});
         setMembershipStatus("error");
+        setLookupIssue(
+          "memberships",
+          lookupFailure(error, "Player team memberships could not be checked")
+        );
       });
     return () => {
       cancelled = true;
     };
-  }, [configuredPlayerIds, match.division, match.league, match.season, matchScopes, scopesLoaded]);
+  }, [
+    configuredPlayerIds,
+    match.division,
+    match.league,
+    match.season,
+    matchScopes,
+    scopesLoaded,
+    setLookupIssue,
+  ]);
 
   useEffect(() => {
     const storedDraft = sessionStorage.getItem("ctc-review-draft");
@@ -506,8 +609,13 @@ export default function MatchJsonEditor(): React.JSX.Element {
           setFileName(draft.filename || "Queued match JSON");
           setReviewSubmissionId(draft.submissionId);
         }
-      } catch {
+      } catch (error) {
         sessionStorage.removeItem("ctc-review-draft");
+        setLoadError(
+          error instanceof Error
+            ? `The saved review draft could not be restored: ${error.message}`
+            : "The saved review draft could not be restored."
+        );
       }
     }
     setTablePreview(null);
@@ -565,7 +673,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
   }, [tablePreview]);
 
   useEffect(() => {
-    if (!canViewDatabaseLog) return;
+    if (!canViewDatabaseLog) {
+      setLookupIssue("additions", null);
+      return;
+    }
     let cancelled = false;
     const mergeLogs = (incoming: DatabaseAddition[]) =>
       setAdditionLogs((current) => {
@@ -584,10 +695,17 @@ export default function MatchJsonEditor(): React.JSX.Element {
           if (!cancelled) {
             mergeLogs(history);
             setAdditionStreamStatus("live");
+            setLookupIssue("additions", null);
           }
         })
-        .catch(() => {
-          if (!cancelled) setAdditionStreamStatus("reconnecting");
+        .catch((error) => {
+          if (!cancelled) {
+            setAdditionStreamStatus("reconnecting");
+            setLookupIssue(
+              "additions",
+              lookupFailure(error, "Addition feed is reconnecting", "warning")
+            );
+          }
         });
     };
     poll();
@@ -596,7 +714,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [canViewDatabaseLog]);
+  }, [canViewDatabaseLog, setLookupIssue]);
 
   useEffect(() => {
     let cancelled = false;
@@ -608,16 +726,18 @@ export default function MatchJsonEditor(): React.JSX.Element {
         if (cancelled) return;
         setTrackOptions(tracks);
         setTracksLoaded(true);
+        setLookupIssue("tracks", null);
       })
-      .catch(() => {
+      .catch((error) => {
         if (cancelled) return;
         setTrackOptions([]);
         setTracksLoaded(false);
+        setLookupIssue("tracks", lookupFailure(error, "Track catalog could not be loaded"));
       });
     return () => {
       cancelled = true;
     };
-  }, [league]);
+  }, [league, setLookupIssue]);
   useEffect(() => {
     const knownNames = new Set(
       trackOptions.flatMap((track) => [track.name, ...track.aliases].map(normalized))
@@ -628,29 +748,38 @@ export default function MatchJsonEditor(): React.JSX.Element {
       queriedTrackNames.current.add(key);
       searchTracks(league, race.trackName, true)
         .then((matches) => {
+          setLookupIssue(`track-query:${race.trackName}`, null);
           setTrackOptions((current) => {
             const ids = new Set(current.map((track) => track.track_id));
             return [...current, ...matches.filter((track) => !ids.has(track.track_id))];
           });
         })
-        .catch(() => undefined);
+        .catch((error) =>
+          setLookupIssue(
+            `track-query:${race.trackName}`,
+            lookupFailure(error, `Track ${race.trackName} could not be checked`)
+          )
+        );
     });
-  }, [league, races, trackOptions]);
+  }, [league, races, trackOptions, setLookupIssue]);
   useEffect(() => {
     fetchMatchScopes()
       .then((scopes) => {
         setMatchScopes(scopes);
         setScopesLoaded(true);
+        setLookupIssue("scopes", null);
       })
-      .catch(() => {
+      .catch((error) => {
         setMatchScopes([]);
         setScopesLoaded(false);
+        setLookupIssue("scopes", lookupFailure(error, "Competition scopes could not be loaded"));
       });
-  }, []);
+  }, [setLookupIssue]);
   useEffect(() => {
     if (!match.season || !match.division) {
       setPlayoffContext(null);
       setPlayoffContextStatus("idle");
+      setLookupIssue("playoffs", null);
       return;
     }
     let cancelled = false;
@@ -683,6 +812,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
           : context;
         setPlayoffContext(editingContext);
         setPlayoffContextStatus("loaded");
+        setLookupIssue("playoffs", null);
         const lockedFormat = context.format?.code;
         if (lockedFormat) {
           setMatch((current) =>
@@ -692,15 +822,16 @@ export default function MatchJsonEditor(): React.JSX.Element {
           );
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (cancelled) return;
         setPlayoffContext(null);
         setPlayoffContextStatus("error");
+        setLookupIssue("playoffs", lookupFailure(error, "Playoff context could not be loaded"));
       });
     return () => {
       cancelled = true;
     };
-  }, [editMatchId, match.division, match.league, match.season]);
+  }, [editMatchId, match.division, match.league, match.season, setLookupIssue]);
 
   useEffect(() => {
     if (match.match_type !== "playoff" || playoffContextStatus !== "loaded") return;
@@ -742,12 +873,14 @@ export default function MatchJsonEditor(): React.JSX.Element {
       .then((scopes) => {
         setTeamScopes(scopes);
         setTeamsLoaded(true);
+        setLookupIssue("teams", null);
       })
-      .catch(() => {
+      .catch((error) => {
         setTeamScopes([]);
         setTeamsLoaded(false);
+        setLookupIssue("teams", lookupFailure(error, "Team catalog could not be loaded"));
       });
-  }, []);
+  }, [setLookupIssue]);
 
   useEffect(() => {
     const pending = players.filter(
@@ -1302,6 +1435,14 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setRaces(racesFromMatch(normalizedMatch));
     setFileName(nextFileName);
     setIdentityStates({});
+    queriedTrackNames.current.clear();
+    setLookupIssues((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([key]) =>
+          ["tracks", "scopes", "playoffs", "teams", "additions"].includes(key)
+        )
+      )
+    );
     setRaceView("one");
     setActiveRace(0);
     setLoadError(null);
@@ -1517,6 +1658,21 @@ export default function MatchJsonEditor(): React.JSX.Element {
       setSubmissionReceipt(receipt);
     } catch (error) {
       if (editorVersion.current !== requestVersion) return;
+      if (
+        error instanceof ApiError &&
+        error.status === 409 &&
+        Array.isArray(error.details.warnings)
+      ) {
+        const warnings = error.details.warnings.filter(
+          (warning): warning is string => typeof warning === "string" && warning.trim().length > 0
+        );
+        if (warnings.length > 0) {
+          setPreviewMetadata((current) =>
+            current ? { ...current, submission_warnings: warnings } : current
+          );
+          setWarningsAcknowledged(false);
+        }
+      }
       setCommitError(
         error instanceof Error ? error.message : "Could not submit this match for review."
       );
@@ -1572,20 +1728,32 @@ export default function MatchJsonEditor(): React.JSX.Element {
         .then((scopes) => {
           setMatchScopes(scopes);
           setScopesLoaded(true);
+          setLookupIssue("scopes", null);
         })
-        .catch(() => undefined);
+        .catch((error) =>
+          setLookupIssue(
+            "scopes",
+            lookupFailure(error, "Competition scopes could not be refreshed")
+          )
+        );
       fetchTeamScopes()
         .then((scopes) => {
           setTeamScopes(scopes);
           setTeamsLoaded(true);
+          setLookupIssue("teams", null);
         })
-        .catch(() => undefined);
+        .catch((error) =>
+          setLookupIssue("teams", lookupFailure(error, "Team catalog could not be refreshed"))
+        );
       searchTracks(league, "", true)
         .then((tracks) => {
           setTrackOptions(tracks);
           setTracksLoaded(true);
+          setLookupIssue("tracks", null);
         })
-        .catch(() => undefined);
+        .catch((error) =>
+          setLookupIssue("tracks", lookupFailure(error, "Track catalog could not be refreshed"))
+        );
       setAdditionLogs((current) => {
         const byId = new Map(current.map((entry) => [entry.id, entry]));
         result.additions.forEach((entry) => {
@@ -1713,6 +1881,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const raceIndexes =
     raceView === "all" ? races.map((_, index) => index) : races[activeRace] ? [activeRace] : [];
   const errorCount = issues.filter((issue) => issue.level === "error").length;
+  const displayedErrorCount = displayedIssues.filter((issue) => issue.level === "error").length;
   const reviewButtonLabel = commitResult
     ? editMatchId
       ? "Saved"
@@ -2791,6 +2960,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       currentFriendCodes={configuredFriendCodes}
                       currentPlayerIds={configuredPlayerIds}
                       onAdd={(player) => addRosterPlayer(teamKey, player)}
+                      onErrorChange={(message) =>
+                        setLookupIssue(
+                          `roster:${teamKey}`,
+                          message ? { level: "error", message } : null
+                        )
+                      }
                     />
                   ) : null}
                   {!specialResult ? (
@@ -3339,12 +3514,16 @@ export default function MatchJsonEditor(): React.JSX.Element {
         ) : null}
 
         <section className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-lg border border-white/10 bg-zinc-950/85 p-4">
+          <section
+            aria-label="Validation"
+            className="rounded-lg border border-white/10 bg-zinc-950/85 p-4"
+          >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-bold">Validation</h2>
                 <p className="mt-1 text-sm text-gray-300">
-                  {errorCount} errors / {issues.length - errorCount} warnings
+                  {displayedErrorCount} errors / {displayedIssues.length - displayedErrorCount}{" "}
+                  warnings
                 </p>
               </div>
               {!(editMatchId && commitResult) ? (
@@ -3372,10 +3551,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
               </p>
             )}
             <div className="max-h-96 space-y-2 overflow-auto">
-              {issues.length === 0 ? (
+              {displayedIssues.length === 0 ? (
                 <p className="text-emerald-300">Ready to review and upload.</p>
               ) : (
-                issues.map((issue, index) => (
+                displayedIssues.map((issue, index) => (
                   <p
                     key={index}
                     className={`border p-2 text-sm ${issue.level === "error" ? "border-red-500/30 bg-red-950/30 text-red-200" : "border-amber-500/30 bg-amber-950/30 text-amber-200"}`}
@@ -3385,7 +3564,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                 ))
               )}
             </div>
-          </div>
+          </section>
           <details className="rounded-lg border border-white/10 bg-zinc-950/85 p-4">
             <summary className="cursor-pointer text-xl font-bold">Generated JSON Preview</summary>
             <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap text-xs text-gray-300">
@@ -3823,6 +4002,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         <ExistingPlayerPicker
                           initialQuery={entry.lounge_name ?? ""}
                           onSelect={(player) => void updatePlayerIdentityLink(entry, player)}
+                          onErrorChange={reportPlayerSearchError}
                         />
                       ) : null}
                     </div>

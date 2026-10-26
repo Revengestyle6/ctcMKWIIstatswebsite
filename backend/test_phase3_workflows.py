@@ -153,6 +153,47 @@ class Phase3WorkflowTests(unittest.TestCase):
                 json.loads(self.storage.read(stored.queue_object_key)), self.match_data
             )
 
+    def test_submission_requires_acknowledgement_only_for_server_warnings(self):
+        import routes.reviews as review_routes
+        from app import app
+
+        clean = json.loads(json.dumps(self.match_data))
+        for team in clean["teams"].values():
+            team["penalties"] = 0
+            for player in team["players"].values():
+                player["race_roles"] = ["runner"] * clean["races_played"]
+        with (
+            patch.object(review_routes, "SessionLocal", self.SessionLocal),
+            patch.object(review_routes, "get_archive_storage", return_value=self.storage),
+            patch("review_queue.detect_new_entries", return_value=[]),
+        ):
+            for penalty, acknowledged, expected_status in (
+                (0, False, 202),
+                (3, False, 409),
+                (3, True, 202),
+            ):
+                with self.subTest(penalty=penalty, acknowledged=acknowledged):
+                    next(iter(clean["teams"].values()))["penalties"] = penalty
+                    response = app.test_client().post(
+                        "/api/review-submissions",
+                        json={"match": clean, "warnings_acknowledged": acknowledged},
+                    )
+                    self.assertEqual(response.status_code, expected_status, response.get_json())
+                    if expected_status == 409:
+                        self.assertEqual(
+                            response.get_json()["warnings"],
+                            ["One or more teams has penalty points."],
+                        )
+                    else:
+                        with self.SessionLocal() as session:
+                            submission = session.get(
+                                ReviewSubmission, response.get_json()["receipt"]
+                            )
+                            self.assertEqual(
+                                len(json.loads(submission.warnings_json)), int(penalty > 0)
+                            )
+                            self.assertEqual(submission.warnings_acknowledged, acknowledged)
+
     def test_admin_acceptance_is_idempotent_and_archives_only_after_commit(self):
         document = prepare_upload_document(self.match_data)
         temporary_key = "queue/admin/first.json"

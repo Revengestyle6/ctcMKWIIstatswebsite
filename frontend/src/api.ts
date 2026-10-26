@@ -25,6 +25,17 @@ interface RequestOptions extends RequestInit {
   params?: Record<string, QueryValue>;
 }
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly details: Record<string, unknown>
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 function apiUrl(path: string, params?: Record<string, QueryValue>): URL {
   const url = new URL(path, API_URL);
   for (const [key, value] of Object.entries(params ?? {})) {
@@ -51,13 +62,17 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   }
 
   let message = response.statusText || "Request failed";
+  let details: Record<string, unknown> = {};
   try {
-    const body = (await response.json()) as { error?: string };
-    message = body.error ?? message;
+    const body: unknown = await response.json();
+    if (body !== null && typeof body === "object" && !Array.isArray(body)) {
+      details = body as Record<string, unknown>;
+      if (typeof details.error === "string") message = details.error;
+    }
   } catch {
     // The status text is the best available error for a non-JSON response.
   }
-  throw new Error(message);
+  throw new ApiError(message, response.status, details);
 }
 
 export async function fetchJson<T>(path: string, params?: Record<string, QueryValue>): Promise<T> {

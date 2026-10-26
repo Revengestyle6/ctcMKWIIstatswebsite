@@ -5,11 +5,13 @@ import { type PlayerIdentity, searchPlayerIdentities } from "../../api";
 type Props = {
   initialQuery?: string;
   onSelect: (player: PlayerIdentity) => void;
+  onErrorChange?: (message: string | null) => void;
 };
 
 export default function ExistingPlayerPicker({
   initialQuery = "",
   onSelect,
+  onErrorChange,
 }: Props): React.JSX.Element {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<PlayerIdentity[]>([]);
@@ -21,12 +23,14 @@ export default function ExistingPlayerPicker({
     if (!normalizedQuery) {
       setResults([]);
       setError("");
+      onErrorChange?.(null);
       return;
     }
     let cancelled = false;
     const timeout = window.setTimeout(() => {
       setLoading(true);
       setError("");
+      onErrorChange?.(null);
       searchPlayerIdentities(normalizedQuery)
         .then((response) => {
           if (!cancelled) setResults(response.results);
@@ -34,7 +38,9 @@ export default function ExistingPlayerPicker({
         .catch((caught: unknown) => {
           if (!cancelled) {
             setResults([]);
-            setError(caught instanceof Error ? caught.message : "Player search failed.");
+            const message = caught instanceof Error ? caught.message : "Player search failed.";
+            setError(message);
+            onErrorChange?.(message);
           }
         })
         .finally(() => {
@@ -45,7 +51,7 @@ export default function ExistingPlayerPicker({
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [query]);
+  }, [query, onErrorChange]);
 
   return (
     <div className="mt-3 border border-blue-300/20 bg-black/30 p-3">
