@@ -118,6 +118,8 @@ test.beforeEach(async ({ page }) => {
       });
     if (path === "/api/match-scopes")
       return route.fulfill({ json: [{ league: "ctc", season: "s4", division: "d2" }] });
+    if (path === "/api/playoff-series")
+      return route.fulfill({ json: { format: null, series: [] } });
     return route.fulfill({ json: [] });
   });
 });

@@ -11,6 +11,7 @@ type Props = {
   currentFriendCodes: string[];
   currentPlayerIds: number[];
   onAdd: (player: TeamRosterPlayer) => void;
+  onErrorChange?: (message: string | null) => void;
 };
 
 export default function TeamRosterPool({
@@ -22,6 +23,7 @@ export default function TeamRosterPool({
   currentFriendCodes,
   currentPlayerIds,
   onAdd,
+  onErrorChange,
 }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [players, setPlayers] = useState<TeamRosterPlayer[] | null>(null);
@@ -54,6 +56,7 @@ export default function TeamRosterPool({
     if (!nextOpen || players !== null || loading) return;
     setLoading(true);
     setError("");
+    onErrorChange?.(null);
     try {
       setPlayers(
         await fetchTeamRosterPool({
@@ -65,7 +68,9 @@ export default function TeamRosterPool({
         })
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not load this roster.");
+      const message = caught instanceof Error ? caught.message : "Could not load this roster.";
+      setError(message);
+      onErrorChange?.(message);
     } finally {
       setLoading(false);
     }

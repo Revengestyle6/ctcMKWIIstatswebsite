@@ -93,6 +93,7 @@ export type PreviewMetadata = {
   new_entries: NewEntry[];
   expected_source_fingerprint?: string;
   edit_summary?: EditSummary;
+  submission_warnings?: string[];
 };
 export type EditSummary = {
   changes: Array<{ path: string; before: unknown; after: unknown }>;

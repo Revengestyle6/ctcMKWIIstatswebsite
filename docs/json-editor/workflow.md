@@ -70,6 +70,24 @@ A preview is not a durable token or a reservation of database state. Its fingerp
 
 Anonymous users submit to `POST /api/review-submissions`; authenticated users can use `POST /api/admin/review-submissions`. Both require warning acknowledgement when the server finds warnings. The authenticated path records the actor and bypasses the anonymous network rate limit.
 
+A submission with no warnings needs no acknowledgement checkbox. The server can
+find additional warnings that were absent from the editor's local checks, such as
+new database entries or team penalties. If it returns a warning-acknowledgement
+conflict, the editor adds those warnings to Validation and shows the acknowledgement
+checkbox. Review and acknowledge them before retrying. Discarding or replacing the
+preview clears its submission warnings.
+
+The Validation box also collects caught document-loading, identity/roster lookup,
+catalogue, preview, submission, and save errors, including post-save refresh
+failures. Identical messages are shown once. Request failures remain retryable;
+they do not disable the action needed to retry them or turn an already successful
+save into a failed save. Match-validation errors still block submission, and
+queue-validation warnings still require acknowledgement. A retry or successful
+reload clears the corresponding request error.
+Server preview review notes, results marked `needs_review`, and committed matches
+whose archives require repair also contribute their warning messages to Validation,
+even though their HTTP requests succeeded.
+
 The server revalidates the document and detects additions. It stores canonical JSON under `queue/pending/<uuid>.json`, creates a `ReviewSubmission` with status `pending`, and returns a minimal receipt (ID/status/timestamps/expiry). This does not add a match, team, player, or race to analytics. An identical active submission returns its existing receipt.
 
 ```mermaid
