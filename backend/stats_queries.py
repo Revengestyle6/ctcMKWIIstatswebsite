@@ -2,6 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from database import get_session_factory
+from database_text import database_text_key
 from division_order import division_order
 from match_sets import apply_match_set, normalize_match_set
 from models import (
@@ -231,7 +232,7 @@ def _resolve_player(session, player, scope):
 def _resolve_team(session, team, scope):
     if not team or not team.strip():
         raise AnalyticsError("Team is required")
-    query = team.strip().lower()
+    query = team.strip()
     row = session.execute(
         select(
             Team.team_id,
@@ -244,7 +245,7 @@ def _resolve_team(session, team, scope):
         .where(
             TeamSeasonEntry.season_id == scope.season_id,
             TeamSeasonEntry.division_id == scope.division_id,
-            func.lower(TeamSeasonEntry.clan_tag) == query,
+            func.lower(TeamSeasonEntry.clan_tag) == func.lower(query),
         )
     ).first()
     if row is None:
@@ -720,7 +721,7 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
                 )
             ).all()
         )
-        team_query = team.strip().lower() if team else ""
+        team_query = database_text_key(session, team.strip()) if team else ""
         matches = [
             {
                 "score_source": "unaccounted" if row.match_id in aggregate_modes else "accounted",
@@ -754,7 +755,8 @@ def list_matches(season=None, division=None, team=None, match_set="regular", lea
             }
             for row in match_rows
             if not team_query
-            or team_query in [tag.lower() for tag in teams_by_match.get(row.match_id, [])]
+            or team_query
+            in [database_text_key(session, tag) for tag in teams_by_match.get(row.match_id, [])]
         ]
         return matches
 
@@ -781,7 +783,7 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
             .order_by(PlayoffSeries.stage.desc(), PlayoffSeries.series_number)
         ).all()
         output = []
-        team_query = (team or "").strip().lower()
+        team_query = database_text_key(session, (team or "").strip())
         for series in series_rows:
             participants = session.execute(
                 select(
@@ -800,7 +802,9 @@ def list_playoff_series(season=None, division=None, team=None, league_code="ctc"
                 .where(PlayoffSeriesParticipant.playoff_series_id == series.playoff_series_id)
                 .order_by(PlayoffSeriesParticipant.participant_slot)
             ).all()
-            if team_query and team_query not in {row.clan_tag.lower() for row in participants}:
+            if team_query and team_query not in {
+                database_text_key(session, row.clan_tag) for row in participants
+            }:
                 continue
             matches = session.execute(
                 select(Match.match_id, Match.series_match_number, Match.match_label)

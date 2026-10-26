@@ -5,6 +5,7 @@ returns detected entries, unresolved approvals, and the identity links safe to p
 to ingestion; it never commits. HTTP request parsing belongs in ``routes.common``.
 """
 
+from database_text import database_text_key
 from import_json_to_db import CREATE_PLAYER_IDENTITY, detect_new_entries
 from models import Match, PlayerFriendCode
 from sqlalchemy import select
@@ -48,7 +49,7 @@ def unapproved_entries(
         }
     )
     team_identity_links = {
-        entry["value"].lower(): entry["resolution"]["team_id"]
+        database_text_key(session, entry["value"]): entry["resolution"]["team_id"]
         for entry in new_entries
         if entry["key"] in approved_keys
         and entry.get("kind") == "cross_league_team_match"

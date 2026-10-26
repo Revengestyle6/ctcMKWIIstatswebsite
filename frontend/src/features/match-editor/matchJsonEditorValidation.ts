@@ -6,6 +6,7 @@ import type {
   TeamScope,
   TrackOption,
 } from "../../api";
+import { identityTextKey } from "../../identityText";
 import type { MatchDetail } from "../match-history/matchHistoryViews";
 import {
   allPlayers,
@@ -237,7 +238,7 @@ export function metadataValue(field: "league" | "season" | "division", value: st
 }
 
 export function normalized(value: string | undefined): string {
-  return (value ?? "").trim().toLowerCase();
+  return identityTextKey(value);
 }
 
 export function findTeamScope(scopes: TeamScope[], value: string): TeamScope | undefined {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import type { TeamScope } from "../../api";
+import { identityTextKey } from "../../identityText";
 
 type Props = {
   teams: TeamScope[];
@@ -18,11 +19,11 @@ export default function TeamScopePool({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const visibleTeams = useMemo(() => {
-    const target = query.trim().toLowerCase();
+    const target = identityTextKey(query);
     if (!target) return teams;
     return teams.filter((team) =>
       [team.display_name, team.canonical_name, team.clan_tag, team.canonical_tag].some((value) =>
-        value.toLowerCase().includes(target)
+        identityTextKey(value).includes(target)
       )
     );
   }, [query, teams]);
