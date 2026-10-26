@@ -106,7 +106,13 @@ class SiblingTeamEntryTests(unittest.TestCase):
         self.entries[0].display_name = "jx.b"
         self.session.flush()
         alias = resolve_team_alias(
-            load_database_team_aliases(self.session), "gsc", "s16", "d1", "", "jx.b"
+            load_database_team_aliases(self.session),
+            "gsc",
+            "s16",
+            "d1",
+            "",
+            "jx.b",
+            session=self.session,
         )
         self.assertEqual(alias["canonical_tag"], "Jx.B")
 

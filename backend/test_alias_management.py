@@ -679,7 +679,9 @@ class AliasManagementTests(unittest.TestCase):
         with self.SessionLocal.begin() as session:
             alias_management.add_alias(session, "teams", self.team_id, {"value": "Cosmic"})
             aliases = load_database_team_aliases(session)
-            resolved = resolve_team_alias(aliases, "ctc", "s3", "d2", "W1 CS SLAY", "Cosmic")
+            resolved = resolve_team_alias(
+                aliases, "ctc", "s3", "d2", "W1 CS SLAY", "Cosmic", session=session
+            )
             self.assertEqual(resolved["canonical_tag"], "CS")
             self.assertEqual(resolved["display_name"], "Cosmic Speed")
 

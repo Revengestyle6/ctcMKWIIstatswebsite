@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from database import BASE_DIR, get_session_factory
+from database_text import cache_database_text_keys, database_text_key
 from match_results import result_type
 from mkc_registry import lookup_mkc_player
 from models import (
@@ -188,13 +189,20 @@ def load_database_team_aliases(
         .join(Season, Season.season_id == TeamSeasonEntry.season_id)
         .join(Division, Division.division_id == TeamSeasonEntry.division_id)
     ).all()
+    cache_database_text_keys(
+        session,
+        [value for key in aliases for value in key]
+        + [value for entry, *_ in entry_rows for value in (entry.clan_tag, entry.display_name)],
+    )
     names_by_scope = defaultdict(list)
     scoped_tag_keys = {
-        (league, season, division, entry.clan_tag.casefold())
+        (league, season, division, database_text_key(session, entry.clan_tag))
         for entry, league, season, division in entry_rows
     }
     for entry, league, season, division in entry_rows:
-        names_by_scope[(league, season, division, entry.display_name.casefold())].append(entry)
+        names_by_scope[
+            (league, season, division, database_text_key(session, entry.display_name))
+        ].append(entry)
         aliases[(league, season, division, "", entry.clan_tag)] = {
             "team_id": entry.team_id,
             "canonical_tag": entry.clan_tag,
@@ -252,6 +260,8 @@ def resolve_team_alias(
     division_code: str,
     match_label: str,
     raw_team_key: str,
+    *,
+    session,
 ) -> dict[str, Any]:
     exact_key = (league_code, season_code, division_code, match_label, raw_team_key)
     division_key = (league_code, season_code, division_code, "", raw_team_key)
@@ -260,9 +270,9 @@ def resolve_team_alias(
     for key in (exact_key, division_key, league_key, global_key):
         if key in aliases:
             return aliases[key]
-        normalized_key = tuple(value.casefold() for value in key)
+        normalized_key = tuple(database_text_key(session, value) for value in key)
         for candidate, alias in aliases.items():
-            if tuple(value.casefold() for value in candidate) == normalized_key:
+            if tuple(database_text_key(session, value) for value in candidate) == normalized_key:
                 return alias
     return {"canonical_tag": raw_team_key, "display_name": raw_team_key, "note": ""}
 
@@ -316,21 +326,21 @@ def get_or_create_team(
 ) -> Team:
     team = session.get(Team, linked_team_id) if linked_team_id is not None else None
     if team is None:
-        # PostgreSQL lower() does not fold Greek final sigma as Python casefold() does.
+        # Compare both sides in PostgreSQL, matching the league-identity unique index.
         team = session.scalar(
             select(Team)
             .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
             .where(
-                func.lower(TeamLeagueIdentity.league_code) == league_code.casefold(),
-                func.lower(TeamLeagueIdentity.tag) == canonical_tag.lower(),
+                func.lower(TeamLeagueIdentity.league_code) == func.lower(league_code),
+                func.lower(TeamLeagueIdentity.tag) == func.lower(canonical_tag),
             )
         )
     if team:
         league_identity = session.scalar(
             select(TeamLeagueIdentity).where(
                 TeamLeagueIdentity.team_id == team.team_id,
-                func.lower(TeamLeagueIdentity.league_code) == league_code.casefold(),
-                func.lower(TeamLeagueIdentity.tag) == canonical_tag.lower(),
+                func.lower(TeamLeagueIdentity.league_code) == func.lower(league_code),
+                func.lower(TeamLeagueIdentity.tag) == func.lower(canonical_tag),
             )
         )
         if league_identity is None:
@@ -369,7 +379,7 @@ def get_or_create_team_entry(
     display_name: str,
     hex_color: str | None,
 ) -> TeamSeasonEntry:
-    if canonical_tag.casefold() == team.canonical_tag.casefold():
+    if database_text_key(session, canonical_tag) == database_text_key(session, team.canonical_tag):
         candidates = session.scalars(
             select(TeamSeasonEntry).where(
                 TeamSeasonEntry.team_id == team.team_id,
@@ -380,7 +390,8 @@ def get_or_create_team_entry(
         if len(candidates) == 1:
             canonical_tag = candidates[0].clan_tag
         elif len(candidates) > 1 and not any(
-            entry.clan_tag.casefold() == canonical_tag.casefold() for entry in candidates
+            database_text_key(session, entry.clan_tag) == database_text_key(session, canonical_tag)
+            for entry in candidates
         ):
             raise ValueError("Choose a season team tag; this canonical team has multiple entries.")
     existing_team_entry = session.scalar(
@@ -389,7 +400,7 @@ def get_or_create_team_entry(
             TeamSeasonEntry.team_id == team.team_id,
             TeamSeasonEntry.season_id == season.season_id,
             TeamSeasonEntry.division_id == division.division_id,
-            func.lower(TeamSeasonEntry.clan_tag) == canonical_tag.lower(),
+            func.lower(TeamSeasonEntry.clan_tag) == func.lower(canonical_tag),
         )
         .order_by(TeamSeasonEntry.team_season_entry_id)
         .limit(1)
@@ -826,7 +837,13 @@ def import_match(
     team_identity_links = team_identity_links or {}
     for raw_team_key, team_data in teams.items():
         alias = resolve_team_alias(
-            aliases, league_code, season_code, division_code, match_label, raw_team_key
+            aliases,
+            league_code,
+            season_code,
+            division_code,
+            match_label,
+            raw_team_key,
+            session=session,
         )
         canonical_tag = alias["canonical_tag"]
         display_name = alias["display_name"] or canonical_tag
@@ -836,7 +853,8 @@ def import_match(
             league_code,
             canonical_tag,
             display_name,
-            linked_team_id=alias.get("team_id") or team_identity_links.get(canonical_tag.lower()),
+            linked_team_id=alias.get("team_id")
+            or team_identity_links.get(database_text_key(session, canonical_tag)),
         )
         team_entry = get_or_create_team_entry(
             session,
@@ -1215,10 +1233,10 @@ def import_editor_match(
     )
 
 
-def _new_entry(entry_type: str, value: str, *scope: str, **details: Any) -> dict[str, Any]:
+def _new_entry(session, entry_type: str, value: str, *scope: str, **details: Any) -> dict[str, Any]:
     key_parts = [entry_type, *scope, value]
     return {
-        "key": ":".join(str(part).strip().lower() for part in key_parts),
+        "key": ":".join(database_text_key(session, str(part).strip()) for part in key_parts),
         "type": entry_type,
         "value": value,
         **details,
@@ -1300,11 +1318,12 @@ def detect_new_entries(
     entries: dict[str, dict[str, Any]] = {}
     league_exists = session.scalar(
         select(Season.season_id)
-        .where(func.lower(Season.league_code) == league_code.casefold())
+        .where(func.lower(Season.league_code) == func.lower(league_code))
         .limit(1)
     )
     if league_exists is None:
         entry = _new_entry(
+            session,
             "league",
             league_code,
             kind="new_league",
@@ -1319,6 +1338,7 @@ def detect_new_entries(
     )
     if season is None:
         entry = _new_entry(
+            session,
             "season",
             season_code,
             league_code,
@@ -1346,6 +1366,7 @@ def detect_new_entries(
             .order_by(Season.season_number, Season.season_code)
         ).all()
         entry = _new_entry(
+            session,
             "division",
             division_code,
             league_code,
@@ -1362,7 +1383,7 @@ def detect_new_entries(
     existing_entry_ids = []
     for raw_team_key in match_data.get("teams") or {}:
         alias = resolve_team_alias(
-            aliases, league_code, season_code, division_code, label, raw_team_key
+            aliases, league_code, season_code, division_code, label, raw_team_key, session=session
         )
         canonical_tag = alias["canonical_tag"]
         linked_team_id = alias.get("team_id")
@@ -1372,8 +1393,8 @@ def detect_new_entries(
                 select(Team)
                 .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
                 .where(
-                    func.lower(TeamLeagueIdentity.league_code) == league_code.casefold(),
-                    func.lower(TeamLeagueIdentity.tag) == canonical_tag.lower(),
+                    func.lower(TeamLeagueIdentity.league_code) == func.lower(league_code),
+                    func.lower(TeamLeagueIdentity.tag) == func.lower(canonical_tag),
                 )
             )
         cross_league_candidates = []
@@ -1383,7 +1404,7 @@ def detect_new_entries(
                     select(Team)
                     .join(TeamLeagueIdentity, TeamLeagueIdentity.team_id == Team.team_id)
                     .where(
-                        func.lower(TeamLeagueIdentity.tag) == canonical_tag.lower(),
+                        func.lower(TeamLeagueIdentity.tag) == func.lower(canonical_tag),
                         func.lower(TeamLeagueIdentity.league_code) != league_code.casefold(),
                     )
                     .order_by(Team.team_id)
@@ -1418,7 +1439,7 @@ def detect_new_entries(
                     TeamSeasonEntry.team_id == team.team_id,
                     TeamSeasonEntry.season_id == season.season_id,
                     TeamSeasonEntry.division_id == division.division_id,
-                    func.lower(TeamSeasonEntry.clan_tag) == canonical_tag.lower(),
+                    func.lower(TeamSeasonEntry.clan_tag) == func.lower(canonical_tag),
                 )
             )
         if team_entry is not None:
@@ -1427,6 +1448,7 @@ def detect_new_entries(
             existing_entry_ids.append(team_entry.team_season_entry_id)
         if team_entry is None:
             entry = _new_entry(
+                session,
                 "team",
                 canonical_tag,
                 league_code,
@@ -1525,6 +1547,7 @@ def detect_new_entries(
                     player_id = next(iter(candidate_ids))
                     summary = player_identity_summary(session, player_id)
                     entry = _new_entry(
+                        session,
                         "player",
                         f"{display_name} ({friend_code})",
                         str(player_id),
@@ -1539,6 +1562,7 @@ def detect_new_entries(
                     continue
                 if len(candidate_ids) > 1:
                     entry = _new_entry(
+                        session,
                         "player",
                         f"{display_name} ({friend_code})",
                         kind="player_identity_conflict",
@@ -1552,6 +1576,7 @@ def detect_new_entries(
                     entries[entry["key"]] = entry
                     continue
                 entry = _new_entry(
+                    session,
                     "player",
                     f"{display_name} ({friend_code})",
                     kind="new_player_identity",
@@ -1581,6 +1606,7 @@ def detect_new_entries(
                     f"{league_code.upper()} match."
                 )
             entry = _new_entry(
+                session,
                 "track",
                 track_name.strip(),
                 league_code,

@@ -9,6 +9,7 @@ import {
   resolveAssetUrl,
 } from "../../api";
 import type { LeagueCode } from "../../config/leagues";
+import { identityTextKey } from "../../identityText";
 
 type SetupConference = { id: number; code: string; name: string; sort_order: number };
 type SetupDivision = {
@@ -267,8 +268,8 @@ export default function CompetitionSetupManager({
   }, [catalog, registrationDivision, registrationTeamId]);
   const registrationIdentityAlreadyUsed = selectedTeamSeasonEntries.some(
     (entry) =>
-      entry.display_name.trim().toLowerCase() === entryName.trim().toLowerCase() &&
-      entry.clan_tag.trim().toLowerCase() === entryTag.trim().toLowerCase()
+      identityTextKey(entry.display_name) === identityTextKey(entryName) &&
+      identityTextKey(entry.clan_tag) === identityTextKey(entryTag)
   );
   const selectedRegistrationLogo = useMemo(
     () =>

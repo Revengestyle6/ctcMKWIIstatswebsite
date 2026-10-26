@@ -55,6 +55,22 @@ duplicate entry after an administrator changes a season display tag.
 All identity changes require administrator authentication, produce audit events,
 and clear cached dashboard responses.
 
+## Unicode tag comparisons
+
+Case-insensitive identity checks use the same PostgreSQL `lower()` rules as the
+unique indexes. SQL comparisons normalize both operands in PostgreSQL; Python
+maps use database-generated keys from `backend/database_text.py`. Python
+`lower()`/`casefold()` are unsuitable substitutes: terminal `Σ` has contextual
+lowercasing, while casefolding collapses final `ς` into `σ`. Stored tags retain
+their original Unicode spelling.
+
+In the current database, `ZΣ` and `Zσ` identify the same tag; `Zς` remains distinct.
+Alias resolution, new-entry approval keys, import, identity edits, analytics and
+merge execution follow that distinction. Editor comparisons use the shared
+`frontend/src/identityText.ts` simple lowercase helper, with server checks
+remaining authoritative. See the [team 187 diagnosis and previous-fix audit](../operations/team-187-sigma-diagnostics.md)
+for the reproduction, historical fixes and regression coverage.
+
 ## Team Merging
 
 **Database Management → Teams** can review and merge a source team into a destination
