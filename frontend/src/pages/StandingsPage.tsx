@@ -485,6 +485,7 @@ function PlayerLeaderboard({
   const { leaguePath } = useLeague();
   const [eligibleOnly, setEligibleOnly] = useState(true);
   const [role, setRole] = useState<"runner" | "bagger">("runner");
+  const [showPoints, setShowPoints] = useState(false);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -607,10 +608,35 @@ function PlayerLeaderboard({
               <th className="border-l border-black/20 px-1 py-2 text-center">Player</th>
               <th className="border-l border-black/20 px-1 py-2">Team</th>
               <th
-                className="border-l border-black/20 px-1 py-2"
-                title="Player GPs played / team GPs played"
+                className="border-l border-black/20 px-1 py-1"
+                title={
+                  showPoints
+                    ? "Total points in the selected role"
+                    : "Player GPs played / team GPs played"
+                }
               >
-                GPs
+                <button
+                  type="button"
+                  aria-label="Switch between GPs and total points"
+                  aria-pressed={showPoints}
+                  title={showPoints ? "Show GPs played" : "Show total points"}
+                  onClick={() => setShowPoints((current) => !current)}
+                  className="inline-flex w-full items-center justify-center gap-1 rounded px-1 py-1 text-xs font-bold leading-5 ring-1 ring-inset ring-black/20 transition-colors hover:bg-black/10 hover:ring-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                >
+                  {showPoints ? "Points" : "GPs"}
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-3 w-3 shrink-0 opacity-60"
+                  >
+                    <path d="M3 5h10m-3-3 3 3-3 3M13 11H3m3-3-3 3 3 3" />
+                  </svg>
+                </button>
               </th>
               <th className="border-l border-black/20 px-1 py-2 text-center" title="GP Average">
                 GP Avg
@@ -657,10 +683,25 @@ function PlayerLeaderboard({
                   </td>
                   <td
                     className="whitespace-nowrap border-l border-white/[0.08] px-1 py-2 text-center text-[0.7rem] text-gray-200"
-                    title={`${roleGpsPlayed} race-equivalent GPs as ${role} (4 races = 1 GP); ${player.required_gps} required for eligibility`}
+                    title={
+                      showPoints
+                        ? `Total ${role} points`
+                        : `${roleGpsPlayed} race-equivalent GPs as ${role} (4 races = 1 GP); ${player.required_gps} required for eligibility`
+                    }
                   >
-                    <span className="font-bold text-white">{roleGpsPlayed}</span>
-                    <span className="text-gray-500">/{player.team_gps}</span>
+                    {showPoints ? (
+                      <span className="font-bold text-white">
+                        {(role === "runner"
+                          ? player.runner_points
+                          : player.bagger_points
+                        ).toLocaleString("en-US")}
+                      </span>
+                    ) : (
+                      <>
+                        <span className="font-bold text-white">{roleGpsPlayed}</span>
+                        <span className="text-gray-500">/{player.team_gps}</span>
+                      </>
+                    )}
                   </td>
                   <td
                     className={`border-l border-white/[0.08] px-1 py-2 text-center text-sm font-black ${rank > 3 ? "league-accent-text" : ""}`}
