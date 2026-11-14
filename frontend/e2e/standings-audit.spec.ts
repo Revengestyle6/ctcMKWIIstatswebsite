@@ -65,7 +65,9 @@ test("audit follows leaderboard filters, selection, and the source breakdown", a
   await expect(raceRows.first()).toBeVisible();
   await page.getByRole("button", { name: "All players", exact: true }).click();
   await page.getByRole("button", { name: "Bagging points", exact: true }).click();
-  await expect(rows).toHaveCount(data.leaderboard.length);
+  await expect(
+    leaderboard.getByText(`${data.leaderboard.length} players`, { exact: true })
+  ).toBeVisible();
   await page.getByRole("searchbox", { name: "Find player or team" }).fill(first.name);
   await expect(rows.first()).toContainText(first.name);
   await page.getByRole("searchbox").fill("no-player-has-this-name-000");
@@ -271,4 +273,93 @@ test("aggregate GP records page independently and whole-match totals stay intact
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText("Whole match");
   await expect(rows.first().locator("td").nth(3)).toHaveText("96");
+});
+
+test("leaderboard pages track the audit height without vertical scrolling", async ({
+  page,
+  request,
+}) => {
+  const response = await request.get(`/api/standings?${query}`);
+  const data: { leaderboard: LeaderboardPlayer[] } = await response.json();
+  const original = rankLeaderboard(data.leaderboard, "runner", true)[0];
+  const auditResponse = await request.get(
+    `/api/standings/audit?${query}&player_id=${original.player_id}&team_season_entry_id=${original.team_season_entry_id}`
+  );
+  const fixture: StandingsAudit = await auditResponse.json();
+  const players = Array.from(
+    { length: 60 },
+    (_, index): LeaderboardPlayer => ({
+      ...original,
+      player_id: 100000 + index,
+      name: `Audit Player ${String(index + 1).padStart(2, "0")}`,
+    })
+  );
+  let flags = 0;
+  for (const match of fixture.matches)
+    for (const race of match.races) {
+      race.flags = flags < 8 ? ["small_room"] : [];
+      flags += race.flags.length;
+    }
+  fixture.flagged_races = flags;
+  await page.route("**/api/standings?**", (route) =>
+    route.fulfill({ json: { leaderboard: players } })
+  );
+  await page.route("**/api/standings/audit?**", (route) => {
+    const id = Number(new URL(route.request().url()).searchParams.get("player_id"));
+    return route.fulfill({
+      json: { ...fixture, player: players.find((player) => player.player_id === id) ?? players[0] },
+    });
+  });
+  await page.goto(`/standings/audit?${query}`);
+  const left = page.getByRole("region", { name: "Player GP Average" });
+  const right = page.getByRole("region", { name: "Selected player audit" });
+  await expect(right.getByRole("heading", { name: players[0].name, exact: true })).toBeVisible();
+  const rows = left.locator("tbody tr");
+  const viewport = left.locator("table").locator("..");
+  async function expectFittedCards() {
+    await expect
+      .poll(async () => {
+        const [a, b] = await Promise.all([left.boundingBox(), right.boundingBox()]);
+        return Math.abs((a?.height ?? 0) - (b?.height ?? 1));
+      })
+      .toBeLessThan(0.1);
+    await expect
+      .poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight))
+      .toBeLessThanOrEqual(1);
+    await expect(viewport).toHaveCSS("overflow-y", "hidden");
+  }
+  await expectFittedCards();
+  const initialHeight = (await right.boundingBox())?.height ?? 0;
+  const initialRows = await rows.count();
+  expect(initialRows).toBeGreaterThan(0);
+  expect(initialRows).toBeLessThan(players.length);
+  await right.getByText("Calculation rules", { exact: true }).click();
+  await expect
+    .poll(async () => (await right.boundingBox())?.height ?? 0)
+    .toBeGreaterThan(initialHeight);
+  await expect.poll(() => rows.count()).toBeGreaterThan(initialRows);
+  await expectFittedCards();
+  await right.getByText("Calculation rules", { exact: true }).click();
+  await expect.poll(() => rows.count()).toBe(initialRows);
+  await expectFittedCards();
+  await right.getByRole("button", { name: "Expand review", exact: true }).click();
+  await expect.poll(() => rows.count()).toBeGreaterThan(initialRows);
+  await expectFittedCards();
+  await right.getByRole("button", { name: "Collapse review", exact: true }).click();
+  await expect.poll(() => rows.count()).toBe(initialRows);
+  const firstName = await rows.first().locator("td").nth(1).innerText();
+  await left.getByRole("button", { name: "Next players" }).click();
+  await expect(rows.first().locator("td").nth(1)).not.toHaveText(firstName);
+  await expect(right.getByRole("heading", { name: players[0].name, exact: true })).toBeVisible();
+  await expectFittedCards();
+  const nextName = await rows.first().locator("td").nth(1).innerText();
+  await rows.first().click();
+  await expect(right.getByRole("heading", { name: nextName, exact: true })).toBeVisible();
+  await expect(left.locator('tr[aria-selected="true"]')).toHaveCount(1);
+  await expectFittedCards();
+  await page.getByRole("searchbox", { name: "Find player or team" }).fill("Audit Player 59");
+  await expect(rows).toHaveCount(1);
+  await expect(left.getByRole("button", { name: "Previous players" })).toBeDisabled();
+  await expect(left.getByRole("button", { name: "Next players" })).toBeDisabled();
+  await expectFittedCards();
 });

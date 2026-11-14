@@ -10,6 +10,17 @@ the right; on smaller screens the audit follows the table. Search narrows the
 current filtered list without changing ranks. The first matching row is selected
 when the previous selection is unavailable.
 
+Both cards have the same measured height, determined by the audit's natural
+content height. The player table fits as many rows as the available height
+allows and uses Previous/Next pagination instead of vertical scrolling. Opening
+rules or review details, changing matches/GPs, and resizing the window adjust
+the row budget automatically. Paging does not change the selected player;
+selecting a row anchors that player on the visible page as capacity changes.
+A minimum shared height keeps the controls, pagination, and one row usable in
+loading, empty, and error states. The previous audit height is preserved while
+a different player's audit loads. Horizontal table scrolling remains available
+when needed on narrow screens.
+
 The audit shows both roles, team participation, qualification, and per-match
 role totals. The match dropdown and compact Previous/Next arrows show one match
 at a time, with a position counter and review counts in the dropdown.

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchJson } from "../api";
 import { BackToHomeLink } from "../components/BackToHomeLink";
@@ -12,6 +12,7 @@ import {
   rankLeaderboard,
 } from "../features/standings/leaderboard";
 import { PlayerAudit } from "../features/standings/PlayerAudit";
+import { useAuditLeaderboardLayout } from "../features/standings/useAuditLeaderboardLayout";
 import { useAdminSession } from "../hooks/useAdminSession";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
@@ -37,14 +38,14 @@ export default function StandingsAuditPage() {
   const [error, setError] = useState("");
   const [auditError, setAuditError] = useState("");
   const [retry, setRetry] = useState(0);
-  const auditPanelRef = useRef<HTMLElement>(null);
+  const [pageAnchor, setPageAnchor] = useState({ key: "", index: 0 });
   const scopeKey = `${league}:${scope.season}:${scope.division}`;
   const currentPlayers = players?.key === scopeKey ? players.rows : null;
   const ranked = useMemo(
     () => rankLeaderboard(currentPlayers ?? [], role, eligibleOnly),
     [currentPlayers, role, eligibleOnly]
   );
-  const visible = ranked
+  const filtered = ranked
     .map((player, index) => ({ player, rank: index + 1 }))
     .filter(({ player }) =>
       `${player.name} ${player.team_tag}`
@@ -52,13 +53,31 @@ export default function StandingsAuditPage() {
         .includes(search.trim().toLocaleLowerCase())
     );
   const selected =
-    visible.find(
+    filtered.find(
       ({ player }) =>
         String(player.player_id) === params.get("player") &&
         String(player.team_season_entry_id) === params.get("entry")
-    )?.player ?? visible[0]?.player;
+    )?.player ?? filtered[0]?.player;
   const selectedKey = selected ? `${scopeKey}:${keyFor(selected)}` : "";
   const currentAudit = audit?.key === selectedKey ? audit.data : null;
+
+  const filterKey = `${scopeKey}:${role}:${eligibleOnly}:${search.trim().toLocaleLowerCase()}`;
+  const layout = useAuditLeaderboardLayout(
+    currentPlayers !== null && !(scope.scopeError || error),
+    filterKey
+  );
+  const { auditPanelRef } = layout;
+  const selectedIndex = selected
+    ? filtered.findIndex(({ player }) => keyFor(player) === keyFor(selected))
+    : 0;
+  const anchor = pageAnchor.key === filterKey ? pageAnchor.index : Math.max(0, selectedIndex);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / layout.pageSize));
+  const currentPage = Math.min(Math.floor(anchor / layout.pageSize), pageCount - 1);
+  const visible = filtered.slice(
+    currentPage * layout.pageSize,
+    (currentPage + 1) * layout.pageSize
+  );
+  const auditPending = Boolean(selected && !currentAudit && !auditError);
 
   useEffect(() => {
     if (!scope.season || !scope.division || scope.loadingScope) return;
@@ -120,6 +139,13 @@ export default function StandingsAuditPage() {
     setParams(next, { replace: true });
   }
   function select(player: LeaderboardPlayer) {
+    setPageAnchor({
+      key: filterKey,
+      index: Math.max(
+        0,
+        filtered.findIndex((row) => keyFor(row.player) === keyFor(player))
+      ),
+    });
     update({ player: String(player.player_id), entry: String(player.team_season_entry_id) });
     if (window.matchMedia("(max-width: 1279px)").matches) {
       requestAnimationFrame(() => auditPanelRef.current?.scrollIntoView({ block: "start" }));
@@ -194,15 +220,17 @@ export default function StandingsAuditPage() {
         ) : (
           <div className="grid items-start gap-5 xl:grid-cols-[minmax(25rem,0.85fr)_minmax(0,1.65fr)]">
             <section
+              ref={layout.leaderboardRef}
               aria-labelledby="audit-leaderboard-heading"
-              className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-950/95 xl:sticky xl:top-5"
+              style={{ height: layout.height }}
+              className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950/95"
             >
-              <div className="p-4">
+              <div ref={layout.controlsRef} className="shrink-0 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <h2 id="audit-leaderboard-heading" className="text-lg font-bold">
                     Player GP Average
                   </h2>
-                  <span className="text-xs text-gray-500">{visible.length} players</span>
+                  <span className="text-xs text-gray-500">{filtered.length} players</span>
                 </div>
                 <p className="mt-1 text-xs text-gray-400">
                   Select a row to inspect its calculation.
@@ -257,9 +285,12 @@ export default function StandingsAuditPage() {
                   />
                 </label>
               </div>
-              <div className="max-h-[28rem] overflow-auto xl:max-h-[calc(100vh-22rem)]">
+              <div
+                ref={layout.tableViewportRef}
+                className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden"
+              >
                 <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 z-10 league-accent-bg text-black">
+                  <thead ref={layout.tableHeaderRef} className="league-accent-bg text-black">
                     <tr>
                       {["#", "Player", "Team", "GPs", "Points", "GP Avg"].map((label) => (
                         <th
@@ -275,7 +306,7 @@ export default function StandingsAuditPage() {
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody ref={layout.tableBodyRef}>
                     {visible.map(({ player, rank }) => {
                       const active = keyFor(player) === (selected ? keyFor(selected) : "");
                       return (
@@ -323,19 +354,56 @@ export default function StandingsAuditPage() {
                     })}
                   </tbody>
                 </table>
+                {!filtered.length ? (
+                  <p ref={layout.emptyRef} className="p-4 text-sm text-gray-400">
+                    {search
+                      ? "No players match this search."
+                      : "No players qualify for these filters. Try All players."}
+                  </p>
+                ) : null}
               </div>
-              {!visible.length ? (
-                <p className="p-4 text-sm text-gray-400">
-                  {search
-                    ? "No players match this search."
-                    : "No players qualify for these filters. Try All players."}
-                </p>
-              ) : null}
+              <nav
+                ref={layout.paginationRef}
+                aria-label="Leaderboard pages"
+                className="flex shrink-0 items-center justify-between gap-2 border-t border-white/10 p-3 text-xs text-gray-300"
+              >
+                <button
+                  type="button"
+                  aria-label="Previous players"
+                  disabled={currentPage === 0}
+                  onClick={() =>
+                    setPageAnchor({ key: filterKey, index: (currentPage - 1) * layout.pageSize })
+                  }
+                  className="rounded border border-white/15 px-3 py-1 hover:bg-white/5 focus:outline-none league-focus-ring disabled:opacity-30"
+                >
+                  Previous
+                </button>
+                <span aria-live="polite" aria-atomic="true">
+                  Page {currentPage + 1} of {pageCount}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Next players"
+                  disabled={currentPage === pageCount - 1}
+                  onClick={() =>
+                    setPageAnchor({ key: filterKey, index: (currentPage + 1) * layout.pageSize })
+                  }
+                  className="rounded border border-white/15 px-3 py-1 hover:bg-white/5 focus:outline-none league-focus-ring disabled:opacity-30"
+                >
+                  Next
+                </button>
+              </nav>
             </section>
             <section
               ref={auditPanelRef}
               aria-label="Selected player audit"
-              aria-busy={Boolean(selected && !currentAudit && !auditError)}
+              aria-busy={auditPending}
+              style={{
+                minHeight:
+                  auditPending && layout.height !== undefined
+                    ? Math.max(layout.minimumHeight, layout.height)
+                    : layout.minimumHeight,
+              }}
               className="min-w-0 scroll-mt-5 rounded-xl border border-white/10 bg-zinc-950/95 p-4 sm:p-5"
             >
               {!selected ? (
