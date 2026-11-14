@@ -7,6 +7,7 @@ import SeasonDivisionSelector from "../components/SeasonDivisionSelector";
 import TeamCompetitionStatusManager from "../components/TeamCompetitionStatusManager";
 import { useLeague } from "../context/LeagueContext";
 import { matchHistoryPath } from "../features/match-history/matchHistoryLinks";
+import { type LeaderboardPlayer, rankLeaderboard } from "../features/standings/leaderboard";
 import { useAdminSession } from "../hooks/useAdminSession";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
@@ -54,32 +55,7 @@ type MatchResult = {
     outcome: "win" | "tie" | "loss";
   }>;
 };
-type LeaderboardPlayer = {
-  unaccounted_matches?: number;
-  player_id: number;
-  name: string;
-  team_id: number;
-  team_tag: string;
-  team_season_entry_id: number;
-  team_status: CompetitionStatus;
-  gps_played: number;
-  team_gps: number;
-  required_gps: number;
-  eligible: boolean;
-  eligibility_reason: string | null;
-  runner_gps_played: number;
-  runner_eligible: boolean;
-  runner_eligibility_reason: string | null;
-  runner_points: number;
-  runner_races: number;
-  runner_gp_average: number | null;
-  bagger_gps_played: number;
-  bagger_eligible: boolean;
-  bagger_eligibility_reason: string | null;
-  bagger_points: number;
-  bagger_races: number;
-  bagger_gp_average: number | null;
-};
+
 type PlayoffSeries = {
   playoff_series_id: number;
   stage: "semifinals" | "finals";
@@ -494,16 +470,10 @@ function PlayerLeaderboard({
   const firstRowRef = useRef<HTMLTableRowElement>(null);
   const paginationRef = useRef<HTMLDivElement>(null);
   const noteRef = useRef<HTMLParagraphElement>(null);
-  const ranked = useMemo(() => {
-    const metric = role === "runner" ? "runner_gp_average" : "bagger_gp_average";
-    const eligibilityMetric = role === "runner" ? "runner_eligible" : "bagger_eligible";
-    return players
-      .filter((player) => !eligibleOnly || player[eligibilityMetric])
-      .toSorted(
-        (left, right) =>
-          (right[metric] ?? -1) - (left[metric] ?? -1) || left.name.localeCompare(right.name)
-      );
-  }, [eligibleOnly, players, role]);
+  const ranked = useMemo(
+    () => rankLeaderboard(players, role, eligibleOnly),
+    [eligibleOnly, players, role]
+  );
   const pageCount = Math.max(1, Math.ceil(ranked.length / pageSize));
   const currentPage = Math.min(page, pageCount - 1);
   const visible = ranked.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
@@ -815,7 +785,7 @@ function PlayoffBracket({
 }
 
 export default function StandingsPage(): React.JSX.Element {
-  const { league, config } = useLeague();
+  const { league, config, leaguePath } = useLeague();
   const auth = useAdminSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const scope = useSeasonDivision({
@@ -996,7 +966,17 @@ export default function StandingsPage(): React.JSX.Element {
               </div>
               <section className="flex min-w-0 flex-col rounded-xl border border-white/10 bg-zinc-950/90 p-5 shadow-2xl">
                 <div className="mb-4">
-                  <h2 className="text-xl font-bold">Player GP Average</h2>
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-xl font-bold">Player GP Average</h2>
+                    <Link
+                      to={leaguePath(
+                        `/standings/audit?season=${scope.season}&division=${scope.division}`
+                      )}
+                      className="rounded border border-white/20 px-2 py-1 text-xs font-semibold text-gray-200 hover:bg-white/10 focus:outline-none league-focus-ring"
+                    >
+                      Audit
+                    </Link>
+                  </div>
                 </div>
                 <PlayerLeaderboard
                   players={data.leaderboard}

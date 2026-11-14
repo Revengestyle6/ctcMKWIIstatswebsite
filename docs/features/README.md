@@ -4,6 +4,7 @@
 | --- | --- | --- |
 | Match preparation, validation and review | [JSON editor](../json-editor/README.md) | Editor, match review, acceptance and importer |
 | Runner/bagger metrics and exclusions | [Analytics methodology](dashboard-analytics-methodology.md) | Role and dashboard queries |
+| Leaderboard calculation and race review | [GP average audit](standings-leaderboard-audit.md) | Standings, role evidence and audit navigation |
 | Playoff series and match sets | [Playoff support](playoff-support-implementation.md) | Playoff rules, importer, editor and filters |
 | Team names, tags and cross-league identity | [Team identity](team-identity-management.md) | Team identity management and catalog |
 | Multiple entries under one canonical team | [Sibling season entries and analytics impact](sibling-team-season-entries.md) | Registration, editor, reports and playoffs |

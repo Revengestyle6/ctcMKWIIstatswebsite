@@ -9,6 +9,7 @@ from match_editor_catalog import list_player_team_memberships, list_team_roster_
 from media_storage import get_media_storage
 from mkc_registry import lookup_mkc_player
 from models import TeamLogo
+from standings_audit import get_standings_audit
 from standings_service import get_division_standings
 from track_analytics import get_track_analytics, get_track_dashboard
 
@@ -413,6 +414,29 @@ def api_standings():
             )
     except Exception as error:
         logger.exception("Failed to build divisional standings")
+        return error_response(error)
+
+
+@public_api.get("/api/standings/audit")
+def api_standings_audit():
+    try:
+        player_id = optional_int_arg("player_id")
+        entry_id = optional_int_arg("team_season_entry_id")
+        if not player_id or not entry_id:
+            raise ValueError("player_id and team_season_entry_id are required.")
+        with stats.SessionLocal() as session:
+            return jsonify(
+                get_standings_audit(
+                    session,
+                    league=league_arg(),
+                    season=season_arg(),
+                    division=division_arg(),
+                    player_id=player_id,
+                    team_season_entry_id=entry_id,
+                )
+            )
+    except Exception as error:
+        logger.exception("Failed to build leaderboard audit")
         return error_response(error)
 
 

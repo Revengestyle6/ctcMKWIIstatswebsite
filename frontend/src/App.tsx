@@ -16,6 +16,7 @@ const MusicPlayer = lazy(() => import("./components/MusicPlayer"));
 const PlayerDashboard = lazy(() => import("./pages/PlayerDashboard"));
 const PlayerStats = lazy(() => import("./pages/PlayerStats"));
 const StandingsPage = lazy(() => import("./pages/StandingsPage"));
+const StandingsAuditPage = lazy(() => import("./pages/StandingsAuditPage"));
 const TeamDashboard = lazy(() => import("./pages/TeamDashboard"));
 const TopTeamPlayers = lazy(() => import("./pages/TopTeamPlayers"));
 const TrackAnalyticsPage = lazy(() => import("./pages/TrackAnalyticsPage"));
@@ -54,6 +55,7 @@ export default function App(): JSX.Element {
             <Route path="/" element={<HomePage />} />
             <Route path="/stats" element={<PlayerStats />} />
             <Route path="/standings" element={<StandingsPage />} />
+            <Route path="/standings/audit" element={<StandingsAuditPage />} />
             <Route path="/top-team-players" element={<TopTeamPlayers />} />
             <Route path="/top-tracks" element={<Navigate to="/tracks" replace />} />
             <Route path="/tracks" element={<TrackAnalyticsPage />} />
