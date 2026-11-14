@@ -7,7 +7,11 @@ import SeasonDivisionSelector from "../components/SeasonDivisionSelector";
 import TeamCompetitionStatusManager from "../components/TeamCompetitionStatusManager";
 import { useLeague } from "../context/LeagueContext";
 import { matchHistoryPath } from "../features/match-history/matchHistoryLinks";
-import { type LeaderboardPlayer, rankLeaderboard } from "../features/standings/leaderboard";
+import {
+  formatQualification,
+  type LeaderboardPlayer,
+  rankLeaderboard,
+} from "../features/standings/leaderboard";
 import { useAdminSession } from "../hooks/useAdminSession";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
@@ -656,7 +660,7 @@ function PlayerLeaderboard({
                     title={
                       showPoints
                         ? `Total ${role} points`
-                        : `${roleGpsPlayed} race-equivalent GPs as ${role} (4 races = 1 GP); ${player.required_gps} required for eligibility`
+                        : `${roleGpsPlayed} race-equivalent GPs as ${role} (4 races = 1 GP); ${formatQualification(player.team_gps)} required for eligibility (⅔ of team races; no rounding)`
                     }
                   >
                     {showPoints ? (
@@ -707,7 +711,8 @@ function PlayerLeaderboard({
       </div>
       <p ref={noteRef} className="text-xs leading-5 text-gray-400">
         Four races in the selected role count as one GP, with partial GPs included. Eligibility
-        requires race-equivalent GPs in at least two-thirds of an active team’s total GPs.
+        requires playing that role in at least two-thirds of an active team’s actual races. Team GPs
+        also equal races ÷ 4; neither GP counts nor qualification thresholds are rounded.
       </p>
     </div>
   );

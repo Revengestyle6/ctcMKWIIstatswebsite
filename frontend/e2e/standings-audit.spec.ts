@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 import type { StandingsAudit } from "../src/features/standings/auditTypes";
-import { type LeaderboardPlayer, rankLeaderboard } from "../src/features/standings/leaderboard";
+import {
+  formatQualification,
+  type LeaderboardPlayer,
+  rankLeaderboard,
+} from "../src/features/standings/leaderboard";
 import type { AdminSession } from "../src/hooks/useAdminSession";
 
 const query = "league=ctc&season=s3&division=d1";
@@ -50,6 +54,11 @@ test("audit follows leaderboard filters, selection, and the source breakdown", a
     second.runner_gp_average?.toFixed(2) ?? "—"
   );
   await expect(roleRows.first().locator("td").nth(4)).toHaveText("Eligible");
+  await expect(
+    audit.getByRole("region", { name: "Participation and qualification" })
+  ).toContainText(
+    `Qualification per role: ${formatQualification(second.team_gps)} GPs / ${formatQualification(second.team_gps, "races")} races`
+  );
   const rules = audit.getByText(/^Required GPs =/);
   await expect(rules).toBeHidden();
   await audit.getByText("Calculation rules", { exact: true }).click();
@@ -362,4 +371,18 @@ test("leaderboard pages track the audit height without vertical scrolling", asyn
   await expect(left.getByRole("button", { name: "Previous players" })).toBeDisabled();
   await expect(left.getByRole("button", { name: "Next players" })).toBeDisabled();
   await expectFittedCards();
+});
+
+// Repeating eligibility thresholds must stay exact, including thresholds below one GP.
+test("qualification displays exact fractions without rounding GP requirements", () => {
+  for (const [teamGps, gps, races] of [
+    [0.25, "⅙", "⅔"],
+    [1.75, "1⅙", "4⅔"],
+    [2.5, "1⅔", "6⅔"],
+    [3, "2", "8"],
+    [3.25, "2⅙", "8⅔"],
+  ] as const) {
+    expect(formatQualification(teamGps)).toBe(gps);
+    expect(formatQualification(teamGps, "races")).toBe(races);
+  }
 });

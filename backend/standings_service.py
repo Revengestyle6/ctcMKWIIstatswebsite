@@ -1,4 +1,3 @@
-import math
 from collections import defaultdict
 
 from analytics_eligibility import analytics_excluded_race_ids
@@ -251,13 +250,13 @@ def _race_equivalent_gps(race_count):
     return race_count / 4
 
 
-def _role_eligibility(status, role, role_gp_count, required_gps):
+def _role_eligibility(status, role, role_races, team_races):
     if status in INACTIVE_STATUSES:
         return False, f"Team {status}"
-    if required_gps <= 0 or role_gp_count < required_gps:
+    if team_races <= 0 or role_races * 3 < team_races * 2:
         return (
             False,
-            f"Completed {role_gp_count:g} of {required_gps} required race-equivalent GPs as {role}",
+            f"Played {role_races} of {team_races} team races as {role}; at least 2/3 required",
         )
     return True, None
 
@@ -274,8 +273,7 @@ def _leaderboard_player(player_id, entry_id, team_id, tag, status):
         "team_season_entry_id": entry_id,
         "team_tag": tag,
         "team_status": status,
-        "gp_keys": set(),
-        "aggregate_gps": 0,
+        "races_played": 0,
         "unaccounted_match_ids": set(),
         "runner_points": 0,
         "runner_races": 0,
@@ -318,13 +316,12 @@ def _player_leaderboard(session, scope, records):
     _, classified = role_coverage(result_objects, confirmed_ids)
     classification = {row.race_player_result_id: role for row, role, _source in classified}
 
-    team_gp_races = defaultdict(lambda: defaultdict(set))
+    team_races = defaultdict(set)
     player_data = {}
     canonical_names = {}
     for row in rows:
         result = row[0]
-        gp_key = (row.match_id, (row.race_number - 1) // 4 + 1)
-        team_gp_races[row.team_season_entry_id][gp_key].add(result.race_id)
+        team_races[row.team_season_entry_id].add(result.race_id)
         key = (result.player_id, row.team_season_entry_id)
         data = player_data.setdefault(
             key,
@@ -339,7 +336,7 @@ def _player_leaderboard(session, scope, records):
         participated = result.position is not None or result.score is not None
         role = classification.get(result.race_player_result_id, "unknown")
         if participated:
-            data["gp_keys"].add(gp_key)
+            data["races_played"] += 1
             if role in LEADERBOARD_ROLES:
                 data[f"{role}_races"] += 1
         if role in {"runner", "bagger"} and valid_race_score(result.score):
@@ -351,7 +348,7 @@ def _player_leaderboard(session, scope, records):
     for row in aggregate_rows:
         score = row.UnaccountedPlayerScore
         entry_id = row.team_season_entry_id
-        aggregate_team_matches[(entry_id, row.match_id)] = row.races_played / 4
+        aggregate_team_matches[(entry_id, row.match_id)] = row.races_played
         key = (row.player_id, entry_id)
         data = player_data.setdefault(
             key,
@@ -362,36 +359,39 @@ def _player_leaderboard(session, scope, records):
         data[f"{score.role}_points"] += score.points
         data[f"{score.role}_races"] += score.races
         data["unaccounted_match_ids"].add(row.match_id)
-        if score.gp_number and score.races:
-            data["gp_keys"].add((row.match_id, score.gp_number))
-        elif not score.gp_number:
-            data["aggregate_gps"] += score.races / 4
+        data["races_played"] += score.races
         canonical_names[row.player_id] = row.canonical_name
-    aggregate_team_gps = defaultdict(float)
+    aggregate_team_races = defaultdict(int)
     for (entry_id, _match_id), count in aggregate_team_matches.items():
-        aggregate_team_gps[entry_id] += count
+        aggregate_team_races[entry_id] += count
 
     display_names = _display_names_for_players(session, canonical_names.keys(), canonical_names)
     leaderboard = []
     for data in player_data.values():
-        entry_gp_races = team_gp_races[data["team_season_entry_id"]]
-        team_gp_count = len(entry_gp_races) + aggregate_team_gps[data["team_season_entry_id"]]
-        played_gps = len(data.pop("gp_keys")) + data.pop("aggregate_gps")
+        entry_id = data["team_season_entry_id"]
+        team_race_count = len(team_races[entry_id]) + aggregate_team_races[entry_id]
+        team_gp_count = _race_equivalent_gps(team_race_count)
+        played_races = data["races_played"]
+        played_gps = _race_equivalent_gps(played_races)
         data["unaccounted_matches"] = len(data.pop("unaccounted_match_ids"))
         role_gp_counts = {
             role: _race_equivalent_gps(data[f"{role}_races"]) for role in LEADERBOARD_ROLES
         }
-        required_gps = math.ceil(team_gp_count * 2 / 3)
+        required_gps = team_race_count / 6
         status_eligible = data["team_status"] not in INACTIVE_STATUSES
-        participation_eligible = played_gps >= required_gps and required_gps > 0
+        participation_eligible = team_race_count > 0 and played_races * 3 >= team_race_count * 2
         role_eligibility = {
-            role: _role_eligibility(data["team_status"], role, role_gp_counts[role], required_gps)
+            role: _role_eligibility(
+                data["team_status"], role, data[f"{role}_races"], team_race_count
+            )
             for role in LEADERBOARD_ROLES
         }
         data.update(
             {
                 "name": display_names.get(data["player_id"], f"Player {data['player_id']}"),
                 "team_gps": team_gp_count,
+                "team_races": team_race_count,
+                "required_races": team_race_count * 2 / 3,
                 "gps_played": played_gps,
                 "required_gps": required_gps,
                 "eligible": status_eligible and participation_eligible,
@@ -400,7 +400,7 @@ def _player_leaderboard(session, scope, records):
                     if not status_eligible
                     else None
                     if participation_eligible
-                    else f"Played {played_gps} of {required_gps} required GPs"
+                    else f"Played {played_races} of {team_race_count} team races; at least 2/3 required"
                 ),
                 "runner_gps_played": role_gp_counts["runner"],
                 "runner_eligible": role_eligibility["runner"][0],

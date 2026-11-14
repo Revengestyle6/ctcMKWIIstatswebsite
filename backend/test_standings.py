@@ -32,14 +32,26 @@ from team_competition import update_team_competition_status  # noqa: E402
 
 class RoleGpEligibilityTests(unittest.TestCase):
     def test_role_gp_count_uses_fractional_race_equivalents(self):
+        self.assertEqual(_race_equivalent_gps(7), 1.75)
+        self.assertEqual(_race_equivalent_gps(10), 2.5)
         self.assertEqual(_race_equivalent_gps(11), 2.75)
         self.assertEqual(_race_equivalent_gps(12), 3)
 
-    def test_fractional_role_gps_control_eligibility(self):
-        eligible, reason = _role_eligibility("active", "runner", 2.75, 3)
-        self.assertFalse(eligible)
-        self.assertIn("2.75 of 3", reason)
-        self.assertEqual(_role_eligibility("active", "runner", 3, 3), (True, None))
+    def test_exact_two_thirds_role_race_threshold(self):
+        for role in ("runner", "bagger"):
+            for team_races, below, qualifies in ((10, 6, 7), (7, 4, 5), (12, 7, 8), (1, 0, 1)):
+                with self.subTest(role=role, team_races=team_races):
+                    eligible, reason = _role_eligibility("active", role, below, team_races)
+                    self.assertFalse(eligible)
+                    self.assertIn("at least 2/3 required", reason)
+                    self.assertEqual(
+                        _role_eligibility("active", role, qualifies, team_races), (True, None)
+                    )
+
+    def test_empty_and_inactive_teams_do_not_qualify(self):
+        self.assertFalse(_role_eligibility("active", "runner", 0, 0)[0])
+        for status in ("dropped", "disqualified"):
+            self.assertEqual(_role_eligibility(status, "runner", 10, 10), (False, f"Team {status}"))
 
     def test_role_average_treats_each_four_role_races_as_one_gp(self):
         self.assertEqual(_role_gp_average(1088, 132), 32.97)

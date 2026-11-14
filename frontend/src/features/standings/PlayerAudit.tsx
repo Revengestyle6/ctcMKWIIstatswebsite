@@ -9,7 +9,7 @@ import {
   reviewLabels,
   type StandingsAudit,
 } from "./auditTypes";
-import type { LeaderboardRole } from "./leaderboard";
+import { formatQualification, type LeaderboardRole } from "./leaderboard";
 
 const format = (value: number) => value.toLocaleString("en-US");
 const roles = ["runner", "bagger"] as const;
@@ -410,7 +410,8 @@ export function PlayerAudit({
         <p>
           Qualification per role:{" "}
           <span className="tabular-nums text-gray-200">
-            {audit.required_gps} GPs / {audit.required_races} races
+            {formatQualification(audit.team_gps)} GPs /{" "}
+            {formatQualification(audit.team_gps, "races")} races
           </span>
         </p>
       </section>
@@ -434,14 +435,13 @@ export function PlayerAudit({
               const races = audit.player[`${item}_races`];
               const gps = audit.player[`${item}_gps_played`];
               const points = audit.player[`${item}_points`];
-              const remaining = Math.max(0, audit.required_races - races);
               const status = eligible
                 ? "Eligible"
                 : audit.player.team_status !== "active"
                   ? `Team ${audit.player.team_status}`
                   : audit.required_gps <= 0
                     ? "No qualifying team GPs"
-                    : `Needs ${remaining} ${remaining === 1 ? "race" : "races"}`;
+                    : "Below ⅔ of team races";
               return (
                 <tr
                   key={item}
@@ -504,10 +504,10 @@ export function PlayerAudit({
           </summary>
           <div className="mt-2 space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-3 leading-5">
             <p>
-              Required GPs = team GPs × ⅔, rounded up. Each four individual role races count as one
-              GP; partial GPs count. Team GPs count recorded four-race blocks, including partial
-              blocks. Dropped or disqualified teams are ineligible. Races with unclassified roles
-              contribute to neither role.
+              Required GPs = team GPs × ⅔, with no rounding. Eligibility requires playing the role
+              in at least ⅔ of the team’s actual races. Both team and individual role GPs equal
+              races ÷ 4: 10 races = 2.5 GPs; 7 races = 1.75 GPs. Dropped or disqualified teams are
+              ineligible. Races with unclassified roles contribute to neither role.
             </p>
             <p>
               Reconciliation confirms that match totals account for the leaderboard. Entry accuracy

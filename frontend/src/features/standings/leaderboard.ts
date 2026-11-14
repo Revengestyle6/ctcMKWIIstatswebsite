@@ -41,3 +41,11 @@ export function rankLeaderboard(
         (right[metric] ?? -1) - (left[metric] ?? -1) || left.name.localeCompare(right.name)
     );
 }
+
+// Qualification can be a repeating decimal. Keep its display exact in sixths.
+export function formatQualification(teamGps: number, unit: "gps" | "races" = "gps") {
+  const sixths = teamGps * 4 * (unit === "races" ? 4 : 1);
+  const whole = Math.floor(sixths / 6);
+  const fraction = ["", "⅙", "⅓", "½", "⅔", "⅚"][sixths % 6];
+  return `${whole || !fraction ? whole : ""}${fraction}`;
+}
