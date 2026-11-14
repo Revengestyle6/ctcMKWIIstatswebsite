@@ -52,6 +52,11 @@ export const navigationGroups = [
     label: "Tools & admin",
     links: [
       {
+        to: "/standings/audit",
+        label: "GP average audit",
+        description: "Trace leaderboard points, roles, and participation.",
+      },
+      {
         to: "/json-editor",
         label: "Match JSON editor",
         description: "Create, validate, and submit match data.",
@@ -88,6 +93,7 @@ export function isNavigationLinkActive(link: NavigationLink, pathname: string): 
 }
 
 export function backDestination(pathname: string): string {
+  if (pathname === "/standings/audit") return "/standings";
   if (pathname.startsWith("/players/")) return "/players";
   if (pathname.startsWith("/teams/")) return "/teams";
   if (pathname.startsWith("/tracks/")) return "/tracks";
