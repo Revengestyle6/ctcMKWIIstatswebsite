@@ -76,16 +76,46 @@ class StandingsAuditTests(unittest.TestCase):
             team_season_entry_id=entry_id,
         )
 
-    def test_partial_team_blocks_and_role_races_reconcile(self):
+    def test_partial_team_races_and_role_races_reconcile(self):
         self.import_document(race_document())
         with self.database.SessionLocal() as session:
             audit = self.audit(session)
         self.assertTrue(audit["reconciled"])
-        self.assertEqual((audit["team_gps"], audit["team_races"]), (4, 13))
-        self.assertEqual((audit["required_gps"], audit["required_races"]), (3, 12))
+        self.assertEqual((audit["team_gps"], audit["team_races"]), (3.25, 13))
+        self.assertEqual((audit["required_gps"], audit["required_races"]), (13 / 6, 26 / 3))
         self.assertEqual(audit["player"]["runner_gps_played"], 3.25)
         self.assertEqual(audit["matches"][0]["roles"]["runner"], {"points": 39, "races": 13})
         self.assertEqual(audit["flagged_races"], 0)
+
+    def test_role_eligibility_uses_exact_team_races(self):
+        document = race_document(races=10)
+        roster = document["teams"]["A"]["players"]
+        roster["1111-2222-0000"]["race_roles"] = ["runner"] * 6 + ["bagger"] * 4
+        roster["1111-2222-0001"]["race_roles"] = ["runner"] * 7 + ["bagger"] * 3
+        roster["1111-2222-0004"]["race_roles"] = ["bagger"] * 7 + ["runner"] * 3
+        self.import_document(document)
+        with self.database.SessionLocal() as session:
+            below = self.audit(session)
+            above = self.audit(session, fc="1111-2222-0001")
+            bagger = self.audit(session, fc="1111-2222-0004")
+        self.assertEqual(below["team_gps"], 2.5)
+        self.assertEqual(below["player"]["runner_gps_played"], 1.5)
+        self.assertFalse(below["player"]["runner_eligible"])
+        self.assertTrue(above["player"]["runner_eligible"])
+        self.assertTrue(bagger["player"]["bagger_eligible"])
+        self.assertFalse(bagger["player"]["runner_eligible"])
+        self.assertTrue(all(audit["reconciled"] for audit in (below, above, bagger)))
+
+    def test_partial_matches_sum_actual_races_without_rounding(self):
+        self.import_document(race_document(number=1, races=7))
+        self.import_document(race_document(number=2, races=3))
+        with self.database.SessionLocal() as session:
+            audit = self.audit(session)
+        self.assertEqual((audit["team_races"], audit["team_gps"]), (10, 2.5))
+        self.assertEqual(audit["player"]["gps_played"], 2.5)
+        self.assertEqual([match["team_gps"] for match in audit["matches"]], [1.75, 0.75])
+        self.assertTrue(audit["player"]["runner_eligible"])
+        self.assertTrue(audit["reconciled"])
 
     def test_nine_finishers_dc_and_zero_awards_remain_reviewable(self):
         document = race_document(races=2)
@@ -195,6 +225,37 @@ class StandingsAuditTests(unittest.TestCase):
             self.assertTrue(
                 all(row["disconnection_points"] == 2 for row in match["aggregate_entries"])
             )
+
+    def test_partial_unaccounted_entries_use_actual_races_in_both_modes(self):
+        for number, (mode, races) in enumerate((("gp", 7), ("totals", 10)), start=1):
+            document = aggregate_document(mode, number)
+            document["races_played"] = races
+            for team in document["teams"].values():
+                player = next(iter(team["players"].values()))
+                player["aggregate_scores"] = (
+                    [
+                        {"gp_number": 1, "role": "runner", "points": 12, "races": 4},
+                        {"gp_number": 2, "role": "runner", "points": 3, "races": 1},
+                        {"gp_number": 2, "role": "bagger", "points": 6, "races": 2},
+                    ]
+                    if mode == "gp"
+                    else [
+                        {"gp_number": 0, "role": "runner", "points": 21, "races": 7},
+                        {"gp_number": 0, "role": "bagger", "points": 9, "races": 3},
+                    ]
+                )
+                player["total_score"] = team["total_score"] = races * 3
+            self.import_document(document)
+            with self.database.SessionLocal() as session:
+                audit = self.audit(session, "1111-2222-3330")
+            total_races = 7 if mode == "gp" else 17
+            self.assertEqual(audit["team_races"], total_races)
+            self.assertEqual(audit["team_gps"], total_races / 4)
+            self.assertEqual(audit["player"]["gps_played"], total_races / 4)
+            self.assertEqual(audit["required_gps"], total_races / 6)
+            self.assertEqual(audit["player"]["runner_races"], 5 if mode == "gp" else 12)
+            self.assertTrue(audit["player"]["runner_eligible"])
+            self.assertTrue(audit["reconciled"])
 
     def test_cross_scope_entry_is_rejected(self):
         self.import_document(race_document())

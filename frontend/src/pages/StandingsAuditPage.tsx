@@ -329,7 +329,7 @@ export default function StandingsAuditPage() {
                             {rank}
                           </td>
                           <td
-                            className={`max-w-40 break-words px-2 py-3 font-semibold ${active ? "league-accent-text" : "text-gray-100"}`}
+                            className={`max-w-40 break-words px-2 py-3 text-center font-semibold ${active ? "league-accent-text" : "text-gray-100"}`}
                           >
                             {player.name}
                             {!player[role === "runner" ? "runner_eligible" : "bagger_eligible"] ? (

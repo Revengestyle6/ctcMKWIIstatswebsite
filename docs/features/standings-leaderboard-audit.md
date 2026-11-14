@@ -41,7 +41,7 @@ owner. Public visitors retain access to the audit and full-match link.
 
 The player header combines identity and scope. A compact participation line and
 two-row role table show points, races, GPs, the average calculation, and
-eligibility. Ineligible active players see the additional role races needed;
+eligibility. Ineligible active players see that they are below two-thirds participation;
 inactive teams retain their team-status reason. Calculation and review rules
 are available in a collapsed disclosure. Reconciliation is a quiet status when
 matching and a highlighted warning when mismatching.
@@ -58,10 +58,16 @@ role classification functions. Reviewed analytics exclusions stay excluded and
 are labelled in the race breakdown. Team matches without selected-player
 participation still appear because they can affect qualification.
 
-Individual role GPs are role races divided by four. Team GPs count recorded
-four-race blocks, including partial blocks, plus unaccounted match race
-equivalents. The requirement is `ceil(team GPs × 2/3)` GPs, or four times that
-many races, separately in each role. Inactive teams remain ineligible.
+Individual role GPs are role races divided by four. Team GPs are actual team
+races divided by four, including accepted unaccounted match races exactly once
+per team and match. Neither partial GPs nor qualification thresholds are rounded:
+10 races = 2.5 GPs, and 7 races = 1.75 GPs. Each role qualifies independently
+when `role races × 3 >= team races × 2`, with a positive team race count. This
+integer comparison implements the exact two-thirds threshold without floating-point
+rounding. The API exposes `required_races = team races × 2/3` and
+`required_gps = team races / 6`; the UI displays repeating thresholds as exact
+fractions. For 10 team races, six role races fall short and seven qualify.
+Inactive teams remain ineligible.
 
 Match totals are independently summed and reconciled with the leaderboard's
 role points, role race counts, and team GP denominator. Reconciliation confirms

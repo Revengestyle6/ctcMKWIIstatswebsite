@@ -113,8 +113,10 @@ team individual statistics pages defaults off. Its URL/API field is
 team/opponent, role, and match-set filters still apply; cache keys include this
 choice. Track-only pages do not offer inclusion because neither mode has track
 facts. Standings and divisional indivs always include accepted unaccounted results.
-Their eligibility uses entered role race counts as race-equivalent GPs for totals,
-without inventing period splits.
+Leaderboard eligibility requires role races to cover at least two-thirds of actual
+team races, with no rounding. Both GP and total entry modes use entered role race
+counts and team `races_played`; each four races equal one GP, including partial
+GPs, without inventing period splits.
 
 Role summary responses expose `unaccounted_matches`, `unaccounted_points`, and
 `unaccounted_races`. Placement, bag-point occurrence, counterpart statistics, and

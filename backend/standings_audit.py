@@ -114,7 +114,6 @@ def get_standings_audit(session, *, league, season, division, player_id, team_se
             "races": [],
             "aggregate_entries": [],
         }
-    team_blocks = defaultdict(set)
     flagged_races = 0
     unknown_races = 0
     for race, track_name in race_rows:
@@ -124,7 +123,6 @@ def get_standings_audit(session, *, league, season, division, player_id, team_se
         included = race.race_id not in excluded
         if included and team_present:
             match["team_races"] += 1
-            team_blocks[race.match_id].add((race.race_number - 1) // 4 + 1)
         selected_results = [
             r
             for r in all_results
@@ -178,11 +176,10 @@ def get_standings_audit(session, *, league, season, division, player_id, team_se
                 }
             )
     for match_id, match in audit_matches.items():
-        match["team_gps"] = len(team_blocks[match_id])
         rows = aggregate_by_match[match_id]
         if rows:
             match["team_races"] += rows[0].races_played
-            match["team_gps"] += rows[0].races_played / 4
+        match["team_gps"] = match["team_races"] / 4
         for row in rows:
             if row.player_id != player_id:
                 continue
@@ -209,7 +206,7 @@ def get_standings_audit(session, *, league, season, division, player_id, team_se
         "team_races": sum(match["team_races"] for match in audit_matches.values()),
         "team_gps": player["team_gps"],
         "required_gps": player["required_gps"],
-        "required_races": player["required_gps"] * 4,
+        "required_races": player["required_races"],
         "dominant_role": dominant_role,
         "role_history": {role: player[f"{role}_races"] for role in LEADERBOARD_ROLES},
         "flagged_races": flagged_races,
