@@ -172,6 +172,24 @@ export function fetchPlayerIdentity(
   return fetchJson("/api/player-identities", { friend_code: friendCode });
 }
 
+export type PlayerIdentityResult = Awaited<ReturnType<typeof fetchPlayerIdentity>>;
+
+export async function fetchPlayerIdentities(
+  friendCodes: string[]
+): Promise<Record<string, PlayerIdentityResult>> {
+  const codes = Array.from(new Set(friendCodes));
+  const results: Record<string, PlayerIdentityResult> = {};
+  for (let offset = 0; offset < codes.length; offset += 24) {
+    Object.assign(
+      results,
+      await fetchJson<Record<string, PlayerIdentityResult>>("/api/player-identities/batch", {
+        friend_codes: codes.slice(offset, offset + 24).join(","),
+      })
+    );
+  }
+  return results;
+}
+
 export function searchPlayerIdentities(
   query: string
 ): Promise<{ reason: string; results: PlayerIdentity[] }> {

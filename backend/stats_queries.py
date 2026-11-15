@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -401,44 +402,76 @@ def find_player_identities(friend_code=None, query=None, limit=12):
         if not player_ids:
             return {"reason": reason, "results": []}
 
-        players = session.execute(
-            select(Player.player_id, Player.canonical_name, Player.primary_friend_code).where(
-                Player.player_id.in_(player_ids)
+        return {"reason": reason, "results": _player_identity_summaries(session, player_ids)}
+
+
+def _player_identity_summaries(session, player_ids):
+    players = session.execute(
+        select(Player.player_id, Player.canonical_name, Player.primary_friend_code).where(
+            Player.player_id.in_(player_ids)
+        )
+    ).all()
+    codes = session.execute(
+        select(PlayerFriendCode.player_id, PlayerFriendCode.friend_code)
+        .where(PlayerFriendCode.player_id.in_(player_ids))
+        .order_by(PlayerFriendCode.friend_code)
+    ).all()
+    aliases = session.execute(
+        select(PlayerAlias.player_id, PlayerAlias.alias_type, PlayerAlias.alias_value)
+        .where(PlayerAlias.player_id.in_(player_ids))
+        .order_by(PlayerAlias.alias_type, PlayerAlias.alias_value)
+    ).all()
+    codes_by_player = {}
+    aliases_by_player = {}
+    for row in codes:
+        codes_by_player.setdefault(row.player_id, []).append(row.friend_code)
+    for row in aliases:
+        aliases_by_player.setdefault(row.player_id, []).append(
+            {
+                "type": row.alias_type,
+                "value": row.alias_value,
+            }
+        )
+    return [
+        {
+            "player_id": row.player_id,
+            "canonical_name": row.canonical_name,
+            "primary_friend_code": row.primary_friend_code,
+            "friend_codes": codes_by_player.get(row.player_id, []),
+            "aliases": aliases_by_player.get(row.player_id, []),
+        }
+        for row in players
+    ]
+
+
+def find_player_identities_batch(friend_codes):
+    """Resolve a bounded group with four SELECTs; external enrichment is separate."""
+    if not friend_codes or len(friend_codes) > 24:
+        raise ValueError("Provide between 1 and 24 friend codes.")
+    if any(not re.fullmatch(r"[0-9]{4}-[0-9]{4}-[0-9]{4}", code) for code in friend_codes):
+        raise ValueError("Friend codes must use 0000-0000-0000 format.")
+    friend_codes = list(dict.fromkeys(friend_codes))
+    with SessionLocal() as session:
+        rows = session.execute(
+            select(PlayerFriendCode.friend_code, PlayerFriendCode.player_id).where(
+                PlayerFriendCode.friend_code.in_(friend_codes)
             )
         ).all()
-        codes = session.execute(
-            select(PlayerFriendCode.player_id, PlayerFriendCode.friend_code)
-            .where(PlayerFriendCode.player_id.in_(player_ids))
-            .order_by(PlayerFriendCode.friend_code)
-        ).all()
-        aliases = session.execute(
-            select(PlayerAlias.player_id, PlayerAlias.alias_type, PlayerAlias.alias_value)
-            .where(PlayerAlias.player_id.in_(player_ids))
-            .order_by(PlayerAlias.alias_type, PlayerAlias.alias_value)
-        ).all()
-        codes_by_player = {}
-        aliases_by_player = {}
-        for row in codes:
-            codes_by_player.setdefault(row.player_id, []).append(row.friend_code)
-        for row in aliases:
-            aliases_by_player.setdefault(row.player_id, []).append(
-                {
-                    "type": row.alias_type,
-                    "value": row.alias_value,
-                }
-            )
+        ids_by_code = {code: [] for code in friend_codes}
+        for row in rows:
+            ids_by_code[row.friend_code].append(row.player_id)
+        player_ids = sorted({row.player_id for row in rows})
+        summaries = (
+            {row["player_id"]: row for row in _player_identity_summaries(session, player_ids)}
+            if player_ids
+            else {}
+        )
         return {
-            "reason": reason,
-            "results": [
-                {
-                    "player_id": row.player_id,
-                    "canonical_name": row.canonical_name,
-                    "primary_friend_code": row.primary_friend_code,
-                    "friend_codes": codes_by_player.get(row.player_id, []),
-                    "aliases": aliases_by_player.get(row.player_id, []),
-                }
-                for row in players
-            ],
+            code: {
+                "reason": "exact_friend_code" if ids_by_code[code] else "none",
+                "results": [summaries[player_id] for player_id in ids_by_code[code]],
+            }
+            for code in friend_codes
         }
 
 

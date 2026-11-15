@@ -125,6 +125,15 @@ def api_player_directory():
         return error_response(error)
 
 
+@public_api.get("/api/player-identities/batch")
+def api_player_identities_batch():
+    try:
+        friend_codes = (request.args.get("friend_codes") or "").split(",")
+        return jsonify(stats.find_player_identities_batch(friend_codes))
+    except Exception as error:
+        return error_response(error)
+
+
 @public_api.get("/api/player-identities")
 def api_player_identities():
     try:

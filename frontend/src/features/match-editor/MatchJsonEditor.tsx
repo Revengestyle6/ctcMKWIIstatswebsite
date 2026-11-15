@@ -7,12 +7,14 @@ import {
   fetchDatabaseAdditions,
   fetchJson,
   fetchMatchScopes,
+  fetchPlayerIdentities,
   fetchPlayerIdentity,
   fetchPlayerTeamMemberships,
   fetchPlayoffSeries,
   fetchTeamScopes,
   type MatchScope,
   type PlayerIdentity,
+  type PlayerIdentityResult,
   type PlayerTeamMembership,
   type PlayoffSeriesResponse,
   patchJson,
@@ -258,6 +260,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const previewSection = useRef<HTMLElement>(null);
   const scrollToPreviewAfterReview = useRef(false);
   const queriedTrackNames = useRef(new Set<string>());
+  const trackCatalog = useRef({ league: "" });
   const editorVersion = useRef(0);
   const warningFingerprint = useRef("");
 
@@ -317,6 +320,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       ),
     [players, identityStates, playerIdentityLinks]
   );
+  const configuredPlayerIdsKey = [...configuredPlayerIds].sort((a, b) => a - b).join(",");
   const unusualTeamIssues = useMemo<Issue[]>(() => {
     if (membershipStatus === "error") {
       return [
@@ -546,20 +550,25 @@ export default function MatchJsonEditor(): React.JSX.Element {
           normalized(scope.season) === normalized(match.season) &&
           normalized(scope.division) === normalized(match.division)
       );
-    if (!scopeExists || configuredPlayerIds.length === 0) {
+    if (!scopeExists || (!identityChecksPending && !configuredPlayerIdsKey)) {
       setPlayerTeamMemberships({});
       setMembershipStatus("idle");
       setLookupIssue("memberships", null);
       return;
     }
 
+    if (identityChecksPending) {
+      setPlayerTeamMemberships({});
+      setMembershipStatus("loading");
+      return;
+    }
     let cancelled = false;
     setMembershipStatus("loading");
     fetchPlayerTeamMemberships({
       league: match.league ?? "",
       season: match.season ?? "",
       division: match.division ?? "",
-      player_ids: configuredPlayerIds,
+      player_ids: configuredPlayerIdsKey.split(",").map(Number),
     })
       .then((memberships) => {
         if (cancelled) return;
@@ -584,7 +593,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
       cancelled = true;
     };
   }, [
-    configuredPlayerIds,
+    configuredPlayerIdsKey,
+    identityChecksPending,
     match.division,
     match.league,
     match.season,
@@ -718,12 +728,15 @@ export default function MatchJsonEditor(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
+    const catalog = { league: "" };
+    trackCatalog.current = catalog;
     setTracksLoaded(false);
     setTrackOptions([]);
     queriedTrackNames.current.clear();
     searchTracks(league, "", true)
       .then((tracks) => {
         if (cancelled) return;
+        catalog.league = league;
         setTrackOptions(tracks);
         setTracksLoaded(true);
         setLookupIssue("tracks", null);
@@ -739,6 +752,11 @@ export default function MatchJsonEditor(): React.JSX.Element {
     };
   }, [league, setLookupIssue]);
   useEffect(() => {
+    if (!tracksLoaded || trackCatalog.current.league !== league) return;
+    const catalog = trackCatalog.current;
+    const requestVersion = editorVersion.current;
+    const isCurrent = () =>
+      trackCatalog.current === catalog && editorVersion.current === requestVersion;
     const knownNames = new Set(
       trackOptions.flatMap((track) => [track.name, ...track.aliases].map(normalized))
     );
@@ -748,20 +766,22 @@ export default function MatchJsonEditor(): React.JSX.Element {
       queriedTrackNames.current.add(key);
       searchTracks(league, race.trackName, true)
         .then((matches) => {
+          if (!isCurrent()) return;
           setLookupIssue(`track-query:${race.trackName}`, null);
           setTrackOptions((current) => {
             const ids = new Set(current.map((track) => track.track_id));
             return [...current, ...matches.filter((track) => !ids.has(track.track_id))];
           });
         })
-        .catch((error) =>
+        .catch((error) => {
+          if (!isCurrent()) return;
           setLookupIssue(
             `track-query:${race.trackName}`,
             lookupFailure(error, `Track ${race.trackName} could not be checked`)
-          )
-        );
+          );
+        });
     });
-  }, [league, races, trackOptions, setLookupIssue]);
+  }, [league, races, trackOptions, tracksLoaded, setLookupIssue]);
   useEffect(() => {
     fetchMatchScopes()
       .then((scopes) => {
@@ -895,39 +915,80 @@ export default function MatchJsonEditor(): React.JSX.Element {
       ),
     }));
 
-    pending.forEach(({ playerKey, friendCode }) => {
-      fetchPlayerIdentity(friendCode)
-        .then((result) => {
-          const nextState: IdentityState =
-            result.results.length === 1
-              ? { status: "confirmed", identity: result.results[0] }
-              : result.results.length === 0
-                ? {
-                    status: "new",
-                    message:
-                      result.mkc_lookup?.status === "found"
-                        ? `Not found in the database; MKCentral profile: ${result.mkc_lookup.mkc_name}`
-                        : result.mkc_lookup?.status === "not_found"
-                          ? "Not found in the database or MKCentral"
-                          : result.mkc_lookup?.status === "lookup_failed"
-                            ? `Not found in the database; ${result.mkc_lookup.error ?? "MKCentral lookup failed"}`
-                            : result.mkc_lookup?.status === "ambiguous"
-                              ? `Not found in the database; ${result.mkc_lookup.error ?? "MKCentral returned multiple matches"}`
-                              : "Not found in database",
-                  }
-                : { status: "conflict", message: "Multiple matches" };
-          setIdentityStates((current) => ({ ...current, [playerKey]: nextState }));
-        })
-        .catch((error) => {
-          setIdentityStates((current) => ({
-            ...current,
-            [playerKey]: {
-              status: "conflict",
-              message: error instanceof Error ? error.message : "Lookup failed",
-            },
-          }));
-        });
+    const requestVersion = editorVersion.current;
+    const applyStates = (updates: Record<string, IdentityState>) => {
+      if (editorVersion.current !== requestVersion) return;
+      setIdentityStates((current) => ({
+        ...current,
+        ...Object.fromEntries(
+          Object.entries(updates).filter(([key]) => current[key]?.status === "checking")
+        ),
+      }));
+    };
+    const stateFor = (result: PlayerIdentityResult): IdentityState =>
+      result.results.length === 1
+        ? { status: "confirmed", identity: result.results[0] }
+        : result.results.length === 0
+          ? {
+              status: "new",
+              message:
+                result.mkc_lookup?.status === "found"
+                  ? `Not found in the database; MKCentral profile: ${result.mkc_lookup.mkc_name}`
+                  : result.mkc_lookup?.status === "not_found"
+                    ? "Not found in the database or MKCentral"
+                    : result.mkc_lookup?.status === "lookup_failed"
+                      ? `Not found in the database; ${result.mkc_lookup.error ?? "MKCentral lookup failed"}`
+                      : result.mkc_lookup?.status === "ambiguous"
+                        ? `Not found in the database; ${result.mkc_lookup.error ?? "MKCentral returned multiple matches"}`
+                        : "Not found in database",
+            }
+          : { status: "conflict", message: "Multiple matches" };
+    const failedState = (error: unknown): IdentityState => ({
+      status: "conflict",
+      message: error instanceof Error ? error.message : "Lookup failed",
     });
+
+    fetchPlayerIdentities(pending.map(({ friendCode }) => friendCode))
+      .then(async (results) => {
+        if (editorVersion.current !== requestVersion) return;
+        const updates: Record<string, IdentityState> = {};
+        const unresolved = new Set<string>();
+        for (const { playerKey, friendCode } of pending) {
+          const result = results[friendCode];
+          if (!result) updates[playerKey] = failedState(new Error("Missing identity result"));
+          else if (result.results.length) updates[playerKey] = stateFor(result);
+          else unresolved.add(friendCode);
+        }
+        applyStates(updates);
+        // Keep existing MKCentral enrichment for unknown codes, with at most two
+        // requests in flight. Known players need only the database batch.
+        const remaining = Array.from(unresolved);
+        const enrich = async () => {
+          while (remaining.length && editorVersion.current === requestVersion) {
+            const code = remaining.shift();
+            if (!code) return;
+            let state: IdentityState;
+            try {
+              state = stateFor(await fetchPlayerIdentity(code));
+            } catch (error) {
+              state = failedState(error);
+            }
+            applyStates(
+              Object.fromEntries(
+                pending
+                  .filter(({ friendCode }) => friendCode === code)
+                  .map(({ playerKey }) => [playerKey, state])
+              )
+            );
+          }
+        };
+        await Promise.all([enrich(), enrich()]);
+      })
+      .catch((error) => {
+        applyStates(
+          Object.fromEntries(pending.map(({ playerKey }) => [playerKey, failedState(error)]))
+        );
+      });
   }, [players, identityStates]);
 
   function updateMatch(patch: Partial<MatchJson>): void {
