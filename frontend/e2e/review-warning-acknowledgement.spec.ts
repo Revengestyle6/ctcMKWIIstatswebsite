@@ -165,6 +165,13 @@ async function prepareFailureCase(
       });
     if (path === "/api/playoff-series")
       return route.fulfill({ json: { format: null, series: [] } });
+    if (path === "/api/player-identities/batch") {
+      const codes =
+        new URL(route.request().url()).searchParams.get("friend_codes")?.split(",") ?? [];
+      return route.fulfill({
+        json: Object.fromEntries(codes.map((code) => [code, { reason: "none", results: [] }])),
+      });
+    }
     if (path === "/api/player-identities") return route.fulfill({ json: { results: [] } });
     if (path === "/api/matches/new-entries") return route.fulfill({ json: { new_entries: [] } });
     if (path === "/api/matches/preview")
@@ -210,6 +217,7 @@ for (const stage of [
   "database-additions",
   "auth/session",
   "player-identities",
+  "player-identities/batch",
   "team-roster-pool",
 ] as const) {
   test(`${stage} failures appear in Validation`, async ({ page }) => {
@@ -229,7 +237,7 @@ for (const stage of [
         mimeType: "application/json",
         buffer: Buffer.from(
           JSON.stringify(
-            ["player-identities", "team-roster-pool"].includes(stage)
+            ["player-identities", "player-identities/batch", "team-roster-pool"].includes(stage)
               ? {
                   ...match,
                   result_type: "played",
