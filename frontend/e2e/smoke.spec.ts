@@ -864,6 +864,85 @@ test("json editor updates a loaded match label when its match number changes", a
   await expect(label).toHaveValue("[M4] A vs B");
 });
 
+test("moving a race keeps navigation and exported results in race order", async ({ page }) => {
+  await page.goto("/json-editor?league=ctc");
+  await page.getByRole("button", { name: "Paste JSON", exact: true }).click();
+  const tracks = Array.from({ length: 7 }, (_, index) => `Track ${index + 1}`);
+  const friendCode = "1111-2222-3333";
+  await page.getByLabel("Raw match JSON").fill(
+    JSON.stringify({
+      league: "ctc",
+      season: "s3",
+      division: "d1",
+      match_number: 4,
+      races_played: 7,
+      tracks,
+      teams: {
+        A: {
+          players: {
+            [friendCode]: {
+              mii_name: "Player A",
+              race_positions: [1, 2, null, null, null, null, null],
+              race_scores: [15, 12, null, null, null, null, null],
+            },
+          },
+          missing_player_results: [{ race_number: 1, score: 3, reason: "short_roster" }],
+        },
+        B: { players: {} },
+      },
+    })
+  );
+  await page.getByRole("button", { name: "Load pasted JSON" }).click();
+
+  const raceNumber = page.getByRole("spinbutton", { name: "Race number", exact: true });
+  await raceNumber.fill("7");
+  await raceNumber.press("Enter");
+  await expect(page.getByLabel("Race 7 track")).toHaveValue("Track 1");
+  const navigation = page.getByRole("button", { name: "Previous", exact: true }).locator("..");
+  const raceSelect = navigation.getByRole("combobox");
+  await expect(raceSelect.getByRole("option")).toHaveText(
+    tracks.map((_, index) => `Race ${index + 1}`)
+  );
+  await expect(raceSelect.locator("option:checked")).toHaveText("Race 7");
+  await navigation.getByRole("button", { name: "Previous", exact: true }).click();
+  await expect(page.getByLabel("Race 6 track")).toHaveValue("Track 7");
+  await navigation.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByLabel("Race 7 track")).toHaveValue("Track 1");
+
+  await page.getByRole("button", { name: "All Races", exact: true }).click();
+  await expect(page.getByLabel("Race 1 track")).toHaveValue("Track 2");
+  await page.getByText("Generated JSON Preview", { exact: true }).click();
+  const exported = JSON.parse((await page.locator("details pre").textContent()) ?? "{}");
+  expect(exported.tracks).toEqual([...tracks.slice(1), tracks[0]]);
+  expect(exported.teams.A.players[friendCode].race_positions).toEqual([
+    2,
+    null,
+    null,
+    null,
+    null,
+    null,
+    1,
+  ]);
+  expect(exported.teams.A.players[friendCode].race_scores).toEqual([
+    12,
+    null,
+    null,
+    null,
+    null,
+    null,
+    15,
+  ]);
+  expect(exported.teams.A.missing_player_results).toEqual([
+    { race_number: 7, score: 3, reason: "short_roster" },
+  ]);
+
+  await page.getByRole("button", { name: "One Race", exact: true }).click();
+  await raceNumber.fill("1");
+  await raceNumber.press("Tab");
+  await expect(page.getByLabel("Race 1 track")).toHaveValue("Track 1");
+  await expect(raceSelect.locator("option:checked")).toHaveText("Race 1");
+});
+
 test("GSC receives the correct favicon before React boots", async ({ page }) => {
   await page.route("**/src/index.tsx", (route) => route.abort());
   await page.goto("/?league=gsc");

@@ -1142,6 +1142,27 @@ export default function MatchJsonEditor(): React.JSX.Element {
       current.map((race, raceIndex) => (raceIndex === index ? updater(race) : race))
     );
   }
+  function moveRace(raceIndex: number, raceNumber: number): void {
+    const targetIndex = raceNumber - 1;
+    if (
+      !Number.isInteger(targetIndex) ||
+      targetIndex < 0 ||
+      targetIndex >= races.length ||
+      targetIndex === raceIndex
+    ) {
+      return;
+    }
+
+    setRaces((current) => {
+      const reordered = [...current];
+      const [movedRace] = reordered.splice(raceIndex, 1);
+      reordered.splice(targetIndex, 0, movedRace);
+      return reordered.map((race, index) =>
+        race.raceNumber === index + 1 ? race : { ...race, raceNumber: index + 1 }
+      );
+    });
+    setActiveRace(targetIndex);
+  }
   function resizeRaces(count: number): void {
     const safeCount = Math.max(1, Math.min(99, count));
     setRaces((current) => {
@@ -3099,6 +3120,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   Previous
                 </button>
                 <select
+                  aria-label="Race selection"
                   value={activeRace}
                   onChange={(e) => setActiveRace(Number(e.target.value))}
                   className="rounded border border-white/15 bg-zinc-900 px-4 py-2"
@@ -3157,16 +3179,21 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       <label className={smallLabel}>
                         Race number
                         <input
+                          key={race.raceNumber}
                           type="number"
                           min={1}
+                          max={races.length}
                           step={1}
-                          value={race.raceNumber}
-                          onChange={(e) =>
-                            setRace(raceIndex, (current) => ({
-                              ...current,
-                              raceNumber: Number(e.target.value),
-                            }))
-                          }
+                          defaultValue={race.raceNumber}
+                          onBlur={(event) => {
+                            const input = event.currentTarget;
+                            const nextNumber = input.valueAsNumber;
+                            input.value = String(race.raceNumber);
+                            moveRace(raceIndex, nextNumber);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") event.currentTarget.blur();
+                          }}
                           className={inputClass}
                         />
                       </label>
@@ -3258,7 +3285,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         Delete race
                       </button>
                       <span className="self-center text-xs text-gray-400">
-                        Subsequent race numbers will shift automatically.
+                        Changing a race number moves the race. Other race numbers adjust
+                        automatically.
                       </span>
                     </div>
                     <div className="mb-4 border border-amber-400/30 bg-amber-950/25 p-3">

@@ -24,6 +24,8 @@ The screen keeps match metadata/team/player facts in `match`, and ordered race e
 
 The editor supports team scope selection, roster reuse, player moves between teams, identity/friend-code correction, race placement by drag/drop or selection, room-size changes, disconnection awards, missing-player awards, penalties, regular/playoff metadata, and special results. Moving or renaming a player updates race references along with the player card. Removing a player removes that player's placements and disconnection awards. Shrinking a room preserves only placement slots still inside the room. Inserting/deleting races shifts subsequent race numbers; deleting requires confirmation and preserves at least one race. Race-count resizing clamps to 1–99. Deleting a team confirms removal of its players, placements, disconnection awards, missing-player awards, and identity links. Applying a missing-player award to all or remaining races replaces that team’s existing awards in the affected races.
 
+To move a race, enter its new position and press Enter or leave the field. The intervening races shift by one position, and the moved race stays selected with its track and results.
+
 Catalog requests enrich validation; they do not replace the draft's historical names or race facts. A team assignment differing from recorded participation warns for review instead of automatically moving the player. Download is available during editing and does not require a valid/server-previewed document.
 
 ## 3. Resolve proposed additions
