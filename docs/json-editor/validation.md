@@ -117,6 +117,8 @@ Changing the sorted set of warning messages resets the acknowledgement checkbox.
 
 Lookup-dependent league/team/track checks run only when their catalogs are loaded. Failed scope/team/track fetches do not fabricate “new entry” warnings. The database-aware detection and preview stages still decide whether entries are valid. A player lookup failure is a warning state; an ambiguous proposed identity is a hard approval conflict on the server.
 
+Known team aliases and team season entry tags resolve silently. A match whose two opponents resolve to the same team season entry fails validation.
+
 ## Database-aware detection and approvals
 
 The server always recomputes proposals from the submitted document and current database state. `approved_new_entries` is a set of proposal keys, not a request to blindly create the supplied IDs.

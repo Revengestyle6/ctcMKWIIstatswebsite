@@ -6,6 +6,7 @@ import math
 import re
 import uuid
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -142,7 +143,6 @@ def load_historical_team_corrections(
                     "display_name": (
                         row.get("display_name") or row.get("canonical_tag") or ""
                     ).strip(),
-                    "note": (row.get("note") or "").strip(),
                 }
     return aliases
 
@@ -168,7 +168,6 @@ def load_database_team_aliases(
             "team_id": row.team_id,
             "canonical_tag": row.canonical_tag,
             "display_name": row.canonical_name,
-            "note": "League-scoped team identity.",
         }
     database_aliases = session.execute(
         select(TeamAlias.alias_value, Team.team_id, Team.canonical_tag, Team.canonical_name)
@@ -180,7 +179,6 @@ def load_database_team_aliases(
             "team_id": row.team_id,
             "canonical_tag": row.canonical_tag,
             "display_name": row.canonical_name,
-            "note": "Database-managed team alias.",
         }
     # A season tag identifies a competing entry, even when its canonical team
     # owns other entries in the same division. Prefer it over global aliases.
@@ -207,7 +205,6 @@ def load_database_team_aliases(
             "team_id": entry.team_id,
             "canonical_tag": entry.clan_tag,
             "display_name": entry.display_name,
-            "note": "Season team entry.",
         }
     for (league, season, division, name), entries in names_by_scope.items():
         if len(entries) == 1 and (league, season, division, name) not in scoped_tag_keys:
@@ -274,7 +271,7 @@ def resolve_team_alias(
         for candidate, alias in aliases.items():
             if tuple(database_text_key(session, value) for value in candidate) == normalized_key:
                 return alias
-    return {"canonical_tag": raw_team_key, "display_name": raw_team_key, "note": ""}
+    return {"canonical_tag": raw_team_key, "display_name": raw_team_key}
 
 
 def get_or_create_season(session, league_code: str, season_code: str) -> Season:
@@ -797,6 +794,21 @@ def normalize_match_objects(data: Any) -> tuple[str, list[dict[str, Any]]]:
     return "unknown", []
 
 
+def without_legacy_team_alias_notes(notes: str, raw_team_keys: Iterable[str]) -> str:
+    """Remove generated alias mapping sentences copied into older match documents."""
+    if "Team alias applied: " not in notes:
+        return notes
+    team_keys = "|".join(re.escape(key) for key in raw_team_keys)
+    if not team_keys:
+        return notes
+    cleaned, removed = re.subn(
+        rf"(?<!\S)Team alias applied: (?:{team_keys}) -> [^\r\n]+?\.(?=\s|$)[ \t]*",
+        "",
+        notes,
+    )
+    return cleaned.strip() if removed else notes
+
+
 def import_match(
     session,
     source_file: SourceFile,
@@ -866,8 +878,6 @@ def import_match(
             team_data.get("hex_color"),
         )
         resolved_teams[raw_team_key] = (alias, team, team_entry)
-        if alias.get("note"):
-            review_notes.append(f"Team alias applied: {raw_team_key} -> {alias['canonical_tag']}.")
     if len(set(resolved_team_keys)) != 2:
         review_notes.append(
             f"Expected 2 resolved teams, found {len(set(resolved_team_keys))} from {len(teams)} raw team objects."
@@ -915,6 +925,7 @@ def import_match(
             match_label += f" [Unaccounted · {mode_label}]"
 
     explicit_review_notes = str(match_data.get("review_notes") or "").strip()
+    explicit_review_notes = without_legacy_team_alias_notes(explicit_review_notes, teams)
     combined_review_notes = [explicit_review_notes] if explicit_review_notes else []
     combined_review_notes.extend(note for note in review_notes if note not in explicit_review_notes)
 

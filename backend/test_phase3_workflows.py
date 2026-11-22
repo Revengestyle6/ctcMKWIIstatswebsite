@@ -38,6 +38,8 @@ from models import (
     RacePlayerResult,
     ReviewSubmission,
     SourceFile,
+    TeamAlias,
+    TeamLeagueIdentity,
     Track,
 )
 from phase3_maintenance import repair_accepted_archives
@@ -378,6 +380,55 @@ class Phase3WorkflowTests(unittest.TestCase):
                 json.loads(self.storage.read(result["archive_path"]))["match_label"],
                 result["match"]["label"],
             )
+
+    def test_team_alias_lookup_is_silent_and_legacy_edit_notes_are_cleaned(self):
+        from app import app
+
+        accepted = self._accept_match().payload
+        path = f"/api/admin/matches/{accepted['match_id']}"
+        headers = {"X-Dev-Admin-Email": self.actor.email}
+        admin_note = "An administrator verified the original team assignment."
+        legacy_notes = f"Team alias applied: CS -> CS. {admin_note} Team alias applied: sts -> sts."
+        with self.SessionLocal.begin() as session:
+            match = session.get(Match, accepted["match_id"])
+            match.review_notes = legacy_notes
+            team_id = session.scalar(
+                select(TeamLeagueIdentity.team_id).where(TeamLeagueIdentity.tag == "CS")
+            )
+            session.add(TeamAlias(team_id=team_id, alias_value="Cosmic alias"))
+
+        with (
+            patch.dict("os.environ", {"APP_ENV": "test", "ALLOW_DEV_AUTH": "true"}),
+            patch("admin_auth.SessionLocal", self.SessionLocal),
+            patch.object(stats, "SessionLocal", self.SessionLocal),
+            app.test_client() as client,
+        ):
+            upload = {**self.match_data, "match_number": 7, "match_label": "M7 sts vs CS"}
+            upload["teams"] = dict(upload["teams"])
+            upload["teams"]["Cosmic alias"] = upload["teams"].pop("CS")
+            preview = client.post("/api/matches/preview", json={"match": upload})
+            self.assertEqual(preview.status_code, 200, preview.get_json())
+            detail = preview.get_json()["match"]
+            self.assertEqual({team["tag"] for team in detail["teams"]}, {"CS", "sts"})
+            self.assertIsNone(detail["review_notes"])
+
+            response = client.get(f"{path}/management", headers=headers)
+            self.assertEqual(response.status_code, 200, response.get_json())
+            original = response.get_json()["match"]
+            self.assertEqual(original["review_notes"], admin_note)
+            response = client.post(
+                f"{path}/preview",
+                json={
+                    "match": {**original, "review_notes": legacy_notes},
+                    "expected_source_fingerprint": accepted["fingerprint"],
+                },
+                headers=headers,
+            )
+            self.assertEqual(response.status_code, 200, response.get_json())
+            result = response.get_json()
+            self.assertEqual(result["match"]["review_notes"], admin_note)
+            changes = result["preview"]["edit_summary"]["changes"]
+            self.assertNotIn("review_notes", {change["path"] for change in changes})
 
     def test_match_edit_prunes_only_unsupported_imported_player_catalog_rows(self):
         accepted = self._accept_match()

@@ -6,7 +6,11 @@ from datetime import datetime, timezone
 from pathlib import PurePosixPath
 
 from admin_auth import record_audit
-from import_json_to_db import detect_new_entries, import_editor_match
+from import_json_to_db import (
+    detect_new_entries,
+    import_editor_match,
+    without_legacy_team_alias_notes,
+)
 from match_review import mkc_profiles_from_entries, unapproved_entries
 from match_upload import (
     AdditionCapture,
@@ -445,7 +449,20 @@ def match_document_for_edit(original_json: dict, metadata: dict) -> dict:
             document["match_number"] = metadata["match_number"]
     if not str(document.get("match_label") or "").strip():
         document["match_label"] = metadata["label"]
+    _clean_edit_review_notes(document)
     return document
+
+
+def _clean_edit_review_notes(document: dict) -> None:
+    notes = document.get("review_notes")
+    teams = document.get("teams")
+    if isinstance(notes, str) and isinstance(teams, dict):
+        cleaned = without_legacy_team_alias_notes(notes, teams)
+        if cleaned != notes:
+            if cleaned:
+                document["review_notes"] = cleaned
+            else:
+                document.pop("review_notes")
 
 
 def _update_renumbered_label(match: Match, match_data: dict) -> None:
@@ -464,6 +481,7 @@ def _update_renumbered_label(match: Match, match_data: dict) -> None:
 
 def prepare_match_edit(match: Match, match_data: dict) -> UploadDocument:
     _update_renumbered_label(match, match_data)
+    _clean_edit_review_notes(match_data)
     validate_committable_match(match_data)
     return prepare_upload_document(match_data)
 
@@ -574,7 +592,9 @@ def replace_match(
     summary = {
         "changes": _changes(
             _normalized_for_edit_comparison(
-                match_document_for_edit(before, before_inventory["match"])
+                match_document_for_edit(
+                    before_inventory["original_json"], before_inventory["match"]
+                )
             ),
             _normalized_for_edit_comparison(match_data),
         ),
