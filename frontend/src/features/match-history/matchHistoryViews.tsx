@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import type { CompetitionStatus } from "../../api";
 import type { AggregateAward, AggregateScore } from "../match-editor/unaccountedMatchModel";
 import { UnaccountedScorecard } from "./UnaccountedScorecard";
 
@@ -19,7 +20,7 @@ export type MatchSummary = {
   races: number;
   teams: string;
   scores: string;
-  team_statuses: Array<"active" | "dropped" | "disqualified">;
+  team_statuses: Array<CompetitionStatus>;
   import_status: string;
   review_notes: string | null;
   last_update_at?: string | null;
@@ -49,7 +50,7 @@ export type MatchTeam = {
   team_id: number;
   tag: string;
   name: string;
-  competition_status: "active" | "dropped" | "disqualified";
+  competition_status: CompetitionStatus;
   competition_status_note: string | null;
   hex_color: string;
   raw_total_score: number;

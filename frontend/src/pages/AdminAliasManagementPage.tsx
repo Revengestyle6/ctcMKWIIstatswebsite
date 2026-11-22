@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { deleteJson, fetchJson, patchJson, postJson } from "../api";
+import { type CompetitionStatus, deleteJson, fetchJson, patchJson, postJson } from "../api";
 import AdminSessionPanel from "../components/AdminSessionPanel";
 import AdminMatchManager from "../components/admin/AdminMatchManager";
 import CompetitionSetupManager from "../components/admin/CompetitionSetupManager";
@@ -130,7 +130,7 @@ type TeamIdentitySnapshot = {
     division: { id: number; code: string; name: string };
     display_name: string;
     clan_tag: string;
-    competition_status: "active" | "dropped" | "disqualified";
+    competition_status: CompetitionStatus;
     competition_status_note: string | null;
   }>;
 };

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  type CompetitionStatus,
   deleteJson,
   fetchJson,
   patchJson,
@@ -45,7 +46,7 @@ type SetupEntry = {
   display_name: string;
   clan_tag: string;
   hex_color: string | null;
-  competition_status: "active" | "dropped" | "disqualified";
+  competition_status: CompetitionStatus;
   conference: SetupConference | null;
 };
 type SetupCatalog = {

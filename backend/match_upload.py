@@ -29,7 +29,11 @@ from models import (
     Track,
     TrackAlias,
 )
-from playoff_service import ensure_match_label, validate_competition_metadata
+from playoff_service import (
+    ensure_match_label,
+    numbered_regular_match_label,
+    validate_competition_metadata,
+)
 from sqlalchemy import event, select
 from unaccounted_matches import is_unaccounted, validate_unaccounted_match
 
@@ -86,12 +90,8 @@ def _archive_filename(match_data: dict[str, Any], fingerprint: str) -> str:
         match_number = match_data.get("series_match_number")
         stage_label = f"Semifinals Series {series_number}" if stage == "semifinals" else "Finals"
         label = f"{stage_label} - Match {match_number}"
-    elif (
-        isinstance(match_number, (int, float))
-        and int(match_number) > 0
-        and not re.match(r"^M\d+\b", label, re.IGNORECASE)
-    ):
-        label = f"M{int(match_number)} {label}".strip()
+    elif type(match_number) is int and match_number > 0:
+        label = numbered_regular_match_label(label, match_number)
     label = label.removesuffix(".json").removesuffix(".txt")
     label = UNSAFE_FILENAME_RE.sub(" ", label).strip(" .")
     label = re.sub(r"\s+", " ", label)

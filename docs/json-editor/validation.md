@@ -117,6 +117,8 @@ Changing the sorted set of warning messages resets the acknowledgement checkbox.
 
 Lookup-dependent league/team/track checks run only when their catalogs are loaded. Failed scope/team/track fetches do not fabricate “new entry” warnings. The database-aware detection and preview stages still decide whether entries are valid. A player lookup failure is a warning state; an ambiguous proposed identity is a hard approval conflict on the server.
 
+Known team aliases and team season entry tags resolve silently. A match whose two opponents resolve to the same team season entry fails validation.
+
 ## Database-aware detection and approvals
 
 The server always recomputes proposals from the submitted document and current database state. `approved_new_entries` is a set of proposal keys, not a request to blindly create the supplied IDs.
@@ -209,7 +211,7 @@ The rolled-back preview and final import both flush real relational records, so 
 | Records | Constraints |
 | --- | --- |
 | Season/division | Unique league + season code; unique season + division code. |
-| Team identities | Case-insensitive unique league + team tag; unique team alias value; unique season + division + team-entry tag. Team competition status limited to active/dropped/disqualified. |
+| Team identities | Case-insensitive unique league + team tag; unique team alias value; unique season + division + team-entry tag. Team competition status limited to active/dropped. |
 | Player identities | Unique friend code globally; unique player + alias type + alias value; unique player + team season entry. Imported code/alias origin is match_import or admin. |
 | Track catalog | Unique league + canonical track name; unique track + alias value. |
 | Source file | Unique logical source path and unique SHA-256; provider local/gcs; archive status pending/complete/repair_required. |

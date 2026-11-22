@@ -185,7 +185,9 @@ export function normalizeMatchForEditor(match: MatchJson): MatchJson {
   return normalized;
 }
 
-export function automaticMatchLabel(match: MatchJson): string {
+export type MatchNumbers = Pick<MatchJson, "match_number" | "series_match_number">;
+
+export function automaticMatchLabel(match: MatchJson, loadedNumbers?: MatchNumbers): string {
   let existing = String(match.match_label ?? "")
     .trim()
     .replace(/ — (Free win|Mutual tie)$/, "");
@@ -196,8 +198,13 @@ export function automaticMatchLabel(match: MatchJson): string {
         ? "Mutual tie"
         : "";
   if (resultLabel) existing = existing.replace(/ \[Unaccounted[^\]]*\]$/, "");
-  if (existing) return [existing, resultLabel].filter(Boolean).join(" — ");
   if (match.match_type === "playoff") {
+    if (
+      existing &&
+      (!loadedNumbers || loadedNumbers.series_match_number === match.series_match_number)
+    ) {
+      return existing;
+    }
     const seriesLabel =
       match.playoff_stage === "finals"
         ? "Finals"
@@ -212,6 +219,13 @@ export function automaticMatchLabel(match: MatchJson): string {
     Number.isInteger(match.match_number) && Number(match.match_number) > 0
       ? `M${match.match_number}`
       : "";
+  if (existing) {
+    if (numberLabel && loadedNumbers && loadedNumbers.match_number !== match.match_number) {
+      const description = existing.replace(/^(?:[MW]\d+(?:\s+\[M\d+\])?|\[M\d+\])(?=\s|$)\s*/i, "");
+      existing = [numberLabel, description].filter(Boolean).join(" ");
+    }
+    return [existing, resultLabel].filter(Boolean).join(" — ");
+  }
   const matchup = Object.entries(match.teams ?? {})
     .slice(0, 2)
     .map(([teamKey, team]) => teamTag(teamKey, team))
@@ -363,8 +377,13 @@ function gpGroups(scores: Array<number | null>): Array<Array<number | null>> {
   return result;
 }
 
-export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
+export function compileMatch(
+  match: MatchJson,
+  races: RaceDraft[],
+  loadedNumbers?: MatchNumbers
+): MatchJson {
   const normalizedMatch = normalizeMatchForEditor(match);
+  const matchLabel = automaticMatchLabel(normalizedMatch, loadedNumbers);
   const specialResult =
     normalizedMatch.result_type === "free_win" || normalizedMatch.result_type === "mutual_tie";
   if (specialResult) {
@@ -399,7 +418,7 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
               normalizedMatch.teams?.[normalizedMatch.free_win_winner] ?? {}
             )
           : undefined,
-      match_label: automaticMatchLabel(normalizedMatch),
+      match_label: matchLabel,
       format: "5v5",
       title_str: "#title 0 races\n",
       races_played: 0,
@@ -418,7 +437,7 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
     );
     return compileUnaccounted(
       { ...normalizedMatch, free_win_winner: undefined, teams },
-      automaticMatchLabel(normalizedMatch)
+      matchLabel
     );
   }
   const orderedRaces = [...races].sort((left, right) => left.raceNumber - right.raceNumber);
@@ -517,7 +536,7 @@ export function compileMatch(match: MatchJson, races: RaceDraft[]): MatchJson {
   return {
     ...normalizedMatch,
     free_win_winner: undefined,
-    match_label: automaticMatchLabel(normalizedMatch),
+    match_label: matchLabel,
     rxx: (normalizedMatch.rxx ?? []).map((code) => code.trim()).filter(Boolean),
     title_str: `#title ${orderedRaces.length} races\n`,
     races_played: orderedRaces.length,

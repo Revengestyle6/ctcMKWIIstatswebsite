@@ -374,7 +374,7 @@ export default function TeamDashboard() {
               {currentEntry && currentEntry.competition_status !== "active" ? (
                 <span
                   title={currentEntry.competition_status_note || undefined}
-                  className={`rounded-full border px-2.5 py-1 text-xs font-bold uppercase ${currentEntry.competition_status === "disqualified" ? "border-red-300/40 bg-red-950/70 text-red-200" : "border-amber-300/40 bg-amber-950/70 text-amber-200"}`}
+                  className="rounded-full border border-amber-300/40 bg-amber-950/70 px-2.5 py-1 text-xs font-bold uppercase text-amber-200"
                 >
                   {currentEntry.competition_status}
                 </span>

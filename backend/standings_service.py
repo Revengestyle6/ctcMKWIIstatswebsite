@@ -21,7 +21,6 @@ from sqlalchemy import select
 from stats_queries import _get_scope, list_playoff_series
 from unaccounted_matches import aggregate_player_rows
 
-INACTIVE_STATUSES = frozenset({"dropped", "disqualified"})
 LEADERBOARD_ROLES = ("runner", "bagger")
 
 
@@ -63,8 +62,8 @@ def _adjusted_match(team_rows, records, result_type):
     left, right = team_rows
     if result_type == "mutual_tie":
         return {left.team_season_entry_id: 0, right.team_season_entry_id: 0}, False, False
-    left_inactive = records[left.team_season_entry_id]["status"] in INACTIVE_STATUSES
-    right_inactive = records[right.team_season_entry_id]["status"] in INACTIVE_STATUSES
+    left_inactive = records[left.team_season_entry_id]["status"] == "dropped"
+    right_inactive = records[right.team_season_entry_id]["status"] == "dropped"
     if left_inactive and right_inactive:
         return {left.team_season_entry_id: 0, right.team_season_entry_id: 0}, True, True
     if left_inactive:
@@ -251,7 +250,7 @@ def _race_equivalent_gps(race_count):
 
 
 def _role_eligibility(status, role, role_races, team_races):
-    if status in INACTIVE_STATUSES:
+    if status == "dropped":
         return False, f"Team {status}"
     if team_races <= 0 or role_races * 3 < team_races * 2:
         return (
@@ -378,7 +377,7 @@ def _player_leaderboard(session, scope, records):
             role: _race_equivalent_gps(data[f"{role}_races"]) for role in LEADERBOARD_ROLES
         }
         required_gps = team_race_count / 6
-        status_eligible = data["team_status"] not in INACTIVE_STATUSES
+        status_eligible = data["team_status"] != "dropped"
         participation_eligible = team_race_count > 0 and played_races * 3 >= team_race_count * 2
         role_eligibility = {
             role: _role_eligibility(
@@ -555,7 +554,7 @@ def get_division_standings(session, *, league, season, division):
                 }
             )
 
-    active_ordered = [record for record in ordered if record["status"] not in INACTIVE_STATUSES]
+    active_ordered = [record for record in ordered if record["status"] != "dropped"]
     playoff_config = session.get(DivisionPlayoffConfig, scope.division_id)
     playoff_team_count = playoff_config.playoff_team_count if playoff_config else None
     qualifiers = []
@@ -563,8 +562,7 @@ def get_division_standings(session, *, league, season, division):
         winners = [
             conference["standings"][0]
             for conference in conference_standings
-            if conference["standings"]
-            and conference["standings"][0]["status"] not in INACTIVE_STATUSES
+            if conference["standings"] and conference["standings"][0]["status"] != "dropped"
         ]
         winners = _rank_records(
             {record["team_season_entry_id"]: record for record in winners},

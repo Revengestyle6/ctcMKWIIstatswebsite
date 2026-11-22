@@ -1,4 +1,4 @@
-import { fetchCachedJson } from "./api";
+import { type CompetitionStatus, fetchCachedJson } from "./api";
 import { MATCH_SETS, type MatchSet } from "./config/matchSets";
 
 export type PlayerRoleMode = "runner" | "bagger";
@@ -159,7 +159,7 @@ export interface TeamAppearance {
   tag: string;
   hex_color: string | null;
   logo_url: string;
-  competition_status: "active" | "dropped" | "disqualified";
+  competition_status: CompetitionStatus;
   competition_status_note: string | null;
 }
 
@@ -200,7 +200,7 @@ export interface TeamOverview {
       name: string;
       tag: string;
       hex_color: string | null;
-      competition_status: "active" | "dropped" | "disqualified";
+      competition_status: CompetitionStatus;
       competition_status_note: string | null;
     } | null;
     appearances: TeamAppearance[];

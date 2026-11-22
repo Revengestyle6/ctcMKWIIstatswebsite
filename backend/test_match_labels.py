@@ -34,6 +34,20 @@ class MatchLabelTests(unittest.TestCase):
         self.assertEqual(ensure_match_label(match), "Original imported label")
         self.assertEqual(match["match_label"], "Original imported label")
 
+    def test_archive_filename_uses_match_number_with_loaded_labels(self):
+        for label in ("W4 [M4] A vs B", "[M4] A vs B", "M4 A vs B", "A vs B"):
+            with self.subTest(label=label):
+                document = prepare_upload_document(
+                    {
+                        "league": "ctc",
+                        "season": "s3",
+                        "division": "d1",
+                        "match_number": 7,
+                        "match_label": f"{label} — Free win",
+                    }
+                )
+                self.assertEqual(document.filename, "M7 A vs B Free win.json")
+
     def test_playoff_label_uses_series_metadata(self):
         match = {
             "match_type": "playoff",

@@ -1,3 +1,4 @@
+import type { CompetitionStatus } from "../../api";
 export type LeaderboardPlayer = {
   unaccounted_matches?: number;
   player_id: number;
@@ -5,7 +6,7 @@ export type LeaderboardPlayer = {
   team_id: number;
   team_tag: string;
   team_season_entry_id: number;
-  team_status: "active" | "dropped" | "disqualified";
+  team_status: CompetitionStatus;
   gps_played: number;
   team_gps: number;
   required_gps: number;

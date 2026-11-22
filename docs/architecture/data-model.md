@@ -291,8 +291,7 @@ and compatibility with older global/season records.
 ### `team_season_entries`
 
 A global team's season/division membership with display name, clan tag, color,
-optional `conference_id`, and competition status (`active`, `dropped`, or
-`disqualified`) with optional note/change timestamp.
+optional `conference_id`, and competition status (`active` or `dropped`) with optional note/change timestamp.
 `(season_id, division_id, clan_tag)` is unique. Match facts link this scoped entry,
 not just the global team. Administrators may edit the display name and clan tag;
 imports therefore reuse entries by stable team, season, and division identity

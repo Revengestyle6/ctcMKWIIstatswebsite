@@ -24,6 +24,8 @@ The screen keeps match metadata/team/player facts in `match`, and ordered race e
 
 The editor supports team scope selection, roster reuse, player moves between teams, identity/friend-code correction, race placement by drag/drop or selection, room-size changes, disconnection awards, missing-player awards, penalties, regular/playoff metadata, and special results. Moving or renaming a player updates race references along with the player card. Removing a player removes that player's placements and disconnection awards. Shrinking a room preserves only placement slots still inside the room. Inserting/deleting races shifts subsequent race numbers; deleting requires confirmation and preserves at least one race. Race-count resizing clamps to 1–99. Deleting a team confirms removal of its players, placements, disconnection awards, missing-player awards, and identity links. Applying a missing-player award to all or remaining races replaces that team’s existing awards in the affected races.
 
+To move a race, enter its new position and press Enter or leave the field. The intervening races shift by one position, and the moved race stays selected with its track and results.
+
 Catalog requests enrich validation; they do not replace the draft's historical names or race facts. A team assignment differing from recorded participation warns for review instead of automatically moving the player. Download is available during editing and does not require a valid/server-previewed document.
 
 ## 3. Resolve proposed additions
@@ -151,6 +153,7 @@ Edit mode uses dedicated administrator routes. It retains the match ID and sourc
 1. Load original JSON and `source_fingerprint` from the management route.
 2. Detect additions through `/api/admin/matches/<id>/new-entries`, with the existing match temporarily removed inside a rolled-back transaction.
 3. Preview through `/api/admin/matches/<id>/preview`; `replace_match` checks the original source fingerprint and returns a structural change summary, record counts, references, preserved shared records, and proposed additions. Preview then rolls back.
+   A match number change updates the label and archive filename together. For example, `[M4] A vs B` becomes `M7 A vs B` when the match moves to number 7.
 4. Review the summary or download the edit-review report. Replacement row IDs are deliberately omitted from the report because preview IDs do not survive rollback.
 5. `PATCH /api/admin/matches/<id>` first compares the preview fingerprint, preserves old JSON under `replaced/matches/<id>/...`, and stages the replacement bytes. These storage writes happen before the replacement transaction; a failure here leaves the accepted match unchanged.
 6. Inside the replacement transaction, compare the original source fingerprint, lock the match, validate again, and commit the replacement.

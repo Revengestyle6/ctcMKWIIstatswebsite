@@ -50,8 +50,7 @@ class RoleGpEligibilityTests(unittest.TestCase):
 
     def test_empty_and_inactive_teams_do_not_qualify(self):
         self.assertFalse(_role_eligibility("active", "runner", 0, 0)[0])
-        for status in ("dropped", "disqualified"):
-            self.assertEqual(_role_eligibility(status, "runner", 10, 10), (False, f"Team {status}"))
+        self.assertEqual(_role_eligibility("dropped", "runner", 10, 10), (False, "Team dropped"))
 
     def test_role_average_treats_each_four_role_races_as_one_gp(self):
         self.assertEqual(_role_gp_average(1088, 132), 32.97)

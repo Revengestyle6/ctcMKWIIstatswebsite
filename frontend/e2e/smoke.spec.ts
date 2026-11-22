@@ -298,9 +298,11 @@ test("signed-in administrators can update a team competition status from standin
     });
   });
 
-  await page.goto("/standings?league=gsc&season=s15&division=d1");
+  await page.goto("/standings?league=ctc&season=s2&division=d1");
   await expect(page.getByRole("heading", { name: "Team Competition Status" })).toBeVisible();
-  await page.getByLabel("Status").selectOption("dropped");
+  const status = page.getByLabel("Status");
+  await expect(status.locator("option")).toHaveText(["Active", "Dropped"]);
+  await status.selectOption("dropped");
   await page.getByRole("button", { name: "Save status" }).click();
   await expect(page.getByText("Competition status saved")).toBeVisible();
   expect(submittedStatus).toBe("dropped");
@@ -418,10 +420,11 @@ test("alias manager updates a selected team season entry through the shared stat
   await expect(statusPanel).toBeVisible();
   const statusSelects = statusPanel.locator("select");
   await expect(statusSelects.first().locator("option:checked")).toHaveText(/GSC S3 D1/);
-  await statusSelects.nth(1).selectOption("disqualified");
+  await expect(statusSelects.nth(1).locator("option")).toHaveText(["Active", "Dropped"]);
+  await statusSelects.nth(1).selectOption("dropped");
   await statusPanel.getByRole("button", { name: "Save status" }).click();
   await expect(page.getByText("Competition status saved")).toBeVisible();
-  expect(submittedStatus).toBe("disqualified");
+  expect(submittedStatus).toBe("dropped");
 });
 
 test("competition setup keeps actions independent and browses registered teams by division", async ({
@@ -835,6 +838,109 @@ test("json editor validates and loads pasted raw JSON", async ({ page }) => {
   await expect(page.getByText("Pasted JSON", { exact: true })).toBeVisible();
   await expect(page.getByText("Division is missing.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Review & Upload" }).first()).toBeDisabled();
+});
+
+test("json editor updates a loaded match label when its match number changes", async ({ page }) => {
+  await page.goto("/json-editor?league=ctc");
+  await page.getByRole("button", { name: "Paste JSON", exact: true }).click();
+  await page.getByLabel("Raw match JSON").fill(
+    JSON.stringify({
+      league: "ctc",
+      season: "s3",
+      division: "d1",
+      week: 4,
+      match_label: "[M4] A vs B",
+      teams: {},
+    })
+  );
+  await page.getByRole("button", { name: "Load pasted JSON" }).click();
+
+  const label = page.getByLabel("Match label, locked");
+  const number = page.getByRole("spinbutton", { name: /^match number/i });
+  await expect(label).toHaveValue("[M4] A vs B");
+  await number.fill("7");
+  await expect(label).toHaveValue("M7 A vs B");
+  await number.fill("4");
+  await expect(label).toHaveValue("[M4] A vs B");
+});
+
+test("moving a race keeps navigation and exported results in race order", async ({ page }) => {
+  await page.goto("/json-editor?league=ctc");
+  await page.getByRole("button", { name: "Paste JSON", exact: true }).click();
+  const tracks = Array.from({ length: 7 }, (_, index) => `Track ${index + 1}`);
+  const friendCode = "1111-2222-3333";
+  await page.getByLabel("Raw match JSON").fill(
+    JSON.stringify({
+      league: "ctc",
+      season: "s3",
+      division: "d1",
+      match_number: 4,
+      races_played: 7,
+      tracks,
+      teams: {
+        A: {
+          players: {
+            [friendCode]: {
+              mii_name: "Player A",
+              race_positions: [1, 2, null, null, null, null, null],
+              race_scores: [15, 12, null, null, null, null, null],
+            },
+          },
+          missing_player_results: [{ race_number: 1, score: 3, reason: "short_roster" }],
+        },
+        B: { players: {} },
+      },
+    })
+  );
+  await page.getByRole("button", { name: "Load pasted JSON" }).click();
+
+  const raceNumber = page.getByRole("spinbutton", { name: "Race number", exact: true });
+  await raceNumber.fill("7");
+  await raceNumber.press("Enter");
+  await expect(page.getByLabel("Race 7 track")).toHaveValue("Track 1");
+  const navigation = page.getByRole("button", { name: "Previous", exact: true }).locator("..");
+  const raceSelect = navigation.getByRole("combobox");
+  await expect(raceSelect.getByRole("option")).toHaveText(
+    tracks.map((_, index) => `Race ${index + 1}`)
+  );
+  await expect(raceSelect.locator("option:checked")).toHaveText("Race 7");
+  await navigation.getByRole("button", { name: "Previous", exact: true }).click();
+  await expect(page.getByLabel("Race 6 track")).toHaveValue("Track 7");
+  await navigation.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByLabel("Race 7 track")).toHaveValue("Track 1");
+
+  await page.getByRole("button", { name: "All Races", exact: true }).click();
+  await expect(page.getByLabel("Race 1 track")).toHaveValue("Track 2");
+  await page.getByText("Generated JSON Preview", { exact: true }).click();
+  const exported = JSON.parse((await page.locator("details pre").textContent()) ?? "{}");
+  expect(exported.tracks).toEqual([...tracks.slice(1), tracks[0]]);
+  expect(exported.teams.A.players[friendCode].race_positions).toEqual([
+    2,
+    null,
+    null,
+    null,
+    null,
+    null,
+    1,
+  ]);
+  expect(exported.teams.A.players[friendCode].race_scores).toEqual([
+    12,
+    null,
+    null,
+    null,
+    null,
+    null,
+    15,
+  ]);
+  expect(exported.teams.A.missing_player_results).toEqual([
+    { race_number: 7, score: 3, reason: "short_roster" },
+  ]);
+
+  await page.getByRole("button", { name: "One Race", exact: true }).click();
+  await raceNumber.fill("1");
+  await raceNumber.press("Tab");
+  await expect(page.getByLabel("Race 1 track")).toHaveValue("Track 1");
+  await expect(raceSelect.locator("option:checked")).toHaveText("Race 1");
 });
 
 test("GSC receives the correct favicon before React boots", async ({ page }) => {

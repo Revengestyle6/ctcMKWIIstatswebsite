@@ -296,7 +296,7 @@ class TeamSeasonEntry(Base):
             "season_id", "division_id", "clan_tag", name="uq_team_entry_season_division_tag"
         ),
         CheckConstraint(
-            "competition_status IN ('active', 'dropped', 'disqualified')",
+            "competition_status IN ('active', 'dropped')",
             name="ck_team_season_entry_competition_status",
         ),
     )

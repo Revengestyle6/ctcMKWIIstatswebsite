@@ -6,10 +6,15 @@ from datetime import datetime, timezone
 from pathlib import PurePosixPath
 
 from admin_auth import record_audit
-from import_json_to_db import detect_new_entries, import_editor_match
+from import_json_to_db import (
+    detect_new_entries,
+    import_editor_match,
+    without_legacy_team_alias_notes,
+)
 from match_review import mkc_profiles_from_entries, unapproved_entries
 from match_upload import (
     AdditionCapture,
+    UploadDocument,
     find_match_conflict,
     prepare_upload_document,
     record_addition_logs,
@@ -42,6 +47,7 @@ from models import (
     UnaccountedPlayerScore,
     UnaccountedTeamAward,
 )
+from playoff_service import automatic_match_label, match_type, numbered_regular_match_label
 from sqlalchemy import delete, func, select, update
 
 
@@ -436,6 +442,50 @@ def _normalized_for_edit_comparison(match_data: dict) -> dict:
     return normalized
 
 
+def match_document_for_edit(original_json: dict, metadata: dict) -> dict:
+    document = dict(original_json)
+    if document.get("match_number") is None and document.get("week") is None:
+        if metadata["match_number"] is not None:
+            document["match_number"] = metadata["match_number"]
+    if not str(document.get("match_label") or "").strip():
+        document["match_label"] = metadata["label"]
+    _clean_edit_review_notes(document)
+    return document
+
+
+def _clean_edit_review_notes(document: dict) -> None:
+    notes = document.get("review_notes")
+    teams = document.get("teams")
+    if isinstance(notes, str) and isinstance(teams, dict):
+        cleaned = without_legacy_team_alias_notes(notes, teams)
+        if cleaned != notes:
+            if cleaned:
+                document["review_notes"] = cleaned
+            else:
+                document.pop("review_notes")
+
+
+def _update_renumbered_label(match: Match, match_data: dict) -> None:
+    if match_type(match_data) == "playoff":
+        if match_data.get("series_match_number") != match.series_match_number:
+            match_data["match_label"] = automatic_match_label(match_data)
+        return
+    number = match_data.get("match_number", match_data.get("week"))
+    label = str(match_data.get("match_label") or "").strip()
+    if type(number) is int and number > 0 and number != match.match_number:
+        match_data["match_number"] = number
+        match_data.pop("week", None)
+        if label:
+            match_data["match_label"] = numbered_regular_match_label(label, number)
+
+
+def prepare_match_edit(match: Match, match_data: dict) -> UploadDocument:
+    _update_renumbered_label(match, match_data)
+    _clean_edit_review_notes(match_data)
+    validate_committable_match(match_data)
+    return prepare_upload_document(match_data)
+
+
 def edit_preview_summary(summary: dict) -> dict:
     """Exclude transaction-only IDs that will not survive a rolled-back preview."""
     preview_summary = dict(summary)
@@ -465,8 +515,7 @@ def replace_match(
         )
     if not expected_source_fingerprint or source.file_sha256 != expected_source_fingerprint:
         raise ValueError("The match changed after it was loaded. Reload it before editing.")
-    validate_committable_match(match_data)
-    document = prepare_upload_document(match_data)
+    document = prepare_match_edit(match, match_data)
     before = _json(match.raw_json)
     original_created_at = match.created_at
     original_match_index = match.match_index_in_source
@@ -542,7 +591,11 @@ def replace_match(
     after_inventory = match_inventory(session, match_id)
     summary = {
         "changes": _changes(
-            _normalized_for_edit_comparison(before),
+            _normalized_for_edit_comparison(
+                match_document_for_edit(
+                    before_inventory["original_json"], before_inventory["match"]
+                )
+            ),
             _normalized_for_edit_comparison(match_data),
         ),
         "records_before": before_inventory["records_deleted"],
@@ -605,6 +658,7 @@ def detect_edit_entries(
             "This legacy source contains multiple matches and cannot be edited safely. "
             "Delete and re-upload this match as a single-match JSON file instead."
         )
+    _update_renumbered_label(match, match_data)
     validate_committable_match(match_data)
     _detach_match_references(session, match_id)
     _delete_match_rows(session, match)

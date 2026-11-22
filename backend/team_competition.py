@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from models import TeamSeasonEntry
 
-VALID_COMPETITION_STATUSES = frozenset({"active", "dropped", "disqualified"})
+VALID_COMPETITION_STATUSES = frozenset({"active", "dropped"})
 
 
 def update_team_competition_status(session, team_season_entry_id, payload):
@@ -11,7 +11,7 @@ def update_team_competition_status(session, team_season_entry_id, payload):
         raise LookupError("Team season entry was not found.")
     status = str(payload.get("status") or "").strip().lower()
     if status not in VALID_COMPETITION_STATUSES:
-        raise ValueError("Status must be active, dropped, or disqualified.")
+        raise ValueError("Status must be active or dropped.")
     note = str(payload.get("note") or "").strip() or None
     previous = {
         "status": entry.competition_status,

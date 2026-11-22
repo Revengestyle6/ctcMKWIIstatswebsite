@@ -43,6 +43,7 @@ import {
   defaultRoleForPosition,
   expectedRoomSize,
   type MatchJson,
+  type MatchNumbers,
   type MatchPlayerJson,
   normalizeMatchForEditor,
   parseMatchJson,
@@ -177,6 +178,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const editMatchId =
     Number.isInteger(editMatchIdValue) && editMatchIdValue > 0 ? editMatchIdValue : null;
   const [match, setMatch] = useState<MatchJson>(() => ({ ...clone(blankMatch), league }));
+  const [loadedMatchNumbers, setLoadedMatchNumbers] = useState<MatchNumbers>();
   const [races, setRaces] = useState<RaceDraft[]>(() =>
     racesFromMatch({ ...clone(blankMatch), league })
   );
@@ -277,7 +279,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
     });
     return counts;
   }, [players]);
-  const compiled = useMemo(() => compileMatch(match, races), [match, races]);
+  const compiled = useMemo(
+    () => compileMatch(match, races, loadedMatchNumbers),
+    [match, races, loadedMatchNumbers]
+  );
   const unaccounted = match.score_source === "unaccounted";
   const specialResult = match.result_type === "free_win" || match.result_type === "mutual_tie";
   const identityChecksPending =
@@ -615,6 +620,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
         if (draft.match && draft.submissionId) {
           const normalizedMatch = normalizeMatchForEditor(draft.match);
           setMatch(normalizedMatch);
+          setLoadedMatchNumbers({
+            match_number: normalizedMatch.match_number,
+            series_match_number: normalizedMatch.series_match_number,
+          });
           setRaces(racesFromMatch(normalizedMatch));
           setFileName(draft.filename || "Queued match JSON");
           setReviewSubmissionId(draft.submissionId);
@@ -1133,6 +1142,27 @@ export default function MatchJsonEditor(): React.JSX.Element {
       current.map((race, raceIndex) => (raceIndex === index ? updater(race) : race))
     );
   }
+  function moveRace(raceIndex: number, raceNumber: number): void {
+    const targetIndex = raceNumber - 1;
+    if (
+      !Number.isInteger(targetIndex) ||
+      targetIndex < 0 ||
+      targetIndex >= races.length ||
+      targetIndex === raceIndex
+    ) {
+      return;
+    }
+
+    setRaces((current) => {
+      const reordered = [...current];
+      const [movedRace] = reordered.splice(raceIndex, 1);
+      reordered.splice(targetIndex, 0, movedRace);
+      return reordered.map((race, index) =>
+        race.raceNumber === index + 1 ? race : { ...race, raceNumber: index + 1 }
+      );
+    });
+    setActiveRace(targetIndex);
+  }
   function resizeRaces(count: number): void {
     const safeCount = Math.max(1, Math.min(99, count));
     setRaces((current) => {
@@ -1493,6 +1523,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
   function resetEditor(nextMatch: MatchJson, nextFileName: string): void {
     const normalizedMatch = normalizeMatchForEditor(nextMatch);
     setMatch(normalizedMatch);
+    setLoadedMatchNumbers({
+      match_number: normalizedMatch.match_number,
+      series_match_number: normalizedMatch.series_match_number,
+    });
     setRaces(racesFromMatch(normalizedMatch));
     setFileName(nextFileName);
     setIdentityStates({});
@@ -2339,7 +2373,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
               />
               <span className="mt-1 block text-xs text-gray-400">
                 {match.match_label?.trim()
-                  ? "Preserved from the loaded JSON"
+                  ? "Uses the loaded label and the current match number"
                   : "Generated automatically from the match number and team tags"}
               </span>
             </div>
@@ -3086,6 +3120,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   Previous
                 </button>
                 <select
+                  aria-label="Race selection"
                   value={activeRace}
                   onChange={(e) => setActiveRace(Number(e.target.value))}
                   className="rounded border border-white/15 bg-zinc-900 px-4 py-2"
@@ -3144,16 +3179,21 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       <label className={smallLabel}>
                         Race number
                         <input
+                          key={race.raceNumber}
                           type="number"
                           min={1}
+                          max={races.length}
                           step={1}
-                          value={race.raceNumber}
-                          onChange={(e) =>
-                            setRace(raceIndex, (current) => ({
-                              ...current,
-                              raceNumber: Number(e.target.value),
-                            }))
-                          }
+                          defaultValue={race.raceNumber}
+                          onBlur={(event) => {
+                            const input = event.currentTarget;
+                            const nextNumber = input.valueAsNumber;
+                            input.value = String(race.raceNumber);
+                            moveRace(raceIndex, nextNumber);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") event.currentTarget.blur();
+                          }}
                           className={inputClass}
                         />
                       </label>
@@ -3245,7 +3285,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
                         Delete race
                       </button>
                       <span className="self-center text-xs text-gray-400">
-                        Subsequent race numbers will shift automatically.
+                        Changing a race number moves the race. Other race numbers adjust
+                        automatically.
                       </span>
                     </div>
                     <div className="mb-4 border border-amber-400/30 bg-amber-950/25 p-3">
