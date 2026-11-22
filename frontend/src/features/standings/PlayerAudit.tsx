@@ -506,8 +506,8 @@ export function PlayerAudit({
             <p>
               Required GPs = team GPs × ⅔, with no rounding. Eligibility requires playing the role
               in at least ⅔ of the team’s actual races. Both team and individual role GPs equal
-              races ÷ 4: 10 races = 2.5 GPs; 7 races = 1.75 GPs. Dropped or disqualified teams are
-              ineligible. Races with unclassified roles contribute to neither role.
+              races ÷ 4: 10 races = 2.5 GPs; 7 races = 1.75 GPs. Dropped teams are ineligible. Races
+              with unclassified roles contribute to neither role.
             </p>
             <p>
               Reconciliation confirms that match totals account for the leaderboard. Entry accuracy

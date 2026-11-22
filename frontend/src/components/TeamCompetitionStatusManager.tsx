@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { patchJson } from "../api";
-
-type CompetitionStatus = "active" | "dropped" | "disqualified";
+import { type CompetitionStatus, patchJson } from "../api";
 
 export type CompetitionStatusTeam = {
   team_season_entry_id: number;
@@ -64,8 +62,8 @@ export default function TeamCompetitionStatusManager({
         <p className="text-xs font-bold uppercase tracking-widest text-amber-300">Admin control</p>
         <h2 className="text-xl font-bold">Team Competition Status</h2>
         <p className="mt-1 text-sm text-gray-300">
-          Dropped or disqualified teams retain original match history, while every standings result
-          is recalculated as a 150–0 loss and their players become leaderboard-ineligible.
+          Dropped teams retain their original match history. Each standings result is recalculated
+          as a 150–0 loss and their players become leaderboard-ineligible.
         </p>
       </div>
       <div className="grid gap-3 md:grid-cols-[1fr_13rem_1.5fr_auto] md:items-end">
@@ -93,7 +91,6 @@ export default function TeamCompetitionStatusManager({
           >
             <option value="active">Active</option>
             <option value="dropped">Dropped</option>
-            <option value="disqualified">Disqualified</option>
           </select>
         </label>
         <label className="text-xs font-semibold uppercase text-gray-400">

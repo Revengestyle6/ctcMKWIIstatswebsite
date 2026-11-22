@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { deleteJson, fetchJson, patchJson, postJson } from "../../api";
+import { type CompetitionStatus, deleteJson, fetchJson, patchJson, postJson } from "../../api";
 import TeamCompetitionStatusManager, {
   type CompetitionStatusTeam,
 } from "../TeamCompetitionStatusManager";
-
-type CompetitionStatus = "active" | "dropped" | "disqualified";
 
 type TeamIdentity = {
   id: number;

@@ -115,7 +115,7 @@ facts; queries must preserve those distinctions when grouping results.
 | Source | Owns |
 | --- | --- |
 | [competition_setup.py](../../backend/competition_setup.py) | Creation and editing of seasons, divisions/conferences, teams, and team season entries. |
-| [team_competition.py](../../backend/team_competition.py) | Active/dropped/disqualified status and reason for a team season entry. |
+| [team_competition.py](../../backend/team_competition.py) | Active/dropped status and reason for a team season entry. |
 | [alias_management.py](../../backend/alias_management.py) | Player/track/team alias operations, player friend codes, player and track merge workflows. |
 | [team_identity_management.py](../../backend/team_identity_management.py) | Canonical and scoped team identity, explicit league links, entry removal, and team merge workflows. |
 | [team_logo_management.py](../../backend/team_logo_management.py) | Image validation/normalization, upload/reuse, scoped activation, and logo serialization. |

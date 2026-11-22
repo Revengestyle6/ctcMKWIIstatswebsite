@@ -298,9 +298,11 @@ test("signed-in administrators can update a team competition status from standin
     });
   });
 
-  await page.goto("/standings?league=gsc&season=s15&division=d1");
+  await page.goto("/standings?league=ctc&season=s2&division=d1");
   await expect(page.getByRole("heading", { name: "Team Competition Status" })).toBeVisible();
-  await page.getByLabel("Status").selectOption("dropped");
+  const status = page.getByLabel("Status");
+  await expect(status.locator("option")).toHaveText(["Active", "Dropped"]);
+  await status.selectOption("dropped");
   await page.getByRole("button", { name: "Save status" }).click();
   await expect(page.getByText("Competition status saved")).toBeVisible();
   expect(submittedStatus).toBe("dropped");
@@ -418,10 +420,11 @@ test("alias manager updates a selected team season entry through the shared stat
   await expect(statusPanel).toBeVisible();
   const statusSelects = statusPanel.locator("select");
   await expect(statusSelects.first().locator("option:checked")).toHaveText(/GSC S3 D1/);
-  await statusSelects.nth(1).selectOption("disqualified");
+  await expect(statusSelects.nth(1).locator("option")).toHaveText(["Active", "Dropped"]);
+  await statusSelects.nth(1).selectOption("dropped");
   await statusPanel.getByRole("button", { name: "Save status" }).click();
   await expect(page.getByText("Competition status saved")).toBeVisible();
-  expect(submittedStatus).toBe("disqualified");
+  expect(submittedStatus).toBe("dropped");
 });
 
 test("competition setup keeps actions independent and browses registered teams by division", async ({

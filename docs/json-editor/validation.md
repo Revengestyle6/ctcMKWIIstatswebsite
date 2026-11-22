@@ -209,7 +209,7 @@ The rolled-back preview and final import both flush real relational records, so 
 | Records | Constraints |
 | --- | --- |
 | Season/division | Unique league + season code; unique season + division code. |
-| Team identities | Case-insensitive unique league + team tag; unique team alias value; unique season + division + team-entry tag. Team competition status limited to active/dropped/disqualified. |
+| Team identities | Case-insensitive unique league + team tag; unique team alias value; unique season + division + team-entry tag. Team competition status limited to active/dropped. |
 | Player identities | Unique friend code globally; unique player + alias type + alias value; unique player + team season entry. Imported code/alias origin is match_import or admin. |
 | Track catalog | Unique league + canonical track name; unique track + alias value. |
 | Source file | Unique logical source path and unique SHA-256; provider local/gcs; archive status pending/complete/repair_required. |

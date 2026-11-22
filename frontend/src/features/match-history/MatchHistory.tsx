@@ -258,11 +258,7 @@ export default function MatchHistory(): React.JSX.Element {
                       : match.result_type === "mutual_tie"
                         ? " — Mutual tie"
                         : ""}
-                    {match.team_statuses.some((status) => status === "disqualified")
-                      ? " — DQ"
-                      : match.team_statuses.some((status) => status === "dropped")
-                        ? " — Dropped"
-                        : ""}
+                    {match.team_statuses.includes("dropped") ? " — Dropped" : ""}
                   </option>
                 );
               })}
@@ -354,7 +350,7 @@ export default function MatchHistory(): React.JSX.Element {
                         <span
                           key={team.team_id}
                           title={team.competition_status_note || undefined}
-                          className={`rounded-full border px-2.5 py-1 text-xs font-bold ${team.competition_status === "disqualified" ? "border-red-300/40 bg-red-950/70 text-red-200" : "border-amber-300/40 bg-amber-950/70 text-amber-200"}`}
+                          className="rounded-full border border-amber-300/40 bg-amber-950/70 px-2.5 py-1 text-xs font-bold text-amber-200"
                         >
                           {team.tag}: <span className="uppercase">{team.competition_status}</span>
                         </span>

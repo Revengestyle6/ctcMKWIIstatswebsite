@@ -492,6 +492,12 @@ class TeamIdentityManagementTests(unittest.TestCase):
             )
             self.assertEqual(status_response.status_code, 200, status_response.get_json())
             self.assertEqual(status_response.get_json()["status"], "dropped")
+            retired_status_response = client.patch(
+                f"/api/admin/team-season-entries/{self.entry_two_id}/status",
+                json={"status": "disqualified"},
+                headers=headers,
+            )
+            self.assertEqual(retired_status_response.status_code, 400)
         with self.SessionLocal() as session:
             actions = [row.action for row in session.query(AdminAuditLog).all()]
             self.assertIn("team.identity_updated", actions)
@@ -641,7 +647,7 @@ class TeamIdentityManagementTests(unittest.TestCase):
     def test_detail_includes_conventional_and_season_identities(self):
         with self.SessionLocal.begin() as session:
             entry = session.get(TeamSeasonEntry, self.entry_two_id)
-            entry.competition_status = "disqualified"
+            entry.competition_status = "dropped"
             entry.competition_status_note = "Administrative ruling"
 
         with self.SessionLocal() as session:
@@ -654,7 +660,7 @@ class TeamIdentityManagementTests(unittest.TestCase):
             entry = next(
                 item for item in detail["season_entries"] if item["id"] == self.entry_two_id
             )
-            self.assertEqual(entry["competition_status"], "disqualified")
+            self.assertEqual(entry["competition_status"], "dropped")
             self.assertEqual(entry["competition_status_note"], "Administrative ruling")
 
 

@@ -1,6 +1,6 @@
 import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { fetchJson, resolveAssetUrl, type TeamScope } from "../api";
+import { type CompetitionStatus, fetchJson, resolveAssetUrl, type TeamScope } from "../api";
 import { BackToHomeLink } from "../components/BackToHomeLink";
 import { LeagueHeaderControls } from "../components/LeagueHeaderControls";
 import SeasonDivisionSelector from "../components/SeasonDivisionSelector";
@@ -15,7 +15,6 @@ import {
 import { useAdminSession } from "../hooks/useAdminSession";
 import { useSeasonDivision } from "../hooks/useSeasonDivision";
 
-type CompetitionStatus = "active" | "dropped" | "disqualified";
 type Standing = {
   unaccounted_matches?: number;
   rank: number;
@@ -191,13 +190,9 @@ function StatusBadge({ status, note }: { status: CompetitionStatus; note?: strin
   return (
     <span
       title={note || undefined}
-      className={`ml-2 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide ${
-        status === "disqualified"
-          ? "border-red-300/40 bg-red-950/70 text-red-200"
-          : "border-amber-300/40 bg-amber-950/70 text-amber-200"
-      }`}
+      className="ml-2 inline-flex rounded-full border border-amber-300/40 bg-amber-950/70 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-amber-200"
     >
-      {status === "disqualified" ? "DQ" : "Dropped"}
+      Dropped
     </span>
   );
 }
