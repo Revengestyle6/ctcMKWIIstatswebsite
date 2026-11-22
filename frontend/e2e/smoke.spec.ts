@@ -840,6 +840,30 @@ test("json editor validates and loads pasted raw JSON", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Review & Upload" }).first()).toBeDisabled();
 });
 
+test("json editor updates a loaded match label when its match number changes", async ({ page }) => {
+  await page.goto("/json-editor?league=ctc");
+  await page.getByRole("button", { name: "Paste JSON", exact: true }).click();
+  await page.getByLabel("Raw match JSON").fill(
+    JSON.stringify({
+      league: "ctc",
+      season: "s3",
+      division: "d1",
+      week: 4,
+      match_label: "[M4] A vs B",
+      teams: {},
+    })
+  );
+  await page.getByRole("button", { name: "Load pasted JSON" }).click();
+
+  const label = page.getByLabel("Match label, locked");
+  const number = page.getByRole("spinbutton", { name: /^match number/i });
+  await expect(label).toHaveValue("[M4] A vs B");
+  await number.fill("7");
+  await expect(label).toHaveValue("M7 A vs B");
+  await number.fill("4");
+  await expect(label).toHaveValue("[M4] A vs B");
+});
+
 test("GSC receives the correct favicon before React boots", async ({ page }) => {
   await page.route("**/src/index.tsx", (route) => route.abort());
   await page.goto("/?league=gsc");

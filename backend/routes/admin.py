@@ -1185,7 +1185,9 @@ def api_admin_match_management(match_id):
             manifest = match_management.match_inventory(session, match_id)
             return jsonify(
                 {
-                    "match": manifest["original_json"],
+                    "match": match_management.match_document_for_edit(
+                        manifest["original_json"], manifest["match"]
+                    ),
                     "manifest": manifest,
                     "source_fingerprint": manifest["source"]["fingerprint"],
                 }
@@ -1285,16 +1287,18 @@ def api_admin_match_edit(match_id):
     temporary_key = f"queue/admin-edit/{uuid.uuid4()}.json"
     old_key = None
     try:
-        document = prepare_upload_document(match_data)
-        if payload.get("expected_preview_fingerprint") != document.fingerprint:
-            raise ValueError(
-                "The match changed after preview. Generate a new preview before saving."
-            )
         with stats.SessionLocal() as session:
             old_match = session.get(Match, match_id)
             if old_match is None:
                 raise LookupError("Match was not found.")
             source = session.get(SourceFile, old_match.source_file_id)
+            if source.file_sha256 != payload.get("expected_source_fingerprint"):
+                raise ValueError("The match changed after it was loaded. Reload it before editing.")
+            document = match_management.prepare_match_edit(old_match, match_data)
+            if payload.get("expected_preview_fingerprint") != document.fingerprint:
+                raise ValueError(
+                    "The match changed after preview. Generate a new preview before saving."
+                )
             old_key = source.storage_object_key
             old_fingerprint = source.file_sha256
             old_filename = source.source_filename

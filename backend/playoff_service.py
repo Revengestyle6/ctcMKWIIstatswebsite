@@ -39,6 +39,16 @@ def match_type(match_data: dict[str, Any]) -> str:
     return value
 
 
+def numbered_regular_match_label(label: str, match_number: int) -> str:
+    description = re.sub(
+        r"^(?:[MW]\d+(?:\s+\[M\d+\])?|\[M\d+\])(?=\s|$)\s*",
+        "",
+        label.strip(),
+        flags=re.IGNORECASE,
+    )
+    return f"M{match_number} {description}".rstrip()
+
+
 def automatic_match_label(match_data: dict[str, Any]) -> str:
     """Build the stable label used for new editor-created matches."""
     kind = match_type(match_data)

@@ -43,6 +43,7 @@ import {
   defaultRoleForPosition,
   expectedRoomSize,
   type MatchJson,
+  type MatchNumbers,
   type MatchPlayerJson,
   normalizeMatchForEditor,
   parseMatchJson,
@@ -177,6 +178,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const editMatchId =
     Number.isInteger(editMatchIdValue) && editMatchIdValue > 0 ? editMatchIdValue : null;
   const [match, setMatch] = useState<MatchJson>(() => ({ ...clone(blankMatch), league }));
+  const [loadedMatchNumbers, setLoadedMatchNumbers] = useState<MatchNumbers>();
   const [races, setRaces] = useState<RaceDraft[]>(() =>
     racesFromMatch({ ...clone(blankMatch), league })
   );
@@ -277,7 +279,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
     });
     return counts;
   }, [players]);
-  const compiled = useMemo(() => compileMatch(match, races), [match, races]);
+  const compiled = useMemo(
+    () => compileMatch(match, races, loadedMatchNumbers),
+    [match, races, loadedMatchNumbers]
+  );
   const unaccounted = match.score_source === "unaccounted";
   const specialResult = match.result_type === "free_win" || match.result_type === "mutual_tie";
   const identityChecksPending =
@@ -615,6 +620,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
         if (draft.match && draft.submissionId) {
           const normalizedMatch = normalizeMatchForEditor(draft.match);
           setMatch(normalizedMatch);
+          setLoadedMatchNumbers({
+            match_number: normalizedMatch.match_number,
+            series_match_number: normalizedMatch.series_match_number,
+          });
           setRaces(racesFromMatch(normalizedMatch));
           setFileName(draft.filename || "Queued match JSON");
           setReviewSubmissionId(draft.submissionId);
@@ -1493,6 +1502,10 @@ export default function MatchJsonEditor(): React.JSX.Element {
   function resetEditor(nextMatch: MatchJson, nextFileName: string): void {
     const normalizedMatch = normalizeMatchForEditor(nextMatch);
     setMatch(normalizedMatch);
+    setLoadedMatchNumbers({
+      match_number: normalizedMatch.match_number,
+      series_match_number: normalizedMatch.series_match_number,
+    });
     setRaces(racesFromMatch(normalizedMatch));
     setFileName(nextFileName);
     setIdentityStates({});
@@ -2339,7 +2352,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
               />
               <span className="mt-1 block text-xs text-gray-400">
                 {match.match_label?.trim()
-                  ? "Preserved from the loaded JSON"
+                  ? "Uses the loaded label and the current match number"
                   : "Generated automatically from the match number and team tags"}
               </span>
             </div>

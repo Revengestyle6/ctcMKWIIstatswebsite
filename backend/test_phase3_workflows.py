@@ -322,6 +322,63 @@ class Phase3WorkflowTests(unittest.TestCase):
             self.assertIn(edited["review_notes"], replaced.review_notes)
             self.assertEqual(len(analytics_excluded_race_ids(session, exclusion)), 4)
 
+    def test_match_renumbering_updates_preview_and_accepted_archive(self):
+        import routes.admin as admin_routes
+        from app import app
+
+        accepted = self._accept_match().payload
+        path = f"/api/admin/matches/{accepted['match_id']}"
+        headers = {"X-Dev-Admin-Email": self.actor.email}
+        original = self.storage.read(accepted["archive_path"])
+        with (
+            patch.dict("os.environ", {"APP_ENV": "test", "ALLOW_DEV_AUTH": "true"}),
+            patch("admin_auth.SessionLocal", self.SessionLocal),
+            patch.object(admin_routes.stats, "SessionLocal", self.SessionLocal),
+            patch.object(admin_routes, "get_archive_storage", return_value=self.storage),
+            app.test_client() as client,
+        ):
+            payload = {
+                "match": {**self.match_data, "match_number": 7},
+                "expected_source_fingerprint": accepted["fingerprint"],
+            }
+            preview_response = client.post(f"{path}/preview", json=payload, headers=headers)
+            self.assertEqual(preview_response.status_code, 200, preview_response.get_json())
+            preview = preview_response.get_json()
+            label = "M7 sts 366 - 356 CS"
+            self.assertEqual(preview["match"]["label"], label)
+            self.assertTrue(preview["preview"]["archive_path"].endswith(f"/{label}.json"))
+            changes = {change["path"] for change in preview["preview"]["edit_summary"]["changes"]}
+            self.assertTrue({"match_number", "match_label"} <= changes)
+            payload["expected_preview_fingerprint"] = preview["preview"]["fingerprint"]
+            response = client.patch(path, json=payload, headers=headers)
+            self.assertEqual(response.status_code, 200, response.get_json())
+            result = response.get_json()
+            self.assertEqual(result["fingerprint"], payload["expected_preview_fingerprint"])
+            self.assertTrue(Path(result["archive_path"]).name.startswith(f"{label}--"))
+            archived = json.loads(self.storage.read(result["archive_path"]))
+            self.assertEqual(archived["match_label"], label)
+            self.assertEqual(archived["match_number"], 7)
+            self.assertNotIn("week", archived)
+            self.assertEqual(self.storage.read(result["replaced_archive_path"]), original)
+            with self.assertRaises(FileNotFoundError):
+                self.storage.read(accepted["archive_path"])
+
+            payload["match"]["match_number"] = 8
+            payload["expected_source_fingerprint"] = result["fingerprint"]
+            preview = client.post(f"{path}/preview", json=payload, headers=headers).get_json()
+            payload["expected_preview_fingerprint"] = preview["preview"]["fingerprint"]
+            with patch.object(self.storage, "promote", side_effect=OSError("storage unavailable")):
+                response = client.patch(path, json=payload, headers=headers)
+            self.assertEqual(response.status_code, 202, response.get_json())
+            result = response.get_json()
+            self.assertEqual(result["archive_status"], "repair_required")
+            self.assertEqual(result["match"]["label"], "M8 sts 366 - 356 CS")
+            self.assertEqual(repair_accepted_archives(self.SessionLocal, self.storage), (1, 0))
+            self.assertEqual(
+                json.loads(self.storage.read(result["archive_path"]))["match_label"],
+                result["match"]["label"],
+            )
+
     def test_match_edit_prunes_only_unsupported_imported_player_catalog_rows(self):
         accepted = self._accept_match()
         match_id = accepted.payload["match_id"]

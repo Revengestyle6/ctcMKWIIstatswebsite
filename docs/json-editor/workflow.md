@@ -151,6 +151,7 @@ Edit mode uses dedicated administrator routes. It retains the match ID and sourc
 1. Load original JSON and `source_fingerprint` from the management route.
 2. Detect additions through `/api/admin/matches/<id>/new-entries`, with the existing match temporarily removed inside a rolled-back transaction.
 3. Preview through `/api/admin/matches/<id>/preview`; `replace_match` checks the original source fingerprint and returns a structural change summary, record counts, references, preserved shared records, and proposed additions. Preview then rolls back.
+   A match number change updates the label and archive filename together. For example, `[M4] A vs B` becomes `M7 A vs B` when the match moves to number 7.
 4. Review the summary or download the edit-review report. Replacement row IDs are deliberately omitted from the report because preview IDs do not survive rollback.
 5. `PATCH /api/admin/matches/<id>` first compares the preview fingerprint, preserves old JSON under `replaced/matches/<id>/...`, and stages the replacement bytes. These storage writes happen before the replacement transaction; a failure here leaves the accepted match unchanged.
 6. Inside the replacement transaction, compare the original source fingerprint, lock the match, validate again, and commit the replacement.
