@@ -33,7 +33,7 @@ threads. It found **service-level `run.googleapis.com/maxScale=1`** and
 revision-level `autoscaling.knative.dev/maxScale=3`. Google's documented effective
 maximum is the lesser of these, so the effective configured service limit is
 **one instance**, superseding the historical three-instance description in
-[infra/run/README.md](../../infra/run/README.md).
+[infra/run/README.md](../../../infra/run/README.md).
 [Google precedence rules](https://docs.cloud.google.com/run/docs/configuring/max-instances#use_both_service-level_and_revision-level_minimum_or_maximum_instances)
 
 The live Cloud SQL configuration is PostgreSQL 18, Enterprise edition,
@@ -41,7 +41,7 @@ The live Cloud SQL configuration is PostgreSQL 18, Enterprise edition,
 authentication; there is no explicit `max_connections` flag override. This does
 not establish the effective server limit: query `pg_settings` as shown below.
 The intended database tier and cost-first upgrade policy are in
-[ADR 0002](../adr/0002-postgresql-and-durable-json-archive.md).
+[ADR 0002](../../adr/0002-postgresql-and-durable-json-archive.md).
 
 Cloud Run's built-in Cloud SQL integration allows up to 100 connections per
 container instance to a database; the database's own limit still applies.
@@ -150,18 +150,18 @@ and `node /tmp/preview-request-probe.mjs`; captured requests are in
 
 Source evidence:
 
-- [Identity effect](../../frontend/src/features/match-editor/MatchJsonEditor.tsx#L885)
+- [Identity effect](../../../frontend/src/features/match-editor/MatchJsonEditor.tsx#L885)
   uses `pending.forEach` to issue one request per friend code.
-- [Configured IDs](../../frontend/src/features/match-editor/MatchJsonEditor.tsx#L305)
+- [Configured IDs](../../../frontend/src/features/match-editor/MatchJsonEditor.tsx#L305)
   derive from individually resolved identities, and the
-  [membership effect](../../frontend/src/features/match-editor/MatchJsonEditor.tsx#L540)
+  [membership effect](../../../frontend/src/features/match-editor/MatchJsonEditor.tsx#L540)
   reruns as that set grows. The membership endpoint already accepts a batch;
   the caller repeatedly supplies partial batches.
-- [Track effects](../../frontend/src/features/match-editor/MatchJsonEditor.tsx#L719)
+- [Track effects](../../../frontend/src/features/match-editor/MatchJsonEditor.tsx#L719)
   fetch the catalog and launch per-name fallbacks without waiting for catalog
   completion. Cache invalidation, stale replies after scope changes, and retries
   need explicit treatment in any fix.
-- [Identity lookup](../../backend/stats_queries.py#L367) performs four SELECTs for
+- [Identity lookup](../../../backend/stats_queries.py#L367) performs four SELECTs for
   a successful exact friend-code lookup: friend-code resolution, player rows,
   friend codes, aliases. Ten successful lookups therefore perform forty SELECTs
   in that implementation. A true bulk implementation can resolve all supplied
@@ -171,20 +171,20 @@ Source evidence:
 
 The actual Continue to preview action additionally sends **two sequential POSTs**:
 `/api/matches/new-entries`, then `/api/matches/preview` when no approvals block it.
-See [requestTablePreview](../../frontend/src/features/match-editor/MatchJsonEditor.tsx#L1788).
+See [requestTablePreview](../../../frontend/src/features/match-editor/MatchJsonEditor.tsx#L1788).
 Both paths perform entry detection; the preview also runs an import, flushes,
 constructs the match detail using the same session, and rolls back.
-See [preview route](../../backend/routes/admin.py#L1090),
-[new-entry route](../../backend/routes/admin.py#L1476), and
-[preview importer](../../backend/import_json_to_db.py#L1152).
+See [preview route](../../../backend/routes/admin.py#L1090),
+[new-entry route](../../../backend/routes/admin.py#L1476), and
+[preview importer](../../../backend/import_json_to_db.py#L1152).
 These POSTs are separate from the 37 pre-preview requests measured above.
 
 Unknown friend codes can also invoke MKCentral through the
-[public identity route](../../backend/routes/public.py#L128), then again during
+[public identity route](../../../backend/routes/public.py#L128), then again during
 entry detection. The public identity helper closes its database session before
 MKCentral; in contrast, entry detection performs the external lookup inside the
 caller's open database transaction, after database reads have acquired a
-connection. Its [HTTP client](../../backend/mkc_registry.py#L38) has timeouts and
+connection. Its [HTTP client](../../../backend/mkc_registry.py#L38) has timeouts and
 retries; six seconds is a read timeout, not a guaranteed whole-operation bound.
 This is a source-confirmed risk, not a measured explanation of current latency.
 

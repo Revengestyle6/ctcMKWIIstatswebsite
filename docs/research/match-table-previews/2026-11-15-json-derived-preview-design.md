@@ -54,7 +54,7 @@ the exact same Traditional and Vertical renderers. It also required rollback of
 shared player/team/alias/provenance changes and independent atomic final ingestion.
 That design minimized separate implementations of what imported data looks like.
 This is documented rationale, rather than a claim about an author's unstated intent.
-[Original plan](../archive/implementation-plans/json-editor-restructure-plan.md#transactional-table-preview).
+[Original plan](../../archive/implementation-plans/json-editor-restructure-plan.md#transactional-table-preview).
 Current behavior is authoritative where that older plan differs from the code.
 
 The new-match flow is: parse → placement/award drafts → compile current upload
@@ -63,9 +63,9 @@ committable validation → temporary full import and flush → ordinary match-de
 query → rollback → existing tables. Final upload independently performs validation,
 identity/approval resolution, duplicate/conflict handling, import/flush, real commit,
 and accepted-archive promotion.
-[Preview route](../../backend/routes/admin.py:1090),
-[preview importer](../../backend/import_json_to_db.py:1152),
-[final acceptance](../../backend/acceptance_service.py:74).
+[Preview route](../../../backend/routes/admin.py:1090),
+[preview importer](../../../backend/import_json_to_db.py:1152),
+[final acceptance](../../../backend/acceptance_service.py:74).
 
 The strengths were real importer reuse, early ORM/database constraint failures,
 projection of proposed new identities and alias effects, and an ordinary
@@ -155,8 +155,8 @@ penalties, missing-player awards, labels, and final totals. The projection shoul
 not become a second score calculator. Preserve unknown supported passthrough
 fields in the upload JSON; presentation must not rewrite the archive input just
 to choose a canonical display name.
-[Compiler](../../frontend/src/features/match-editor/matchJsonEditorModel.ts:366),
-[unaccounted compiler](../../frontend/src/features/match-editor/unaccountedMatchModel.ts:44).
+[Compiler](../../../frontend/src/features/match-editor/matchJsonEditorModel.ts:366),
+[unaccounted compiler](../../../frontend/src/features/match-editor/unaccountedMatchModel.ts:44).
 
 ### 2. Define a table presentation contract separate from persistence IDs
 
@@ -165,8 +165,8 @@ both main tables delegate unaccounted results to `UnaccountedScorecard`. Keep
 those layouts, styling, GP switches, charts, and formatting. A projection adapter
 assembles the data they need. The saved match-detail contract can share that
 presentation subset without changing the public match JSON/archive format.
-[Editor render call](../../frontend/src/features/match-editor/MatchJsonEditor.tsx:3826),
-[table types/renderers](../../frontend/src/features/match-history/matchHistoryViews.tsx:28).
+[Editor render call](../../../frontend/src/features/match-editor/MatchJsonEditor.tsx:3826),
+[table types/renderers](../../../frontend/src/features/match-history/matchHistoryViews.tsx:28).
 
 Use a stable draft key for each player/team and an optional real database ID for
 navigation. Existing entities retain their links; proposed new entities render
@@ -214,7 +214,7 @@ errors, new-entry decisions, and warning acknowledgement as independent gates.
 Warn clearly while validation is pending; existing error messages should still
 point to the relevant input. Additional server warnings must reset the required
 acknowledgement. Avoid enabling submission after an old response arrives.
-[Current final-action gate](../../frontend/src/features/match-editor/MatchJsonEditor.tsx:1693).
+[Current final-action gate](../../../frontend/src/features/match-editor/MatchJsonEditor.tsx:1693).
 
 Associate validation results with document revision, identity choices, team
 resolutions, and approvals. Source fingerprint still protects existing-match
@@ -232,9 +232,9 @@ queue claim rules, source version checks, current-state revalidation, actual
 import/flush/constraints, atomic database commit, accepted-archive promotion,
 audit/provenance logs, idempotency and archive-repair handling. Replace local
 draft data with the real returned match detail after successful save.
-[Acceptance](../../backend/acceptance_service.py:74),
-[review acceptance](../../backend/routes/reviews.py:197),
-[edit save](../../backend/routes/admin.py:1278).
+[Acceptance](../../../backend/acceptance_service.py:74),
+[review acceptance](../../../backend/routes/reviews.py:197),
+[edit save](../../../backend/routes/admin.py:1278).
 
 A read-only preflight cannot rehearse actual ORM writes. Most expected type and
 relationship errors can be checked explicitly, but unforeseen persistence/schema
@@ -296,8 +296,8 @@ That can grow with match-player count times global player count, with additional
 work for shared-name groups. Batch this calculation once per import/preparation
 and preserve the same name-priority output. This concern is verified from code;
 it has not been stage-profiled as the cause of the measured 34 seconds.
-[Naming loop](../../backend/player_naming.py:95),
-[importer call](../../backend/import_json_to_db.py:1061).
+[Naming loop](../../../backend/player_naming.py:95),
+[importer call](../../../backend/import_json_to_db.py:1061).
 
 Optimizing that loop and repeated flushes while retaining rollback is a credible
 smaller alternative and helps both preview and actual acceptance. Profiling can
@@ -381,8 +381,8 @@ This direction is consistent with ADR 0002 (JSON is accepted audit input;
 PostgreSQL remains operational source for saved history/analytics) and ADR 0004
 (server-valid submissions; administrator-only atomic acceptance). Local draft
 rendering must not be presented as accepted data.
-[ADR 0002](../adr/0002-postgresql-and-durable-json-archive.md),
-[ADR 0004](../adr/0004-administrator-access-and-public-review-queue.md).
+[ADR 0002](../../adr/0002-postgresql-and-durable-json-archive.md),
+[ADR 0004](../../adr/0004-administrator-access-and-public-review-queue.md).
 
 **Recommendation:** adopt JSON-derived display with the existing renderers and
 preserve authoritative server preparation/acceptance. Do not keep synchronous
