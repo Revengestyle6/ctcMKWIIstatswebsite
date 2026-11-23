@@ -80,6 +80,8 @@ import {
   validation,
   validFriendCode,
 } from "./matchJsonEditorValidation";
+import PasteRosterPanel from "./PasteRosterPanel";
+import { addPastedRoster } from "./rosterImport";
 import TeamRosterPool from "./TeamRosterPool";
 import TeamScopePool from "./TeamScopePool";
 import { UnaccountedScoreEntry } from "./UnaccountedScoreEntry";
@@ -215,6 +217,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pastePanelOpen, setPastePanelOpen] = useState(false);
   const [pastedJson, setPastedJson] = useState("");
+  const [pasteRosterOpen, setPasteRosterOpen] = useState(false);
   const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
   const [tablePreview, setTablePreview] = useState<MatchDetail | null>(null);
   const [previewMetadata, setPreviewMetadata] = useState<PreviewMetadata | null>(null);
@@ -1543,6 +1546,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
     setLoadError(null);
     setPastePanelOpen(false);
     setPastedJson("");
+    setPasteRosterOpen(false);
     setDraggedPlayer(null);
     setTablePreview(null);
     setPreviewMetadata(null);
@@ -2780,7 +2784,34 @@ export default function MatchJsonEditor(): React.JSX.Element {
         </section>
 
         <section className="mb-5 rounded-lg border border-white/10 bg-zinc-950/85 p-4 shadow-2xl">
-          <h2 className="mb-4 text-xl font-bold">Teams And Players</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-bold">Teams And Players</h2>
+            {!specialResult && Object.keys(match.teams ?? {}).length > 0 ? (
+              <button
+                type="button"
+                aria-expanded={pasteRosterOpen}
+                aria-controls="paste-roster-panel"
+                disabled={previewLoading || commitLoading || editReloading || Boolean(commitResult)}
+                onClick={() => setPasteRosterOpen((open) => !open)}
+                className="rounded-md border border-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-40"
+              >
+                Paste roster
+              </button>
+            ) : null}
+          </div>
+          {!specialResult && pasteRosterOpen && Object.keys(match.teams ?? {}).length > 0 ? (
+            <PasteRosterPanel
+              match={match}
+              scopeValid={divisionValid}
+              seasonTeams={availableTeams}
+              disabled={previewLoading || commitLoading || editReloading || Boolean(commitResult)}
+              onApply={(assignments, newTags) => {
+                setMatch((current) => addPastedRoster(current, assignments, newTags));
+                setPasteRosterOpen(false);
+              }}
+              onClose={() => setPasteRosterOpen(false)}
+            />
+          ) : null}
           <FieldIssues field="teams" issues={issues} />
           <div className="grid gap-5 xl:grid-cols-2">
             {Object.entries(match.teams ?? {}).map(([teamKey, team]) => {

@@ -818,7 +818,9 @@ test("json editor validates and loads pasted raw JSON", async ({ page }) => {
   const pastedJson = page.getByLabel("Raw match JSON");
   await pastedJson.fill("[]");
   await page.getByRole("button", { name: "Load pasted JSON" }).click();
-  await expect(page.getByText("Match JSON must be a single JSON object.")).toBeVisible();
+  await expect(
+    page.getByText("Match JSON must be a single JSON object.", { exact: true })
+  ).toBeVisible();
   await expect(page.getByText("New match JSON", { exact: true })).toBeVisible();
 
   await pastedJson.fill(
@@ -838,6 +840,187 @@ test("json editor validates and loads pasted raw JSON", async ({ page }) => {
   await expect(page.getByText("Pasted JSON", { exact: true })).toBeVisible();
   await expect(page.getByText("Division is missing.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Review & Upload" }).first()).toBeDisabled();
+});
+
+test("json editor imports a Wiimmfi roster and adds a substitute from Table Bot VR", async ({
+  page,
+}) => {
+  await page.goto("/json-editor?league=ctc");
+  const pasteRoster = page.getByRole("button", { name: "Paste roster", exact: true });
+  const rosterText = page.getByRole("textbox", { name: "Roster text" });
+  const readRoster = page.getByRole("button", { name: "Read roster" });
+  const names = [
+    "LeMSun",
+    "[ωZ]Kιng MS",
+    "MSdraggy",
+    "[ωZ]→Knee»",
+    "MS Jαggγ",
+    "ωZ Calvin",
+    "MS Malware",
+    "[ωZ]TK",
+    "MS colin",
+    "[ωZ]Nathan",
+  ];
+  const rows = names.map(
+    (name, index) =>
+      `| [0001-0000-00${index}0](https://wiimmfi.de/stats/mkw/list/p600000001) | ${index + 1}. guest | — | ${name} |`
+  );
+  await pasteRoster.click();
+  await rosterText.fill(
+    [
+      "| friend code | role | versus<br>points | Mii name |",
+      "| --- | --- | --- | --- |",
+      ...rows,
+    ].join("\n")
+  );
+  await readRoster.click();
+  const firstTag = page.getByRole("textbox", { name: "TeamA tag" });
+  const secondTag = page.getByRole("textbox", { name: "TeamB tag" });
+  await expect(firstTag).toHaveValue("TeamA");
+  await expect(secondTag).toHaveValue("TeamB");
+  await expect(page.getByRole("button", { name: "Add 0 players" })).toBeDisabled();
+  await firstTag.fill("ms");
+  await expect(page.getByRole("combobox", { name: /Team for LeMSun/ })).toHaveValue("");
+  await expect(page.getByRole("combobox", { name: /Team for MSdraggy/ })).toHaveValue("");
+  await expect(page.getByRole("button", { name: "Add 0 players" })).toBeDisabled();
+  await firstTag.fill("M");
+  await secondTag.fill("MS");
+  const prefixMatch = page.getByRole("listitem").filter({ hasText: "LeMSun" });
+  await expect(prefixMatch.getByRole("combobox")).toHaveValue("TeamB");
+  await expect(
+    prefixMatch.getByText("Multiple tags in this Mii name. Review the assignment.")
+  ).toBeVisible();
+  await firstTag.fill("MS");
+  await secondTag.fill("ms");
+  await expect(page.getByText("Enter a different tag for each team.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Add \d+ players?$/ })).toBeDisabled();
+  await secondTag.fill("ω");
+  await expect(page.getByRole("combobox", { name: /Team for \[ωZ\]Kιng MS/ })).toHaveValue("TeamB");
+  await secondTag.fill("ωZ");
+  await expect(page.getByRole("combobox", { name: /Team for LeMSun/ })).toHaveValue("TeamA");
+  await expect(page.getByRole("combobox", { name: /Team for \[ωZ\]Kιng MS/ })).toHaveValue("TeamB");
+  await expect(
+    page.getByText("Multiple tags in this Mii name. Review the assignment.")
+  ).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /Team for MSdraggy/ })).toHaveValue("TeamA");
+  await expect(page.getByRole("combobox", { name: /Team for ωZ Calvin/ })).toHaveValue("TeamB");
+  await page.getByRole("button", { name: "Add 10 players", exact: true }).click();
+  await expect(rosterText).toHaveCount(0);
+  const firstTeam = page.locator('[data-team-key="TeamA"]');
+  const secondTeam = page.locator('[data-team-key="TeamB"]');
+  await expect(firstTeam.getByLabel("Team name or tag")).toHaveValue("MS");
+  await expect(secondTeam.getByLabel("Team name or tag")).toHaveValue("ωZ");
+  await expect(secondTeam.locator("[data-player-key]")).toHaveCount(5);
+
+  await pasteRoster.click();
+  await rosterText.fill(
+    [
+      "- Room GY80: No Race Started Yet -",
+      "#.    Lounge Name       Mii Name    FC",
+      "----  ----------------  ----------  --------------",
+      "1.    An existing name  LeMSun      0001-0000-0000",
+      "2.    cheese stick      5 not V     0001-0000-0011",
+    ].join("\n")
+  );
+  await readRoster.click();
+  await expect(page.getByText("Already in this match (1)", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add 0 players" })).toBeDisabled();
+  await page.getByRole("combobox", { name: /Team for 5 not V/ }).selectOption("TeamB");
+  await page.getByRole("button", { name: "Add 1 player", exact: true }).click();
+
+  const substitute = secondTeam.locator('[data-player-key="TeamB::0001-0000-0011"]');
+  await expect(substitute.getByLabel(/^mii name$/i)).toHaveValue("5 not V");
+  await expect(substitute.getByLabel(/^lounge name$/i)).toHaveValue("cheese stick");
+  const existing = firstTeam.locator('[data-player-key="TeamA::0001-0000-0000"]');
+  await expect(existing.getByLabel(/^lounge name$/i)).toHaveValue("");
+});
+
+test("json editor adds season roster suggestions after metadata is set", async ({ page }) => {
+  const scope = { league: "ctc", season: "s3", division: "d1" };
+  const seasonTeams = ["MS", "[ωZ]"].map((tag, index) => ({
+    ...scope,
+    team_id: 800 + index,
+    team_season_entry_id: 900 + index,
+    clan_tag: tag,
+    canonical_tag: tag,
+    display_name: tag,
+    canonical_name: tag,
+    competition_status: "active",
+    competition_status_note: null,
+  }));
+  const names = ["Nox", "MS Mika", "Rune", "[ωZ]Ari", "MS Visitor", "[ωZ]Tag Only", "Unsure"];
+  const codes = names.map((_, index) => `0002-0000-000${index}`);
+  await page.route("**/api/match-scopes", (route) => route.fulfill({ json: [scope] }));
+  await page.route("**/api/team-scopes", (route) => route.fulfill({ json: seasonTeams }));
+  await page.route("**/api/player-identities/batch?*", (route) =>
+    route.fulfill({
+      json: Object.fromEntries(
+        codes.map((code, index) => [
+          code,
+          {
+            reason: "friend_code",
+            results:
+              index === 5 ? [] : [{ player_id: 810 + index, friend_codes: [code], aliases: [] }],
+          },
+        ])
+      ),
+    })
+  );
+  const membershipGate = Promise.withResolvers<void>();
+  await page.route("**/api/player-team-memberships?*", async (route) => {
+    await membershipGate.promise;
+    await route.fulfill({
+      json: [0, 0, 1, 1, 1, null, null].flatMap((teamIndex, index) =>
+        teamIndex === null && index === 5
+          ? []
+          : [
+              {
+                player_id: 810 + index,
+                teams: teamIndex === null ? seasonTeams : [seasonTeams[teamIndex]],
+              },
+            ]
+      ),
+    });
+  });
+  await page.goto("/json-editor?league=ctc");
+  await page.getByRole("button", { name: "Paste roster", exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "Roster text" })
+    .fill(
+      [
+        "friend code\trole\tMii name",
+        ...names.map((name, index) => `${codes[index]}\t${index + 1}. guest\t${name}`),
+      ].join("\n")
+    );
+  await page.getByRole("button", { name: "Read roster" }).click();
+  const playerTeam = (name: string) => page.getByRole("combobox", { name: `Team for ${name}` });
+  await expect(playerTeam("Nox")).toHaveValue("");
+
+  await page.getByRole("combobox", { name: /^season required/i }).fill("s3");
+  await page.getByRole("combobox", { name: /^division required/i }).fill("d1");
+  await expect(page.getByText("Checking season rosters…")).toBeVisible();
+  await expect(playerTeam("Nox")).toBeEnabled();
+  await expect(playerTeam("[ωZ]Tag Only")).toHaveValue("TeamB");
+  await playerTeam("Rune").selectOption("TeamA");
+  membershipGate.resolve();
+  await expect(playerTeam("Nox")).toHaveValue("TeamA");
+  await expect(playerTeam("Rune")).toHaveValue("TeamA");
+  await expect(playerTeam("[ωZ]Tag Only")).toHaveValue("TeamB");
+  await expect(playerTeam("MS Visitor")).toHaveValue("");
+  await expect(playerTeam("Unsure")).toHaveValue("");
+  await expect(page.getByText("Season roster · [ωZ]", { exact: true })).toBeVisible();
+  await expect(page.getByText("Season roster · MS, [ωZ]", { exact: true })).toBeVisible();
+  await playerTeam("MS Visitor").selectOption("TeamA");
+  await page.getByRole("button", { name: "Add 6 players", exact: true }).click();
+
+  await expect(page.locator('[data-team-key="TeamA"]').getByLabel("Team name or tag")).toHaveValue(
+    "MS"
+  );
+  await expect(page.locator('[data-team-key="TeamB"]').getByLabel("Team name or tag")).toHaveValue(
+    "[ωZ]"
+  );
+  await expect(page.locator('[data-player-key="TeamA::0002-0000-0004"]')).toBeVisible();
+  await expect(page.locator('[data-player-key="TeamA::0002-0000-0002"]')).toBeVisible();
 });
 
 test("json editor updates a loaded match label when its match number changes", async ({ page }) => {
