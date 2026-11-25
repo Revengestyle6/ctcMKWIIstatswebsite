@@ -119,8 +119,12 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
-export async function postFormData<T>(path: string, body: FormData): Promise<T> {
-  return requestJson<T>(path, { method: "POST", body });
+export async function postFormData<T>(
+  path: string,
+  body: FormData,
+  signal?: AbortSignal
+): Promise<T> {
+  return requestJson<T>(path, { method: "POST", body, signal });
 }
 
 export async function patchJson<T>(path: string, body: unknown): Promise<T> {

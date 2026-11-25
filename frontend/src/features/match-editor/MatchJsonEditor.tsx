@@ -35,6 +35,7 @@ import {
   TraditionalTable,
   VerticalScorecard,
 } from "../match-history/matchHistoryViews";
+import BulkResultsImageDialog from "./BulkResultsImageDialog";
 import ExistingPlayerPicker from "./ExistingPlayerPicker";
 import {
   allPlayers,
@@ -81,6 +82,8 @@ import {
   validFriendCode,
 } from "./matchJsonEditorValidation";
 import PasteRosterPanel from "./PasteRosterPanel";
+import ResultsImageUploader from "./ResultsImageUploader";
+import { planExtractedResults, type RecognizedResultRow } from "./raceResultsImport";
 import { addPastedRoster } from "./rosterImport";
 import TeamRosterPool from "./TeamRosterPool";
 import TeamScopePool from "./TeamScopePool";
@@ -214,6 +217,13 @@ export default function MatchJsonEditor(): React.JSX.Element {
   const [teamsLoaded, setTeamsLoaded] = useState(false);
   const [raceView, setRaceView] = useState<"one" | "all">("one");
   const [activeRace, setActiveRace] = useState(0);
+  const [resultsImport, setResultsImport] = useState<{
+    index: number;
+    race: RaceDraft;
+    open: boolean;
+  }>();
+  const [bulkRaces, setBulkRaces] = useState<readonly RaceDraft[]>();
+  const [extractionResult, setExtractionResult] = useState<{ race: RaceDraft; added: number }>();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pastePanelOpen, setPastePanelOpen] = useState(false);
   const [pastedJson, setPastedJson] = useState("");
@@ -1525,6 +1535,8 @@ export default function MatchJsonEditor(): React.JSX.Element {
   }
   function resetEditor(nextMatch: MatchJson, nextFileName: string): void {
     const normalizedMatch = normalizeMatchForEditor(nextMatch);
+    setResultsImport(undefined);
+    setBulkRaces(undefined);
     setMatch(normalizedMatch);
     setLoadedMatchNumbers({
       match_number: normalizedMatch.match_number,
@@ -1755,6 +1767,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
       });
       if (editorVersion.current !== requestVersion) return;
       setSubmissionReceipt(receipt);
+      setResultsImport(undefined);
     } catch (error) {
       if (editorVersion.current !== requestVersion) return;
       if (
@@ -1821,6 +1834,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
         : await postJson<CommitResult>(endpoint, body);
       if (editorVersion.current !== requestVersion) return;
       setCommitResult(result);
+      setResultsImport(undefined);
       if (reviewSubmissionId) sessionStorage.removeItem("ctc-review-draft");
       if (result.match) setTablePreview(result.match);
       fetchMatchScopes()
@@ -1979,6 +1993,21 @@ export default function MatchJsonEditor(): React.JSX.Element {
 
   const raceIndexes =
     raceView === "all" ? races.map((_, index) => index) : races[activeRace] ? [activeRace] : [];
+  const explicitlyOpenedUploader =
+    resultsImport?.open &&
+    resultsImport.race === races[resultsImport.index] &&
+    raceIndexes.includes(resultsImport.index);
+  const extractionRoster = players.map(({ playerKey, player }) => ({
+    key: playerKey,
+    miiName: String(player.mii_name ?? ""),
+  }));
+  function applyRaceImage(index: number, race: RaceDraft, rows: RecognizedResultRow[]) {
+    const plan = planExtractedResults(race, match.format, rows, extractionRoster);
+    const added = plan.valid ? plan.changes.length : 0;
+    const updated = added ? { ...race, placements: plan.placements } : race;
+    setRace(index, (current) => (current === race ? updated : current));
+    return { race: updated, added };
+  }
   const errorCount = issues.filter((issue) => issue.level === "error").length;
   const displayedErrorCount = displayedIssues.filter((issue) => issue.level === "error").length;
   const reviewButtonLabel = commitResult
@@ -3141,12 +3170,12 @@ export default function MatchJsonEditor(): React.JSX.Element {
               </div>
             </div>
             {raceView === "one" && (
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] justify-items-center gap-2">
                 <button
                   type="button"
                   disabled={activeRace === 0}
                   onClick={() => setActiveRace((r) => r - 1)}
-                  className="rounded bg-white/10 px-3 py-2 disabled:opacity-30"
+                  className="justify-self-start rounded bg-white/10 px-3 py-2 disabled:opacity-30"
                 >
                   Previous
                 </button>
@@ -3166,7 +3195,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   type="button"
                   disabled={activeRace === races.length - 1}
                   onClick={() => setActiveRace((r) => r + 1)}
-                  className="rounded bg-white/10 px-3 py-2 disabled:opacity-30"
+                  className="justify-self-end rounded bg-white/10 px-3 py-2 disabled:opacity-30"
                 >
                   Next
                 </button>
@@ -3204,9 +3233,21 @@ export default function MatchJsonEditor(): React.JSX.Element {
                   "track",
                   (entry) => normalized(entry.value) === normalized(race.trackName)
                 );
+                const uploaderPreference =
+                  resultsImport?.index === raceIndex && resultsImport.race === race
+                    ? resultsImport.open
+                    : undefined;
+                const uploaderOpen =
+                  !bulkRaces &&
+                  Boolean(players.length) &&
+                  (uploaderPreference ??
+                    (!explicitlyOpenedUploader &&
+                      raceIndex === activeRace &&
+                      !race.placements.some(Boolean)));
+                const uploaderId = `race-image-extraction-${raceIndex}`;
                 return (
                   <article key={raceIndex} className="border border-white/10 bg-black/25 p-4">
-                    <div className="mb-4 grid gap-3 sm:grid-cols-[7rem_minmax(15rem,1fr)_10rem_auto_auto]">
+                    <div className="mb-4 grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_10rem] lg:grid-cols-[7rem_minmax(12rem,1fr)_10rem_auto]">
                       <label className={smallLabel}>
                         Race number
                         <input
@@ -3269,28 +3310,30 @@ export default function MatchJsonEditor(): React.JSX.Element {
                           ))}
                         </select>
                       </label>
-                      <span className="self-end pb-2 text-sm text-gray-300">
-                        {race.placements.filter(Boolean).length} / {race.roomSize} placed
-                        {race.unplacedResults.length
-                          ? `; ${race.unplacedResults.length} DC award`
-                          : ""}
-                        {race.missingPlayerResults.length
-                          ? `; ${race.missingPlayerResults.length} team missing`
-                          : ""}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={!race.placements.some(Boolean)}
-                        onClick={() =>
-                          setRace(raceIndex, (current) => ({
-                            ...current,
-                            placements: Array(current.roomSize).fill(null),
-                          }))
-                        }
-                        className="self-end rounded-md border border-red-400/30 bg-red-950/30 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Clear all positions
-                      </button>
+                      <div className="flex flex-wrap items-center justify-end gap-3 self-start sm:col-span-3 lg:col-span-1 lg:mt-5">
+                        <span className="text-sm text-gray-300">
+                          {race.placements.filter(Boolean).length} / {race.roomSize} placed
+                          {race.unplacedResults.length
+                            ? `; ${race.unplacedResults.length} DC award`
+                            : ""}
+                          {race.missingPlayerResults.length
+                            ? `; ${race.missingPlayerResults.length} team missing`
+                            : ""}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={!race.placements.some(Boolean)}
+                          onClick={() =>
+                            setRace(raceIndex, (current) => ({
+                              ...current,
+                              placements: Array(current.roomSize).fill(null),
+                            }))
+                          }
+                          className="rounded-md border border-red-400/30 bg-red-950/30 px-3 py-2 text-sm font-semibold leading-4 text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Clear all positions
+                        </button>
+                      </div>
                     </div>
                     <div className="mb-4 flex flex-wrap gap-2">
                       <button
@@ -3315,11 +3358,63 @@ export default function MatchJsonEditor(): React.JSX.Element {
                       >
                         Delete race
                       </button>
-                      <span className="self-center text-xs text-gray-400">
-                        Changing a race number moves the race. Other race numbers adjust
-                        automatically.
-                      </span>
+                      <div className="ml-auto flex flex-wrap justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={previewLoading || commitLoading || !players.length}
+                          onClick={() => {
+                            setExtractionResult(undefined);
+                            setResultsImport(undefined);
+                            setBulkRaces(races);
+                          }}
+                          className="rounded-md border border-blue-300/40 bg-blue-900/40 px-3 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-900/60 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Bulk Extraction
+                        </button>
+                        <button
+                          type="button"
+                          aria-expanded={uploaderOpen}
+                          aria-controls={uploaderOpen ? uploaderId : undefined}
+                          disabled={
+                            !uploaderOpen && (previewLoading || commitLoading || !players.length)
+                          }
+                          title={
+                            !players.length
+                              ? "Add players before importing a race image."
+                              : undefined
+                          }
+                          onClick={() => {
+                            setExtractionResult(undefined);
+                            setResultsImport({ index: raceIndex, race, open: !uploaderOpen });
+                          }}
+                          className="rounded-md border border-blue-300/40 bg-blue-900/40 px-3 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-900/60 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {uploaderOpen ? "Hide image uploader" : "Extract from Image"}
+                        </button>
+                      </div>
                     </div>
+                    {uploaderOpen && (
+                      <ResultsImageUploader
+                        id={uploaderId}
+                        focusOnMount={uploaderPreference === true}
+                        blocked={previewLoading || commitLoading}
+                        raceNumber={race.raceNumber}
+                        roomSize={race.roomSize}
+                        roster={extractionRoster}
+                        onExtracted={(rows) => {
+                          const result = applyRaceImage(raceIndex, race, rows);
+                          setExtractionResult(result);
+                          setResultsImport({ index: raceIndex, race: result.race, open: false });
+                        }}
+                      />
+                    )}
+                    {extractionResult?.race === race && (
+                      <p role="status" className="mb-3 text-sm text-gray-300">
+                        {extractionResult.added
+                          ? `Added ${extractionResult.added} ${extractionResult.added === 1 ? "placement" : "placements"} from the image.`
+                          : "No new placements were added."}
+                      </p>
+                    )}
                     <div className="mb-4 border border-amber-400/30 bg-amber-950/25 p-3">
                       <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
                         <div>
@@ -3558,6 +3653,7 @@ export default function MatchJsonEditor(): React.JSX.Element {
                           </div>
                           <div className="p-2">
                             <select
+                              aria-label={`Player in position ${positionIndex + 1}`}
                               value={placement?.playerKey ?? ""}
                               onChange={(e) =>
                                 e.target.value
@@ -3981,6 +4077,15 @@ export default function MatchJsonEditor(): React.JSX.Element {
               Administrator sign-in
             </Link>
           </section>
+        )}
+
+        {bulkRaces && !specialResult && !unaccounted && (
+          <BulkResultsImageDialog
+            races={bulkRaces}
+            roster={extractionRoster}
+            onClose={() => setBulkRaces(undefined)}
+            onExtracted={(index, rows) => applyRaceImage(index, races[index], rows).added}
+          />
         )}
 
         {approvalModalOpen && (

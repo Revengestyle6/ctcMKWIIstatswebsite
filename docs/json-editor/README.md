@@ -10,6 +10,7 @@ The JSON editor turns a match document into a reviewed, reproducible database im
 2. [JSON format and draft compilation](json-format.md): fields, score tables, substitutions, roles, disconnection awards, and missing-player awards.
 3. [Validation reference](validation.md): every implemented check family, where it runs, and whether it blocks or warns.
 4. [Data sources](data-sources.md): every editor lookup, database provenance, external lookup, and persistence destination.
+5. [Race results image import](race-results-image.md) covers screenshot and phone-photo entry, direct placement entry, Gemini pilot setup, and verification.
 
 Use the [domain glossary](../../CONTEXT.md) for names and the [database model](../architecture/data-model.md) for the complete relational schema. The [manual identity checklist](../development/json-editor-player-identity-test-checklist.md) supplements the automated tests.
 
