@@ -30,6 +30,8 @@ Setting a valid league, season, and division adds suggestions from the season te
 
 To move a race, enter its new position and press Enter or leave the field. The intervening races shift by one position, and the moved race stays selected with its track and results.
 
+When the Gemini pilot is enabled, signed-in administrators can fill a race from a screenshot or phone photo. To use it, set the room size and choose **Extract from Image** in **Race Entry**. Load an image, click **Run Extraction**, and correct placements directly in Race Entry. See [Race results image import](race-results-image.md) for supported inputs and conflict handling.
+
 Catalog requests enrich validation; they do not replace the draft's historical names or race facts. A team assignment differing from recorded participation warns for review instead of automatically moving the player. Download is available during editing and does not require a valid/server-previewed document.
 
 ## 3. Resolve proposed additions

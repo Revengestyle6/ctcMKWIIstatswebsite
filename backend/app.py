@@ -16,6 +16,7 @@ from routes.access import access_api
 from routes.admin import admin_api
 from routes.operations import operations_api
 from routes.public import public_api
+from routes.race_results import race_results_api
 from routes.reviews import reviews_api
 
 __all__ = ["app", "cache", "create_app", "dashboards", "database_health_service", "stats"]
@@ -40,6 +41,7 @@ def create_app(config=None):
     application.register_blueprint(admin_api)
     application.register_blueprint(access_api)
     application.register_blueprint(reviews_api)
+    application.register_blueprint(race_results_api)
     application.register_blueprint(operations_api)
 
     @application.before_request
